@@ -1,0 +1,51 @@
+/* DashboardPage.css - Simple centered dashboard layout */
+
+.dashboard-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at top left, #1f2a9c, #060b20);
+}
+
+.dashboard-card {
+  width: 100%;
+  max-width: 640px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.dashboard-title {
+  margin: 0 0 12px;
+  font-size: 26px;
+}
+
+.dashboard-text {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: #6c7280;
+}
+
+.dashboard-logout {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #d93025;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-logout:hover {
+  background: #b3261e;
+}
+
+@media (max-width: 600px) {
+  .dashboard-card {
+    padding: 22px 18px;
+  }
+}

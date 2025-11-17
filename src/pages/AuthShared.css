@@ -1,0 +1,130 @@
+/* AuthShared.css - Shared styles for Register and Forgot Password pages */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at top left, #1f2a9c, #060b20);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 28px 28px 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.auth-title {
+  margin: 0 0 4px;
+  text-align: center;
+  font-size: 22px;
+  color: #151b2c;
+}
+
+.auth-subtitle {
+  margin: 0 0 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #6c7280;
+}
+
+.auth-error {
+  background: #fdecea;
+  border: 1px solid #f5c2c0;
+  color: #d93025;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.auth-success {
+  background: #e6f4ea;
+  border: 1px solid #9ad0aa;
+  color: #0f9d58;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #151b2c;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d3d7e3;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-input:focus {
+  border-color: #2f3cdd;
+  box-shadow: 0 0 0 1px rgba(47, 60, 221, 0.1);
+}
+
+.auth-button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #2f3cdd;
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.auth-button:hover:not(:disabled) {
+  background: #1f2a9c;
+}
+
+.auth-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.auth-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.auth-footer-text {
+  margin-top: 16px;
+  font-size: 14px;
+  text-align: center;
+  color: #6c7280;
+}
+
+.auth-link {
+  color: #2f3cdd;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .auth-card {
+    padding: 22px 18px 16px;
+  }
+}
