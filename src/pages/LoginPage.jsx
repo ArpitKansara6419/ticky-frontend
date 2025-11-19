@@ -20,8 +20,8 @@ const EyeIcon = () => (
   >
     <path
       d="M12 5C7 5 3.73 8.11 2 12c1.73 3.89 5 7 10 7s8.27-3.11 10-7C20.27 8.11 17 5 12 5Z"
-      stroke="#cbd5f5"
-      strokeWidth="1.6"
+      stroke="#1b4c7a"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -29,8 +29,8 @@ const EyeIcon = () => (
       cx="12"
       cy="12"
       r="3"
-      stroke="#cbd5f5"
-      strokeWidth="1.6"
+      stroke="#1b4c7a"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -48,28 +48,28 @@ const EyeOffIcon = () => (
   >
     <path
       d="M3 3l18 18"
-      stroke="#cbd5f5"
-      strokeWidth="1.6"
+      stroke="#1b4c7a"
+      strokeWidth="1.8"
       strokeLinecap="round"
     />
     <path
       d="M10.58 10.73A3 3 0 0113.27 13.4"
-      stroke="#cbd5f5"
-      strokeWidth="1.6"
+      stroke="#1b4c7a"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <path
       d="M9.88 5.08A9.77 9.77 0 0112 5c5 0 8.27 3.11 10 7-.54 1.22-1.25 2.34-2.11 3.32"
-      stroke="#cbd5f5"
-      strokeWidth="1.6"
+      stroke="#1b4c7a"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <path
       d="M6.61 6.61C4.52 7.86 2.96 9.76 2 12c.89 1.99 2.3 3.68 4.06 4.93"
-      stroke="#cbd5f5"
-      strokeWidth="1.6"
+      stroke="#1b4c7a"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
