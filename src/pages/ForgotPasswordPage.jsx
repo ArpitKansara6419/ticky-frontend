@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import './AuthShared.css'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState('')

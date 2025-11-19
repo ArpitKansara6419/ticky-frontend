@@ -2,11 +2,12 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import './LoginPage.css'
-import logo from '../assets/logo.png'
+import logo from '../assets/Logo.png'
 import googlePlayBadge from '../assets/google-play-badge.png'
 import appStoreBadge from '../assets/app-store-badge.png'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 
 // EyeIcon - simple outline eye icon for show password
 const EyeIcon = () => (
@@ -90,7 +91,7 @@ function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
