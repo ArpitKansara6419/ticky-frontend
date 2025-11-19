@@ -1,10 +1,10 @@
 // LoginPage.jsx - Login screen with Remember Me, Forgot Password and store badges
-import { useState } from 'react'\r
-import { useNavigate, Link } from 'react-router-dom'\r
-import './LoginPage.css'\r
-import logo from '../assets/Logo.png'\r
-import googlePlayBadge from '../assets/play.svg'\r
-import appStoreBadge from '../assets/app.svg'\r
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import './LoginPage.css'
+import logo from '../assets/Logo.png'
+import googlePlayBadge from '../assets/play.svg'
+import appStoreBadge from '../assets/app.svg'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
