@@ -434,7 +434,7 @@ function DashboardPage() {
     <div
       className={`dashboard-shell ${theme === 'dark' ? 'dashboard-shell--dark' : 'dashboard-shell--light'} ${
         isSidebarCollapsed ? 'dashboard-shell--collapsed' : ''
-      }`}
+      } ${activePage === 'dashboard' ? 'dashboard-shell--dashboard-green' : ''}`}
     >
       {/* Sidebar */}
       <aside className="dashboard-sidebar">

@@ -38,6 +38,11 @@
   --text-muted: #9ca3af;
 }
 
+/* When Dashboard menu is active – use subtle green background */
+.dashboard-shell--dashboard-green {
+  --page-bg: #e5f6eb;
+}
+
 /* Sidebar */
 
 .dashboard-sidebar {
