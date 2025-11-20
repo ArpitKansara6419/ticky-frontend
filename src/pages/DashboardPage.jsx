@@ -64,8 +64,8 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
     <section className="dashboard-section">
       {/* Quick actions */}
       <div className="dashboard-card-row">
-        <h2 className="section-title">Quick Actions</h2>
-        <p className="section-subtitle">Commonly used actions for quick access</p>
+        <h2 className="section-title">Dashboard</h2>
+        <p className="section-subtitle">Welcome back &amp; have a great day at work!</p>
 
         <div className="quick-actions-grid">
           <button type="button" className="quick-card quick-card--ticket">
@@ -292,12 +292,97 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
   )
 }
 
-function PlaceholderPage({ title }) {
+const PAGE_COPY = {
+  engineers: {
+    title: 'Engineers',
+    subtitle: 'Manage engineers, skills and allocations.',
+  },
+  customers: {
+    title: 'Customers',
+    subtitle: 'Maintain customer information and contacts.',
+  },
+  leads: {
+    title: 'Leads',
+    subtitle: 'Track incoming leads and nurture pipeline.',
+  },
+  engineerPayout: {
+    title: 'Engineer Payout',
+    subtitle: 'Review and approve engineer payouts.',
+  },
+  customerReceivable: {
+    title: 'Customer Receivable',
+    subtitle: 'Monitor receivables and outstanding invoices.',
+  },
+  tickets: {
+    title: 'Tickets',
+    subtitle: 'View, assign and resolve support tickets.',
+  },
+  assetManagement: {
+    title: 'Asset Management',
+    subtitle: 'Control assets, warranties and lifecycle.',
+  },
+  projectManagement: {
+    title: 'Project Management',
+    subtitle: 'Plan, track and deliver projects.',
+  },
+  meeting: {
+    title: 'Meeting',
+    subtitle: 'Schedule and manage meetings.',
+  },
+  sampleReports: {
+    title: 'Sample Reports',
+    subtitle: 'Preview analytics and business reports.',
+  },
+  attendance: {
+    title: 'Attendance',
+    subtitle: 'Capture and monitor attendance entries.',
+  },
+  leaves: {
+    title: 'Leaves',
+    subtitle: 'Manage leave requests and approvals.',
+  },
+  library: {
+    title: 'Library',
+    subtitle: 'Central place for documents and knowledge.',
+  },
+  training: {
+    title: 'Training',
+    subtitle: 'Organise and track trainings.',
+  },
+  notifications: {
+    title: 'Notifications',
+    subtitle: 'See all system notifications in one place.',
+  },
+  profile: {
+    title: 'Profile',
+    subtitle: 'User profile, contact details and preferences.',
+  },
+  'settings-holiday': {
+    title: 'Holiday Settings',
+    subtitle: 'Configure holidays for the organisation.',
+  },
+  'settings-roles': {
+    title: 'Roles',
+    subtitle: 'Define access roles and permissions.',
+  },
+  'settings-users': {
+    title: 'System Users',
+    subtitle: 'Manage system users and access.',
+  },
+  'settings-bank': {
+    title: 'Bank',
+    subtitle: 'Configure bank accounts and payment details.',
+  },
+}
+
+function GenericPage({ pageId }) {
+  const meta = PAGE_COPY[pageId] || { title: 'Page', subtitle: 'Content will be added here shortly.' }
+
   return (
     <section className="dashboard-section">
       <div className="dashboard-card-full placeholder-card">
-        <h2 className="section-title">{title}</h2>
-        <p className="section-subtitle">This section will be implemented later. Layout and navigation are ready.</p>
+        <h2 className="section-title">{meta.title}</h2>
+        <p className="section-subtitle">{meta.subtitle}</p>
       </div>
     </section>
   )
@@ -342,8 +427,7 @@ function DashboardPage() {
       return <DashboardHome insightsLayout={insightsLayout} onChangeLayout={setInsightsLayout} />
     }
 
-    const currentItem = [...MAIN_MENU_ITEMS, ...SETTINGS_ITEMS].find((item) => item.id === activePage)
-    return <PlaceholderPage title={currentItem?.label || 'Page'} />
+    return <GenericPage pageId={activePage} />
   }
 
   return (
