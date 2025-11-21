@@ -66,6 +66,34 @@ function LeadsPage() {
   // Lead status
   const [status, setStatus] = useState(LEAD_STATUSES[0])
 
+  const resetForm = () => {
+    setTaskName('')
+    setCustomerId('')
+    setLeadType(LEAD_TYPES[0])
+    setClientTicketNumber('')
+    setTaskStartDate('')
+    setTaskEndDate('')
+    setTaskTime('00:00')
+    setScopeOfWork('')
+    setApartment('')
+    setAddressLine1('')
+    setAddressLine2('')
+    setCity('')
+    setCountry('')
+    setZipCode('')
+    setTimezone(TIMEZONES[0])
+    setCurrency('EUR')
+    setHourlyRate('')
+    setFullDayRate('')
+    setMonthlyRate('')
+    setToolsRequired('')
+    setAgreedRate('')
+    setTravelCostPerDay('')
+    setTotalCost('')
+    setStatus(LEAD_STATUSES[0])
+    setError('')
+  }
+
   useEffect(() => {
     async function fetchCustomers() {
       try {
@@ -140,7 +168,8 @@ function LeadsPage() {
       }
 
       setSuccess('Lead created successfully.')
-      // Optional: keep values so user can duplicate; for now, do not reset completely.
+      // Reset form after successful creation
+      resetForm()
     } catch (err) {
       console.error('Create lead error', err)
       setError(err.message || 'Unable to create lead')
@@ -491,6 +520,14 @@ function LeadsPage() {
         {success && <div className="leads-message leads-message--success">{success}</div>}
 
         <div className="leads-actions-footer">
+          <button
+            type="button"
+            className="leads-secondary-btn"
+            onClick={resetForm}
+            disabled={saving}
+          >
+            Cancel
+          </button>
           <button type="submit" className="leads-primary-btn" disabled={saving}>
             {saving ? 'Creating Lead...' : 'Create Lead'}
           </button>
