@@ -29,8 +29,12 @@ import {
   FiShield,
   FiUserPlus,
   FiPhoneCall,
+  FiX,
+  FiCamera,
 } from 'react-icons/fi'
 import './DashboardPage.css'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const MAIN_MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: FiHome },
@@ -388,18 +392,144 @@ function GenericPage({ pageId }) {
   )
 }
 
+function ProfileModal({ isOpen, onClose, form, onChange, onSubmit, onAvatarChange, saving, error, success }) {
+  if (!isOpen) return null
+
+  const handleFieldChange = (field) => (e) => {
+    onChange({ ...form, [field]: e.target.value })
+  }
+
+  return (
+    <div className="profile-modal-backdrop" role="dialog" aria-modal="true">
+      <div className="profile-modal">
+        <header className="profile-modal-header">
+          <div>
+            <h2 className="section-title">Profile Settings</h2>
+            <p className="section-subtitle">Update your personal information and avatar.</p>
+          </div>
+          <button type="button" className="profile-modal-close" onClick={onClose} aria-label="Close profile">
+            <FiX />
+          </button>
+        </header>
+
+        <div className="profile-modal-body">
+          <div className="profile-avatar-block">
+            <div className="profile-avatar-circle">
+              {form.avatarPreview ? <img src={form.avatarPreview} alt="Profile" /> : <span>TU</span>}
+              <label className="profile-avatar-upload">
+                <FiCamera />
+                <input type="file" accept="image/*" onChange={onAvatarChange} />
+              </label>
+            </div>
+            <p className="profile-avatar-hint">PNG or JPG up to 2MB.</p>
+          </div>
+
+          <form className="profile-form" onSubmit={onSubmit}>
+            <div className="profile-form-grid">
+              <label className="profile-field">
+                <span>Username</span>
+                <input type="text" value={form.name} onChange={handleFieldChange('name')} required />
+              </label>
+              <label className="profile-field">
+                <span>Email</span>
+                <input type="email" value={form.email} onChange={handleFieldChange('email')} required />
+              </label>
+              <label className="profile-field">
+                <span>Phone</span>
+                <input type="tel" value={form.phone} onChange={handleFieldChange('phone')} />
+              </label>
+              <label className="profile-field">
+                <span>Date of Birth</span>
+                <input type="date" value={form.dateOfBirth} onChange={handleFieldChange('dateOfBirth')} />
+              </label>
+            </div>
+
+            <label className="profile-field profile-field--full">
+              <span>Address</span>
+              <textarea rows={3} value={form.address} onChange={handleFieldChange('address')} />
+            </label>
+
+            {error && <div className="profile-message profile-message--error">{error}</div>}
+            {success && <div className="profile-message profile-message--success">{success}</div>}
+
+            <div className="profile-actions">
+              <button type="button" className="profile-button profile-button--ghost" onClick={onClose}>
+                Cancel
+              </button>
+              <button type="submit" className="profile-button" disabled={saving}>
+                {saving ? 'Saving...' : 'Save Profile'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [theme, setTheme] = useState(() => localStorage.getItem('awokta-theme') || 'light')
   const [insightsLayout, setInsightsLayout] = useState('split')
+  const [profileForm, setProfileForm] = useState({
+    name: 'Test User',
+    email: 'test@example.com',
+    phone: '',
+    dateOfBirth: '',
+    address: '',
+    avatarPreview: '',
+  })
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [profileSuccess, setProfileSuccess] = useState('')
 
   useEffect(() => {
     localStorage.setItem('awokta-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    // Load profile when modal opens
+    if (!isProfileModalOpen) return
+
+    const controller = new AbortController()
+
+    async function fetchProfile() {
+      try {
+        setProfileError('')
+        const email = profileForm.email
+        const res = await fetch(`${API_BASE_URL}/profile?email=${encodeURIComponent(email)}`, {
+          credentials: 'include',
+          signal: controller.signal,
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data && data.user) {
+          setProfileForm((prev) => ({
+            ...prev,
+            name: data.user.name || prev.name,
+            email: data.user.email || prev.email,
+            phone: data.user.phone || '',
+            dateOfBirth: data.user.dateOfBirth || '',
+            address: data.user.address || '',
+            avatarPreview: data.user.avatarUrl || '',
+          }))
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Profile fetch error', err)
+        }
+      }
+    }
+
+    fetchProfile()
+
+    return () => controller.abort()
+  }, [isProfileModalOpen, profileForm.email])
 
   const handleLogout = () => {
     // Clear tokens from both storages for safety
@@ -420,6 +550,53 @@ function DashboardPage() {
   const handleSettingsItemClick = (id) => {
     setActivePage(id)
     setIsSettingsOpen(false)
+  }
+
+  const handleAvatarChange = (event) => {
+    const file = event.target.files && event.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setProfileForm((prev) => ({ ...prev, avatarPreview: reader.result || '' }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleProfileSubmit = async (event) => {
+    event.preventDefault()
+    setProfileSaving(true)
+    setProfileError('')
+    setProfileSuccess('')
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: profileForm.name,
+          email: profileForm.email,
+          phone: profileForm.phone,
+          dateOfBirth: profileForm.dateOfBirth,
+          address: profileForm.address,
+          avatarUrl: profileForm.avatarPreview,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        setProfileError(data.message || 'Unable to save profile.')
+      } else {
+        setProfileSuccess('Profile saved successfully.')
+      }
+    } catch (err) {
+      console.error('Profile save error', err)
+      setProfileError('Unable to connect to server.')
+    } finally {
+      setProfileSaving(false)
+    }
   }
 
   const renderContent = () => {
@@ -540,10 +717,25 @@ function DashboardPage() {
             </button>
             {isUserMenuOpen && (
               <div className="dashboard-user-dropdown">
-                <button type="button" className="dashboard-user-dropdown-item" onClick={() => setActivePage('dashboard')}>
+                <button
+                  type="button"
+                  className="dashboard-user-dropdown-item"
+                  onClick={() => {
+                    setActivePage('dashboard')
+                    setIsUserMenuOpen(false)
+                    setIsProfileModalOpen(false)
+                  }}
+                >
                   Dashboard
                 </button>
-                <button type="button" className="dashboard-user-dropdown-item" onClick={() => setActivePage('profile')}>
+                <button
+                  type="button"
+                  className="dashboard-user-dropdown-item"
+                  onClick={() => {
+                    setIsUserMenuOpen(false)
+                    setIsProfileModalOpen(true)
+                  }}
+                >
                   Profile
                 </button>
                 <button type="button" className="dashboard-user-dropdown-item">
@@ -563,6 +755,18 @@ function DashboardPage() {
 
         {renderContent()}
       </main>
+
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        form={profileForm}
+        onChange={setProfileForm}
+        onSubmit={handleProfileSubmit}
+        onAvatarChange={handleAvatarChange}
+        saving={profileSaving}
+        error={profileError}
+        success={profileSuccess}
+      />
     </div>
   )
 }
