@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CustomersPage from './CustomersPage'
 import LeadsPage from './LeadsPage'
+import TicketsPage from './TicketsPage'
 import {
   FiHome,
   FiUsers,
@@ -612,6 +613,10 @@ function DashboardPage() {
 
     if (activePage === 'leads') {
       return <LeadsPage />
+    }
+
+    if (activePage === 'tickets') {
+      return <TicketsPage />
     }
 
     return <GenericPage pageId={activePage} />
