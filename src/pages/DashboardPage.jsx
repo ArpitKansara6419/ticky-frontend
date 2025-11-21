@@ -1,6 +1,7 @@
 // DashboardPage.jsx - Main dashboard shell with sidebar navigation, theme toggle and content sections
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import CustomersPage from './CustomersPage'
 import {
   FiHome,
   FiUsers,
@@ -602,6 +603,10 @@ function DashboardPage() {
   const renderContent = () => {
     if (activePage === 'dashboard') {
       return <DashboardHome insightsLayout={insightsLayout} onChangeLayout={setInsightsLayout} />
+    }
+
+    if (activePage === 'customers') {
+      return <CustomersPage />
     }
 
     return <GenericPage pageId={activePage} />
