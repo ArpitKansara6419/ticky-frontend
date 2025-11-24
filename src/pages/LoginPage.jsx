@@ -109,6 +109,16 @@ function LoginPage() {
       const storage = rememberMe ? localStorage : sessionStorage
       storage.setItem('authToken', data.token)
 
+      // Persist basic user info so dashboard/profile can use it
+      const userName = data.user?.name || ''
+      const userEmail = data.user?.email || email
+      if (userEmail) {
+        localStorage.setItem('userEmail', userEmail)
+      }
+      if (userName) {
+        localStorage.setItem('userName', userName)
+      }
+
       navigate('/dashboard')
     } catch (err) {
       console.error('Login error', err)

@@ -479,13 +479,18 @@ function DashboardPage() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [theme, setTheme] = useState(() => localStorage.getItem('awokta-theme') || 'light')
   const [insightsLayout, setInsightsLayout] = useState('split')
-  const [profileForm, setProfileForm] = useState({
-    name: 'Test User',
-    email: 'test@example.com',
-    phone: '',
-    dateOfBirth: '',
-    address: '',
-    avatarPreview: '',
+  const [profileForm, setProfileForm] = useState(() => {
+    const storedName = localStorage.getItem('userName') || 'Test User'
+    const storedEmail = localStorage.getItem('userEmail') || 'test@example.com'
+
+    return {
+      name: storedName,
+      email: storedEmail,
+      phone: '',
+      dateOfBirth: '',
+      address: '',
+      avatarPreview: '',
+    }
   })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState('')
@@ -592,6 +597,29 @@ function DashboardPage() {
       if (!res.ok) {
         setProfileError(data.message || 'Unable to save profile.')
       } else {
+        const updatedUser = data.user || {
+          name: profileForm.name,
+          email: profileForm.email,
+          phone: profileForm.phone,
+          dateOfBirth: profileForm.dateOfBirth,
+          address: profileForm.address,
+          avatarUrl: profileForm.avatarPreview,
+        }
+
+        setProfileForm((prev) => ({
+          ...prev,
+          name: updatedUser.name || prev.name,
+          email: updatedUser.email || prev.email,
+          phone: updatedUser.phone || prev.phone,
+          dateOfBirth: updatedUser.dateOfBirth || prev.dateOfBirth,
+          address: updatedUser.address || prev.address,
+          avatarPreview: updatedUser.avatarUrl || prev.avatarPreview,
+        }))
+
+        // Keep header in sync with latest profile
+        if (updatedUser.name) localStorage.setItem('userName', updatedUser.name)
+        if (updatedUser.email) localStorage.setItem('userEmail', updatedUser.email)
+
         setProfileSuccess('Profile saved successfully.')
       }
     } catch (err) {
@@ -724,10 +752,19 @@ function DashboardPage() {
               className="dashboard-user-info"
               onClick={() => setIsUserMenuOpen((prev) => !prev)}
             >
-              <div className="dashboard-avatar">TU</div>
+              <div className="dashboard-avatar">
+                {profileForm.avatarPreview
+                  ? null
+                  : (profileForm.name || 'TU')
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part[0]?.toUpperCase())
+                      .join('')}
+              </div>
               <div className="dashboard-user-meta">
-                <span className="dashboard-user-name">Test User</span>
-                <span className="dashboard-user-role">test@example.com</span>
+                <span className="dashboard-user-name">{profileForm.name}</span>
+                <span className="dashboard-user-role">{profileForm.email}</span>
               </div>
             </button>
             {isUserMenuOpen && (

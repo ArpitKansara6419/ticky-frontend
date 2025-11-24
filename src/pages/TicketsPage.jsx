@@ -1,5 +1,6 @@
-// TicketsPage.jsx - Support Tickets list + Create Ticket form
+// TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState } from 'react'
+import { FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi'
 import './TicketsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -25,6 +26,9 @@ function TicketsPage() {
 
   const [summary, setSummary] = useState({ total: 0, open: 0, inProgress: 0, resolved: 0 })
   const [tickets, setTickets] = useState([])
+  const [selectedTicket, setSelectedTicket] = useState(null)
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+  const [editingTicketId, setEditingTicketId] = useState(null)
 
   // Form data
   const [customers, setCustomers] = useState([])
@@ -134,6 +138,7 @@ function TicketsPage() {
     setStatus('Open')
     setError('')
     setSuccess('')
+    setEditingTicketId(null)
   }
 
   const loadTickets = async () => {
@@ -263,8 +268,12 @@ function TicketsPage() {
         status,
       }
 
-      const res = await fetch(`${API_BASE_URL}/tickets`, {
-        method: 'POST',
+      const isEditing = Boolean(editingTicketId)
+      const url = isEditing ? `${API_BASE_URL}/tickets/${editingTicketId}` : `${API_BASE_URL}/tickets`
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(payload),
@@ -272,10 +281,10 @@ function TicketsPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.message || 'Unable to create ticket')
+        throw new Error(data.message || (isEditing ? 'Unable to update ticket' : 'Unable to create ticket'))
       }
 
-      setSuccess('Ticket created successfully.')
+      setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
       resetForm()
       setViewMode('list')
       await loadTickets()
@@ -285,6 +294,93 @@ function TicketsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const openTicketModal = async (ticketId) => {
+    try {
+      setError('')
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Unable to load ticket details')
+      }
+      setSelectedTicket(data.ticket)
+      setIsTicketModalOpen(true)
+    } catch (err) {
+      console.error('View ticket error', err)
+      setError(err.message || 'Unable to load ticket details')
+    }
+  }
+
+  const fillFormFromTicket = (ticket) => {
+    setCustomerId(ticket.customerId ? String(ticket.customerId) : '')
+    setLeadId(ticket.leadId ? String(ticket.leadId) : '')
+    setClientName(ticket.clientName || '')
+    setTaskName(ticket.taskName || '')
+    setTaskStartDate(ticket.taskStartDate || '')
+    setTaskEndDate(ticket.taskEndDate || '')
+    setTaskTime(ticket.taskTime || '00:00')
+    setScopeOfWork(ticket.scopeOfWork || '')
+    setTools(ticket.tools || '')
+    setEngineerName(ticket.engineerName || '')
+    setApartment(ticket.apartment || '')
+    setAddressLine1(ticket.addressLine1 || '')
+    setAddressLine2(ticket.addressLine2 || '')
+    setCity(ticket.city || '')
+    setCountry(ticket.country || '')
+    setZipCode(ticket.zipCode || '')
+    setTimezone(ticket.timezone || TIMEZONES[0])
+    setPocDetails(ticket.pocDetails || '')
+    setReDetails(ticket.reDetails || '')
+    setCallInvites(ticket.callInvites || '')
+    setDocumentsLabel(ticket.documentsLabel || '')
+    setSignoffLabel(ticket.signoffLabel || '')
+    setCurrency(ticket.currency || 'USD')
+    setHourlyRate(ticket.hourlyRate != null ? String(ticket.hourlyRate) : '')
+    setHalfDayRate(ticket.halfDayRate != null ? String(ticket.halfDayRate) : '')
+    setFullDayRate(ticket.fullDayRate != null ? String(ticket.fullDayRate) : '')
+    setMonthlyRate(ticket.monthlyRate != null ? String(ticket.monthlyRate) : '')
+    setAgreedRate(ticket.agreedRate || '')
+    setStatus(ticket.status || 'Open')
+  }
+
+  const startEditTicket = async (ticketId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Unable to load ticket')
+      }
+      fillFormFromTicket(data.ticket)
+      setEditingTicketId(ticketId)
+      setViewMode('form')
+    } catch (err) {
+      console.error('Edit ticket error', err)
+      setError(err.message || 'Unable to load ticket for edit')
+    }
+  }
+
+  const handleDeleteTicket = async (ticketId) => {
+    if (!window.confirm('Are you sure you want to delete this ticket?')) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Unable to delete ticket')
+      }
+      await loadTickets()
+    } catch (err) {
+      console.error('Delete ticket error', err)
+      setError(err.message || 'Unable to delete ticket')
+    }
+  }
+
+  const handleCloseTicketModal = () => {
+    setIsTicketModalOpen(false)
+    setSelectedTicket(null)
   }
 
   if (viewMode === 'form') {
@@ -709,13 +805,13 @@ function TicketsPage() {
           <p className="summary-label">In Progress</p>
           <p className="summary-value">{summary.inProgress}</p>
         </div>
-        <div className="tickets-summary-card">
-          <p className="summary-label">Resolved</p>
-          <p className="summary-value">{summary.resolved}</p>
-        </div>
-      </section>
+          <div className="tickets-summary-card">
+            <p className="summary-label">Resolved</p>
+            <p className="summary-value">{summary.resolved}</p>
+          </div>
+        </section>
 
-      <section className="tickets-card">
+        <section className="tickets-card">
         <div className="tickets-list-toolbar">
           <div className="tickets-search">
             <input type="text" placeholder="Search tickets..." disabled />
@@ -742,18 +838,19 @@ function TicketsPage() {
                 <th>Customer</th>
                 <th>Engineer Assigned</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="tickets-empty">
+                  <td colSpan={7} className="tickets-empty">
                     Loading tickets...
                   </td>
                 </tr>
               ) : tickets.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="tickets-empty">
+                  <td colSpan={7} className="tickets-empty">
                     No tickets found.
                   </td>
                 </tr>
@@ -770,6 +867,32 @@ function TicketsPage() {
                     <td>{ticket.customerName}</td>
                     <td>{ticket.engineerName || '-'}</td>
                     <td>{ticket.status}</td>
+                    <td className="tickets-actions-cell">
+                      <button
+                        type="button"
+                        className="tickets-action-btn tickets-action-btn--view"
+                        onClick={() => openTicketModal(ticket.id)}
+                        aria-label="View ticket"
+                      >
+                        <FiEye />
+                      </button>
+                      <button
+                        type="button"
+                        className="tickets-action-btn tickets-action-btn--edit"
+                        onClick={() => startEditTicket(ticket.id)}
+                        aria-label="Edit ticket"
+                      >
+                        <FiEdit2 />
+                      </button>
+                      <button
+                        type="button"
+                        className="tickets-action-btn tickets-action-btn--delete"
+                        onClick={() => handleDeleteTicket(ticket.id)}
+                        aria-label="Delete ticket"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -777,6 +900,53 @@ function TicketsPage() {
           </table>
         </div>
       </section>
+
+      {isTicketModalOpen && selectedTicket && (
+        <div className="ticket-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="ticket-modal">
+            <header className="ticket-modal-header">
+              <div>
+                <h2 className="ticket-modal-title">{selectedTicket.taskName}</h2>
+                <p className="ticket-modal-sub">
+                  Customer: {selectedTicket.customerName} | Engineer: {selectedTicket.engineerName}
+                </p>
+              </div>
+              <button type="button" className="ticket-modal-close" onClick={handleCloseTicketModal}>
+                ×
+              </button>
+            </header>
+
+            <section className="ticket-modal-section">
+              <h3>Schedule</h3>
+              <p className="ticket-modal-line">
+                {selectedTicket.taskStartDate} - {selectedTicket.taskEndDate} {selectedTicket.taskTime}
+              </p>
+            </section>
+
+            <section className="ticket-modal-section">
+              <h3>Scope of Work</h3>
+              <p className="ticket-modal-line">{selectedTicket.scopeOfWork}</p>
+            </section>
+
+            <section className="ticket-modal-section">
+              <h3>Location</h3>
+              <p className="ticket-modal-line">Apartment: {selectedTicket.apartment}</p>
+              <p className="ticket-modal-line">Address: {selectedTicket.addressLine1}</p>
+              {selectedTicket.addressLine2 && (
+                <p className="ticket-modal-line">Address Line 2: {selectedTicket.addressLine2}</p>
+              )}
+              <p className="ticket-modal-line">
+                {selectedTicket.city}, {selectedTicket.country} - {selectedTicket.zipCode}
+              </p>
+            </section>
+
+            <section className="ticket-modal-section">
+              <h3>Status</h3>
+              <p className="ticket-modal-line">{selectedTicket.status}</p>
+            </section>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
