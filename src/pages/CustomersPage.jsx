@@ -1,7 +1,7 @@
 // CustomersPage.jsx - Customers listing and Add Customer flow (company / freelancer)
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi'
+import { FiMoreVertical } from 'react-icons/fi'
 import './CustomersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -61,7 +61,7 @@ function CustomersPage() {
   const [editingCustomerId, setEditingCustomerId] = useState(null)
   const [customerDetails, setCustomerDetails] = useState(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-
+  const [menuCustomerId, setMenuCustomerId] = useState(null)
   const [customerType, setCustomerType] = useState('company') // company | freelancer
   const [status, setStatus] = useState('active')
   const [name, setName] = useState('')
@@ -743,16 +743,12 @@ function CustomersPage() {
                     <td>{customer.authorizedPersonName || '-'}</td>
                     <td>
                       {customer.documentTitle ? (
-                        <button
-                          type="button"
-                          className="customers-doc-pill customers-doc-pill--button"
-                          onClick={() => handleViewCustomer(customer.id)}
-                        >
+                        <div className="customers-doc-pill">
                           <span>{customer.documentTitle}</span>
                           {customer.documentExpiryDate && (
                             <span className="customers-doc-expiry">Expires: {customer.documentExpiryDate}</span>
                           )}
-                        </button>
+                        </div>
                       ) : (
                         '-'
                       )}
@@ -767,31 +763,57 @@ function CustomersPage() {
                       </button>
                     </td>
                     <td className="customers-actions-cell">
-                      <div className="customers-actions-inline">
+                      <div className="customers-actions-wrapper">
                         <button
                           type="button"
-                          className="customers-icon-btn"
-                          title="View details"
-                          onClick={() => handleViewCustomer(customer.id)}
+                          className="customers-actions-trigger"
+                          onClick={() =>
+                            setMenuCustomerId((prev) => (prev === customer.id ? null : customer.id))
+                          }
                         >
-                          <FiEye />
+                          <FiMoreVertical />
                         </button>
-                        <button
-                          type="button"
-                          className="customers-icon-btn"
-                          title="Edit customer"
-                          onClick={() => startEditCustomer(customer.id)}
-                        >
-                          <FiEdit2 />
-                        </button>
-                        <button
-                          type="button"
-                          className="customers-icon-btn customers-icon-btn--danger"
-                          title="Delete customer"
-                          onClick={() => handleDeleteCustomer(customer.id)}
-                        >
-                          <FiTrash2 />
-                        </button>
+                        {menuCustomerId === customer.id && (
+                          <div className="customers-actions-menu">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuCustomerId(null)
+                                handleViewCustomer(customer.id)
+                              }}
+                            >
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuCustomerId(null)
+                                startEditCustomer(customer.id)
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuCustomerId(null)
+                                handleCreateLeadFromCustomer(customer)
+                              }}
+                            >
+                              Create Lead
+                            </button>
+                            <button
+                              type="button"
+                              className="customers-actions-item--danger"
+                              onClick={() => {
+                                setMenuCustomerId(null)
+                                handleDeleteCustomer(customer.id)
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
