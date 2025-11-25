@@ -753,12 +753,16 @@ function DashboardPage() {
               onClick={() => setIsUserMenuOpen((prev) => !prev)}
             >
               <div className="dashboard-avatar">
-                {(profileForm.name || 'TU')
-                  .split(' ')
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((part) => part[0]?.toUpperCase())
-                  .join('')}
+                {profileForm.avatarPreview ? (
+                  <img src={profileForm.avatarPreview} alt={profileForm.name || 'User avatar'} />
+                ) : (
+                  (profileForm.name || 'TU')
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase())
+                    .join('')
+                )}
               </div>
               <div className="dashboard-user-meta">
                 <span className="dashboard-user-name">{profileForm.name}</span>
