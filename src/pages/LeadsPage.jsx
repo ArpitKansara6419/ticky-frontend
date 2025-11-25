@@ -76,8 +76,17 @@ function LeadsPage() {
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
   const [totalCost, setTotalCost] = useState('')
 
-  // Lead status
+  // Lead status (form)
   const [status, setStatus] = useState(LEAD_STATUSES[0])
+
+  // Change-status modal state
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [statusLead, setStatusLead] = useState(null)
+  const [statusNewValue, setStatusNewValue] = useState(LEAD_STATUSES[0])
+  const [statusReason, setStatusReason] = useState('')
+  const [statusFollowUpDate, setStatusFollowUpDate] = useState('')
+  const [statusSaving, setStatusSaving] = useState(false)
+  const [statusError, setStatusError] = useState('')
 
   const resetForm = () => {
     setTaskName('')
@@ -174,6 +183,66 @@ function LeadsPage() {
       return name.includes(term) || customerName.includes(term) || code.includes(term)
     })
   }, [leads, searchTerm])
+
+  const openStatusModal = (lead) => {
+    if (!lead) return
+    setStatusLead(lead)
+    setStatusNewValue(lead.status || LEAD_STATUSES[0])
+    setStatusReason('')
+    setStatusFollowUpDate('')
+    setStatusError('')
+    setIsStatusModalOpen(true)
+  }
+
+  const handleStatusValueChange = (value) => {
+    setStatusNewValue(value)
+
+    if ((value === 'Reschedule' || value === 'Cancelled') && !statusFollowUpDate) {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const iso = tomorrow.toISOString().slice(0, 10)
+      setStatusFollowUpDate(iso)
+    }
+  }
+
+  const handleStatusSubmit = async (event) => {
+    event.preventDefault()
+    if (!statusLead) return
+
+    try {
+      setStatusSaving(true)
+      setStatusError('')
+
+      const res = await fetch(`${API_BASE_URL}/leads/${statusLead.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          status: statusNewValue,
+          followUpDate: statusFollowUpDate || null,
+          reason: statusReason || null,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || 'Unable to update lead status')
+      }
+
+      // Update list state immediately for real-time feel
+      setLeads((prev) =>
+        prev.map((lead) => (lead.id === statusLead.id ? { ...lead, status: statusNewValue } : lead)),
+      )
+
+      setIsStatusModalOpen(false)
+      setStatusLead(null)
+    } catch (err) {
+      console.error('Update lead status error', err)
+      setStatusError(err.message || 'Unable to update lead status')
+    } finally {
+      setStatusSaving(false)
+    }
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -809,13 +878,42 @@ function LeadsPage() {
                   <tr key={lead.id}>
                     <td>
                       <div className="leads-name-main">{lead.taskName}</div>
-                      <div className="leads-name-sub">#AIM-L-{String(lead.id).padStart(3, '0')}</div>
+                      <div className="leads-name-sub">
+                        #AIM-L-{String(lead.id).padStart(3, '0')} • {lead.leadType}
+                      </div>
                     </td>
-                    <td>{lead.customerName}</td>
+                    <td>
+                      <div className="leads-customer-cell">
+                        {lead.customerProfileImageUrl && (
+                          <img
+                            src={lead.customerProfileImageUrl}
+                            alt={lead.customerName}
+                            className="leads-customer-avatar"
+                          />
+                        )}
+                        <div>
+                          <div className="leads-customer-name">{lead.customerName}</div>
+                          <div className="leads-customer-sub">#AIM-C-{String(lead.customerId).padStart(3, '0')}</div>
+                        </div>
+                      </div>
+                    </td>
                     <td>
                       {lead.taskStartDate} - {lead.taskEndDate} {lead.taskTime}
                     </td>
-                    <td>{lead.status}</td>
+                    <td>
+                      <div className="leads-status-cell">
+                        <span className={`leads-status-pill leads-status-pill--${lead.status.toLowerCase()}`}>
+                          {lead.status}
+                        </span>
+                        <button
+                          type="button"
+                          className="leads-status-change-btn"
+                          onClick={() => openStatusModal(lead)}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    </td>
                     <td>--</td>
                     <td className="leads-actions-cell">
                       <div className="leads-actions-wrapper">
@@ -878,6 +976,104 @@ function LeadsPage() {
           </table>
         </div>
       </section>
+
+      {isStatusModalOpen && statusLead && (
+        <div className="lead-status-backdrop" role="dialog" aria-modal="true">
+          <div className="lead-status-modal">
+            <header className="lead-status-header">
+              <div>
+                <h2 className="lead-status-title">Change Status</h2>
+                <p className="lead-status-sub">
+                  Update status for: <strong>{statusLead.taskName}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                className="lead-status-close"
+                onClick={() => {
+                  setIsStatusModalOpen(false)
+                  setStatusLead(null)
+                }}
+              >
+                ×
+              </button>
+            </header>
+
+            <form className="lead-status-body" onSubmit={handleStatusSubmit}>
+              <div className="lead-status-current">
+                <span className="lead-status-label">Current Status</span>
+                <span className="lead-status-pill lead-status-pill--current">{statusLead.status}</span>
+              </div>
+
+              <div className="lead-status-options">
+                <span className="lead-status-label">New Status</span>
+                <div className="lead-status-grid">
+                  {LEAD_STATUSES.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`lead-status-option ${
+                        statusNewValue === value ? 'lead-status-option--active' : ''
+                      }`}
+                      onClick={() => handleStatusValueChange(value)}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lead-status-followup">
+                <span className="lead-status-label">Follow-up Date (optional)</span>
+                <input
+                  type="date"
+                  value={statusFollowUpDate}
+                  onChange={(e) => setStatusFollowUpDate(e.target.value)}
+                />
+                <p className="lead-status-hint">
+                  For <strong>Reschedule</strong> or <strong>Cancelled</strong>, the next day is suggested by default.
+                </p>
+              </div>
+
+              <div className="lead-status-reason">
+                <span className="lead-status-label">Reason for Change (optional)</span>
+                <textarea
+                  rows={3}
+                  value={statusReason}
+                  onChange={(e) => setStatusReason(e.target.value)}
+                  placeholder="Enter reason for status change..."
+                />
+              </div>
+
+              {statusError && (
+                <div className="leads-message leads-message--error lead-status-message">{statusError}</div>
+              )}
+
+              <div className="lead-status-footer">
+                <span className="lead-status-change-summary">
+                  Status will change from <strong>{statusLead.status}</strong> to{' '}
+                  <strong>{statusNewValue}</strong>
+                </span>
+                <div className="lead-status-buttons">
+                  <button
+                    type="button"
+                    className="leads-secondary-btn"
+                    onClick={() => {
+                      setIsStatusModalOpen(false)
+                      setStatusLead(null)
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="leads-primary-btn" disabled={statusSaving}>
+                    {statusSaving ? 'Updating...' : 'Update Status'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {isLeadModalOpen && selectedLead && (
         <div className="lead-modal-backdrop" role="dialog" aria-modal="true">

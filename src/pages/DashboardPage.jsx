@@ -1,6 +1,6 @@
 // DashboardPage.jsx - Main dashboard shell with sidebar navigation, theme toggle and content sections
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import CustomersPage from './CustomersPage'
 import LeadsPage from './LeadsPage'
 import TicketsPage from './TicketsPage'
@@ -472,6 +472,7 @@ function ProfileModal({ isOpen, onClose, form, onChange, onSubmit, onAvatarChang
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -499,6 +500,13 @@ function DashboardPage() {
   useEffect(() => {
     localStorage.setItem('awokta-theme', theme)
   }, [theme])
+
+  // When navigating from Customers "Create Lead" shortcut, open Leads tab directly
+  useEffect(() => {
+    if (location?.state && location.state.openLeads) {
+      setActivePage('leads')
+    }
+  }, [location])
 
   useEffect(() => {
     // Load profile when modal opens
@@ -548,6 +556,16 @@ function DashboardPage() {
 
   const handleThemeToggle = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
+
+  const renderStatusField = (label, value) => {
+    if (!value) return null
+    return (
+      <div className="dashboard-user-extra-row">
+        <span className="dashboard-user-extra-label">{label}</span>
+        <span className="dashboard-user-extra-value">{value}</span>
+      </div>
+    )
   }
 
   const handleMenuClick = (id) => {
@@ -753,14 +771,16 @@ function DashboardPage() {
               onClick={() => setIsUserMenuOpen((prev) => !prev)}
             >
               <div className="dashboard-avatar">
-                {profileForm.avatarPreview
-                  ? null
-                  : (profileForm.name || 'TU')
-                      .split(' ')
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((part) => part[0]?.toUpperCase())
-                      .join('')}
+                {profileForm.avatarPreview ? (
+                  <img src={profileForm.avatarPreview} alt={profileForm.name || 'User avatar'} />
+                ) : (
+                  (profileForm.name || 'TU')
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase())
+                    .join('')
+                )}
               </div>
               <div className="dashboard-user-meta">
                 <span className="dashboard-user-name">{profileForm.name}</span>
@@ -769,6 +789,11 @@ function DashboardPage() {
             </button>
             {isUserMenuOpen && (
               <div className="dashboard-user-dropdown">
+                <div className="dashboard-user-dropdown-header">
+                  {renderStatusField('Phone', profileForm.phone)}
+                  {renderStatusField('DOB', profileForm.dateOfBirth)}
+                  {renderStatusField('Address', profileForm.address)}
+                </div>
                 <button
                   type="button"
                   className="dashboard-user-dropdown-item"
@@ -788,7 +813,7 @@ function DashboardPage() {
                     setIsProfileModalOpen(true)
                   }}
                 >
-                  Profile
+                  Profile Settings
                 </button>
                 <button type="button" className="dashboard-user-dropdown-item">
                   Change Password

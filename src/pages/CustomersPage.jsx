@@ -1,7 +1,7 @@
 // CustomersPage.jsx - Customers listing and Add Customer flow (company / freelancer)
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiMoreVertical } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi'
 import './CustomersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -61,7 +61,6 @@ function CustomersPage() {
   const [editingCustomerId, setEditingCustomerId] = useState(null)
   const [customerDetails, setCustomerDetails] = useState(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const [menuCustomerId, setMenuCustomerId] = useState(null)
 
   const [customerType, setCustomerType] = useState('company') // company | freelancer
   const [status, setStatus] = useState('active')
@@ -744,12 +743,16 @@ function CustomersPage() {
                     <td>{customer.authorizedPersonName || '-'}</td>
                     <td>
                       {customer.documentTitle ? (
-                        <div className="customers-doc-pill">
+                        <button
+                          type="button"
+                          className="customers-doc-pill customers-doc-pill--button"
+                          onClick={() => handleViewCustomer(customer.id)}
+                        >
                           <span>{customer.documentTitle}</span>
                           {customer.documentExpiryDate && (
                             <span className="customers-doc-expiry">Expires: {customer.documentExpiryDate}</span>
                           )}
-                        </div>
+                        </button>
                       ) : (
                         '-'
                       )}
@@ -764,57 +767,31 @@ function CustomersPage() {
                       </button>
                     </td>
                     <td className="customers-actions-cell">
-                      <div className="customers-actions-wrapper">
+                      <div className="customers-actions-inline">
                         <button
                           type="button"
-                          className="customers-actions-trigger"
-                          onClick={() =>
-                            setMenuCustomerId((prev) => (prev === customer.id ? null : customer.id))
-                          }
+                          className="customers-icon-btn"
+                          title="View details"
+                          onClick={() => handleViewCustomer(customer.id)}
                         >
-                          <FiMoreVertical />
+                          <FiEye />
                         </button>
-                        {menuCustomerId === customer.id && (
-                          <div className="customers-actions-menu">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMenuCustomerId(null)
-                                handleViewCustomer(customer.id)
-                              }}
-                            >
-                              View
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMenuCustomerId(null)
-                                startEditCustomer(customer.id)
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMenuCustomerId(null)
-                                handleCreateLeadFromCustomer(customer)
-                              }}
-                            >
-                              Create Lead
-                            </button>
-                            <button
-                              type="button"
-                              className="customers-actions-item--danger"
-                              onClick={() => {
-                                setMenuCustomerId(null)
-                                handleDeleteCustomer(customer.id)
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
+                        <button
+                          type="button"
+                          className="customers-icon-btn"
+                          title="Edit customer"
+                          onClick={() => startEditCustomer(customer.id)}
+                        >
+                          <FiEdit2 />
+                        </button>
+                        <button
+                          type="button"
+                          className="customers-icon-btn customers-icon-btn--danger"
+                          title="Delete customer"
+                          onClick={() => handleDeleteCustomer(customer.id)}
+                        >
+                          <FiTrash2 />
+                        </button>
                       </div>
                     </td>
                   </tr>
