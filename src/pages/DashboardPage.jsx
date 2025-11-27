@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import CustomersPage from './CustomersPage'
 import LeadsPage from './LeadsPage'
 import TicketsPage from './TicketsPage'
+import EngineersPage from './EngineersPage'
 import {
   FiHome,
   FiUsers,
@@ -678,6 +679,10 @@ function DashboardPage() {
   const renderContent = () => {
     if (activePage === 'dashboard') {
       return <DashboardHome insightsLayout={insightsLayout} onChangeLayout={setInsightsLayout} />
+    }
+
+    if (activePage === 'engineers') {
+      return <EngineersPage />
     }
 
     if (activePage === 'customers') {
