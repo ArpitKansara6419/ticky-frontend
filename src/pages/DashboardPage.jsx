@@ -539,6 +539,46 @@ function DashboardPage() {
     return () => controller.abort()
   }, [isProfileModalOpen, profileForm.email])
 
+  // Fetch profile on mount to ensure header avatar is up to date
+  useEffect(() => {
+    const email = localStorage.getItem('userEmail')
+    if (!email) return
+
+    const controller = new AbortController()
+
+    async function fetchProfileOnMount() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/profile?email=${encodeURIComponent(email)}`, {
+          credentials: 'include',
+          signal: controller.signal,
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data && data.user) {
+          setProfileForm((prev) => ({
+            ...prev,
+            name: data.user.name || prev.name,
+            email: data.user.email || prev.email,
+            phone: data.user.phone || '',
+            dateOfBirth: data.user.dateOfBirth || '',
+            address: data.user.address || '',
+            avatarPreview: data.user.avatarUrl || '',
+          }))
+          // Update localStorage to keep sync
+          if (data.user.name) localStorage.setItem('userName', data.user.name)
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Initial profile fetch error', err)
+        }
+      }
+    }
+
+    fetchProfileOnMount()
+
+    return () => controller.abort()
+  }, [])
+
   const handleLogout = () => {
     // Clear tokens from both storages for safety
     localStorage.removeItem('authToken')
