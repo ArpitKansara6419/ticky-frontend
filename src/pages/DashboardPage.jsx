@@ -551,6 +551,11 @@ function DashboardPage() {
   }
 
   const handleMenuClick = (id) => {
+    if (id === 'profile') {
+      setIsProfileModalOpen(true)
+      if (isSettingsOpen) setIsSettingsOpen(false)
+      return
+    }
     setActivePage(id)
     if (isSettingsOpen) setIsSettingsOpen(false)
   }
@@ -652,9 +657,8 @@ function DashboardPage() {
 
   return (
     <div
-      className={`dashboard-shell ${theme === 'dark' ? 'dashboard-shell--dark' : 'dashboard-shell--light'} ${
-        isSidebarCollapsed ? 'dashboard-shell--collapsed' : ''
-      } ${activePage === 'dashboard' ? 'dashboard-shell--dashboard-green' : ''}`}
+      className={`dashboard-shell ${theme === 'dark' ? 'dashboard-shell--dark' : 'dashboard-shell--light'} ${isSidebarCollapsed ? 'dashboard-shell--collapsed' : ''
+        } ${activePage === 'dashboard' ? 'dashboard-shell--dashboard-green' : ''}`}
     >
       {/* Sidebar */}
       <aside className="dashboard-sidebar">
