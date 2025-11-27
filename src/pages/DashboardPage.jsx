@@ -424,7 +424,7 @@ function ProfileModal({ isOpen, onClose, form, onChange, onSubmit, onAvatarChang
                 <input type="file" accept="image/*" onChange={onAvatarChange} />
               </label>
             </div>
-            <p className="profile-avatar-hint">PNG or JPG up to 2MB.</p>
+            <p className="profile-avatar-hint">PNG or JPG up to 50MB.</p>
           </div>
 
           <form className="profile-form" onSubmit={onSubmit}>
