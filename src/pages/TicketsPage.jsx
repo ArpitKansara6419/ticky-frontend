@@ -33,6 +33,7 @@ function TicketsPage() {
   // Form data
   const [customers, setCustomers] = useState([])
   const [leads, setLeads] = useState([])
+  const [engineers, setEngineers] = useState([])
   const [loadingDropdowns, setLoadingDropdowns] = useState(false)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState('')
@@ -78,17 +79,17 @@ function TicketsPage() {
     () =>
       Boolean(
         customerId &&
-          taskName &&
-          taskStartDate &&
-          taskEndDate &&
-          taskTime &&
-          scopeOfWork &&
-          engineerName &&
-          apartment &&
-          addressLine1 &&
-          city &&
-          country &&
-          zipCode,
+        taskName &&
+        taskStartDate &&
+        taskEndDate &&
+        taskTime &&
+        scopeOfWork &&
+        engineerName &&
+        apartment &&
+        addressLine1 &&
+        city &&
+        country &&
+        zipCode,
       ),
     [
       customerId,
@@ -169,13 +170,15 @@ function TicketsPage() {
     try {
       setLoadingDropdowns(true)
       setError('')
-      const [customersRes, leadsRes] = await Promise.all([
+      const [customersRes, leadsRes, engineersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/leads/customers`, { credentials: 'include' }),
         fetch(`${API_BASE_URL}/leads`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/engineers`, { credentials: 'include' }),
       ])
 
       const customersData = await customersRes.json()
       const leadsData = await leadsRes.json()
+      const engineersData = await engineersRes.json()
 
       if (!customersRes.ok) {
         throw new Error(customersData.message || 'Unable to load customers')
@@ -183,9 +186,13 @@ function TicketsPage() {
       if (!leadsRes.ok) {
         throw new Error(leadsData.message || 'Unable to load leads')
       }
+      if (!engineersRes.ok) {
+        throw new Error(engineersData.message || 'Unable to load engineers')
+      }
 
       setCustomers(customersData.customers || [])
       setLeads(leadsData.leads || [])
+      setEngineers(engineersData.engineers || [])
     } catch (err) {
       console.error('Load ticket dropdowns error', err)
       setError(err.message || 'Unable to load dropdown data')
@@ -523,12 +530,18 @@ function TicketsPage() {
                 <span>
                   Select Engineer <span className="field-required">*</span>
                 </span>
-                <input
-                  type="text"
+                <select
                   value={engineerName}
                   onChange={(e) => setEngineerName(e.target.value)}
-                  placeholder="Choose an engineer..."
-                />
+                  disabled={loadingDropdowns}
+                >
+                  <option value="">Choose an engineer...</option>
+                  {engineers.map((eng) => (
+                    <option key={eng.id} value={eng.name}>
+                      {eng.name} ({eng.email})
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
           </section>
@@ -805,13 +818,13 @@ function TicketsPage() {
           <p className="summary-label">In Progress</p>
           <p className="summary-value">{summary.inProgress}</p>
         </div>
-          <div className="tickets-summary-card">
-            <p className="summary-label">Resolved</p>
-            <p className="summary-value">{summary.resolved}</p>
-          </div>
-        </section>
+        <div className="tickets-summary-card">
+          <p className="summary-label">Resolved</p>
+          <p className="summary-value">{summary.resolved}</p>
+        </div>
+      </section>
 
-        <section className="tickets-card">
+      <section className="tickets-card">
         <div className="tickets-list-toolbar">
           <div className="tickets-search">
             <input type="text" placeholder="Search tickets..." disabled />
