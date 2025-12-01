@@ -353,6 +353,9 @@ function TicketsPage() {
 
   const startEditTicket = async (ticketId) => {
     try {
+      // Load dropdown options first
+      await loadDropdowns()
+
       const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) {

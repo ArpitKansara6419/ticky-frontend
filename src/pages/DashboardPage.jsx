@@ -1,6 +1,6 @@
 // DashboardPage.jsx - Main dashboard shell with sidebar navigation, theme toggle and content sections
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import CustomersPage from './CustomersPage'
 import LeadsPage from './LeadsPage'
 import TicketsPage from './TicketsPage'
@@ -473,6 +473,7 @@ function ProfileModal({ isOpen, onClose, form, onChange, onSubmit, onAvatarChang
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -500,6 +501,14 @@ function DashboardPage() {
   useEffect(() => {
     localStorage.setItem('awokta-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    if (location.state?.openLeads) {
+      setActivePage('leads')
+      // Clear state so it doesn't persist
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   useEffect(() => {
     // Load profile when modal opens

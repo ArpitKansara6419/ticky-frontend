@@ -9,6 +9,7 @@ function EngineersPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
+    const [openMenuId, setOpenMenuId] = useState(null)
 
     useEffect(() => {
         fetchEngineers()
@@ -29,6 +30,38 @@ function EngineersPage() {
             setError(err.message || 'Unable to load engineers')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleView = (engineer) => {
+        alert(`Viewing engineer: ${engineer.name}\nEmail: ${engineer.email}\nPhone: ${engineer.phone}`)
+        setOpenMenuId(null)
+    }
+
+    const handleEdit = (engineer) => {
+        alert(`Edit functionality coming soon for: ${engineer.name}`)
+        setOpenMenuId(null)
+    }
+
+    const handleDelete = async (engineer) => {
+        if (!window.confirm(`Are you sure you want to delete ${engineer.name}?`)) {
+            setOpenMenuId(null)
+            return
+        }
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/engineers/${engineer.id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
+            if (!res.ok) {
+                throw new Error('Failed to delete engineer')
+            }
+            await fetchEngineers()
+            setOpenMenuId(null)
+        } catch (err) {
+            console.error('Delete error:', err)
+            alert('Failed to delete engineer')
         }
     }
 
@@ -124,9 +157,21 @@ function EngineersPage() {
                                         </td>
                                         <td>{new Date(eng.createdAt).toLocaleDateString()}</td>
                                         <td>
-                                            <button className="action-btn">
-                                                <FiMoreVertical />
-                                            </button>
+                                            <div style={{ position: 'relative' }}>
+                                                <button
+                                                    className="action-btn"
+                                                    onClick={() => setOpenMenuId(openMenuId === eng.id ? null : eng.id)}
+                                                >
+                                                    <FiMoreVertical />
+                                                </button>
+                                                {openMenuId === eng.id && (
+                                                    <div className="dropdown-menu">
+                                                        <button onClick={() => handleView(eng)}>View</button>
+                                                        <button onClick={() => handleEdit(eng)}>Edit</button>
+                                                        <button onClick={() => handleDelete(eng)} style={{ color: '#dc3545' }}>Delete</button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
