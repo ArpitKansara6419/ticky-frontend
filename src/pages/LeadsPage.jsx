@@ -205,8 +205,8 @@ function LeadsPage() {
         statusChangeReason: statusChangeReason || null
       }
 
-      const res = await fetch(`${API_BASE_URL}/leads/${leadId}`, {
-        method: 'PUT',
+      const res = await fetch(`${API_BASE_URL}/leads/${leadId}/status`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(payload)
