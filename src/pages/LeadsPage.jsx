@@ -1,6 +1,7 @@
 // LeadsPage.jsx - Leads list + Create / Edit Lead page
 import { useEffect, useMemo, useState } from 'react'
-import { FiMoreVertical } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
+import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText } from 'react-icons/fi'
 import './LeadsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -22,6 +23,7 @@ const CURRENCIES = [
 const LEAD_STATUSES = ['BID', 'Confirm', 'Reschedule', 'Cancelled']
 
 function LeadsPage() {
+  const navigate = useNavigate()
   const [viewMode, setViewMode] = useState('list') // list | form
 
   const [customers, setCustomers] = useState([])
@@ -40,6 +42,22 @@ function LeadsPage() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false)
   const [editingLeadId, setEditingLeadId] = useState(null)
   const [menuLeadId, setMenuLeadId] = useState(null)
+
+  // Country/Timezone states
+  const [countriesList, setCountriesList] = useState([])
+  const [loadingCountries, setLoadingCountries] = useState(false)
+  const [availableTimezones, setAvailableTimezones] = useState([])
+
+  // Status change modal states
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [statusChangeData, setStatusChangeData] = useState({
+    leadId: null,
+    leadName: '',
+    currentStatus: '',
+    newStatus: ''
+  })
+  const [followUpDate, setFollowUpDate] = useState('')
+  const [statusChangeReason, setStatusChangeReason] = useState('')
 
   // Lead Information
   const [taskName, setTaskName] = useState('')
@@ -60,7 +78,7 @@ function LeadsPage() {
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
   const [zipCode, setZipCode] = useState('')
-  const [timezone, setTimezone] = useState(TIMEZONES[0])
+  const [timezone, setTimezone] = useState('')
 
   // Pricing & Rates
   const [currency, setCurrency] = useState('EUR') // default Euro
@@ -94,7 +112,8 @@ function LeadsPage() {
     setCity('')
     setCountry('')
     setZipCode('')
-    setTimezone(TIMEZONES[0])
+    setTimezone('')
+    setAvailableTimezones([])
     setCurrency('EUR')
     setHourlyRate('')
     setFullDayRate('')
@@ -107,6 +126,100 @@ function LeadsPage() {
     setFormError('')
     setFormSuccess('')
     setEditingLeadId(null)
+  }
+
+  // Fetch countries from REST Countries API
+  const fetchCountries = async () => {
+    try {
+      setLoadingCountries(true)
+      const res = await fetch('https://restcountries.com/v3.1/all')
+      const data = await res.json()
+      const countries = data.map(c => ({
+        name: c.name.common,
+        timezones: c.timezones || [],
+        code: c.cca2
+      })).sort((a, b) => a.name.localeCompare(b.name))
+      setCountriesList(countries)
+    } catch (err) {
+      console.error('Failed to fetch countries:', err)
+    } finally {
+      setLoadingCountries(false)
+    }
+  }
+
+  // Handle country selection and auto-populate timezone
+  const handleCountryChange = (countryName) => {
+    setCountry(countryName)
+    const selected = countriesList.find(c => c.name === countryName)
+    if (selected && selected.timezones.length > 0) {
+      setAvailableTimezones(selected.timezones)
+      setTimezone(selected.timezones[0])
+    } else {
+      setAvailableTimezones([])
+      setTimezone('')
+    }
+  }
+
+  // Open status change modal
+  const openStatusChangeModal = (lead) => {
+    setStatusChangeData({
+      leadId: lead.id,
+      leadName: lead.taskName,
+      currentStatus: lead.status,
+      newStatus: lead.status
+    })
+    setFollowUpDate('')
+    setStatusChangeReason('')
+    setIsStatusModalOpen(true)
+  }
+
+  // Handle status update
+  const handleStatusUpdate = async () => {
+    try {
+      const { leadId, newStatus } = statusChangeData
+
+      if (newStatus === 'Reschedule') {
+        if (!followUpDate) {
+          alert('Please select a follow-up date for rescheduling.')
+          return
+        }
+        const today = new Date().toISOString().split('T')[0]
+        if (followUpDate < today) {
+          alert('Follow-up date cannot be in the past.')
+          return
+        }
+      }
+
+      const payload = {
+        status: newStatus,
+        followUpDate: newStatus === 'Reschedule' ? followUpDate : null,
+        statusChangeReason: statusChangeReason || null
+      }
+
+      const res = await fetch(`${API_BASE_URL}/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || 'Unable to update lead status')
+      }
+
+      setIsStatusModalOpen(false)
+      await loadLeads()
+    } catch (err) {
+      console.error('Status update error:', err)
+      alert(err.message || 'Unable to update lead status')
+    }
+  }
+
+  // Handle create ticket from confirmed lead
+  const handleCreateTicketFromLead = (lead) => {
+    localStorage.setItem('selectedLeadForTicket', JSON.stringify(lead))
+    navigate('/dashboard', { state: { openTickets: true } })
   }
 
   const loadLeads = async () => {
@@ -150,6 +263,7 @@ function LeadsPage() {
 
     fetchCustomers()
     loadLeads()
+    fetchCountries()
   }, [])
 
   useEffect(() => {
@@ -184,6 +298,12 @@ function LeadsPage() {
     try {
       if (!taskName || !customerId || !taskStartDate || !taskEndDate || !taskTime || !scopeOfWork) {
         throw new Error('Please fill all required fields.')
+      }
+
+      // Validate task start date is not in the past
+      const today = new Date().toISOString().split('T')[0]
+      if (taskStartDate < today) {
+        throw new Error('Task start date cannot be in the past.')
       }
 
       const payload = {
@@ -377,354 +497,365 @@ function LeadsPage() {
         </header>
 
         <form className="leads-form" onSubmit={handleSubmit}>
-        {/* Lead Information */}
-        <section className="leads-card">
-          <h2 className="leads-section-title">Lead Information</h2>
+          {/* Lead Information */}
+          <section className="leads-card">
+            <h2 className="leads-section-title">Lead Information</h2>
 
-          <div className="leads-grid">
-            <label className="leads-field leads-field--full">
-              <span>
-                Task Name <span className="field-required">*</span>
-              </span>
-              <input
-                type="text"
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                placeholder="Enter task name"
-              />
-            </label>
+            <div className="leads-grid">
+              <label className="leads-field leads-field--full">
+                <span>
+                  Task Name <span className="field-required">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={taskName}
+                  onChange={(e) => setTaskName(e.target.value)}
+                  placeholder="Enter task name"
+                />
+              </label>
 
-            <label className="leads-field">
-              <span>Lead Type *</span>
-              <select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
-                {LEAD_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <label className="leads-field">
+                <span>Lead Type *</span>
+                <select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
+                  {LEAD_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="leads-field">
-              <span>Client Ticket Number</span>
-              <input
-                type="text"
-                value={clientTicketNumber}
-                onChange={(e) => setClientTicketNumber(e.target.value)}
-                placeholder="Enter client ticket number (optional)"
-              />
-            </label>
+              <label className="leads-field">
+                <span>Client Ticket Number</span>
+                <input
+                  type="text"
+                  value={clientTicketNumber}
+                  onChange={(e) => setClientTicketNumber(e.target.value)}
+                  placeholder="Enter client ticket number (optional)"
+                />
+              </label>
 
-            <label className="leads-field leads-field--full">
-              <span>
-                Select Customer <span className="field-required">*</span>
-              </span>
-              <select
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-                disabled={loadingCustomers}
-              >
-                <option value="">Choose a customer...</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.accountEmail})
-                  </option>
-                ))}
-              </select>
-            </label>
+              <label className="leads-field leads-field--full">
+                <span>
+                  Select Customer <span className="field-required">*</span>
+                </span>
+                <select
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  disabled={loadingCustomers}
+                >
+                  <option value="">Choose a customer...</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.accountEmail})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          {/* Ticket Details */}
+          <section className="leads-card">
+            <h2 className="leads-section-title">Ticket Details</h2>
+
+            <div className="leads-grid">
+              <label className="leads-field">
+                <span>
+                  Task Start Date <span className="field-required">*</span>
+                </span>
+                <input
+                  type="date"
+                  value={taskStartDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setTaskStartDate(e.target.value)}
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Task End Date <span className="field-required">*</span>
+                </span>
+                <input type="date" value={taskEndDate} onChange={(e) => setTaskEndDate(e.target.value)} />
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Task Time <span className="field-required">*</span>
+                </span>
+                <input type="time" value={taskTime} onChange={(e) => setTaskTime(e.target.value)} />
+              </label>
+
+              <label className="leads-field leads-field--full">
+                <span>
+                  Scope of Work <span className="field-required">*</span>
+                </span>
+                <textarea
+                  rows={3}
+                  value={scopeOfWork}
+                  onChange={(e) => setScopeOfWork(e.target.value)}
+                  placeholder="Describe the scope of work"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Address & Location */}
+          <section className="leads-card">
+            <h2 className="leads-section-title">Address &amp; Location</h2>
+
+            <div className="leads-grid">
+              <label className="leads-field">
+                <span>
+                  Apartment <span className="field-required">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={apartment}
+                  onChange={(e) => setApartment(e.target.value)}
+                  placeholder="Enter apartment/unit number"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Address Line 1 <span className="field-required">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
+                  placeholder="Enter address line 1"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Address Line 2</span>
+                <input
+                  type="text"
+                  value={addressLine2}
+                  onChange={(e) => setAddressLine2(e.target.value)}
+                  placeholder="Enter address line 2 (optional)"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  City <span className="field-required">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Enter city"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Country <span className="field-required">*</span>
+                </span>
+                <select
+                  value={country}
+                  onChange={(e) => handleCountryChange(e.target.value)}
+                  disabled={loadingCountries}
+                >
+                  <option value="">Select a country...</option>
+                  {countriesList.map((c) => (
+                    <option key={c.code} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Zip Code <span className="field-required">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  placeholder="Enter zip code"
+                />
+              </label>
+
+              <label className="leads-field leads-field--full">
+                <span>
+                  Timezone <span className="field-required">*</span>
+                </span>
+                <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country}>
+                  <option value="">Select timezone...</option>
+                  {availableTimezones.map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone}
+                    </option>
+                  ))}
+                </select>
+                {country && availableTimezones.length === 0 && (
+                  <small style={{ color: '#999', marginTop: '4px' }}>No timezone data available for this country</small>
+                )}
+              </label>
+            </div>
+          </section>
+
+          {/* Pricing & Rates */}
+          <section className="leads-card">
+            <h2 className="leads-section-title">Pricing &amp; Rates</h2>
+
+            <div className="leads-grid">
+              <label className="leads-field">
+                <span>
+                  Select Currency <span className="field-required">*</span>
+                </span>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                  {CURRENCIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Hourly Rate <span className="field-required">*</span>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(e.target.value)}
+                  placeholder="Enter hourly rate"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Full Day Rate <span className="field-required">*</span>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fullDayRate}
+                  onChange={(e) => setFullDayRate(e.target.value)}
+                  placeholder="Enter full day rate"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Monthly Rate</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={monthlyRate}
+                  onChange={(e) => setMonthlyRate(e.target.value)}
+                  placeholder="Enter monthly rate (optional)"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Tools & Project Details */}
+          <section className="leads-card">
+            <h2 className="leads-section-title">Tools &amp; Project Details</h2>
+
+            <div className="leads-grid">
+              <label className="leads-field leads-field--full">
+                <span>Tools Required</span>
+                <textarea
+                  rows={2}
+                  value={toolsRequired}
+                  onChange={(e) => setToolsRequired(e.target.value)}
+                  placeholder="List the tools and technologies required for this project"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Agreed Rate</span>
+                <input
+                  type="text"
+                  value={agreedRate}
+                  onChange={(e) => setAgreedRate(e.target.value)}
+                  placeholder="Enter the agreed rate"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Additional Costs */}
+          <section className="leads-card">
+            <h2 className="leads-section-title">Additional Costs</h2>
+
+            <div className="leads-grid">
+              <label className="leads-field">
+                <span>Travel Cost/Day</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={travelCostPerDay}
+                  onChange={(e) => setTravelCostPerDay(e.target.value)}
+                  placeholder="Enter travel cost per day"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Total Cost</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={totalCost}
+                  onChange={(e) => setTotalCost(e.target.value)}
+                  placeholder="Enter total cost"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Lead Status */}
+          <section className="leads-card">
+            <h2 className="leads-section-title">Lead Status</h2>
+
+            <div className="lead-status-row">
+              <label className="leads-field">
+                <span>Status *</span>
+                <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                  {LEAD_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          {formError && <div className="leads-message leads-message--error">{formError}</div>}
+          {formSuccess && <div className="leads-message leads-message--success">{formSuccess}</div>}
+
+          <div className="leads-actions-footer">
+            <button
+              type="button"
+              className="leads-secondary-btn"
+              onClick={resetForm}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="leads-primary-btn" disabled={saving}>
+              {saving ? (editingLeadId ? 'Updating Lead...' : 'Creating Lead...') : editingLeadId ? 'Update Lead' : 'Create Lead'}
+            </button>
           </div>
-        </section>
-
-        {/* Ticket Details */}
-        <section className="leads-card">
-          <h2 className="leads-section-title">Ticket Details</h2>
-
-          <div className="leads-grid">
-            <label className="leads-field">
-              <span>
-                Task Start Date <span className="field-required">*</span>
-              </span>
-              <input
-                type="date"
-                value={taskStartDate}
-                onChange={(e) => setTaskStartDate(e.target.value)}
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>
-                Task End Date <span className="field-required">*</span>
-              </span>
-              <input type="date" value={taskEndDate} onChange={(e) => setTaskEndDate(e.target.value)} />
-            </label>
-
-            <label className="leads-field">
-              <span>
-                Task Time <span className="field-required">*</span>
-              </span>
-              <input type="time" value={taskTime} onChange={(e) => setTaskTime(e.target.value)} />
-            </label>
-
-            <label className="leads-field leads-field--full">
-              <span>
-                Scope of Work <span className="field-required">*</span>
-              </span>
-              <textarea
-                rows={3}
-                value={scopeOfWork}
-                onChange={(e) => setScopeOfWork(e.target.value)}
-                placeholder="Describe the scope of work"
-              />
-            </label>
-          </div>
-        </section>
-
-        {/* Address & Location */}
-        <section className="leads-card">
-          <h2 className="leads-section-title">Address &amp; Location</h2>
-
-          <div className="leads-grid">
-            <label className="leads-field">
-              <span>
-                Apartment <span className="field-required">*</span>
-              </span>
-              <input
-                type="text"
-                value={apartment}
-                onChange={(e) => setApartment(e.target.value)}
-                placeholder="Enter apartment/unit number"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>
-                Address Line 1 <span className="field-required">*</span>
-              </span>
-              <input
-                type="text"
-                value={addressLine1}
-                onChange={(e) => setAddressLine1(e.target.value)}
-                placeholder="Enter address line 1"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>Address Line 2</span>
-              <input
-                type="text"
-                value={addressLine2}
-                onChange={(e) => setAddressLine2(e.target.value)}
-                placeholder="Enter address line 2 (optional)"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>
-                City <span className="field-required">*</span>
-              </span>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Enter city"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>
-                Country <span className="field-required">*</span>
-              </span>
-              <input
-                type="text"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="Enter country"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>
-                Zip Code <span className="field-required">*</span>
-              </span>
-              <input
-                type="text"
-                value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
-                placeholder="Enter zip code"
-              />
-            </label>
-
-            <label className="leads-field leads-field--full">
-              <span>
-                Timezone <span className="field-required">*</span>
-              </span>
-              <select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-                {TIMEZONES.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {zone}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-
-        {/* Pricing & Rates */}
-        <section className="leads-card">
-          <h2 className="leads-section-title">Pricing &amp; Rates</h2>
-
-          <div className="leads-grid">
-            <label className="leads-field">
-              <span>
-                Select Currency <span className="field-required">*</span>
-              </span>
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                {CURRENCIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="leads-field">
-              <span>
-                Hourly Rate <span className="field-required">*</span>
-              </span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(e.target.value)}
-                placeholder="Enter hourly rate"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>
-                Full Day Rate <span className="field-required">*</span>
-              </span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={fullDayRate}
-                onChange={(e) => setFullDayRate(e.target.value)}
-                placeholder="Enter full day rate"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>Monthly Rate</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={monthlyRate}
-                onChange={(e) => setMonthlyRate(e.target.value)}
-                placeholder="Enter monthly rate (optional)"
-              />
-            </label>
-          </div>
-        </section>
-
-        {/* Tools & Project Details */}
-        <section className="leads-card">
-          <h2 className="leads-section-title">Tools &amp; Project Details</h2>
-
-          <div className="leads-grid">
-            <label className="leads-field leads-field--full">
-              <span>Tools Required</span>
-              <textarea
-                rows={2}
-                value={toolsRequired}
-                onChange={(e) => setToolsRequired(e.target.value)}
-                placeholder="List the tools and technologies required for this project"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>Agreed Rate</span>
-              <input
-                type="text"
-                value={agreedRate}
-                onChange={(e) => setAgreedRate(e.target.value)}
-                placeholder="Enter the agreed rate"
-              />
-            </label>
-          </div>
-        </section>
-
-        {/* Additional Costs */}
-        <section className="leads-card">
-          <h2 className="leads-section-title">Additional Costs</h2>
-
-          <div className="leads-grid">
-            <label className="leads-field">
-              <span>Travel Cost/Day</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={travelCostPerDay}
-                onChange={(e) => setTravelCostPerDay(e.target.value)}
-                placeholder="Enter travel cost per day"
-              />
-            </label>
-
-            <label className="leads-field">
-              <span>Total Cost</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={totalCost}
-                onChange={(e) => setTotalCost(e.target.value)}
-                placeholder="Enter total cost"
-              />
-            </label>
-          </div>
-        </section>
-
-        {/* Lead Status */}
-        <section className="leads-card">
-          <h2 className="leads-section-title">Lead Status</h2>
-
-          <div className="lead-status-row">
-            <label className="leads-field">
-              <span>Status *</span>
-              <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                {LEAD_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-
-        {formError && <div className="leads-message leads-message--error">{formError}</div>}
-        {formSuccess && <div className="leads-message leads-message--success">{formSuccess}</div>}
-
-        <div className="leads-actions-footer">
-          <button
-            type="button"
-            className="leads-secondary-btn"
-            onClick={resetForm}
-            disabled={saving}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="leads-primary-btn" disabled={saving}>
-            {saving ? (editingLeadId ? 'Updating Lead...' : 'Creating Lead...') : editingLeadId ? 'Update Lead' : 'Create Lead'}
-          </button>
-        </div>
-      </form>
-    </section>
-  )
- }
+        </form>
+      </section>
+    )
+  }
 
   // LIST VIEW
   return (
@@ -815,8 +946,28 @@ function LeadsPage() {
                     <td>
                       {lead.taskStartDate} - {lead.taskEndDate} {lead.taskTime}
                     </td>
-                    <td>{lead.status}</td>
-                    <td>--</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="leads-status-btn"
+                        onClick={() => openStatusChangeModal(lead)}
+                      >
+                        {lead.status}
+                      </button>
+                    </td>
+                    <td>
+                      {lead.status === 'Confirm' ? (
+                        <button
+                          type="button"
+                          className="leads-create-ticket-btn"
+                          onClick={() => handleCreateTicketFromLead(lead)}
+                        >
+                          <FiFileText /> Create Ticket
+                        </button>
+                      ) : (
+                        '--'
+                      )}
+                    </td>
                     <td className="leads-actions-cell">
                       <div className="leads-actions-wrapper">
                         <button
@@ -938,6 +1089,99 @@ function LeadsPage() {
                 <p className="lead-modal-line">Total cost: {selectedLead.totalCost}</p>
               )}
             </section>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Modal */}
+      {isStatusModalOpen && (
+        <div className="lead-modal-backdrop" onClick={() => setIsStatusModalOpen(false)}>
+          <div className="lead-modal status-modal" onClick={(e) => e.stopPropagation()}>
+            <header className="lead-modal-header">
+              <div>
+                <h2 className="lead-modal-title">Change Status</h2>
+                <p className="lead-modal-sub">Update status for: {statusChangeData.leadName}</p>
+              </div>
+              <button type="button" className="lead-modal-close" onClick={() => setIsStatusModalOpen(false)}>
+                ×
+              </button>
+            </header>
+
+            <section className="lead-modal-section">
+              <h3>Current Status</h3>
+              <p className="current-status-badge">{statusChangeData.currentStatus}</p>
+            </section>
+
+            <section className="lead-modal-section">
+              <h3>New Status</h3>
+              <div className="status-buttons-grid">
+                <button
+                  type="button"
+                  className={`status-btn status-btn-bid ${statusChangeData.newStatus === 'BID' ? 'active' : ''}`}
+                  onClick={() => setStatusChangeData({ ...statusChangeData, newStatus: 'BID' })}
+                >
+                  <FiAlertCircle /> BID
+                </button>
+                <button
+                  type="button"
+                  className={`status-btn status-btn-confirm ${statusChangeData.newStatus === 'Confirm' ? 'active' : ''}`}
+                  onClick={() => setStatusChangeData({ ...statusChangeData, newStatus: 'Confirm' })}
+                >
+                  <FiCheckCircle /> Confirmed
+                </button>
+                <button
+                  type="button"
+                  className={`status-btn status-btn-reschedule ${statusChangeData.newStatus === 'Reschedule' ? 'active' : ''}`}
+                  onClick={() => setStatusChangeData({ ...statusChangeData, newStatus: 'Reschedule' })}
+                >
+                  <FiCalendar /> Reschedule
+                </button>
+                <button
+                  type="button"
+                  className={`status-btn status-btn-cancelled ${statusChangeData.newStatus === 'Cancelled' ? 'active' : ''}`}
+                  onClick={() => setStatusChangeData({ ...statusChangeData, newStatus: 'Cancelled' })}
+                >
+                  <FiXCircle /> Cancelled
+                </button>
+              </div>
+            </section>
+
+            {statusChangeData.newStatus === 'Reschedule' && (
+              <section className="lead-modal-section">
+                <label className="leads-field">
+                  <span>Follow-up Date <span className="field-required">*</span></span>
+                  <input
+                    type="date"
+                    value={followUpDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setFollowUpDate(e.target.value)}
+                  />
+                </label>
+              </section>
+            )}
+
+            {(statusChangeData.newStatus === 'Reschedule' || statusChangeData.newStatus === 'Cancelled') && (
+              <section className="lead-modal-section">
+                <label className="leads-field">
+                  <span>Reason for Change (Optional)</span>
+                  <textarea
+                    rows={3}
+                    value={statusChangeReason}
+                    onChange={(e) => setStatusChangeReason(e.target.value)}
+                    placeholder="Enter reason for status change..."
+                  />
+                </label>
+              </section>
+            )}
+
+            <div className="lead-modal-actions">
+              <button type="button" className="leads-secondary-btn" onClick={() => setIsStatusModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="leads-primary-btn" onClick={handleStatusUpdate}>
+                Update Status
+              </button>
+            </div>
           </div>
         </div>
       )}

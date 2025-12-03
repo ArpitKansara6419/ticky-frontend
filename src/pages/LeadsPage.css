@@ -298,3 +298,126 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Status Change Button */
+.leads-status-btn {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.leads-status-btn:hover {
+  background: #e0e0e0;
+  border-color: #003366;
+}
+
+/* Create Ticket Button */
+.leads-create-ticket-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.leads-create-ticket-btn:hover {
+  background: #218838;
+}
+
+/* Status Modal */
+.status-modal {
+  max-width: 600px;
+}
+
+.current-status-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.status-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.status-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.status-btn-bid {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-btn-bid:hover,
+.status-btn-bid.active {
+  background: #ffc107;
+  border-color: #856404;
+}
+
+.status-btn-confirm {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-btn-confirm:hover,
+.status-btn-confirm.active {
+  background: #28a745;
+  color: white;
+  border-color: #155724;
+}
+
+.status-btn-reschedule {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-btn-reschedule:hover,
+.status-btn-reschedule.active {
+  background: #ff9800;
+  color: white;
+  border-color: #e65100;
+}
+
+.status-btn-cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-btn-cancelled:hover,
+.status-btn-cancelled.active {
+  background: #dc3545;
+  color: white;
+  border-color: #721c24;
+}
+
+.lead-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
