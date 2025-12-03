@@ -190,9 +190,18 @@ function LeadsPage() {
         }
       }
 
+      // Validate follow-up date if provided for Cancelled status
+      if (newStatus === 'Cancelled' && followUpDate) {
+        const today = new Date().toISOString().split('T')[0]
+        if (followUpDate < today) {
+          alert('Follow-up date cannot be in the past.')
+          return
+        }
+      }
+
       const payload = {
         status: newStatus,
-        followUpDate: newStatus === 'Reschedule' ? followUpDate : null,
+        followUpDate: (newStatus === 'Reschedule' || newStatus === 'Cancelled') ? (followUpDate || null) : null,
         statusChangeReason: statusChangeReason || null
       }
 
@@ -1146,10 +1155,16 @@ function LeadsPage() {
               </div>
             </section>
 
-            {statusChangeData.newStatus === 'Reschedule' && (
+
+            {/* Follow-up Date for Reschedule and Cancelled */}
+            {(statusChangeData.newStatus === 'Reschedule' || statusChangeData.newStatus === 'Cancelled') && (
               <section className="lead-modal-section">
                 <label className="leads-field">
-                  <span>Follow-up Date <span className="field-required">*</span></span>
+                  <span>
+                    Follow-up Date
+                    {statusChangeData.newStatus === 'Reschedule' && <span className="field-required">*</span>}
+                    {statusChangeData.newStatus === 'Cancelled' && ' (Optional)'}
+                  </span>
                   <input
                     type="date"
                     value={followUpDate}
@@ -1160,7 +1175,8 @@ function LeadsPage() {
               </section>
             )}
 
-            {(statusChangeData.newStatus === 'Reschedule' || statusChangeData.newStatus === 'Cancelled') && (
+            {/* Reason for Change - shown for all statuses */}
+            {statusChangeData.newStatus && (
               <section className="lead-modal-section">
                 <label className="leads-field">
                   <span>Reason for Change (Optional)</span>
