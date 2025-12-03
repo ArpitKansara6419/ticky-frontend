@@ -133,15 +133,34 @@ function LeadsPage() {
     try {
       setLoadingCountries(true)
       const res = await fetch('https://restcountries.com/v3.1/all')
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch countries')
+      }
+
       const data = await res.json()
+
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format')
+      }
+
       const countries = data.map(c => ({
         name: c.name.common,
         timezones: c.timezones || [],
         code: c.cca2
       })).sort((a, b) => a.name.localeCompare(b.name))
+
       setCountriesList(countries)
     } catch (err) {
       console.error('Failed to fetch countries:', err)
+      // Fallback to basic country list if API fails
+      setCountriesList([
+        { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
+        { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
+        { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
+        { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
+        { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
+      ])
     } finally {
       setLoadingCountries(false)
     }
