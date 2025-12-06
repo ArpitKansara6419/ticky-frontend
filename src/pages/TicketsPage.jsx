@@ -49,6 +49,11 @@ function TicketsPage() {
   const [scopeOfWork, setScopeOfWork] = useState('')
   const [tools, setTools] = useState('')
 
+  // Country/Timezone states
+  const [countriesList, setCountriesList] = useState([])
+  const [loadingCountries, setLoadingCountries] = useState(false)
+  const [availableTimezones, setAvailableTimezones] = useState([])
+
   const [engineerName, setEngineerName] = useState('')
 
   const [apartment, setApartment] = useState('')
@@ -57,7 +62,7 @@ function TicketsPage() {
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
   const [zipCode, setZipCode] = useState('')
-  const [timezone, setTimezone] = useState(TIMEZONES[0])
+  const [timezone, setTimezone] = useState('')
 
   const [pocDetails, setPocDetails] = useState('')
   const [reDetails, setReDetails] = useState('')
@@ -124,7 +129,8 @@ function TicketsPage() {
     setCity('')
     setCountry('')
     setZipCode('')
-    setTimezone(TIMEZONES[0])
+    setTimezone('')
+    setAvailableTimezones([])
     setPocDetails('')
     setReDetails('')
     setCallInvites('')
@@ -201,8 +207,60 @@ function TicketsPage() {
     }
   }
 
+  // Fetch countries from REST Countries API
+  const fetchCountries = async () => {
+    try {
+      setLoadingCountries(true)
+      const res = await fetch('https://restcountries.com/v3.1/all')
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch countries')
+      }
+
+      const data = await res.json()
+
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format')
+      }
+
+      const countries = data.map(c => ({
+        name: c.name.common,
+        timezones: c.timezones || [],
+        code: c.cca2
+      })).sort((a, b) => a.name.localeCompare(b.name))
+
+      setCountriesList(countries)
+    } catch (err) {
+      console.error('Failed to fetch countries:', err)
+      // Fallback to basic country list if API fails
+      setCountriesList([
+        { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
+        { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
+        { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
+        { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
+        { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
+      ])
+    } finally {
+      setLoadingCountries(false)
+    }
+  }
+
+  // Handle country selection and auto-populate timezone
+  const handleCountryChange = (countryName) => {
+    setCountry(countryName)
+    const selected = countriesList.find(c => c.name === countryName)
+    if (selected && selected.timezones.length > 0) {
+      setAvailableTimezones(selected.timezones)
+      setTimezone(selected.timezones[0])
+    } else {
+      setAvailableTimezones([])
+      setTimezone('')
+    }
+  }
+
   useEffect(() => {
     loadTickets()
+    fetchCountries()
   }, [])
 
   const filteredLeads = useMemo(
@@ -336,7 +394,12 @@ function TicketsPage() {
     setCity(ticket.city || '')
     setCountry(ticket.country || '')
     setZipCode(ticket.zipCode || '')
-    setTimezone(ticket.timezone || TIMEZONES[0])
+    setTimezone(ticket.timezone || '')
+    // Update timezone list for the selected country (if country exists in our list)
+    // NOTE: In a real scenario, we might want to wait for countriesList to load or
+    // set availableTimezones if we can match the country.
+    // For simplicity, we just set the timezone value.
+    // The country select will trigger handleCountryChange if changed.
     setPocDetails(ticket.pocDetails || '')
     setReDetails(ticket.reDetails || '')
     setCallInvites(ticket.callInvites || '')
@@ -603,12 +666,18 @@ function TicketsPage() {
                 <span>
                   Country <span className="field-required">*</span>
                 </span>
-                <input
-                  type="text"
+                <select
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  placeholder="Enter country"
-                />
+                  onChange={(e) => handleCountryChange(e.target.value)}
+                  disabled={loadingCountries}
+                >
+                  <option value="">Select a country...</option>
+                  {countriesList.map((c) => (
+                    <option key={c.code} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="tickets-field">
@@ -627,13 +696,17 @@ function TicketsPage() {
                 <span>
                   Timezone <span className="field-required">*</span>
                 </span>
-                <select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-                  {TIMEZONES.map((zone) => (
+                <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country}>
+                  <option value="">Select timezone...</option>
+                  {availableTimezones.map((zone) => (
                     <option key={zone} value={zone}>
                       {zone}
                     </option>
                   ))}
                 </select>
+                {country && availableTimezones.length === 0 && (
+                  <small style={{ color: '#999', marginTop: '4px' }}>No timezone data available for this country</small>
+                )}
               </label>
             </div>
           </section>

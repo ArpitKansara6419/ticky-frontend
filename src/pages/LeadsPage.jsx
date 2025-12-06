@@ -83,6 +83,7 @@ function LeadsPage() {
   // Pricing & Rates
   const [currency, setCurrency] = useState('EUR') // default Euro
   const [hourlyRate, setHourlyRate] = useState('')
+  const [halfDayRate, setHalfDayRate] = useState('')
   const [fullDayRate, setFullDayRate] = useState('')
   const [monthlyRate, setMonthlyRate] = useState('')
 
@@ -116,6 +117,7 @@ function LeadsPage() {
     setAvailableTimezones([])
     setCurrency('EUR')
     setHourlyRate('')
+    setHalfDayRate('')
     setFullDayRate('')
     setMonthlyRate('')
     setToolsRequired('')
@@ -352,6 +354,7 @@ function LeadsPage() {
         timezone,
         currency,
         hourlyRate: hourlyRate ? Number(hourlyRate) : null,
+        halfDayRate: halfDayRate ? Number(halfDayRate) : null,
         fullDayRate: fullDayRate ? Number(fullDayRate) : null,
         monthlyRate: monthlyRate ? Number(monthlyRate) : null,
         toolsRequired,
@@ -422,6 +425,7 @@ function LeadsPage() {
     setTimezone(lead.timezone || TIMEZONES[0])
     setCurrency(lead.currency || 'EUR')
     setHourlyRate(lead.hourlyRate != null ? String(lead.hourlyRate) : '')
+    setHalfDayRate(lead.halfDayRate != null ? String(lead.halfDayRate) : '')
     setFullDayRate(lead.fullDayRate != null ? String(lead.fullDayRate) : '')
     setMonthlyRate(lead.monthlyRate != null ? String(lead.monthlyRate) : '')
     setToolsRequired(lead.toolsRequired || '')
@@ -762,6 +766,20 @@ function LeadsPage() {
 
               <label className="leads-field">
                 <span>
+                  Half Day Rate <span className="field-required">*</span>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={halfDayRate}
+                  onChange={(e) => setHalfDayRate(e.target.value)}
+                  placeholder="Enter half day rate"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>
                   Full Day Rate <span className="field-required">*</span>
                 </span>
                 <input
@@ -833,14 +851,14 @@ function LeadsPage() {
               </label>
 
               <label className="leads-field">
-                <span>Total Cost</span>
+                <span>Tool Cost</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={totalCost}
                   onChange={(e) => setTotalCost(e.target.value)}
-                  placeholder="Enter total cost"
+                  placeholder="Enter tool cost"
                 />
               </label>
             </div>
