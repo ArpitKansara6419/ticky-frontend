@@ -774,7 +774,7 @@ function LeadsPage() {
             <div className="leads-grid">
               <label className="leads-field leads-field--full">
                 <span>
-                  Search Address (Global)
+                  Address
                 </span>
                 <AsyncSelect
                   cacheOptions
@@ -1047,8 +1047,8 @@ function LeadsPage() {
               {saving ? (editingLeadId ? 'Updating Lead...' : 'Creating Lead...') : editingLeadId ? 'Update Lead' : 'Create Lead'}
             </button>
           </div>
-        </form>
-      </section>
+        </form >
+      </section >
     )
   }
 
