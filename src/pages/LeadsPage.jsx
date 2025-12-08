@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText } from 'react-icons/fi'
+import Select from 'react-select'
+import AsyncSelect from 'react-select/async'
 import './LeadsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -21,6 +23,63 @@ const CURRENCIES = [
 ]
 
 const LEAD_STATUSES = ['BID', 'Confirm', 'Reschedule', 'Cancelled']
+
+const customSelectStyles = {
+  control: (provided) => ({
+    ...provided,
+    borderRadius: '10px',
+    border: '1px solid var(--border-subtle, #e5e7eb)',
+    padding: '1px 0',
+    fontSize: '13px',
+    boxShadow: 'none',
+    '&:hover': {
+      border: '1px solid var(--border-subtle, #9ca3af)',
+    },
+  }),
+  menu: (provided) => ({
+    ...provided,
+    zIndex: 50,
+    fontSize: '13px',
+  }),
+  option: (provided, state) => ({
+    ...provided,
+    backgroundColor: state.isSelected ? '#4f46e5' : state.isFocused ? '#e0e7ff' : null,
+    color: state.isSelected ? 'white' : 'black',
+  }),
+  input: (provided) => ({
+    ...provided,
+    margin: '0',
+    padding: '0',
+  }),
+}
+
+// Promise-aware debounce for AsyncSelect to prevent hanging loading state
+const debounce = (func, wait) => {
+  let timeout
+  let previousResolve
+
+  return (...args) => {
+    // If a request is already pending, resolve it with empty options to "cancel" it from the UI's perspective
+    if (previousResolve) {
+      previousResolve([])
+    }
+
+    return new Promise((resolve) => {
+      previousResolve = resolve
+      clearTimeout(timeout)
+      timeout = setTimeout(async () => {
+        try {
+          const result = await func(...args)
+          resolve(result)
+        } catch {
+          resolve([])
+        } finally {
+          previousResolve = null
+        }
+      }, wait)
+    })
+  }
+}
 
 function LeadsPage() {
   const navigate = useNavigate()
@@ -169,8 +228,16 @@ function LeadsPage() {
   }
 
   // Handle country selection and auto-populate timezone
-  const handleCountryChange = (countryName) => {
+  const handleCountrySelectChange = (option) => {
+    const countryName = option ? option.value : ''
     setCountry(countryName)
+
+    if (!countryName) {
+      setAvailableTimezones([])
+      setTimezone('')
+      return
+    }
+
     const selected = countriesList.find(c => c.name === countryName)
     if (selected && selected.timezones.length > 0) {
       setAvailableTimezones(selected.timezones)
@@ -180,6 +247,74 @@ function LeadsPage() {
       setTimezone('')
     }
   }
+
+  // Address Autocomplete Logic
+  const fetchAddressOptions = async (inputValue) => {
+    if (!inputValue || inputValue.length < 3) return []
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(inputValue)}&addressdetails=1&limit=5&accept-language=en`)
+      const data = await res.json()
+      return data.map(item => ({
+        value: item,
+        label: item.display_name
+      }))
+    } catch (error) {
+      console.error("Error fetching address suggestions:", error)
+      return []
+    }
+  }
+
+  // Debounced load options
+  const loadAddressOptions = debounce(fetchAddressOptions, 800)
+
+  const handleAddressSelect = (option) => {
+    if (!option) return
+    const { address } = option.value
+
+    // Auto-fill fields
+    const newApartment = address.house_number || address.flat || address.unit || ''
+    const newAddressLine1 = address.road || address.pedestrian || address.building || ''
+    const newCity = address.city || address.town || address.village || address.hamlet || address.municipality || ''
+    const newCountry = address.country || ''
+    const newZip = address.postcode || ''
+
+    setApartment(newApartment)
+    setAddressLine1(newAddressLine1)
+    setCity(newCity)
+    setZipCode(newZip)
+
+    // Handle Country & Timezone
+    // Try to match the Nominatim country with our country list
+    if (newCountry) {
+      // Check against our countriesList (Common names)
+      // Nominatim returns full country name usually e.g. "United States", "India"
+      const matchedCountry = countriesList.find(c => c.name.toLowerCase() === newCountry.toLowerCase()) ||
+        countriesList.find(c => c.code.toLowerCase() === (address.country_code || '').toLowerCase())
+
+      if (matchedCountry) {
+        setCountry(matchedCountry.name)
+        if (matchedCountry.timezones && matchedCountry.timezones.length > 0) {
+          setAvailableTimezones(matchedCountry.timezones)
+          setTimezone(matchedCountry.timezones[0])
+        } else {
+          setAvailableTimezones([])
+          setTimezone('')
+        }
+      } else {
+        setCountry(newCountry) // Fallback set naive name
+        // Can't guess timezone easily if not in our list
+      }
+    }
+  }
+
+  // Derived options for React Select
+  const countryOptions = useMemo(() => {
+    return countriesList.map(c => ({ value: c.name, label: c.name, ...c }))
+  }, [countriesList])
+
+  const timezoneOptions = useMemo(() => {
+    return availableTimezones.map(tz => ({ value: tz, label: tz }))
+  }, [availableTimezones])
 
   // Open status change modal
   const openStatusChangeModal = (lead) => {
@@ -637,6 +772,25 @@ function LeadsPage() {
             <h2 className="leads-section-title">Address &amp; Location</h2>
 
             <div className="leads-grid">
+              <label className="leads-field leads-field--full">
+                <span>
+                  Search Address (Global)
+                </span>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={loadAddressOptions}
+                  onChange={handleAddressSelect}
+                  placeholder="Type to search global address..."
+                  styles={customSelectStyles}
+                  components={{ DropdownIndicator: () => null, IndicatorSeparator: () => null }}
+                  noOptionsMessage={() => "Type address to search..."}
+                />
+                <small style={{ color: '#666', fontSize: '11px', marginTop: '2px' }}>
+                  Type an address to auto-fill details below.
+                </small>
+              </label>
+
               <label className="leads-field">
                 <span>
                   Apartment <span className="field-required">*</span>
@@ -687,18 +841,15 @@ function LeadsPage() {
                 <span>
                   Country <span className="field-required">*</span>
                 </span>
-                <select
-                  value={country}
-                  onChange={(e) => handleCountryChange(e.target.value)}
-                  disabled={loadingCountries}
-                >
-                  <option value="">Select a country...</option>
-                  {countriesList.map((c) => (
-                    <option key={c.code} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  options={countryOptions}
+                  value={countryOptions.find(c => c.value === country) || null}
+                  onChange={handleCountrySelectChange}
+                  isLoading={loadingCountries}
+                  placeholder="Select a country..."
+                  styles={customSelectStyles}
+                  isClearable
+                />
               </label>
 
               <label className="leads-field">
@@ -717,17 +868,15 @@ function LeadsPage() {
                 <span>
                   Timezone <span className="field-required">*</span>
                 </span>
-                <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country}>
-                  <option value="">Select timezone...</option>
-                  {availableTimezones.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </select>
-                {country && availableTimezones.length === 0 && (
-                  <small style={{ color: '#999', marginTop: '4px' }}>No timezone data available for this country</small>
-                )}
+                <Select
+                  options={timezoneOptions}
+                  value={timezoneOptions.find(t => t.value === timezone) || null}
+                  onChange={(opt) => setTimezone(opt ? opt.value : '')}
+                  isDisabled={!country}
+                  placeholder="Select timezone..."
+                  styles={customSelectStyles}
+                  noOptionsMessage={() => "No timezone data available"}
+                />
               </label>
             </div>
           </section>
