@@ -10,12 +10,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const LEAD_TYPES = ['Full time', 'Part time', 'One-time task']
 
-const TIMEZONES = [
-  'GB United Kingdom (UTC+00:00)',
-  'EU Europe (UTC+01:00)',
-  'US Eastern (UTC-05:00)',
-]
-
 const CURRENCIES = [
   { value: 'EUR', label: 'Euro (EUR)' },
   { value: 'USD', label: 'Dollar (USD)' },
@@ -131,7 +125,6 @@ function LeadsPage() {
   const [scopeOfWork, setScopeOfWork] = useState('')
 
   // Address & Location
-  const [apartment, setApartment] = useState('')
   const [addressLine1, setAddressLine1] = useState('')
   const [addressLine2, setAddressLine2] = useState('')
   const [city, setCity] = useState('')
@@ -166,7 +159,6 @@ function LeadsPage() {
     setTaskEndDate('')
     setTaskTime('00:00')
     setScopeOfWork('')
-    setApartment('')
     setAddressLine1('')
     setAddressLine2('')
     setCity('')
@@ -227,28 +219,7 @@ function LeadsPage() {
     }
   }
 
-  // Handle country selection and auto-populate timezone
-  const handleCountrySelectChange = (option) => {
-    const countryName = option ? option.value : ''
-    setCountry(countryName)
-
-    if (!countryName) {
-      setAvailableTimezones([])
-      setTimezone('')
-      return
-    }
-
-    const selected = countriesList.find(c => c.name === countryName)
-    if (selected && selected.timezones.length > 0) {
-      setAvailableTimezones(selected.timezones)
-      setTimezone(selected.timezones[0])
-    } else {
-      setAvailableTimezones([])
-      setTimezone('')
-    }
-  }
-
-  // Address Autocomplete Logic
+  // Address Autocomplete Logic (OpenStreetMap Nominatim)
   const fetchAddressOptions = async (inputValue) => {
     if (!inputValue || inputValue.length < 3) return []
     try {
@@ -272,13 +243,14 @@ function LeadsPage() {
     const { address } = option.value
 
     // Auto-fill fields
-    const newApartment = address.house_number || address.flat || address.unit || ''
-    const newAddressLine1 = address.road || address.pedestrian || address.building || ''
+    const houseNumber = address.house_number || ''
+    const road = address.road || address.pedestrian || ''
+    const newAddressLine1 = (houseNumber && road) ? `${houseNumber} ${road}` : (road || option.value.display_name.split(',')[0])
+
     const newCity = address.city || address.town || address.village || address.hamlet || address.municipality || ''
     const newCountry = address.country || ''
     const newZip = address.postcode || ''
 
-    setApartment(newApartment)
     setAddressLine1(newAddressLine1)
     setCity(newCity)
     setZipCode(newZip)
@@ -287,7 +259,6 @@ function LeadsPage() {
     // Try to match the Nominatim country with our country list
     if (newCountry) {
       // Check against our countriesList (Common names)
-      // Nominatim returns full country name usually e.g. "United States", "India"
       const matchedCountry = countriesList.find(c => c.name.toLowerCase() === newCountry.toLowerCase()) ||
         countriesList.find(c => c.code.toLowerCase() === (address.country_code || '').toLowerCase())
 
@@ -302,8 +273,28 @@ function LeadsPage() {
         }
       } else {
         setCountry(newCountry) // Fallback set naive name
-        // Can't guess timezone easily if not in our list
       }
+    }
+  }
+
+  // Handle country selection and auto-populate timezone
+  const handleCountrySelectChange = (option) => {
+    const countryName = option ? option.value : ''
+    setCountry(countryName)
+
+    if (!countryName) {
+      setAvailableTimezones([])
+      setTimezone('')
+      return
+    }
+
+    const selected = countriesList.find(c => c.name === countryName)
+    if (selected && selected.timezones.length > 0) {
+      setAvailableTimezones(selected.timezones)
+      setTimezone(selected.timezones[0])
+    } else {
+      setAvailableTimezones([])
+      setTimezone('')
     }
   }
 
@@ -480,7 +471,6 @@ function LeadsPage() {
         taskEndDate,
         taskTime,
         scopeOfWork,
-        apartment,
         addressLine1,
         addressLine2,
         city,
@@ -551,13 +541,12 @@ function LeadsPage() {
     setTaskEndDate(lead.taskEndDate || '')
     setTaskTime(lead.taskTime || '00:00')
     setScopeOfWork(lead.scopeOfWork || '')
-    setApartment(lead.apartment || '')
     setAddressLine1(lead.addressLine1 || '')
     setAddressLine2(lead.addressLine2 || '')
     setCity(lead.city || '')
     setCountry(lead.country || '')
     setZipCode(lead.zipCode || '')
-    setTimezone(lead.timezone || TIMEZONES[0])
+    setTimezone(lead.timezone || '')
     setCurrency(lead.currency || 'EUR')
     setHourlyRate(lead.hourlyRate != null ? String(lead.hourlyRate) : '')
     setHalfDayRate(lead.halfDayRate != null ? String(lead.halfDayRate) : '')
@@ -568,6 +557,14 @@ function LeadsPage() {
     setTravelCostPerDay(lead.travelCostPerDay != null ? String(lead.travelCostPerDay) : '')
     setTotalCost(lead.totalCost != null ? String(lead.totalCost) : '')
     setStatus(lead.status || LEAD_STATUSES[0])
+
+    // Trigger country validation to load timezones if needed
+    if (lead.country) {
+      const matched = countriesList.find(c => c.name === lead.country)
+      if (matched) {
+        setAvailableTimezones(matched.timezones || [])
+      }
+    }
   }
 
   const startEditLead = async (leadId) => {
@@ -774,7 +771,7 @@ function LeadsPage() {
             <div className="leads-grid">
               <label className="leads-field leads-field--full">
                 <span>
-                  Address
+                  Address <span className="field-required">*</span>
                 </span>
                 <AsyncSelect
                   cacheOptions
@@ -787,32 +784,8 @@ function LeadsPage() {
                   noOptionsMessage={() => "Type address to search..."}
                 />
                 <small style={{ color: '#666', fontSize: '11px', marginTop: '2px' }}>
-                  Type an address to auto-fill details below.
+                  Powered by OpenStreetMap. Type to search & auto-fill.
                 </small>
-              </label>
-
-              <label className="leads-field">
-                <span>
-                  Apartment <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={apartment}
-                  onChange={(e) => setApartment(e.target.value)}
-                  placeholder="Enter apartment/unit number"
-                />
-              </label>
-
-              <label className="leads-field">
-                <span>
-                  Address Line 1 <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
-                  placeholder="Enter address line 1"
-                />
               </label>
 
               <label className="leads-field">
@@ -1038,7 +1011,10 @@ function LeadsPage() {
             <button
               type="button"
               className="leads-secondary-btn"
-              onClick={resetForm}
+              onClick={() => {
+                resetForm()
+                setViewMode('list')
+              }}
               disabled={saving}
             >
               Cancel
@@ -1047,8 +1023,8 @@ function LeadsPage() {
               {saving ? (editingLeadId ? 'Updating Lead...' : 'Creating Lead...') : editingLeadId ? 'Update Lead' : 'Create Lead'}
             </button>
           </div>
-        </form >
-      </section >
+        </form>
+      </section>
     )
   }
 
@@ -1261,7 +1237,6 @@ function LeadsPage() {
 
             <section className="lead-modal-section">
               <h3>Address</h3>
-              <p className="lead-modal-line">Apartment: {selectedLead.apartment}</p>
               <p className="lead-modal-line">Address: {selectedLead.addressLine1}</p>
               {selectedLead.addressLine2 && (
                 <p className="lead-modal-line">Address Line 2: {selectedLead.addressLine2}</p>
@@ -1274,14 +1249,14 @@ function LeadsPage() {
             <section className="lead-modal-section">
               <h3>Pricing</h3>
               <p className="lead-modal-line">
-                Currency: {selectedLead.currency} | Hourly: {selectedLead.hourlyRate} | Full day:{' '}
+                Currency: {selectedLead.currency} | Hourly: {selectedLead.hourlyRate} | Half Day: {selectedLead.halfDayRate} | Full day:{' '}
                 {selectedLead.fullDayRate}
               </p>
               {selectedLead.monthlyRate && (
                 <p className="lead-modal-line">Monthly: {selectedLead.monthlyRate}</p>
               )}
               {selectedLead.totalCost && (
-                <p className="lead-modal-line">Total cost: {selectedLead.totalCost}</p>
+                <p className="lead-modal-line">Tool cost: {selectedLead.totalCost}</p>
               )}
             </section>
           </div>
