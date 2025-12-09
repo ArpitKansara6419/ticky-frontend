@@ -238,9 +238,10 @@ function LeadsPage() {
   // Debounced load options
   const loadAddressOptions = debounce(fetchAddressOptions, 800)
 
-  const handleAddressSelect = (option) => {
+  // Handle Address Selection
+  const handleAddressSelect = async (option) => {
     if (!option) return
-    const { address } = option.value
+    const { address, lat, lon } = option.value
 
     // Auto-fill fields
     const houseNumber = address.house_number || ''
@@ -255,24 +256,50 @@ function LeadsPage() {
     setCity(newCity)
     setZipCode(newZip)
 
-    // Handle Country & Timezone
-    // Try to match the Nominatim country with our country list
+    // 1. Identify Country
+    let matchedCountry = null
+    let countryTimezones = []
+
     if (newCountry) {
-      // Check against our countriesList (Common names)
-      const matchedCountry = countriesList.find(c => c.name.toLowerCase() === newCountry.toLowerCase()) ||
+      matchedCountry = countriesList.find(c => c.name.toLowerCase() === newCountry.toLowerCase()) ||
         countriesList.find(c => c.code.toLowerCase() === (address.country_code || '').toLowerCase())
 
       if (matchedCountry) {
         setCountry(matchedCountry.name)
-        if (matchedCountry.timezones && matchedCountry.timezones.length > 0) {
-          setAvailableTimezones(matchedCountry.timezones)
-          setTimezone(matchedCountry.timezones[0])
-        } else {
-          setAvailableTimezones([])
-          setTimezone('')
-        }
+        countryTimezones = matchedCountry.timezones || []
       } else {
-        setCountry(newCountry) // Fallback set naive name
+        setCountry(newCountry)
+      }
+    }
+
+    // 2. Fetch Precise Timezone from Coordinates (Open-Meteo)
+    let detectedTimezone = ''
+    if (lat && lon) {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`)
+        const data = await res.json()
+        if (data && data.timezone) {
+          detectedTimezone = data.timezone
+        }
+      } catch (err) {
+        console.error("Failed to fetch precise timezone:", err)
+      }
+    }
+
+    // 3. Set Timezone States
+    if (detectedTimezone) {
+      // Use the precise timezone
+      setTimezone(detectedTimezone)
+      // Ensure it's in the list of options. If country gave us a list, merge it.
+      const combinedTimezones = Array.from(new Set([detectedTimezone, ...countryTimezones]))
+      setAvailableTimezones(combinedTimezones)
+    } else {
+      // Fallback to Country defaults
+      setAvailableTimezones(countryTimezones)
+      if (countryTimezones.length > 0) {
+        setTimezone(countryTimezones[0])
+      } else {
+        setTimezone('')
       }
     }
   }

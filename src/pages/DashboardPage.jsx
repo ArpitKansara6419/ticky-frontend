@@ -507,6 +507,9 @@ function DashboardPage() {
       setActivePage('leads')
       // Clear state so it doesn't persist
       window.history.replaceState({}, document.title)
+    } else if (location.state?.openTickets) {
+      setActivePage('tickets')
+      window.history.replaceState({}, document.title)
     }
   }, [location])
 
@@ -731,7 +734,7 @@ function DashboardPage() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Main">
-          {MAIN_MENU_ITEMS.map(({ id, label, icon: Icon }) => (
+          {MAIN_MENU_ITEMS.map(({ id, label, icon: MenuIcon }) => (
             <button
               key={id}
               type="button"
@@ -739,7 +742,7 @@ function DashboardPage() {
               onClick={() => handleMenuClick(id)}
             >
               <span className="sidebar-link-icon">
-                <Icon />
+                <MenuIcon />
               </span>
               <span className="sidebar-link-label">{label}</span>
             </button>
@@ -759,7 +762,7 @@ function DashboardPage() {
             </button>
             {isSettingsOpen && (
               <div className="sidebar-settings-dropdown">
-                {SETTINGS_ITEMS.map(({ id, label, icon: Icon }) => (
+                {SETTINGS_ITEMS.map(({ id, label, icon: SettingsIcon }) => (
                   <button
                     key={id}
                     type="button"
@@ -767,7 +770,7 @@ function DashboardPage() {
                     onClick={() => handleSettingsItemClick(id)}
                   >
                     <span className="sidebar-settings-icon">
-                      <Icon />
+                      <SettingsIcon />
                     </span>
                     <span>{label}</span>
                   </button>

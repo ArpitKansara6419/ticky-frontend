@@ -456,6 +456,51 @@ function TicketsPage() {
     setSelectedTicket(null)
   }
 
+  // Check for lead data passed from Leads page via localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('selectedLeadForTicket')
+    if (!stored) return
+    try {
+      const parsedLead = JSON.parse(stored)
+      if (parsedLead && parsedLead.id) {
+        // Ensure dropdowns identify the IDs
+        loadDropdowns()
+
+        setCustomerId(String(parsedLead.customerId || ''))
+        setLeadId(String(parsedLead.id))
+        setTaskName(parsedLead.taskName || '')
+        setTaskStartDate(parsedLead.taskStartDate || '')
+        setTaskEndDate(parsedLead.taskEndDate || '')
+        setTaskTime(parsedLead.taskTime || '00:00')
+        setScopeOfWork(parsedLead.scopeOfWork || '')
+
+        // Address & Location
+        setAddressLine1(parsedLead.addressLine1 || '')
+        setAddressLine2(parsedLead.addressLine2 || '')
+        setCity(parsedLead.city || '')
+        setCountry(parsedLead.country || '')
+        setZipCode(parsedLead.zipCode || '')
+        setTimezone(parsedLead.timezone || '')
+
+        // Tools
+        setTools(parsedLead.toolsRequired || '')
+
+        // Rates
+        setCurrency(parsedLead.currency || 'USD')
+        setHourlyRate(parsedLead.hourlyRate != null ? String(parsedLead.hourlyRate) : '')
+        setHalfDayRate(parsedLead.halfDayRate != null ? String(parsedLead.halfDayRate) : '')
+        setFullDayRate(parsedLead.fullDayRate != null ? String(parsedLead.fullDayRate) : '')
+        setMonthlyRate(parsedLead.monthlyRate != null ? String(parsedLead.monthlyRate) : '')
+        setAgreedRate(parsedLead.agreedRate || '')
+
+        setViewMode('form')
+      }
+    } catch (err) {
+      console.error("Failed to parse selected lead", err)
+    }
+    localStorage.removeItem('selectedLeadForTicket')
+  }, [])
+
   if (viewMode === 'form') {
     return (
       <section className="tickets-page">
@@ -471,8 +516,8 @@ function TicketsPage() {
             ← Back
           </button>
           <div>
-            <h1 className="tickets-title">Create Ticket</h1>
-            <p className="tickets-subtitle">Generate a support ticket from a lead.</p>
+            <h1 className="tickets-title">{editingTicketId ? 'Edit Ticket' : 'Create Ticket'}</h1>
+            <p className="tickets-subtitle">{editingTicketId ? 'Update the details of the ticket.' : 'Generate a support ticket from a lead.'}</p>
           </div>
         </header>
 
@@ -847,11 +892,13 @@ function TicketsPage() {
               className="tickets-secondary-btn"
               onClick={() => {
                 resetForm()
+                setViewMode('list')
               }}
               disabled={saving}
             >
               Cancel
             </button>
+
             <button type="submit" className="tickets-primary-btn" disabled={saving || !canSubmit}>
               {saving ? 'Creating Ticket...' : 'Create Ticket'}
             </button>
