@@ -213,6 +213,7 @@ function LeadsPage() {
         { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
         { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
         { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
+        { name: 'Poland', timezones: ['Europe/Paris'], code: 'PL' },
       ])
     } finally {
       setLoadingCountries(false)
