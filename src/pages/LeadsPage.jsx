@@ -294,14 +294,17 @@ function LeadsPage() {
       const combinedTimezones = Array.from(new Set([detectedTimezone, ...countryTimezones]))
       setAvailableTimezones(combinedTimezones)
     } else {
-      // Fallback to Country defaults
-      setAvailableTimezones(countryTimezones)
+      // Fallback to Country defaults or browser default if available
       if (countryTimezones.length > 0) {
+        setAvailableTimezones(countryTimezones)
         setTimezone(countryTimezones[0])
       } else {
+        setAvailableTimezones([])
         setTimezone('')
       }
     }
+
+
   }
 
   // Handle country selection and auto-populate timezone
