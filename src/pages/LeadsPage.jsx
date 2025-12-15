@@ -1,6 +1,6 @@
 // LeadsPage.jsx - Leads list + Create / Edit Lead page
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText } from 'react-icons/fi'
 import Select from 'react-select'
 import AsyncSelect from 'react-select/async'
@@ -451,7 +451,17 @@ function LeadsPage() {
     fetchCustomers()
     loadLeads()
     fetchCountries()
+
   }, [])
+
+  const location = useLocation()
+  useEffect(() => {
+    if (location.state?.openForm) {
+      setViewMode('form')
+      // Clear state so it doesn't reopen if we navigate back
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   useEffect(() => {
     if (!leads.length) {

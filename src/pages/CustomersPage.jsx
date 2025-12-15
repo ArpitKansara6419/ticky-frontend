@@ -1,6 +1,6 @@
-// CustomersPage.jsx - Customers listing and Add Customer flow (company / freelancer)
+// CustomersPage.jsx - Customers listing and Add Customer flow
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { FiMoreVertical } from 'react-icons/fi'
 import './CustomersPage.css'
 
@@ -141,6 +141,14 @@ function CustomersPage() {
     loadCustomers('all')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const location = useLocation()
+  useEffect(() => {
+    if (location.state?.openForm) {
+      setViewMode('form')
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   const filteredCustomers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()

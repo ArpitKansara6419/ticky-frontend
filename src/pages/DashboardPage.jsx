@@ -1,4 +1,5 @@
 // DashboardPage.jsx - Main dashboard shell with sidebar navigation, theme toggle and content sections
+import favicon from '../assets/favicon.png'
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import CustomersPage from './CustomersPage'
@@ -35,6 +36,8 @@ import {
   FiPhoneCall,
   FiX,
   FiCamera,
+  FiChevronDown,
+  FiChevronUp,
 } from 'react-icons/fi'
 import './DashboardPage.css'
 
@@ -68,157 +71,193 @@ const SETTINGS_ITEMS = [
 ]
 
 function DashboardHome({ onChangeLayout, insightsLayout }) {
+  const navigate = useNavigate()
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false)
+  const [tickets, setTickets] = useState([])
+  const [loadingTickets, setLoadingTickets] = useState(false)
+
+  // Fetch tickets for calendar
+  useEffect(() => {
+    async function fetchTickets() {
+      try {
+        setLoadingTickets(true)
+        const res = await fetch(`${API_BASE_URL}/tickets`, { credentials: 'include' })
+        const data = await res.json()
+        if (res.ok) {
+          setTickets(data.tickets || [])
+        }
+      } catch (err) {
+        console.error('Failed to load tickets for dashboard', err)
+      } finally {
+        setLoadingTickets(false)
+      }
+    }
+    fetchTickets()
+  }, [])
+
+  // Helper to check if date has ticket
+  const hasTicket = (day) => {
+    // day is 1-30 just for demo. In real app, match valid dates.
+    // For demo using a simple logic or mock
+    return false
+  }
+
   return (
     <section className="dashboard-section">
-      {/* Quick actions */}
-      <div className="dashboard-card-row">
-        <h2 className="section-title">Dashboard</h2>
-        <p className="section-subtitle">Welcome back &amp; have a great day at work!</p>
-
-        <div className="quick-actions-grid">
-          <button type="button" className="quick-card quick-card--ticket">
-            <div className="quick-card-icon">
-              <FiCalendar className="quick-card-icon-svg" />
-            </div>
-            <h3 className="quick-card-title">New Ticket</h3>
-            <p className="quick-card-text">Create support ticket</p>
-          </button>
-
-          <button type="button" className="quick-card quick-card--customer">
-            <div className="quick-card-icon">
-              <FiUserPlus className="quick-card-icon-svg" />
-            </div>
-            <h3 className="quick-card-title">Add Customer</h3>
-            <p className="quick-card-text">Register new client</p>
-          </button>
-
-          <button type="button" className="quick-card quick-card--schedule">
-            <div className="quick-card-icon">
-              <FiPhoneCall className="quick-card-icon-svg" />
-            </div>
-            <h3 className="quick-card-title">Schedule Call</h3>
-            <p className="quick-card-text">Book meeting time</p>
-          </button>
-
-          <button type="button" className="quick-card quick-card--reports">
-            <div className="quick-card-icon">
-              <FiBarChart2 className="quick-card-icon-svg" />
-            </div>
-            <h3 className="quick-card-title">View Reports</h3>
-            <p className="quick-card-text">Analytics dashboard</p>
-          </button>
+      {/* 1. Header Row (Title + Filter) */}
+      <div className="dashboard-header-row">
+        <div>
+          <h2 className="section-title">Dashboard</h2>
+          <p className="section-subtitle">Welcome back &amp; have a great day at work!</p>
         </div>
-      </div>
 
-      {/* Filter by date */}
-      <div className="dashboard-card-full">
-        <div className="filter-header">
-          <div className="filter-title-block">
-            <div className="filter-icon">
-              <FiCalendar />
-            </div>
-            <div>
-              <h2 className="section-title">Filter by Date</h2>
-              <p className="section-subtitle">View metrics for specific month and year</p>
-            </div>
-          </div>
-
+        <div className="filter-block-compact">
           <div className="filter-controls">
             <label className="filter-control">
-              <span>Month</span>
               <select>
                 <option>November</option>
                 <option>October</option>
-                <option>September</option>
               </select>
             </label>
             <label className="filter-control">
-              <span>Year</span>
               <select>
                 <option>2025</option>
                 <option>2024</option>
-                <option>2023</option>
               </select>
             </label>
             <button type="button" className="filter-today-btn">
               Today
             </button>
           </div>
-        </div>
-
-        <div className="filter-footer">
-          <span>
-            Viewing data for: <strong>November 2025</strong>
-          </span>
-          <span className="filter-compare">Compared to: October 2025</span>
-        </div>
-      </div>
-
-      {/* Business overview cards */}
-      <div className="dashboard-card-row">
-        <h2 className="section-title">Business Overview</h2>
-
-        <div className="overview-grid">
-          <div className="overview-card">
-            <div className="overview-header">
-              <div className="overview-icon overview-icon--receivable">
-                <FiFileText />
-              </div>
-              <span className="overview-label">Customer Receivables</span>
-            </div>
-            <p className="overview-value">₹ 1,24,500</p>
-            <span className="overview-pill overview-pill--up">19.1%&nbsp;▲</span>
-          </div>
-
-          <div className="overview-card">
-            <div className="overview-header">
-              <div className="overview-icon overview-icon--payout">
-                <FiCreditCard />
-              </div>
-              <span className="overview-label">Engineer Payout</span>
-            </div>
-            <p className="overview-value">₹ 84,200</p>
-            <span className="overview-pill overview-pill--up">15.2%&nbsp;▲</span>
-          </div>
-
-          <div className="overview-card">
-            <div className="overview-header">
-              <div className="overview-icon overview-icon--leads">
-                <FiTarget />
-              </div>
-              <span className="overview-label">Leads</span>
-            </div>
-            <p className="overview-value">94</p>
-            <span className="overview-pill overview-pill--down">94.7%&nbsp;▼</span>
-          </div>
-
-          <div className="overview-card">
-            <div className="overview-header">
-              <div className="overview-icon overview-icon--tickets">
-                <FiTag />
-              </div>
-              <span className="overview-label">Total Tickets</span>
-            </div>
-            <p className="overview-value">218</p>
-            <span className="overview-pill overview-pill--up">33.3%&nbsp;▲</span>
+          <div className="filter-info-compact">
+            Viewing: <strong>Nov 2025</strong>
           </div>
         </div>
       </div>
 
-      {/* Ticket calendar + details placeholder (for future calendar work) */}
-      <section className="dashboard-card-split">
+      {/* 2. Quick Actions */}
+      <div className="quick-actions-grid section-spacer">
+        <button
+          type="button"
+          className="quick-card quick-card--ticket"
+          onClick={() => navigate('/dashboard', { state: { openLeads: true, openForm: true } })}
+        >
+          <div className="quick-card-icon">
+            <FiTarget className="quick-card-icon-svg" />
+          </div>
+          <h3 className="quick-card-title">New Lead</h3>
+          <p className="quick-card-text">Create new lead</p>
+        </button>
+
+        <button
+          type="button"
+          className="quick-card quick-card--customer"
+          onClick={() => navigate('/dashboard', { state: { openCustomers: true, openForm: true } })}
+        >
+          <div className="quick-card-icon">
+            <FiUserPlus className="quick-card-icon-svg" />
+          </div>
+          <h3 className="quick-card-title">Add Customer</h3>
+          <p className="quick-card-text">Register new client</p>
+        </button>
+
+        <button type="button" className="quick-card quick-card--schedule">
+          <div className="quick-card-icon">
+            <FiPhoneCall className="quick-card-icon-svg" />
+          </div>
+          <h3 className="quick-card-title">Schedule Call</h3>
+          <p className="quick-card-text">Book meeting time</p>
+        </button>
+
+        <button type="button" className="quick-card quick-card--reports">
+          <div className="quick-card-icon">
+            <FiBarChart2 className="quick-card-icon-svg" />
+          </div>
+          <h3 className="quick-card-title">View Reports</h3>
+          <p className="quick-card-text">Analytics dashboard</p>
+        </button>
+      </div>
+
+      {/* 3. Business Overview Accordion */}
+      <div className="dashboard-accordion section-spacer">
+        <button
+          type="button"
+          className="dashboard-accordion-header"
+          onClick={() => setIsOverviewOpen(prev => !prev)}
+        >
+          <div className="dashboard-accordion-title-grp">
+            <FiBarChart2 className="dashboard-accordion-icon" />
+            <h2 className="section-title">Business Overview</h2>
+          </div>
+          <div className="dashboard-accordion-chevron">
+            {isOverviewOpen ? <FiChevronUp /> : <FiChevronDown />}
+          </div>
+        </button>
+
+        {isOverviewOpen && (
+          <div className="dashboard-accordion-content">
+            <div className="overview-grid">
+              <div className="overview-card">
+                <div className="overview-header">
+                  <div className="overview-icon overview-icon--receivable">
+                    <FiFileText />
+                  </div>
+                  <span className="overview-label">Customer Receivables</span>
+                </div>
+                <p className="overview-value">₹ 1,24,500</p>
+                <span className="overview-pill overview-pill--up">19.1%&nbsp;▲</span>
+              </div>
+
+              <div className="overview-card">
+                <div className="overview-header">
+                  <div className="overview-icon overview-icon--payout">
+                    <FiCreditCard />
+                  </div>
+                  <span className="overview-label">Engineer Payout</span>
+                </div>
+                <p className="overview-value">₹ 84,200</p>
+                <span className="overview-pill overview-pill--up">15.2%&nbsp;▲</span>
+              </div>
+
+              <div className="overview-card">
+                <div className="overview-header">
+                  <div className="overview-icon overview-icon--leads">
+                    <FiTarget />
+                  </div>
+                  <span className="overview-label">Leads</span>
+                </div>
+                <p className="overview-value">94</p>
+                <span className="overview-pill overview-pill--down">94.7%&nbsp;▼</span>
+              </div>
+
+              <div className="overview-card">
+                <div className="overview-header">
+                  <div className="overview-icon overview-icon--tickets">
+                    <FiTag />
+                  </div>
+                  <span className="overview-label">Total Tickets</span>
+                </div>
+                <p className="overview-value">218</p>
+                <span className="overview-pill overview-pill--up">33.3%&nbsp;▲</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 4. Ticket Calendar */}
+      <section className="dashboard-card-split section-spacer">
         <div className="ticket-calendar-card">
           <header className="ticket-calendar-header">
             <div>
               <h2 className="section-title">Ticket Calendar</h2>
-              <p className="section-subtitle">View and manage tickets by date. Click on a date to see details.</p>
+              <p className="section-subtitle">View and manage tickets by date.</p>
             </div>
             <button type="button" className="ticket-today-btn">
               Today
             </button>
           </header>
           <div className="ticket-calendar-body">
-            {/* Calendar grid placeholder; can be wired later */}
             <div className="ticket-calendar-month">November 2025</div>
             <div className="ticket-calendar-grid">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
@@ -226,12 +265,12 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
                   {day}
                 </div>
               ))}
+              {/* Simple 30 day grid for demo */}
               {Array.from({ length: 30 }).map((_, index) => (
                 <button
-                  // 30 days for sample grid
                   key={index}
                   type="button"
-                  className={`ticket-calendar-cell ${index + 1 === 20 ? 'ticket-calendar-cell--active' : ''}`}
+                  className={`ticket-calendar-cell`}
                 >
                   <span>{index + 1}</span>
                 </button>
@@ -241,58 +280,36 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
         </div>
         <aside className="ticket-details-card">
           <h3 className="section-title">Ticket Details</h3>
-          <p className="ticket-details-empty">No tickets selected. Click on a date or ticket to view details.</p>
+          <p className="ticket-details-empty">No tickets selected.</p>
+          {/* Customization as requested: add more useful info */}
           <div className="ticket-summary">
             <div className="ticket-summary-item">
               <span className="ticket-summary-label">Total Tickets</span>
-              <span className="ticket-summary-value">6</span>
+              <span className="ticket-summary-value">{tickets.length}</span>
             </div>
             <div className="ticket-summary-item">
-              <span className="ticket-summary-label">Active Days</span>
-              <span className="ticket-summary-value">6</span>
+              <span className="ticket-summary-label">Pending</span>
+              <span className="ticket-summary-value">{tickets.filter(t => t.status !== 'Closed').length}</span>
             </div>
           </div>
         </aside>
       </section>
 
-      {/* Insights/layout section under calendar (50/50 or full width) */}
+      {/* Insights */}
       <section className="dashboard-card-row">
+        {/* ... existing insights ... */}
         <div className="section-layout-header">
           <div>
             <h2 className="section-title">Workspace Insights</h2>
-            <p className="section-subtitle">Flexible layout for analytics or custom widgets (future expansion).</p>
           </div>
-          <div className="layout-toggle" aria-label="Change layout">
-            <button
-              type="button"
-              className={`layout-toggle-btn ${insightsLayout === 'split' ? 'layout-toggle-btn--active' : ''}`}
-              onClick={() => onChangeLayout('split')}
-            >
-              <FiColumns />
-            </button>
-            <button
-              type="button"
-              className={`layout-toggle-btn ${insightsLayout === 'full' ? 'layout-toggle-btn--active' : ''}`}
-              onClick={() => onChangeLayout('full')}
-            >
-              <FiMaximize2 />
-            </button>
-          </div>
+          {/* ... */}
         </div>
-
         <div className={`insights-layout insights-layout--${insightsLayout}`}>
           <div className="insights-card">
             <h3 className="insights-title">Pipeline Snapshot</h3>
-            <p className="insights-text">
-              This area can later host charts or KPI widgets. For now it is structured to work in both split and full-width
-              layouts.
-            </p>
           </div>
           <div className="insights-card">
             <h3 className="insights-title">Capacity & Utilisation</h3>
-            <p className="insights-text">
-              Use this panel for capacity planning, utilisation graphs or any custom content you want to plug in.
-            </p>
           </div>
         </div>
       </section>
@@ -477,20 +494,47 @@ function DashboardPage() {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+
+  // Theme state
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+
+  // Last Login logic
+  const [lastLoginDisplay, setLastLoginDisplay] = useState('just now')
+
+  useEffect(() => {
+    const previous = localStorage.getItem('lastLoginTimestamp')
+    if (previous) {
+      const date = new Date(parseInt(previous, 10))
+      const formatted = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+        ' | ' + date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+      setLastLoginDisplay(formatted)
+    }
+    localStorage.setItem('lastLoginTimestamp', Date.now().toString())
+  }, [])
+
+  const handleThemeToggle = () => {
+    setTheme((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light'
+      localStorage.setItem('theme', next)
+      return next
+    })
+  }
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
-  const [theme, setTheme] = useState(() => localStorage.getItem('awokta-theme') || 'light')
   const [insightsLayout, setInsightsLayout] = useState('split')
   const [profileForm, setProfileForm] = useState(() => {
     const storedName = localStorage.getItem('userName') || 'Test User'
     const storedEmail = localStorage.getItem('userEmail') || 'test@example.com'
+    const storedPhone = localStorage.getItem('userPhone') || ''
+    const storedDob = localStorage.getItem('userDob') || ''
+    const storedAddress = localStorage.getItem('userAddress') || ''
 
     return {
       name: storedName,
       email: storedEmail,
-      phone: '',
-      dateOfBirth: '',
-      address: '',
+      phone: storedPhone,
+      dateOfBirth: storedDob,
+      address: storedAddress,
       avatarPreview: '',
     }
   })
@@ -498,9 +542,7 @@ function DashboardPage() {
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
 
-  useEffect(() => {
-    localStorage.setItem('awokta-theme', theme)
-  }, [theme])
+
 
   useEffect(() => {
     if (location.state?.openLeads) {
@@ -579,6 +621,9 @@ function DashboardPage() {
           }))
           // Update localStorage to keep sync
           if (data.user.name) localStorage.setItem('userName', data.user.name)
+          if (data.user.phone) localStorage.setItem('userPhone', data.user.phone)
+          if (data.user.dateOfBirth) localStorage.setItem('userDob', data.user.dateOfBirth)
+          if (data.user.address) localStorage.setItem('userAddress', data.user.address)
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
@@ -599,9 +644,7 @@ function DashboardPage() {
     navigate('/')
   }
 
-  const handleThemeToggle = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
-  }
+
 
   const handleMenuClick = (id) => {
     if (id === 'profile') {
@@ -657,12 +700,17 @@ function DashboardPage() {
       } else {
         const updatedUser = data.user || {
           name: profileForm.name,
-          email: profileForm.email,
-          phone: profileForm.phone,
           dateOfBirth: profileForm.dateOfBirth,
-          address: profileForm.address,
-          avatarUrl: profileForm.avatarPreview,
+          phone: profileForm.phone,
+          address: profileForm.address
         }
+
+        // Persist to local storage explicitly to survive refresh manually in case backend fails
+        localStorage.setItem('userName', updatedUser.name || profileForm.name)
+        localStorage.setItem('userPhone', updatedUser.phone || profileForm.phone)
+        localStorage.setItem('userDob', updatedUser.dateOfBirth || profileForm.dateOfBirth)
+        localStorage.setItem('userAddress', updatedUser.address || profileForm.address)
+
 
         setProfileForm((prev) => ({
           ...prev,
@@ -715,12 +763,13 @@ function DashboardPage() {
   return (
     <div
       className={`dashboard-shell ${theme === 'dark' ? 'dashboard-shell--dark' : 'dashboard-shell--light'} ${isSidebarCollapsed ? 'dashboard-shell--collapsed' : ''
-        } ${activePage === 'dashboard' ? 'dashboard-shell--dashboard-green' : ''}`}
+        } ${activePage === 'dashboard' && theme === 'light' ? 'dashboard-shell--dashboard-green' : ''}`}
     >
       {/* Sidebar */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-top">
           <div className="sidebar-logo" aria-label="Awokta logo">
+            <img src={favicon} alt="Logo" className="sidebar-logo-img" />
             <span className="sidebar-logo-text">awokta</span>
           </div>
           <button
@@ -796,7 +845,7 @@ function DashboardPage() {
         <header className="dashboard-header">
           <div>
             <h1 className="dashboard-heading">Welcome back &amp; have a great day at work!</h1>
-            <p className="dashboard-subheading">Last login: just now &nbsp;|&nbsp; 21:51 (UTC)</p>
+            <p className="dashboard-subheading">Last login: {lastLoginDisplay}</p>
           </div>
 
           <div className="dashboard-user">
@@ -836,24 +885,20 @@ function DashboardPage() {
                   type="button"
                   className="dashboard-user-dropdown-item"
                   onClick={() => {
-                    setActivePage('dashboard')
-                    setIsUserMenuOpen(false)
-                    setIsProfileModalOpen(false)
-                  }}
-                >
-                  Dashboard
-                </button>
-                <button
-                  type="button"
-                  className="dashboard-user-dropdown-item"
-                  onClick={() => {
                     setIsUserMenuOpen(false)
                     setIsProfileModalOpen(true)
                   }}
                 >
                   Profile
                 </button>
-                <button type="button" className="dashboard-user-dropdown-item">
+                <button
+                  type="button"
+                  className="dashboard-user-dropdown-item"
+                  onClick={() => {
+                    alert('Change Password feature coming soon')
+                    setIsUserMenuOpen(false)
+                  }}
+                >
                   Change Password
                 </button>
                 <button
