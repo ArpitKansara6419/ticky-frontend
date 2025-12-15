@@ -78,6 +78,8 @@
   border: 1px solid var(--border-subtle);
   padding: 6px 12px;
   font-size: 13px;
+  background: var(--card-bg);
+  color: var(--text-main);
 }
 
 .tickets-filter-row {
@@ -91,6 +93,8 @@
   border: 1px solid var(--border-subtle);
   padding: 4px 18px 4px 10px;
   font-size: 12px;
+  background: var(--card-bg);
+  color: var(--text-main);
 }
 
 .tickets-table-wrapper {
@@ -104,7 +108,8 @@
 }
 
 .tickets-table thead tr {
-  background: #f3f4ff;
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-main);
 }
 
 .tickets-table th,
@@ -173,8 +178,13 @@
   border-radius: 999px;
   border: 1px solid var(--border-subtle);
   background: transparent;
-  padding: 6px 12px;
-  margin-right: 10px;
+  color: var(--text-main);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
   cursor: pointer;
 }
 
@@ -269,9 +279,12 @@
 .ticket-modal {
   width: 560px;
   max-width: 95vw;
-  background: #ffffff;
+  background: var(--card-bg);
+  /* Fixed white background issue */
+  color: var(--text-main);
   border-radius: 16px;
   padding: 18px 20px 16px;
+  border: 1px solid var(--border-subtle);
 }
 
 .ticket-modal-header {
@@ -297,6 +310,7 @@
   background: none;
   font-size: 20px;
   cursor: pointer;
+  color: var(--text-muted);
 }
 
 .ticket-modal-section {

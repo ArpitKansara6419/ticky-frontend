@@ -1,7 +1,7 @@
 // CustomersPage.jsx - Customers listing and Add Customer flow
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiMoreVertical } from 'react-icons/fi'
+import { FiMoreVertical, FiArrowLeft } from 'react-icons/fi'
 import './CustomersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -384,8 +384,8 @@ function CustomersPage() {
     return (
       <section className="customers-page">
         <header className="customers-header">
-          <button type="button" className="customers-back" onClick={() => setViewMode('list')}>
-            ← Back
+          <button type="button" className="customers-back" onClick={() => setViewMode('list')} aria-label="Go back">
+            <FiArrowLeft />
           </button>
           <div>
             <h1 className="customers-title">Add Customer</h1>

@@ -85,6 +85,8 @@
   border: 1px solid var(--border-subtle);
   padding: 6px 12px;
   font-size: 13px;
+  background: var(--card-bg);
+  color: var(--text-main);
 }
 
 .customers-filter {
@@ -112,7 +114,8 @@
 }
 
 .customers-table thead tr {
-  background: #f3f4ff;
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-main);
 }
 
 .customers-table th,
@@ -183,8 +186,13 @@
   border-radius: 999px;
   border: 1px solid var(--border-subtle);
   background: transparent;
-  padding: 6px 12px;
-  margin-right: 10px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  color: var(--text-main);
   cursor: pointer;
 }
 
@@ -269,7 +277,8 @@
   padding: 5px 14px;
   font-size: 12px;
   cursor: pointer;
-  background: #ffffff;
+  background: var(--card-bg);
+  color: var(--text-main);
 }
 
 .status-pill--active {
@@ -362,7 +371,7 @@
   top: 100%;
   right: 0;
   margin-top: 4px;
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
   min-width: 140px;
@@ -379,10 +388,11 @@
   font-size: 12px;
   text-align: left;
   cursor: pointer;
+  color: var(--text-main);
 }
 
 .customers-actions-menu button:hover {
-  background: #f3f4ff;
+  background: rgba(148, 163, 184, 0.1);
 }
 
 .customers-actions-item--danger {
@@ -415,9 +425,11 @@
 .customer-modal {
   width: 560px;
   max-width: 95vw;
-  background: #ffffff;
+  background: var(--card-bg);
+  color: var(--text-main);
   border-radius: 16px;
   padding: 18px 20px 16px;
+  border: 1px solid var(--border-subtle);
 }
 
 .customer-modal-header {
@@ -460,6 +472,7 @@
   background: none;
   font-size: 20px;
   cursor: pointer;
+  color: var(--text-muted);
 }
 
 .customer-modal-section {

@@ -685,13 +685,14 @@ function LeadsPage() {
         <header className="leads-header">
           <button
             type="button"
-            className="leads-secondary-btn"
+            className="leads-back"
             onClick={() => {
               resetForm()
               setViewMode('list')
             }}
+            aria-label="Go back"
           >
-            ← Back
+            <FiArrowLeft />
           </button>
           <div>
             <h1 className="leads-title">{editingLeadId ? 'Edit Lead' : 'Create New Lead'}</h1>
