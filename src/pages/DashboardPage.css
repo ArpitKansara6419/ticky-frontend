@@ -31,12 +31,22 @@
 }
 
 .dashboard-shell--dark {
-  --sidebar-bg: linear-gradient(180deg, #0b1723 0%, #020617 100%);
-  --page-bg: #020617;
-  --card-bg: #020617;
-  --border-subtle: #1e293b;
-  --text-main: #e5e7eb;
+  /* Professional Dark Theme (Slate/grayish blue tone) */
+  --sidebar-bg: #111827;
+  /* Gray 900 */
+  --page-bg: #030712;
+  /* Gray 950 - Near black but rich */
+  --card-bg: #1f2937;
+  /* Gray 800 */
+  --border-subtle: #374151;
+  /* Gray 700 */
+  --text-main: #f9fafb;
+  /* Gray 50 */
   --text-muted: #9ca3af;
+  /* Gray 400 */
+  --sidebar-active: #ffffff;
+  --sidebar-text: #d1d5db;
+  /* Gray 300 */
 }
 
 /* When Dashboard menu is active – use subtle green background */

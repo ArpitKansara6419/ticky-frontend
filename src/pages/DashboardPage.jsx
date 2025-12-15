@@ -171,12 +171,42 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
         </div>
 
         <div className="filter-block-compact">
-          {/* Reusing existing filter structure, but could be connected to real date state if requested. Keeping simple for now as per instructions. */}
           <div className="filter-controls">
-            {/* Use styles suitable for dark mode now */}
-            <div className="filter-info-compact" style={{ marginRight: '10px', fontSize: '13px' }}>
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
-            </div>
+            <label className="filter-control">
+              <select
+                value={currentDate.getMonth()}
+                onChange={(e) => {
+                  const newMonth = parseInt(e.target.value, 10)
+                  setCurrentDate(new Date(currentDate.getFullYear(), newMonth, 1))
+                }}
+              >
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <option key={i} value={i}>
+                    {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="filter-control">
+              <select
+                value={currentDate.getFullYear()}
+                onChange={(e) => {
+                  const newYear = parseInt(e.target.value, 10)
+                  setCurrentDate(new Date(newYear, currentDate.getMonth(), 1))
+                }}
+              >
+                {Array.from({ length: 5 }).map((_, i) => {
+                  const y = new Date().getFullYear() - 2 + i // Show 2 years back to 2 years forward
+                  return <option key={y} value={y}>{y}</option>
+                })}
+              </select>
+            </label>
+            <button type="button" className="filter-today-btn" onClick={goToToday}>
+              Today
+            </button>
+          </div>
+          <div className="filter-info-compact">
+            Viewing: <strong>{formatMonthYear(currentDate)}</strong>
           </div>
         </div>
       </div>
