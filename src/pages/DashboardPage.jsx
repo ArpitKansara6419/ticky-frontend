@@ -38,6 +38,8 @@ import {
   FiCamera,
   FiChevronDown,
   FiChevronUp,
+  FiChevronLeft,
+  FiChevronRight,
 } from 'react-icons/fi'
 import './DashboardPage.css'
 
@@ -73,10 +75,62 @@ const SETTINGS_ITEMS = [
 function DashboardHome({ onChangeLayout, insightsLayout }) {
   const navigate = useNavigate()
   const [isOverviewOpen, setIsOverviewOpen] = useState(false)
+
+  // Real-time Calendar State
+  const [currentDate, setCurrentDate] = useState(new Date()) // tracks the mont/year view
+  const [selectedDate, setSelectedDate] = useState(new Date()) // tracks clicked date
+
   const [tickets, setTickets] = useState([])
   const [loadingTickets, setLoadingTickets] = useState(false)
 
-  // Fetch tickets for calendar
+  // Helpers for Calendar
+  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate()
+  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay() // 0 = Sun
+
+  const generateCalendarDays = () => {
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+    const daysInMonth = getDaysInMonth(year, month)
+    const startDay = getFirstDayOfMonth(year, month)
+
+    const days = []
+    // Add empty slots for previous month
+    for (let i = 0; i < startDay; i++) {
+      days.push(null)
+    }
+    // Add actual days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i))
+    }
+    return days
+  }
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+  }
+
+  const goToToday = () => {
+    const now = new Date()
+    setCurrentDate(now)
+    setSelectedDate(now)
+  }
+
+  const isSameDay = (d1, d2) => {
+    if (!d1 || !d2) return false
+    return d1.getDate() === d2.getDate() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getFullYear() === d2.getFullYear()
+  }
+
+  const formatMonthYear = (date) => {
+    return date.toLocaleString('default', { month: 'long', year: 'numeric' })
+  }
+
+  // Fetch tickets
   useEffect(() => {
     async function fetchTickets() {
       try {
@@ -95,12 +149,17 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
     fetchTickets()
   }, [])
 
-  // Helper to check if date has ticket
-  const hasTicket = (day) => {
-    // day is 1-30 just for demo. In real app, match valid dates.
-    // For demo using a simple logic or mock
-    return false
+  // Filter tickets for a specific date (based on createdAt)
+  const getTicketsForDate = (date) => {
+    if (!date) return []
+    return tickets.filter(t => {
+      const tDate = new Date(t.createdAt)
+      return isSameDay(tDate, date)
+    })
   }
+
+  const selectedTickets = getTicketsForDate(selectedDate)
+  const calendarDays = generateCalendarDays()
 
   return (
     <section className="dashboard-section">
@@ -112,25 +171,12 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
         </div>
 
         <div className="filter-block-compact">
+          {/* Reusing existing filter structure, but could be connected to real date state if requested. Keeping simple for now as per instructions. */}
           <div className="filter-controls">
-            <label className="filter-control">
-              <select>
-                <option>November</option>
-                <option>October</option>
-              </select>
-            </label>
-            <label className="filter-control">
-              <select>
-                <option>2025</option>
-                <option>2024</option>
-              </select>
-            </label>
-            <button type="button" className="filter-today-btn">
-              Today
-            </button>
-          </div>
-          <div className="filter-info-compact">
-            Viewing: <strong>Nov 2025</strong>
+            {/* Use styles suitable for dark mode now */}
+            <div className="filter-info-compact" style={{ marginRight: '10px', fontSize: '13px' }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
+            </div>
           </div>
         </div>
       </div>
@@ -251,45 +297,88 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
           <header className="ticket-calendar-header">
             <div>
               <h2 className="section-title">Ticket Calendar</h2>
-              <p className="section-subtitle">View and manage tickets by date.</p>
+              <p className="section-subtitle">Manage tickets by date.</p>
             </div>
-            <button type="button" className="ticket-today-btn">
-              Today
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button type="button" className="ticket-today-btn" onClick={goToPreviousMonth} aria-label="Previous Month">
+                <FiChevronLeft />
+              </button>
+              <button type="button" className="ticket-today-btn" onClick={goToToday}>
+                Today
+              </button>
+              <button type="button" className="ticket-today-btn" onClick={goToNextMonth} aria-label="Next Month">
+                <FiChevronRight />
+              </button>
+            </div>
           </header>
           <div className="ticket-calendar-body">
-            <div className="ticket-calendar-month">November 2025</div>
+            <div className="ticket-calendar-month">{formatMonthYear(currentDate)}</div>
             <div className="ticket-calendar-grid">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                 <div key={day} className="ticket-calendar-day-header">
                   {day}
                 </div>
               ))}
-              {/* Simple 30 day grid for demo */}
-              {Array.from({ length: 30 }).map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className={`ticket-calendar-cell`}
-                >
-                  <span>{index + 1}</span>
-                </button>
-              ))}
+
+              {calendarDays.map((date, index) => {
+                if (!date) return <div key={`empty-${index}`} className="ticket-calendar-cell ticket-calendar-cell--empty" />
+
+                const hasTickets = getTicketsForDate(date).length > 0
+                const isActive = isSameDay(date, selectedDate)
+                const isToday = isSameDay(date, new Date())
+                const ticketCount = getTicketsForDate(date).length
+
+                return (
+                  <button
+                    key={date.toISOString()}
+                    type="button"
+                    className={`ticket-calendar-cell ${isActive ? 'ticket-calendar-cell--active' : ''} ${hasTickets ? 'ticket-calendar-cell--has-ticket' : ''}`}
+                    onClick={() => setSelectedDate(date)}
+                    style={isToday ? { fontWeight: 'bold', color: '#7c3aed' } : {}}
+                  >
+                    <span>{date.getDate()}</span>
+                    {hasTickets && (
+                      <span className="ticket-count-badge">{ticketCount}</span>
+                      // Or simple dot: <span className="ticket-indicator-dot" />
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
         <aside className="ticket-details-card">
-          <h3 className="section-title">Ticket Details</h3>
-          <p className="ticket-details-empty">No tickets selected.</p>
-          {/* Customization as requested: add more useful info */}
-          <div className="ticket-summary">
-            <div className="ticket-summary-item">
-              <span className="ticket-summary-label">Total Tickets</span>
-              <span className="ticket-summary-value">{tickets.length}</span>
+          <h3 className="section-title">
+            {selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </h3>
+
+          {selectedTickets.length === 0 ? (
+            <div className="ticket-details-empty">
+              <p>No tickets generated on this date.</p>
             </div>
+          ) : (
+            <div className="ticket-list-mini">
+              {selectedTickets.map(ticket => (
+                <div key={ticket.id} className="ticket-mini-item">
+                  <div className="ticket-mini-header">
+                    <span className="ticket-mini-id">#{ticket.ticketUniqueId || ticket.id}</span>
+                    <span className={`ticket-mini-status status-${ticket.status?.toLowerCase()}`}>{ticket.status}</span>
+                  </div>
+                  <p className="ticket-mini-subject">{ticket.subject || 'No Subject'}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="ticket-summary" style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)', paddingTop: '15px' }}>
             <div className="ticket-summary-item">
-              <span className="ticket-summary-label">Pending</span>
-              <span className="ticket-summary-value">{tickets.filter(t => t.status !== 'Closed').length}</span>
+              <span className="ticket-summary-label">Total Tickets (Month)</span>
+              <span className="ticket-summary-value">
+                {tickets.filter(t => {
+                  const d = new Date(t.createdAt)
+                  return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()
+                }).length}
+              </span>
             </div>
           </div>
         </aside>
