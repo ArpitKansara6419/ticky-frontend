@@ -1,7 +1,7 @@
 // LeadsPage.jsx - Leads list + Create / Edit Lead page
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText } from 'react-icons/fi'
+import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft } from 'react-icons/fi'
 import Select from 'react-select'
 import AsyncSelect from 'react-select/async'
 import './LeadsPage.css'

@@ -150,11 +150,13 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
   }, [])
 
   // Filter tickets for a specific date (based on createdAt)
+  // Filter tickets for a specific date (based on createdAt)
   const getTicketsForDate = (date) => {
     if (!date) return []
     return tickets.filter(t => {
+      if (!t.createdAt) return false
       const tDate = new Date(t.createdAt)
-      return isSameDay(tDate, date)
+      return tDate.toDateString() === date.toDateString()
     })
   }
 
@@ -695,10 +697,10 @@ function DashboardPage() {
             ...prev,
             name: data.user.name || prev.name,
             email: data.user.email || prev.email,
-            phone: data.user.phone || '',
-            dateOfBirth: data.user.dateOfBirth || '',
-            address: data.user.address || '',
-            avatarPreview: data.user.avatarUrl || '',
+            phone: data.user.phone || prev.phone || '',
+            dateOfBirth: data.user.dateOfBirth || prev.dateOfBirth || '',
+            address: data.user.address || prev.address || '',
+            avatarPreview: data.user.avatarUrl || prev.avatarPreview || '',
           }))
         }
       } catch (err) {
@@ -733,10 +735,10 @@ function DashboardPage() {
             ...prev,
             name: data.user.name || prev.name,
             email: data.user.email || prev.email,
-            phone: data.user.phone || '',
-            dateOfBirth: data.user.dateOfBirth || '',
-            address: data.user.address || '',
-            avatarPreview: data.user.avatarUrl || '',
+            phone: data.user.phone || prev.phone || '',
+            dateOfBirth: data.user.dateOfBirth || prev.dateOfBirth || '',
+            address: data.user.address || prev.address || '',
+            avatarPreview: data.user.avatarUrl || prev.avatarPreview || '',
           }))
           // Update localStorage to keep sync
           if (data.user.name) localStorage.setItem('userName', data.user.name)

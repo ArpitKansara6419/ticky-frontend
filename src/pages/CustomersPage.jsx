@@ -15,14 +15,10 @@ const PAGE_SIZE = 10
 async function uploadToCloudinary(file) {
   if (!file) return ''
 
-  // If Cloudinary config is missing, fall back to base64 string (local only)
+  // If Cloudinary config is missing, do NOT fall back to base64.
+  // Base64 strings are too large for most backends and cause 413 Payload Too Large errors.
   if (!CLOUDINARY_UPLOAD_URL) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result || '')
-      reader.onerror = (err) => reject(err)
-      reader.readAsDataURL(file)
-    })
+    throw new Error('Cloudinary configuration is missing. Cannot upload image.')
   }
 
   const formData = new FormData()
