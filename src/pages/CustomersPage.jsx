@@ -124,6 +124,22 @@ function CustomersPage() {
         totalRevenue: data.summary?.totalRevenue || 0,
       })
       setCustomers(data.customers || [])
+
+      // Fetch Tickets for Real-time count
+      try {
+        const ticketsRes = await fetch(`${API_BASE_URL}/tickets`, { credentials: 'include' })
+        const ticketsData = await ticketsRes.json()
+        if (ticketsRes.ok) {
+          const realTicketCount = ticketsData.tickets ? ticketsData.tickets.length : 0
+          setSummary(prev => ({
+            ...prev,
+            totalTickets: realTicketCount
+          }))
+        }
+      } catch (err) {
+        console.error('Failed to fetch tickets for summary', err)
+      }
+
       setCurrentPage(1)
     } catch (err) {
       console.error('Load customers error', err)
@@ -705,6 +721,7 @@ function CustomersPage() {
           <table className="customers-table">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Name</th>
                 <th>Customer Type</th>
                 <th>Authorised Person</th>
@@ -716,19 +733,20 @@ function CustomersPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="customers-empty">
+                  <td colSpan={7} className="customers-empty">
                     Loading customers...
                   </td>
                 </tr>
               ) : paginatedCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="customers-empty">
+                  <td colSpan={7} className="customers-empty">
                     No customers found.
                   </td>
                 </tr>
               ) : (
                 paginatedCustomers.map((customer) => (
                   <tr key={customer.id}>
+                    <td>#AIM-C-{customer.id}</td>
                     <td>
                       <div className="customers-name-cell">
                         {customer.profileImageUrl && (
@@ -751,7 +769,9 @@ function CustomersPage() {
                         <div className="customers-doc-pill">
                           <span>{customer.documentTitle}</span>
                           {customer.documentExpiryDate && (
-                            <span className="customers-doc-expiry">Expires: {customer.documentExpiryDate}</span>
+                            <span className="customers-doc-expiry">
+                              Expires: {new Date(customer.documentExpiryDate).toISOString().split('T')[0]}
+                            </span>
                           )}
                         </div>
                       ) : (
@@ -823,35 +843,38 @@ function CustomersPage() {
                     </td>
                   </tr>
                 ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              )
+              }
+            </tbody >
+          </table >
+        </div >
 
-        {filteredCustomers.length > PAGE_SIZE && (
-          <div className="customers-pagination">
-            <button
-              type="button"
-              className="customers-secondary-btn"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            >
-              Prev
-            </button>
-            <span className="customers-page-info">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              className="customers-secondary-btn"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </section>
+        {
+          filteredCustomers.length > PAGE_SIZE && (
+            <div className="customers-pagination">
+              <button
+                type="button"
+                className="customers-secondary-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              >
+                Prev
+              </button>
+              <span className="customers-page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="customers-secondary-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                Next
+              </button>
+            </div>
+          )
+        }
+      </section >
 
       {isDetailsOpen && customerDetails && (
         <div className="customer-modal-backdrop" role="dialog" aria-modal="true">
@@ -910,7 +933,7 @@ function CustomersPage() {
           </div>
         </div>
       )}
-    </section>
+    </section >
   )
 }
 

@@ -154,7 +154,7 @@ function EngineersPage() {
                                         <td>
                                             <span className={`status-pill status-pill--${eng.status}`}>{eng.status}</span>
                                         </td>
-                                        <td>{new Date(eng.createdAt).toLocaleDateString()}</td>
+                                        <td>{new Date(eng.createdAt).toISOString().split('T')[0]}</td>
                                         <td>
                                             <div className="engineer-actions">
                                                 <button
