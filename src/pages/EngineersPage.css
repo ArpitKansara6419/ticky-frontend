@@ -133,6 +133,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  border: 1px solid var(--border-color);
 }
 
 .engineers-table th {
@@ -141,12 +142,12 @@
   background: var(--bg-background);
   color: var(--text-secondary);
   font-weight: 600;
-  border-bottom: 1px solid var(--border-color);
+  border: 1px solid var(--border-color);
 }
 
 .engineers-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
+  border: 1px solid var(--border-color);
   color: var(--text-primary);
 }
 
@@ -186,10 +187,49 @@
   border-radius: 4px;
 }
 
-.action-btn:hover {
-  background-color: var(--bg-background);
-  color: var(--text-primary);
+.engineer-actions {
+  display: flex;
+  gap: 8px;
 }
+
+.action-icon-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  font-size: 16px;
+}
+
+.view-btn {
+  color: #3b82f6;
+}
+
+.view-btn:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.edit-btn {
+  color: #f59e0b;
+}
+
+.edit-btn:hover {
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.delete-btn {
+  color: #ef4444;
+}
+
+.delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Removing old dropdown styles if not used, but keeping structure valid */
 
 .engineers-empty {
   text-align: center;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FiSearch, FiMoreVertical } from 'react-icons/fi'
+import { FiSearch, FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi'
 import './EngineersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -9,7 +9,6 @@ function EngineersPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
-    const [openMenuId, setOpenMenuId] = useState(null)
 
     useEffect(() => {
         fetchEngineers()
@@ -24,7 +23,9 @@ function EngineersPage() {
             if (!res.ok) {
                 throw new Error(data.message || 'Unable to load engineers')
             }
-            setEngineers(data.engineers || [])
+            // Sort by ID ascending
+            const sorted = (data.engineers || []).sort((a, b) => a.id - b.id)
+            setEngineers(sorted)
         } catch (err) {
             console.error('Load engineers error', err)
             setError(err.message || 'Unable to load engineers')
@@ -35,17 +36,14 @@ function EngineersPage() {
 
     const handleView = (engineer) => {
         alert(`Viewing engineer: ${engineer.name}\nEmail: ${engineer.email}\nPhone: ${engineer.phone}`)
-        setOpenMenuId(null)
     }
 
     const handleEdit = (engineer) => {
         alert(`Edit functionality coming soon for: ${engineer.name}`)
-        setOpenMenuId(null)
     }
 
     const handleDelete = async (engineer) => {
         if (!window.confirm(`Are you sure you want to delete ${engineer.name}?`)) {
-            setOpenMenuId(null)
             return
         }
 
@@ -58,7 +56,6 @@ function EngineersPage() {
                 throw new Error('Failed to delete engineer')
             }
             await fetchEngineers()
-            setOpenMenuId(null)
         } catch (err) {
             console.error('Delete error:', err)
             alert('Failed to delete engineer')
@@ -80,7 +77,7 @@ function EngineersPage() {
                 <div>
                     <h1 className="engineers-title">Engineers</h1>
                     <p className="engineers-subtitle">
-                        Manage your engineering team <span className="status-badge status-badge--active">Live Updates</span>
+                        Manage your engineering team
                     </p>
                 </div>
                 {/* No Add Button as per requirement */}
@@ -123,6 +120,7 @@ function EngineersPage() {
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
+                                <th>Location</th>
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th>Status</th>
@@ -133,23 +131,24 @@ function EngineersPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="engineers-empty">
+                                    <td colSpan={8} className="engineers-empty">
                                         Loading engineers...
                                     </td>
                                 </tr>
                             ) : filteredEngineers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="engineers-empty">
+                                    <td colSpan={8} className="engineers-empty">
                                         No engineers found.
                                     </td>
                                 </tr>
                             ) : (
                                 filteredEngineers.map((eng) => (
                                     <tr key={eng.id}>
-                                        <td>#{eng.id}</td>
+                                        <td>#AIM-E-{eng.id}</td>
                                         <td>
                                             <div className="engineer-name">{eng.name}</div>
                                         </td>
+                                        <td>{eng.city || eng.address || '-'}</td>
                                         <td>{eng.email}</td>
                                         <td>{eng.phone}</td>
                                         <td>
@@ -157,20 +156,28 @@ function EngineersPage() {
                                         </td>
                                         <td>{new Date(eng.createdAt).toLocaleDateString()}</td>
                                         <td>
-                                            <div style={{ position: 'relative' }}>
+                                            <div className="engineer-actions">
                                                 <button
-                                                    className="action-btn"
-                                                    onClick={() => setOpenMenuId(openMenuId === eng.id ? null : eng.id)}
+                                                    className="action-icon-btn view-btn"
+                                                    onClick={() => handleView(eng)}
+                                                    title="View"
                                                 >
-                                                    <FiMoreVertical />
+                                                    <FiEye />
                                                 </button>
-                                                {openMenuId === eng.id && (
-                                                    <div className="dropdown-menu">
-                                                        <button onClick={() => handleView(eng)}>View</button>
-                                                        <button onClick={() => handleEdit(eng)}>Edit</button>
-                                                        <button onClick={() => handleDelete(eng)} style={{ color: '#dc3545' }}>Delete</button>
-                                                    </div>
-                                                )}
+                                                <button
+                                                    className="action-icon-btn edit-btn"
+                                                    onClick={() => handleEdit(eng)}
+                                                    title="Edit"
+                                                >
+                                                    <FiEdit2 />
+                                                </button>
+                                                <button
+                                                    className="action-icon-btn delete-btn"
+                                                    onClick={() => handleDelete(eng)}
+                                                    title="Delete"
+                                                >
+                                                    <FiTrash2 />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
