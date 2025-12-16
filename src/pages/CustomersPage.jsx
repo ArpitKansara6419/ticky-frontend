@@ -123,7 +123,10 @@ function CustomersPage() {
         totalTickets: data.summary?.totalTickets || 0,
         totalRevenue: data.summary?.totalRevenue || 0,
       })
-      setCustomers(data.customers || [])
+      const fetchedCustomers = data.customers || []
+      // Sort customers by ID (ascending) as per user request
+      const sortedCustomers = fetchedCustomers.sort((a, b) => a.id - b.id)
+      setCustomers(sortedCustomers)
 
       // Fetch Tickets for Real-time count
       try {
