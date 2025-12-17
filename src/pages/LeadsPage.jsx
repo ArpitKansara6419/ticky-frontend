@@ -487,7 +487,7 @@ function LeadsPage() {
     setFormSuccess('')
 
     try {
-      if (!taskName || !customerId || !taskStartDate || !taskEndDate || !taskTime || !scopeOfWork) {
+      if (!taskName || !customerId || !taskStartDate || !taskEndDate || !taskTime || !scopeOfWork || !addressLine1 || !city || !country || !zipCode || !timezone) {
         throw new Error('Please fill all required fields.')
       }
 
@@ -501,25 +501,26 @@ function LeadsPage() {
         customerId: Number(customerId),
         taskName,
         leadType,
-        clientTicketNumber: clientTicketNumber || '',
+        // Optional strings: send null if empty to avoid unique constraint violations on empty strings
+        clientTicketNumber: clientTicketNumber || null,
         taskStartDate,
         taskEndDate,
         // Ensure seconds are included (HH:mm -> HH:mm:ss). Default to '09:00:00' if missing.
         taskTime: (taskTime && taskTime.length === 5) ? taskTime + ':00' : (taskTime || '09:00:00'),
         scopeOfWork,
-        addressLine1: addressLine1 || '',
-        addressLine2: addressLine2 || '',
-        city: city || '',
-        country: country || '',
-        zipCode: zipCode || '',
-        timezone: timezone || '',
+        addressLine1,
+        addressLine2: addressLine2 || null, // Optional
+        city,
+        country,
+        zipCode,
+        timezone,
         currency,
         // Send 0 instead of null for numeric fields to prevent potential DB errors
         hourlyRate: hourlyRate ? Number(hourlyRate) : 0,
         halfDayRate: halfDayRate ? Number(halfDayRate) : 0,
         fullDayRate: fullDayRate ? Number(fullDayRate) : 0,
         monthlyRate: monthlyRate ? Number(monthlyRate) : 0,
-        toolsRequired: toolsRequired || '',
+        toolsRequired: toolsRequired || null,
         agreedRate: agreedRate ? Number(agreedRate) : 0,
         travelCostPerDay: travelCostPerDay ? Number(travelCostPerDay) : 0,
         totalCost: totalCost ? Number(totalCost) : 0,
