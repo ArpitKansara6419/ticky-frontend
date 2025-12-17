@@ -181,41 +181,37 @@ function LeadsPage() {
     setEditingLeadId(null)
   }
 
-  // Fetch countries from REST Countries API
+  // Fetch countries - using hardcoded list for stability and to prevent 400 errors from external API
   const fetchCountries = async () => {
-    try {
-      setLoadingCountries(true)
-      // Use fields filter to reduce payload size and potentially avoid 400 errors
-      const res = await fetch('https://restcountries.com/v3.1/all?fields=name,timezones,cca2')
-      if (!res.ok) {
-        throw new Error('Failed to fetch countries')
-      }
-      const data = await res.json()
-      // Sort by common name
-      const sorted = data.sort((a, b) => a.name.common.localeCompare(b.name.common))
+    // Extensive list of common countries to ensure dropdown is populated without external dependencies
+    const staticCountries = [
+      { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
+      { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
+      { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
+      { name: 'Canada', timezones: ['America/Toronto', 'America/Vancouver'], code: 'CA' },
+      { name: 'Australia', timezones: ['Australia/Sydney', 'Australia/Melbourne'], code: 'AU' },
+      { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
+      { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
+      { name: 'Italy', timezones: ['Europe/Rome'], code: 'IT' },
+      { name: 'Spain', timezones: ['Europe/Madrid'], code: 'ES' },
+      { name: 'Netherlands', timezones: ['Europe/Amsterdam'], code: 'NL' },
+      { name: 'Poland', timezones: ['Europe/Warsaw'], code: 'PL' },
+      { name: 'Sweden', timezones: ['Europe/Stockholm'], code: 'SE' },
+      { name: 'Belgium', timezones: ['Europe/Brussels'], code: 'BE' },
+      { name: 'Austria', timezones: ['Europe/Vienna'], code: 'AT' },
+      { name: 'Switzerland', timezones: ['Europe/Zurich'], code: 'CH' },
+      { name: 'Ireland', timezones: ['Europe/Dublin'], code: 'IE' },
+      { name: 'Denmark', timezones: ['Europe/Copenhagen'], code: 'DK' },
+      { name: 'Norway', timezones: ['Europe/Oslo'], code: 'NO' },
+      { name: 'Finland', timezones: ['Europe/Helsinki'], code: 'FI' },
+      { name: 'Portugal', timezones: ['Europe/Lisbon'], code: 'PT' },
+      { name: 'China', timezones: ['Asia/Shanghai'], code: 'CN' },
+      { name: 'Japan', timezones: ['Asia/Tokyo'], code: 'JP' },
+      { name: 'Singapore', timezones: ['Asia/Singapore'], code: 'SG' },
+      { name: 'United Arab Emirates', timezones: ['Asia/Dubai'], code: 'AE' }
+    ].sort((a, b) => a.name.localeCompare(b.name))
 
-      const formatted = sorted.map(c => ({
-        name: c.name.common,
-        // c.timezones is array, c.cca2 is code
-        timezones: c.timezones || [],
-        code: c.cca2
-      }))
-
-      setCountriesList(formatted)
-    } catch (err) {
-      console.error('Failed to fetch countries:', err)
-      // Fallback to basic country list if API fails
-      setCountriesList([
-        { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
-        { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
-        { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
-        { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
-        { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
-        { name: 'Poland', timezones: ['Europe/Paris'], code: 'PL' },
-      ])
-    } finally {
-      setLoadingCountries(false)
-    }
+    setCountriesList(staticCountries)
   }
 
   // Address Autocomplete Logic (OpenStreetMap Nominatim)
