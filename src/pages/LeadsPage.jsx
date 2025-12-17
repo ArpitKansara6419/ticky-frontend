@@ -578,8 +578,8 @@ function LeadsPage() {
     setCustomerId(String(lead.customerId || ''))
     setLeadType(lead.leadType || LEAD_TYPES[0])
     setClientTicketNumber(lead.clientTicketNumber || '')
-    setTaskStartDate(lead.taskStartDate || '')
-    setTaskEndDate(lead.taskEndDate || '')
+    setTaskStartDate(lead.taskStartDate ? String(lead.taskStartDate).split('T')[0] : '')
+    setTaskEndDate(lead.taskEndDate ? String(lead.taskEndDate).split('T')[0] : '')
     setTaskTime(lead.taskTime || '00:00')
     setScopeOfWork(lead.scopeOfWork || '')
     setApartment(lead.apartment || '')
@@ -1180,7 +1180,7 @@ function LeadsPage() {
                     </td>
                     <td>{lead.customerName}</td>
                     <td>
-                      {lead.taskStartDate} - {lead.taskEndDate} {lead.taskTime}
+                      {String(lead.taskStartDate).split('T')[0]} - {String(lead.taskEndDate).split('T')[0]} {lead.taskTime}
                     </td>
                     <td>
                       <button
