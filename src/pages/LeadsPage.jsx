@@ -125,6 +125,7 @@ function LeadsPage() {
   const [scopeOfWork, setScopeOfWork] = useState('')
 
   // Address & Location
+  const [apartment, setApartment] = useState('') // Required by backend
   const [addressLine1, setAddressLine1] = useState('')
   const [addressLine2, setAddressLine2] = useState('')
   const [city, setCity] = useState('')
@@ -159,6 +160,7 @@ function LeadsPage() {
     setTaskEndDate('')
     setTaskTime('00:00')
     setScopeOfWork('')
+    setApartment('')
     setAddressLine1('')
     setAddressLine2('')
     setCity('')
@@ -508,6 +510,7 @@ function LeadsPage() {
         // Ensure seconds are included (HH:mm -> HH:mm:ss). Default to '09:00:00' if missing.
         taskTime: (taskTime && taskTime.length === 5) ? taskTime + ':00' : (taskTime || '09:00:00'),
         scopeOfWork,
+        apartment: apartment || '', // Required by DB (NOT NULL), send empty string if missing
         addressLine1,
         addressLine2: addressLine2 || '',
         city,
@@ -579,6 +582,7 @@ function LeadsPage() {
     setTaskEndDate(lead.taskEndDate || '')
     setTaskTime(lead.taskTime || '00:00')
     setScopeOfWork(lead.scopeOfWork || '')
+    setApartment(lead.apartment || '')
     setAddressLine1(lead.addressLine1 || '')
     setAddressLine2(lead.addressLine2 || '')
     setCity(lead.city || '')
@@ -846,6 +850,16 @@ function LeadsPage() {
                   value={addressLine2}
                   onChange={(e) => setAddressLine2(e.target.value)}
                   placeholder="Enter address line 2 (optional)"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Apartment / Suite</span>
+                <input
+                  type="text"
+                  value={apartment}
+                  onChange={(e) => setApartment(e.target.value)}
+                  placeholder="Apt, Suite, Unit, etc."
                 />
               </label>
 
