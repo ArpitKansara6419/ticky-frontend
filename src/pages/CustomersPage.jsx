@@ -18,7 +18,8 @@ async function uploadToCloudinary(file) {
   // If Cloudinary config is missing, do NOT fall back to base64.
   // Base64 strings are too large for most backends and cause 413 Payload Too Large errors.
   if (!CLOUDINARY_UPLOAD_URL) {
-    throw new Error('Cloudinary configuration is missing. Cannot upload image.')
+    console.warn('Cloudinary configuration is missing. Image upload skipped.')
+    return ''
   }
 
   const formData = new FormData()
