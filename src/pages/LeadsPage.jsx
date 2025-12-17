@@ -225,7 +225,7 @@ function LeadsPage() {
         label: item.display_name
       }))
     } catch (error) {
-      console.error("Error fetching address suggestions:", error)
+      // Silently fail for CORS or network issues so we don't spam console or break flow
       return []
     }
   }
@@ -809,7 +809,7 @@ function LeadsPage() {
             <div className="leads-grid">
               <label className="leads-field leads-field--full">
                 <span>
-                  Address <span className="field-required">*</span>
+                  Search Address (Auto-fill)
                 </span>
                 <AsyncSelect
                   cacheOptions
@@ -822,8 +822,20 @@ function LeadsPage() {
                   noOptionsMessage={() => "Type address to search..."}
                 />
                 <small style={{ color: '#666', fontSize: '11px', marginTop: '2px' }}>
-                  Powered by OpenStreetMap. Type to search & auto-fill.
+                  Powered by OpenStreetMap. Select to auto-fill details below.
                 </small>
+              </label>
+
+              <label className="leads-field">
+                <span>
+                  Address Line 1 <span className="field-required">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
+                  placeholder="Enter street address"
+                />
               </label>
 
               <label className="leads-field">
