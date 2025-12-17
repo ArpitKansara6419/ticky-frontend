@@ -501,15 +501,15 @@ function LeadsPage() {
         customerId: Number(customerId),
         taskName,
         leadType,
-        // Optional strings: send null if empty to avoid unique constraint violations on empty strings
-        clientTicketNumber: clientTicketNumber || null,
+        // Send empty string instead of null for optional text fields to prevent 500 errors if DB expects string
+        clientTicketNumber: clientTicketNumber || '',
         taskStartDate,
         taskEndDate,
         // Ensure seconds are included (HH:mm -> HH:mm:ss). Default to '09:00:00' if missing.
         taskTime: (taskTime && taskTime.length === 5) ? taskTime + ':00' : (taskTime || '09:00:00'),
         scopeOfWork,
         addressLine1,
-        addressLine2: addressLine2 || null, // Optional
+        addressLine2: addressLine2 || '',
         city,
         country,
         zipCode,
@@ -520,7 +520,7 @@ function LeadsPage() {
         halfDayRate: halfDayRate ? Number(halfDayRate) : 0,
         fullDayRate: fullDayRate ? Number(fullDayRate) : 0,
         monthlyRate: monthlyRate ? Number(monthlyRate) : 0,
-        toolsRequired: toolsRequired || null,
+        toolsRequired: toolsRequired || '',
         agreedRate: agreedRate ? Number(agreedRate) : 0,
         travelCostPerDay: travelCostPerDay ? Number(travelCostPerDay) : 0,
         totalCost: totalCost ? Number(totalCost) : 0,
