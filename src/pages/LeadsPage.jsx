@@ -9,6 +9,7 @@ import './LeadsPage.css'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const LEAD_TYPES = ['Full time', 'Part time', 'Dispatch']
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const CURRENCIES = [
   { value: 'EUR', label: 'Euro (EUR)' },
@@ -121,6 +122,7 @@ function LeadsPage() {
   const [recurringStartDate, setRecurringStartDate] = useState('')
   const [recurringEndDate, setRecurringEndDate] = useState('')
   const [totalWeeks, setTotalWeeks] = useState('')
+  const [recurringDays, setRecurringDays] = useState([])
 
   // Ticket Details
   const [taskStartDate, setTaskStartDate] = useState('')
@@ -169,6 +171,7 @@ function LeadsPage() {
     setRecurringStartDate('')
     setRecurringEndDate('')
     setTotalWeeks('')
+    setRecurringDays([])
     setAddressLine1('')
     setAddressLine2('')
     setCity('')
@@ -540,6 +543,7 @@ function LeadsPage() {
         recurringStartDate: (leadType === 'Dispatch' && isRecurring === 'Yes') ? recurringStartDate : null,
         recurringEndDate: (leadType === 'Dispatch' && isRecurring === 'Yes') ? recurringEndDate : null,
         totalWeeks: (leadType === 'Dispatch' && isRecurring === 'Yes') ? totalWeeks : null,
+        recurringDays: (leadType === 'Dispatch' && isRecurring === 'Yes') ? recurringDays.join(',') : '',
       }
 
       const isEditing = Boolean(editingLeadId)
@@ -599,6 +603,7 @@ function LeadsPage() {
     setRecurringStartDate(lead.recurringStartDate ? String(lead.recurringStartDate).split('T')[0] : '')
     setRecurringEndDate(lead.recurringEndDate ? String(lead.recurringEndDate).split('T')[0] : '')
     setTotalWeeks(lead.totalWeeks || '')
+    setRecurringDays(lead.recurringDays ? lead.recurringDays.split(',') : [])
     setAddressLine1(lead.addressLine1 || '')
     setAddressLine2(lead.addressLine2 || '')
     setCity(lead.city || '')
@@ -797,6 +802,28 @@ function LeadsPage() {
                           onChange={(e) => setTotalWeeks(e.target.value)}
                         />
                       </label>
+
+                      <div className="leads-field leads-field--full">
+                        <span style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Select Days</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
+                          {WEEKDAYS.map(day => (
+                            <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                              <input
+                                type="checkbox"
+                                checked={recurringDays.includes(day)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setRecurringDays([...recurringDays, day])
+                                  } else {
+                                    setRecurringDays(recurringDays.filter(d => d !== day))
+                                  }
+                                }}
+                              />
+                              {day}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
