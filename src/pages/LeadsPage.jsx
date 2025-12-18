@@ -8,7 +8,7 @@ import './LeadsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-const LEAD_TYPES = ['Full time', 'Part time', 'One-time task']
+const LEAD_TYPES = ['Full time', 'Part time', 'Dispatch']
 
 const CURRENCIES = [
   { value: 'EUR', label: 'Euro (EUR)' },
@@ -117,6 +117,10 @@ function LeadsPage() {
   const [customerId, setCustomerId] = useState('')
   const [leadType, setLeadType] = useState(LEAD_TYPES[0])
   const [clientTicketNumber, setClientTicketNumber] = useState('')
+  const [isRecurring, setIsRecurring] = useState('No') // Default to 'No'
+  const [recurringStartDate, setRecurringStartDate] = useState('')
+  const [recurringEndDate, setRecurringEndDate] = useState('')
+  const [totalWeeks, setTotalWeeks] = useState('')
 
   // Ticket Details
   const [taskStartDate, setTaskStartDate] = useState('')
@@ -161,6 +165,10 @@ function LeadsPage() {
     setTaskTime('00:00')
     setScopeOfWork('')
     setApartment('')
+    setIsRecurring('No')
+    setRecurringStartDate('')
+    setRecurringEndDate('')
+    setTotalWeeks('')
     setAddressLine1('')
     setAddressLine2('')
     setCity('')
@@ -528,6 +536,10 @@ function LeadsPage() {
         travelCostPerDay: travelCostPerDay ? Number(travelCostPerDay) : 0,
         totalCost: totalCost ? Number(totalCost) : 0,
         status,
+        isRecurring: leadType === 'Dispatch' ? isRecurring : 'No',
+        recurringStartDate: (leadType === 'Dispatch' && isRecurring === 'Yes') ? recurringStartDate : null,
+        recurringEndDate: (leadType === 'Dispatch' && isRecurring === 'Yes') ? recurringEndDate : null,
+        totalWeeks: (leadType === 'Dispatch' && isRecurring === 'Yes') ? totalWeeks : null,
       }
 
       const isEditing = Boolean(editingLeadId)
@@ -583,6 +595,10 @@ function LeadsPage() {
     setTaskTime(lead.taskTime || '00:00')
     setScopeOfWork(lead.scopeOfWork || '')
     setApartment(lead.apartment || '')
+    setIsRecurring(lead.isRecurring || 'No')
+    setRecurringStartDate(lead.recurringStartDate ? String(lead.recurringStartDate).split('T')[0] : '')
+    setRecurringEndDate(lead.recurringEndDate ? String(lead.recurringEndDate).split('T')[0] : '')
+    setTotalWeeks(lead.totalWeeks || '')
     setAddressLine1(lead.addressLine1 || '')
     setAddressLine2(lead.addressLine2 || '')
     setCity(lead.city || '')
@@ -731,6 +747,60 @@ function LeadsPage() {
                   ))}
                 </select>
               </label>
+
+              {leadType === 'Dispatch' && (
+                <div className="leads-field leads-field--full recurring-section">
+                  <span style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Recurring?</span>
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={isRecurring === 'Yes'}
+                        onChange={() => setIsRecurring(isRecurring === 'Yes' ? 'No' : 'Yes')}
+                      />
+                      Yes
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={isRecurring === 'No'}
+                        onChange={() => setIsRecurring(isRecurring === 'No' ? 'Yes' : 'No')}
+                      />
+                      No
+                    </label>
+                  </div>
+
+                  {isRecurring === 'Yes' && (
+                    <div className="leads-grid" style={{ marginTop: '15px' }}>
+                      <label className="leads-field">
+                        <span>Recurring Start Date</span>
+                        <input
+                          type="date"
+                          value={recurringStartDate}
+                          onChange={(e) => setRecurringStartDate(e.target.value)}
+                        />
+                      </label>
+                      <label className="leads-field">
+                        <span>Recurring End Date</span>
+                        <input
+                          type="date"
+                          value={recurringEndDate}
+                          onChange={(e) => setRecurringEndDate(e.target.value)}
+                        />
+                      </label>
+                      <label className="leads-field">
+                        <span>Total Weeks</span>
+                        <input
+                          type="number"
+                          placeholder="Enter total weeks"
+                          value={totalWeeks}
+                          onChange={(e) => setTotalWeeks(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <label className="leads-field">
                 <span>Client Ticket Number</span>
