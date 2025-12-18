@@ -98,7 +98,7 @@ function LeadsPage() {
 
   // Country/Timezone states
   const [countriesList, setCountriesList] = useState([])
-  const [loadingCountries, setLoadingCountries] = useState(false)
+  const [loadingCountries] = useState(false)
   const [availableTimezones, setAvailableTimezones] = useState([])
 
   // Status change modal states
@@ -226,7 +226,7 @@ function LeadsPage() {
         value: item,
         label: item.display_name
       }))
-    } catch (error) {
+    } catch {
       // Silently fail for CORS or network issues so we don't spam console or break flow
       return []
     }

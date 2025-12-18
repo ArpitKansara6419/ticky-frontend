@@ -72,7 +72,7 @@ const SETTINGS_ITEMS = [
   { id: 'settings-bank', label: 'Bank', icon: FiCreditCard },
 ]
 
-function DashboardHome({ onChangeLayout, insightsLayout }) {
+function DashboardHome({ onNavigate, insightsLayout }) {
   const navigate = useNavigate()
   const [isOverviewOpen, setIsOverviewOpen] = useState(false)
 
@@ -81,7 +81,6 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
   const [selectedDate, setSelectedDate] = useState(new Date()) // tracks clicked date
 
   const [tickets, setTickets] = useState([])
-  const [loadingTickets, setLoadingTickets] = useState(false)
 
   // Helpers for Calendar
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate()
@@ -134,7 +133,6 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
   useEffect(() => {
     async function fetchTickets() {
       try {
-        setLoadingTickets(true)
         const res = await fetch(`${API_BASE_URL}/tickets`, { credentials: 'include' })
         const data = await res.json()
         if (res.ok) {
@@ -142,14 +140,11 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
         }
       } catch (err) {
         console.error('Failed to load tickets for dashboard', err)
-      } finally {
-        setLoadingTickets(false)
       }
     }
     fetchTickets()
   }, [])
 
-  // Filter tickets for a specific date (based on createdAt)
   // Filter tickets for a specific date (based on createdAt)
   const getTicketsForDate = (date) => {
     if (!date) return []
@@ -239,7 +234,11 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
           <p className="quick-card-text">Register new client</p>
         </button>
 
-        <button type="button" className="quick-card quick-card--schedule">
+        <button
+          type="button"
+          className="quick-card quick-card--schedule"
+          onClick={() => onNavigate('meeting')}
+        >
           <div className="quick-card-icon">
             <FiPhoneCall className="quick-card-icon-svg" />
           </div>
@@ -247,7 +246,11 @@ function DashboardHome({ onChangeLayout, insightsLayout }) {
           <p className="quick-card-text">Book meeting time</p>
         </button>
 
-        <button type="button" className="quick-card quick-card--reports">
+        <button
+          type="button"
+          className="quick-card quick-card--reports"
+          onClick={() => onNavigate('sampleReports')}
+        >
           <div className="quick-card-icon">
             <FiBarChart2 className="quick-card-icon-svg" />
           </div>
@@ -642,7 +645,7 @@ function DashboardPage() {
   }
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
-  const [insightsLayout, setInsightsLayout] = useState('split')
+  const [insightsLayout] = useState('split')
   const [profileForm, setProfileForm] = useState(() => {
     const storedName = localStorage.getItem('userName') || 'Test User'
     const storedEmail = localStorage.getItem('userEmail') || 'test@example.com'
@@ -859,7 +862,10 @@ function DashboardPage() {
 
   const renderContent = () => {
     if (activePage === 'dashboard') {
-      return <DashboardHome insightsLayout={insightsLayout} onChangeLayout={setInsightsLayout} />
+      return <DashboardHome
+        insightsLayout={insightsLayout}
+        onNavigate={handleMenuClick}
+      />
     }
 
     if (activePage === 'engineers') {
@@ -904,17 +910,17 @@ function DashboardPage() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Main">
-          {MAIN_MENU_ITEMS.map(({ id, label, icon: MenuIcon }) => (
+          {MAIN_MENU_ITEMS.map((item) => (
             <button
-              key={id}
+              key={item.id}
               type="button"
-              className={`sidebar-link ${activePage === id ? 'sidebar-link--active' : ''}`}
-              onClick={() => handleMenuClick(id)}
+              className={`sidebar-link ${activePage === item.id ? 'sidebar-link--active' : ''}`}
+              onClick={() => handleMenuClick(item.id)}
             >
               <span className="sidebar-link-icon">
-                <MenuIcon />
+                <item.icon />
               </span>
-              <span className="sidebar-link-label">{label}</span>
+              <span className="sidebar-link-label">{item.label}</span>
             </button>
           ))}
 
@@ -932,17 +938,17 @@ function DashboardPage() {
             </button>
             {isSettingsOpen && (
               <div className="sidebar-settings-dropdown">
-                {SETTINGS_ITEMS.map(({ id, label, icon: SettingsIcon }) => (
+                {SETTINGS_ITEMS.map((item) => (
                   <button
-                    key={id}
+                    key={item.id}
                     type="button"
-                    className={`sidebar-settings-item ${activePage === id ? 'sidebar-settings-item--active' : ''}`}
-                    onClick={() => handleSettingsItemClick(id)}
+                    className={`sidebar-settings-item ${activePage === item.id ? 'sidebar-settings-item--active' : ''}`}
+                    onClick={() => handleSettingsItemClick(item.id)}
                   >
                     <span className="sidebar-settings-icon">
-                      <SettingsIcon />
+                      <item.icon />
                     </span>
-                    <span>{label}</span>
+                    <span>{item.label}</span>
                   </button>
                 ))}
               </div>

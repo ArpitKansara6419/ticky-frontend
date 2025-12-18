@@ -51,7 +51,7 @@ function TicketsPage() {
 
   // Country/Timezone states
   const [countriesList, setCountriesList] = useState([])
-  const [loadingCountries, setLoadingCountries] = useState(false)
+  const [loadingCountries] = useState(false)
   const [availableTimezones, setAvailableTimezones] = useState([])
 
   const [engineerName, setEngineerName] = useState('')
@@ -207,42 +207,36 @@ function TicketsPage() {
     }
   }
 
-  // Fetch countries from REST Countries API
+  // Fetch countries - using hardcoded list for stability
   const fetchCountries = async () => {
-    try {
-      setLoadingCountries(true)
-      const res = await fetch('https://restcountries.com/v3.1/all')
+    const staticCountries = [
+      { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
+      { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
+      { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
+      { name: 'Canada', timezones: ['America/Toronto', 'America/Vancouver'], code: 'CA' },
+      { name: 'Australia', timezones: ['Australia/Sydney', 'Australia/Melbourne'], code: 'AU' },
+      { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
+      { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
+      { name: 'Italy', timezones: ['Europe/Rome'], code: 'IT' },
+      { name: 'Spain', timezones: ['Europe/Madrid'], code: 'ES' },
+      { name: 'Netherlands', timezones: ['Europe/Amsterdam'], code: 'NL' },
+      { name: 'Poland', timezones: ['Europe/Warsaw'], code: 'PL' },
+      { name: 'Sweden', timezones: ['Europe/Stockholm'], code: 'SE' },
+      { name: 'Belgium', timezones: ['Europe/Brussels'], code: 'BE' },
+      { name: 'Austria', timezones: ['Europe/Vienna'], code: 'AT' },
+      { name: 'Switzerland', timezones: ['Europe/Zurich'], code: 'CH' },
+      { name: 'Ireland', timezones: ['Europe/Dublin'], code: 'IE' },
+      { name: 'Denmark', timezones: ['Europe/Copenhagen'], code: 'DK' },
+      { name: 'Norway', timezones: ['Europe/Oslo'], code: 'NO' },
+      { name: 'Finland', timezones: ['Europe/Helsinki'], code: 'FI' },
+      { name: 'Portugal', timezones: ['Europe/Lisbon'], code: 'PT' },
+      { name: 'China', timezones: ['Asia/Shanghai'], code: 'CN' },
+      { name: 'Japan', timezones: ['Asia/Tokyo'], code: 'JP' },
+      { name: 'Singapore', timezones: ['Asia/Singapore'], code: 'SG' },
+      { name: 'United Arab Emirates', timezones: ['Asia/Dubai'], code: 'AE' }
+    ].sort((a, b) => a.name.localeCompare(b.name))
 
-      if (!res.ok) {
-        throw new Error('Failed to fetch countries')
-      }
-
-      const data = await res.json()
-
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid response format')
-      }
-
-      const countries = data.map(c => ({
-        name: c.name.common,
-        timezones: c.timezones || [],
-        code: c.cca2
-      })).sort((a, b) => a.name.localeCompare(b.name))
-
-      setCountriesList(countries)
-    } catch (err) {
-      console.error('Failed to fetch countries:', err)
-      // Fallback to basic country list if API fails
-      setCountriesList([
-        { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
-        { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
-        { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
-        { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
-        { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
-      ])
-    } finally {
-      setLoadingCountries(false)
-    }
+    setCountriesList(staticCountries)
   }
 
   // Handle country selection and auto-populate timezone
@@ -382,8 +376,8 @@ function TicketsPage() {
     setLeadId(ticket.leadId ? String(ticket.leadId) : '')
     setClientName(ticket.clientName || '')
     setTaskName(ticket.taskName || '')
-    setTaskStartDate(ticket.taskStartDate || '')
-    setTaskEndDate(ticket.taskEndDate || '')
+    setTaskStartDate(ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '')
+    setTaskEndDate(ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '')
     setTaskTime(ticket.taskTime || '00:00')
     setScopeOfWork(ticket.scopeOfWork || '')
     setTools(ticket.tools || '')
@@ -469,18 +463,28 @@ function TicketsPage() {
         setCustomerId(String(parsedLead.customerId || ''))
         setLeadId(String(parsedLead.id))
         setTaskName(parsedLead.taskName || '')
-        setTaskStartDate(parsedLead.taskStartDate || '')
-        setTaskEndDate(parsedLead.taskEndDate || '')
+        // Ensure dates are in YYYY-MM-DD for the <input type="date" />
+        setTaskStartDate(parsedLead.taskStartDate ? String(parsedLead.taskStartDate).split('T')[0] : '')
+        setTaskEndDate(parsedLead.taskEndDate ? String(parsedLead.taskEndDate).split('T')[0] : '')
         setTaskTime(parsedLead.taskTime || '00:00')
         setScopeOfWork(parsedLead.scopeOfWork || '')
 
         // Address & Location
+        setApartment(parsedLead.apartment || '')
         setAddressLine1(parsedLead.addressLine1 || '')
         setAddressLine2(parsedLead.addressLine2 || '')
         setCity(parsedLead.city || '')
         setCountry(parsedLead.country || '')
         setZipCode(parsedLead.zipCode || '')
         setTimezone(parsedLead.timezone || '')
+
+        // Sync timezones if we have the country list
+        if (parsedLead.country && countriesList.length > 0) {
+          const matched = countriesList.find(c => c.name === parsedLead.country)
+          if (matched) {
+            setAvailableTimezones(matched.timezones || [])
+          }
+        }
 
         // Tools
         setTools(parsedLead.toolsRequired || '')
@@ -499,7 +503,7 @@ function TicketsPage() {
       console.error("Failed to parse selected lead", err)
     }
     localStorage.removeItem('selectedLeadForTicket')
-  }, [])
+  }, [leads, countriesList])
 
   if (viewMode === 'form') {
     return (
@@ -692,6 +696,16 @@ function TicketsPage() {
                   value={addressLine2}
                   onChange={(e) => setAddressLine2(e.target.value)}
                   placeholder="Enter address line 2 (optional)"
+                />
+              </label>
+
+              <label className="tickets-field">
+                <span>Apartment / Suite</span>
+                <input
+                  type="text"
+                  value={apartment}
+                  onChange={(e) => setApartment(e.target.value)}
+                  placeholder="Apt, Suite, Unit, etc."
                 />
               </label>
 
