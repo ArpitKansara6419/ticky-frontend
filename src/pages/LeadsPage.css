@@ -52,25 +52,28 @@
 .leads-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .leads-card {
   background: var(--card-bg);
   border-radius: 16px;
   border: 1px solid var(--border-subtle);
-  padding: 16px 18px;
+  padding: 12px 16px;
 }
 
 .leads-section-title {
-  margin: 0 0 10px;
-  font-size: 15px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  opacity: 0.9;
 }
 
 .leads-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 14px;
 }
 
 .leads-field {
@@ -311,7 +314,13 @@
 
 /* Responsive */
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
+  .leads-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
   .leads-grid {
     grid-template-columns: minmax(0, 1fr);
   }
