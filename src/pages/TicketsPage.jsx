@@ -1012,7 +1012,7 @@ function TicketsPage() {
                       {ticket.city}, {ticket.country}
                     </td>
                     <td>
-                      {ticket.taskStartDate} - {ticket.taskEndDate} {ticket.taskTime}
+                      {ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : ''} - {ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : ''} {ticket.taskTime}
                     </td>
                     <td>{ticket.customerName}</td>
                     <td>{ticket.engineerName || '-'}</td>
@@ -1069,7 +1069,7 @@ function TicketsPage() {
             <section className="ticket-modal-section">
               <h3>Schedule</h3>
               <p className="ticket-modal-line">
-                {selectedTicket.taskStartDate} - {selectedTicket.taskEndDate} {selectedTicket.taskTime}
+                {selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : ''} - {selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : ''} {selectedTicket.taskTime}
               </p>
             </section>
 
