@@ -1,9 +1,11 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState } from 'react'
 import { FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi'
+import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI'
 
 const TIMEZONES = [
   'GB United Kingdom (UTC+00:00)',
@@ -249,6 +251,61 @@ function TicketsPage() {
     } else {
       setAvailableTimezones([])
       setTimezone('')
+    }
+  }
+
+  // Handle Google Address Selection
+  const handleGoogleAddressSelect = async (place) => {
+    if (!place || !place.address_components) return
+
+    let streetNumber = ''
+    let route = ''
+    let cityLocality = ''
+    let countryName = ''
+    let postalCode = ''
+
+    place.address_components.forEach((component) => {
+      const types = component.types
+      if (types.includes('street_number')) streetNumber = component.long_name
+      if (types.includes('route')) route = component.long_name
+      if (types.includes('locality')) cityLocality = component.long_name
+      if (types.includes('country')) countryName = component.long_name
+      if (types.includes('postal_code')) postalCode = component.long_name
+    })
+
+    const newAddressLine1 = (streetNumber && route) ? `${streetNumber} ${route}` : (route || place.name || '')
+    setAddressLine1(newAddressLine1)
+    setCity(cityLocality)
+    setZipCode(postalCode)
+    setCountry(countryName)
+
+    // Handle Country selection with timezones
+    const selected = countriesList.find(c => c.name === countryName)
+    let countryTimezones = []
+    if (selected && selected.timezones.length > 0) {
+      setAvailableTimezones(selected.timezones)
+      setTimezone(selected.timezones[0])
+      countryTimezones = selected.timezones
+    } else {
+      setAvailableTimezones([])
+      setTimezone('')
+    }
+
+    // Try to get precise timezone if geometry exists
+    if (place.geometry && place.geometry.location) {
+      const lat = place.geometry.location.lat()
+      const lon = place.geometry.location.lng()
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`)
+        const data = await res.json()
+        if (data && data.timezone) {
+          setTimezone(data.timezone)
+          const combinedTimezones = Array.from(new Set([data.timezone, ...countryTimezones]))
+          setAvailableTimezones(combinedTimezones)
+        }
+      } catch (err) {
+        console.error("Failed to fetch precise timezone:", err)
+      }
     }
   }
 
@@ -665,6 +722,27 @@ function TicketsPage() {
           <section className="tickets-card">
             <h2 className="tickets-section-title">Address</h2>
             <div className="tickets-grid">
+              <label className="tickets-field tickets-field--full">
+                <span>Search Address (Google Places)</span>
+                <Autocomplete
+                  apiKey={GOOGLE_MAPS_API_KEY}
+                  onPlaceSelected={handleGoogleAddressSelect}
+                  options={{
+                    types: ['address'],
+                  }}
+                  placeholder="Type to search global address..."
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    padding: '0 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-subtle, #e5e7eb)',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                />
+              </label>
+
               <label className="tickets-field">
                 <span>
                   Apartment <span className="field-required">*</span>
