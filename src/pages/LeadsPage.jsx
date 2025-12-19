@@ -349,12 +349,13 @@ function LeadsPage() {
   const openStatusChangeModal = (lead) => {
     setStatusChangeData({
       leadId: lead.id,
-      leadName: lead.taskName,
-      currentStatus: lead.status,
-      newStatus: lead.status
+      leadName: lead.taskName || 'Lead',
+      currentStatus: lead.status || 'BID',
+      newStatus: lead.status || 'BID'
     })
-    setFollowUpDate('')
-    setStatusChangeReason('')
+    // Format date for <input type="date">
+    setFollowUpDate(lead.followUpDate ? String(lead.followUpDate).split('T')[0] : '')
+    setStatusChangeReason(lead.statusChangeReason || '')
     setIsStatusModalOpen(true)
   }
 
@@ -539,6 +540,8 @@ function LeadsPage() {
         travelCostPerDay: travelCostPerDay ? Number(travelCostPerDay) : 0,
         totalCost: totalCost ? Number(totalCost) : 0,
         status,
+        followUpDate: (status === 'Reschedule' || status === 'Cancelled') ? (followUpDate || null) : null,
+        statusChangeReason: statusChangeReason || null,
         isRecurring: leadType === 'Dispatch' ? isRecurring : 'No',
         recurringStartDate: (leadType === 'Dispatch' && isRecurring === 'Yes') ? recurringStartDate : null,
         recurringEndDate: (leadType === 'Dispatch' && isRecurring === 'Yes') ? recurringEndDate : null,
@@ -620,6 +623,8 @@ function LeadsPage() {
     setTravelCostPerDay(lead.travelCostPerDay != null ? String(lead.travelCostPerDay) : '')
     setTotalCost(lead.totalCost != null ? String(lead.totalCost) : '')
     setStatus(lead.status || LEAD_STATUSES[0])
+    setFollowUpDate(lead.followUpDate ? String(lead.followUpDate).split('T')[0] : '')
+    setStatusChangeReason(lead.statusChangeReason || '')
 
     // Trigger country validation to load timezones if needed
     if (lead.country) {
@@ -1383,6 +1388,14 @@ function LeadsPage() {
               <h3>Lead Information</h3>
               <p className="lead-modal-line">Type: {selectedLead.leadType}</p>
               <p className="lead-modal-line">Status: {selectedLead.status}</p>
+              {selectedLead.followUpDate && (
+                <p className="lead-modal-line">
+                  Follow-up Date: {String(selectedLead.followUpDate).split('T')[0]}
+                </p>
+              )}
+              {selectedLead.statusChangeReason && (
+                <p className="lead-modal-line">Reason: {selectedLead.statusChangeReason}</p>
+              )}
               {selectedLead.clientTicketNumber && (
                 <p className="lead-modal-line">Ticket Number: {selectedLead.clientTicketNumber}</p>
               )}
