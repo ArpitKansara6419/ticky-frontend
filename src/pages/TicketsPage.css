@@ -350,3 +350,39 @@
     gap: 8px;
   }
 }
+
+.tickets-file-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tickets-file-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(148, 163, 184, 0.05);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.tickets-file-list li span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+}
+
+.tickets-file-list li button {
+  border: none;
+  background: none;
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}

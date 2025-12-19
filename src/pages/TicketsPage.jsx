@@ -1,6 +1,6 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState } from 'react'
-import { FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -73,6 +73,9 @@ function TicketsPage() {
   const [documentsLabel, setDocumentsLabel] = useState('')
   const [signoffLabel, setSignoffLabel] = useState('')
 
+  const [documents, setDocuments] = useState([]) // Array of objects {name, base64} or Files
+  const [signoffSheets, setSignoffSheets] = useState([])
+
   const [currency, setCurrency] = useState('USD')
   const [hourlyRate, setHourlyRate] = useState('')
   const [halfDayRate, setHalfDayRate] = useState('')
@@ -138,6 +141,8 @@ function TicketsPage() {
     setCallInvites('')
     setDocumentsLabel('')
     setSignoffLabel('')
+    setDocuments([])
+    setSignoffSheets([])
     setCurrency('USD')
     setHourlyRate('')
     setHalfDayRate('')
@@ -323,21 +328,44 @@ function TicketsPage() {
   )
 
   const handleDocumentsChange = (event) => {
-    const files = event.target.files
-    if (!files || files.length === 0) {
-      setDocumentsLabel('')
-      return
-    }
-    setDocumentsLabel(`${files.length} file(s) selected`)
+    const newFiles = Array.from(event.target.files)
+    if (newFiles.length === 0) return
+
+    setDocuments((prev) => {
+      const updated = [...prev, ...newFiles]
+      setDocumentsLabel(`${updated.length} file(s) selected`)
+      return updated
+    })
+    // Reset input so the same file can be selected again if needed
+    event.target.value = ''
   }
 
   const handleSignoffChange = (event) => {
-    const files = event.target.files
-    if (!files || files.length === 0) {
-      setSignoffLabel('')
-      return
-    }
-    setSignoffLabel(`${files.length} file(s) selected`)
+    const newFiles = Array.from(event.target.files)
+    if (newFiles.length === 0) return
+
+    setSignoffSheets((prev) => {
+      const updated = [...prev, ...newFiles]
+      setSignoffLabel(`${updated.length} file(s) selected`)
+      return updated
+    })
+    event.target.value = ''
+  }
+
+  const removeDocument = (index) => {
+    setDocuments((prev) => {
+      const updated = prev.filter((_, i) => i !== index)
+      setDocumentsLabel(updated.length > 0 ? `${updated.length} file(s) selected` : '')
+      return updated
+    })
+  }
+
+  const removeSignoff = (index) => {
+    setSignoffSheets((prev) => {
+      const updated = prev.filter((_, i) => i !== index)
+      setSignoffLabel(updated.length > 0 ? `${updated.length} file(s) selected` : '')
+      return updated
+    })
   }
 
   const handleSubmitTicket = async (event) => {
@@ -373,8 +401,8 @@ function TicketsPage() {
         pocDetails,
         reDetails,
         callInvites,
-        documentsLabel,
-        signoffLabel,
+        documentsLabel: documents.map(f => f.name).join(', '),
+        signoffLabel: signoffSheets.map(f => f.name).join(', '),
         currency,
         hourlyRate: hourlyRate ? Number(hourlyRate) : null,
         halfDayRate: halfDayRate ? Number(halfDayRate) : null,
@@ -456,6 +484,20 @@ function TicketsPage() {
     setCallInvites(ticket.callInvites || '')
     setDocumentsLabel(ticket.documentsLabel || '')
     setSignoffLabel(ticket.signoffLabel || '')
+
+    // Parse existing labels into the list UI
+    if (ticket.documentsLabel) {
+      setDocuments(ticket.documentsLabel.split(', ').map(name => ({ name })))
+    } else {
+      setDocuments([])
+    }
+
+    if (ticket.signoffLabel) {
+      setSignoffSheets(ticket.signoffLabel.split(', ').map(name => ({ name })))
+    } else {
+      setSignoffSheets([])
+    }
+
     setCurrency(ticket.currency || 'USD')
     setHourlyRate(ticket.hourlyRate != null ? String(ticket.hourlyRate) : '')
     setHalfDayRate(ticket.halfDayRate != null ? String(ticket.halfDayRate) : '')
@@ -880,15 +922,33 @@ function TicketsPage() {
                 <span>Documents (any file)</span>
                 <div className="tickets-file-row">
                   <input type="file" multiple onChange={handleDocumentsChange} />
-                  {documentsLabel && <span className="tickets-file-label">{documentsLabel}</span>}
                 </div>
+                {documents.length > 0 && (
+                  <ul className="tickets-file-list">
+                    {documents.map((file, idx) => (
+                      <li key={idx}>
+                        <span>{file.name}</span>
+                        <button type="button" onClick={() => removeDocument(idx)}><FiX /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </label>
               <label className="tickets-field">
                 <span>Sign-off Sheet (any file)</span>
                 <div className="tickets-file-row">
-                  <input type="file" onChange={handleSignoffChange} />
-                  {signoffLabel && <span className="tickets-file-label">{signoffLabel}</span>}
+                  <input type="file" multiple onChange={handleSignoffChange} />
                 </div>
+                {signoffSheets.length > 0 && (
+                  <ul className="tickets-file-list">
+                    {signoffSheets.map((file, idx) => (
+                      <li key={idx}>
+                        <span>{file.name}</span>
+                        <button type="button" onClick={() => removeSignoff(idx)}><FiX /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </label>
             </div>
           </section>
