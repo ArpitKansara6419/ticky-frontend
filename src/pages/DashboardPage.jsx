@@ -657,7 +657,7 @@ function DashboardPage() {
       name: storedName,
       email: storedEmail,
       phone: storedPhone,
-      dateOfBirth: storedDob,
+      dateOfBirth: storedDob ? String(storedDob).split('T')[0] : '',
       address: storedAddress,
       avatarPreview: '',
     }
@@ -700,9 +700,9 @@ function DashboardPage() {
             ...prev,
             name: data.user.name || prev.name,
             email: data.user.email || prev.email,
-            phone: data.user.phone || prev.phone || '',
-            dateOfBirth: data.user.dateOfBirth || prev.dateOfBirth || '',
-            address: data.user.address || prev.address || '',
+            phone: data.user.phone || '',
+            dateOfBirth: data.user.dateOfBirth ? String(data.user.dateOfBirth).split('T')[0] : '',
+            address: data.user.address || '',
             avatarPreview: data.user.avatarUrl || prev.avatarPreview || '',
           }))
         }
@@ -738,15 +738,15 @@ function DashboardPage() {
             ...prev,
             name: data.user.name || prev.name,
             email: data.user.email || prev.email,
-            phone: data.user.phone || prev.phone || '',
-            dateOfBirth: data.user.dateOfBirth || prev.dateOfBirth || '',
-            address: data.user.address || prev.address || '',
+            phone: data.user.phone || '',
+            dateOfBirth: data.user.dateOfBirth ? String(data.user.dateOfBirth).split('T')[0] : '',
+            address: data.user.address || '',
             avatarPreview: data.user.avatarUrl || prev.avatarPreview || '',
           }))
           // Update localStorage to keep sync
           if (data.user.name) localStorage.setItem('userName', data.user.name)
           if (data.user.phone) localStorage.setItem('userPhone', data.user.phone)
-          if (data.user.dateOfBirth) localStorage.setItem('userDob', data.user.dateOfBirth)
+          if (data.user.dateOfBirth) localStorage.setItem('userDob', String(data.user.dateOfBirth).split('T')[0])
           if (data.user.address) localStorage.setItem('userAddress', data.user.address)
         }
       } catch (err) {
@@ -832,7 +832,7 @@ function DashboardPage() {
         // Persist to local storage explicitly to survive refresh manually in case backend fails
         localStorage.setItem('userName', updatedUser.name || profileForm.name)
         localStorage.setItem('userPhone', updatedUser.phone || profileForm.phone)
-        localStorage.setItem('userDob', updatedUser.dateOfBirth || profileForm.dateOfBirth)
+        localStorage.setItem('userDob', updatedUser.dateOfBirth ? String(updatedUser.dateOfBirth).split('T')[0] : profileForm.dateOfBirth)
         localStorage.setItem('userAddress', updatedUser.address || profileForm.address)
 
 
@@ -840,9 +840,9 @@ function DashboardPage() {
           ...prev,
           name: updatedUser.name || prev.name,
           email: updatedUser.email || prev.email,
-          phone: updatedUser.phone || prev.phone,
-          dateOfBirth: updatedUser.dateOfBirth || prev.dateOfBirth,
-          address: updatedUser.address || prev.address,
+          phone: updatedUser.phone || '',
+          dateOfBirth: updatedUser.dateOfBirth ? String(updatedUser.dateOfBirth).split('T')[0] : '',
+          address: updatedUser.address || '',
           avatarPreview: updatedUser.avatarUrl || prev.avatarPreview,
         }))
 
