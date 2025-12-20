@@ -462,13 +462,6 @@ function LeadsPage() {
 
   return (
     <section className="leads-page">
-      <div className="welcome-banner">
-        <div className="welcome-content">
-          <h2>Welcome back & have a great day at work!</h2>
-          <p>Last login: {new Date().toLocaleDateString()} | {new Date().toLocaleTimeString().slice(0, 5)}</p>
-        </div>
-      </div>
-
       <header className="leads-header">
         <div>
           <h1 className="leads-title">Business Leads</h1>
