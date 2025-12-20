@@ -396,10 +396,10 @@ function DashboardHome({ onNavigate, insightsLayout }) {
               {selectedTickets.map(ticket => (
                 <div key={ticket.id} className="ticket-mini-item">
                   <div className="ticket-mini-header">
-                    <span className="ticket-mini-id">#{ticket.ticketUniqueId || ticket.id}</span>
-                    <span className={`ticket-mini-status status-${ticket.status?.toLowerCase()}`}>{ticket.status}</span>
+                    <span className="ticket-mini-id">#AIM-T-{String(ticket.id).padStart(3, '0')}</span>
+                    <span className={`ticket-mini-status status-${ticket.status?.toLowerCase().replace(' ', '-')}`}>{ticket.status}</span>
                   </div>
-                  <p className="ticket-mini-subject">{ticket.subject || 'No Subject'}</p>
+                  <p className="ticket-mini-subject">{ticket.taskName || 'No Subject'}</p>
                 </div>
               ))}
             </div>
