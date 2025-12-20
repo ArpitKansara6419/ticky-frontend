@@ -1,9 +1,68 @@
+/* Modern Welcome Banner */
+.welcome-banner {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px 32px;
+  margin-bottom: 24px;
+}
+
+.welcome-content h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.welcome-content p {
+  font-size: 13px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+/* Updated Summary Cards */
+.leads-summary-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.leads-summary-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.leads-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: 8px;
+}
+
+.summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 /* Modern Table Styling */
 .leads-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0 8px;
-  /* Spacing between rows */
   margin-top: -8px;
 }
 
@@ -12,14 +71,14 @@
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: #64748b;
   letter-spacing: 0.05em;
   background: transparent;
   border: none;
 }
 
 .leads-table tbody tr {
-  background: var(--card-bg);
+  background: white;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
@@ -32,19 +91,19 @@
 
 .leads-table td {
   padding: 14px 16px;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
   vertical-align: middle;
 }
 
 .leads-table td:first-child {
-  border-left: 1px solid var(--border-subtle);
+  border-left: 1px solid #e2e8f0;
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
 }
 
 .leads-table td:last-child {
-  border-right: 1px solid var(--border-subtle);
+  border-right: 1px solid #e2e8f0;
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
 }
@@ -88,11 +147,6 @@
   border-color: #fee2e2;
 }
 
-.status-badge:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
 /* Date Info */
 .date-stack {
   display: flex;
@@ -102,7 +156,7 @@
 
 .date-label {
   font-size: 10px;
-  color: var(--text-muted);
+  color: #64748b;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -122,6 +176,48 @@
   opacity: 0.6;
 }
 
+/* Action Icons Styling */
+.action-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.action-btn.view {
+  color: #8b5cf6;
+}
+
+.action-btn.edit {
+  color: #10b981;
+}
+
+.action-btn.clone {
+  color: #3b82f6;
+}
+
+.action-btn.delete {
+  color: #ef4444;
+}
+
+.action-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
 /* Premium Modal */
 .lead-modal {
   width: 500px;
@@ -130,26 +226,12 @@
   padding: 0;
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes modalPop {
-  0% {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
 
 .lead-modal-header {
   padding: 24px 32px;
   background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   color: white;
-  position: relative;
 }
 
 .lead-modal-header h2 {
@@ -185,19 +267,17 @@
   border: 2px solid #f3f4f6;
   background: #f9fafb;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s;
 }
 
 .status-option-card:hover {
   background: #f3f4f6;
   border-color: #e5e7eb;
-  transform: translateY(-2px);
 }
 
 .status-option-card.active {
   background: #eff6ff;
   border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
 }
 
 .status-option-icon {
@@ -209,7 +289,6 @@
   font-weight: 600;
 }
 
-/* Status Colors for options */
 .status-option-card.bid .status-option-icon {
   color: #f59e0b;
 }
@@ -232,19 +311,6 @@
   border-radius: 16px;
   border: 1px solid #dbeafe;
   margin-top: 16px;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .reschedule-date-box label {
@@ -266,6 +332,44 @@
   background: white;
 }
 
+/* Details Modal Grid */
+.lead-modal--details {
+  width: 600px;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item--full {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-item span {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
 .lead-modal-footer {
   padding: 16px 32px 32px;
   display: flex;
@@ -280,15 +384,7 @@
   border: none;
   border-radius: 12px;
   font-weight: 600;
-  font-size: 14px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-  transition: all 0.2s;
-}
-
-.btn-wow-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
 }
 
 .btn-wow-secondary {
@@ -298,21 +394,50 @@
   border: none;
   border-radius: 12px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.leads-search input {
+  height: 44px;
+  padding: 0 20px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  width: 320px;
   font-size: 14px;
+}
+
+.leads-header {
+  margin: 32px 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.leads-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.leads-subtitle {
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.leads-primary-btn {
+  background: #4f46e5;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-wow-secondary:hover {
-  background: #e5e7eb;
-}
-
-/* Adjustments for Leads summary cards */
-.leads-summary-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.leads-summary-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+.leads-primary-btn:hover {
+  background: #4338ca;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }

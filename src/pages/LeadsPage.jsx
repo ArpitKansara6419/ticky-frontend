@@ -1,7 +1,7 @@
 // LeadsPage.jsx - Leads list + Create / Edit Lead page
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft } from 'react-icons/fi'
+import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft, FiEye, FiEdit2, FiCopy, FiTrash2 } from 'react-icons/fi'
 import Select from 'react-select'
 import Autocomplete from 'react-google-autocomplete'
 import './LeadsPage.css'
@@ -237,6 +237,22 @@ function LeadsPage() {
     setLoadingLeads(false)
   }
 
+  const openLeadModal = (id) => {
+    const l = leads.find(x => x.id === id)
+    if (l) {
+      setSelectedLead(l)
+      setIsLeadModalOpen(true)
+    }
+  }
+
+  useEffect(() => {
+    const total = leads.length
+    const bid = leads.filter(l => l.status === 'BID').length
+    const confirmed = leads.filter(l => l.status === 'Confirm').length
+    const rescheduled = leads.filter(l => l.status === 'Reschedule').length
+    setSummary({ total, bid, confirmed, rescheduled })
+  }, [leads])
+
   useEffect(() => {
     const fetchInit = async () => {
       setLoadingCustomers(true)
@@ -293,10 +309,27 @@ function LeadsPage() {
     if (l) { fillFormFromLead(l); setEditingLeadId(id); setViewMode('form') }
   }
 
+  const startCloneLead = (id) => {
+    const l = leads.find(x => x.id === id)
+    if (l) {
+      fillFormFromLead(l)
+      setEditingLeadId(null) // Clear ID to represent a new clone
+      setViewMode('form')
+    }
+  }
+
   const handleDeleteLead = async (id) => {
-    if (!window.confirm('Delete?')) return
-    await fetch(`${API_BASE_URL}/leads/${id}`, { method: 'DELETE', credentials: 'include' })
-    loadLeads()
+    if (!window.confirm('Are you sure you want to delete this lead?')) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/leads/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      if (!res.ok) throw new Error('Delete failed')
+      loadLeads()
+    } catch (e) {
+      alert(e.message)
+    }
   }
 
   if (viewMode === 'form') {
@@ -429,15 +462,40 @@ function LeadsPage() {
 
   return (
     <section className="leads-page">
+      <div className="welcome-banner">
+        <div className="welcome-content">
+          <h2>Welcome back & have a great day at work!</h2>
+          <p>Last login: {new Date().toLocaleDateString()} | {new Date().toLocaleTimeString().slice(0, 5)}</p>
+        </div>
+      </div>
+
       <header className="leads-header">
-        <div><h1 className="leads-title">Leads</h1><p className="leads-subtitle">Manage business leads.</p></div>
-        <button type="button" className="leads-primary-btn" onClick={() => { resetForm(); setViewMode('form'); }}>+ Add Lead</button>
+        <div>
+          <h1 className="leads-title">Business Leads</h1>
+          <p className="leads-subtitle">Manage and track your customer opportunities.</p>
+        </div>
+        <button type="button" className="leads-primary-btn" onClick={() => { resetForm(); setViewMode('form'); }}>
+          + Add New Lead
+        </button>
       </header>
 
       <section className="leads-summary-row">
-        {[['Total', summary.total], ['BID', summary.bid], ['Confirmed', summary.confirmed], ['Reschedule', summary.rescheduled]].map(([label, val]) => (
-          <div key={label} className="leads-summary-card"><p className="summary-label">{label}</p><p className="summary-value">{val}</p></div>
-        ))}
+        <div className="leads-summary-card">
+          <p className="summary-label">Total Leads</p>
+          <p className="summary-value">{summary.total}</p>
+        </div>
+        <div className="leads-summary-card">
+          <p className="summary-label">BID</p>
+          <p className="summary-value">{summary.bid}</p>
+        </div>
+        <div className="leads-summary-card">
+          <p className="summary-label">Confirmed</p>
+          <p className="summary-value">{summary.confirmed}</p>
+        </div>
+        <div className="leads-summary-card">
+          <p className="summary-label">Rescheduled</p>
+          <p className="summary-value">{summary.rescheduled}</p>
+        </div>
       </section>
 
       <section className="leads-card">
@@ -494,9 +552,12 @@ function LeadsPage() {
                     ) : l.clientTicketNumber || '--'}
                   </td>
                   <td className="leads-actions-cell">
-                    <button type="button" className="leads-actions-trigger" onClick={() => startEditLead(l.id)}>
-                      <FiMoreVertical />
-                    </button>
+                    <div className="action-icons">
+                      <button title="View" onClick={() => openLeadModal(l.id)} className="action-btn view"><FiEye /></button>
+                      <button title="Edit" onClick={() => startEditLead(l.id)} className="action-btn edit"><FiEdit2 /></button>
+                      <button title="Clone" onClick={() => startCloneLead(l.id)} className="action-btn clone"><FiCopy /></button>
+                      <button title="Delete" onClick={() => handleDeleteLead(l.id)} className="action-btn delete"><FiTrash2 /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -548,6 +609,34 @@ function LeadsPage() {
             <div className="lead-modal-footer">
               <button className="btn-wow-secondary" onClick={() => setIsStatusModalOpen(false)}>Cancel</button>
               <button className="btn-wow-primary" onClick={handleStatusUpdate}>Update Now</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLeadModalOpen && selectedLead && (
+        <div className="lead-modal-backdrop" onClick={() => setIsLeadModalOpen(false)}>
+          <div className="lead-modal lead-modal--details" onClick={e => e.stopPropagation()}>
+            <header className="lead-modal-header">
+              <h2>Lead Details</h2>
+              <p>#{String(selectedLead.id).padStart(3, '0')} - {selectedLead.taskName}</p>
+            </header>
+            <div className="lead-modal-content">
+              <div className="details-grid">
+                <div className="detail-item"><label>Customer</label><span>{selectedLead.customerName}</span></div>
+                <div className="detail-item"><label>Type</label><span>{selectedLead.leadType}</span></div>
+                <div className="detail-item"><label>Service Date</label><span>{selectedLead.taskStartDate?.split('T')[0]}</span></div>
+                <div className="detail-item"><label>Time</label><span>{selectedLead.taskTime}</span></div>
+                <div className="detail-item--full"><label>Scope of Work</label><span>{selectedLead.scopeOfWork}</span></div>
+                <div className="detail-item"><label>Location</label><span>{selectedLead.city}, {selectedLead.country}</span></div>
+                <div className="detail-item"><label>Address</label><span>{selectedLead.addressLine1} {selectedLead.addressLine2}</span></div>
+                <div className="detail-item"><label>Tools Required</label><span>{selectedLead.toolsRequired || '--'}</span></div>
+                <div className="detail-item"><label>Tool Cost</label><span>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span></div>
+                <div className="detail-item"><label>Status</label><span>{selectedLead.status}</span></div>
+              </div>
+            </div>
+            <div className="lead-modal-footer">
+              <button className="btn-wow-secondary" onClick={() => setIsLeadModalOpen(false)}>Close</button>
             </div>
           </div>
         </div>
