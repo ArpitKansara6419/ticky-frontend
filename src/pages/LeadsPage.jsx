@@ -514,15 +514,31 @@ function LeadsPage() {
                   </td>
                   <td>{l.customerName}</td>
                   <td>
-                    {l.status === 'Reschedule' && l.followUpDate ? (
-                      <div className="date-stack">
-                        <span className="date-value date-value--old">{l.taskStartDate?.split('T')[0]}</span>
-                        <div className="date-label">NEW DATE:</div>
-                        <span className="date-value date-value--new">{l.followUpDate?.split('T')[0]}</span>
-                      </div>
-                    ) : (
-                      <div className="date-value">{l.taskStartDate?.split('T')[0]}</div>
-                    )}
+                    {(() => {
+                      let history = [];
+                      try {
+                        if (l.followUpHistory) {
+                          history = typeof l.followUpHistory === 'string' ? JSON.parse(l.followUpHistory) : l.followUpHistory;
+                        }
+                      } catch (e) { history = []; }
+
+                      return (
+                        <div className="date-stack">
+                          <span className={`date-value ${history.filter(h => h.date).length > 0 ? 'date-value--old' : ''}`}>
+                            {l.taskStartDate?.split('T')[0]}
+                          </span>
+                          {history.filter(h => h.date).map((h, i, arr) => (
+                            <div key={i} className="reschedule-item">
+                              <div className="date-label">RESCHEDULE {i + 1}:</div>
+                              <span className={`date-value ${i === arr.length - 1 ? 'date-value--new' : 'date-value--old'}`}>
+                                {h.date}
+                              </span>
+                              {h.remarks && <div className="date-remarks">{h.remarks}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td>
                     <button
@@ -597,6 +613,16 @@ function LeadsPage() {
                   />
                 </div>
               )}
+
+              <div className="remarks-box">
+                <label>Remarks / Note</label>
+                <textarea
+                  placeholder="Enter reason or additional notes..."
+                  value={statusChangeReason}
+                  onChange={e => setStatusChangeReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
             </div>
 
             <div className="lead-modal-footer">
