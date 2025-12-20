@@ -27,9 +27,11 @@
   background: #ffffff;
   border-radius: 24px;
   padding: 0;
-  overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 100px);
   /* Top to center fade animation */
   animation: modalSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -264,6 +266,26 @@
 
 .lead-modal-content {
   padding: 32px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for Modal */
+.lead-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.lead-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lead-modal-content::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.lead-modal-content::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
 }
 
 .status-options-grid {
