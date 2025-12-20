@@ -441,20 +441,62 @@ function LeadsPage() {
       </section>
 
       <section className="leads-card">
-        <div className="leads-list-toolbar"><div className="leads-search"><input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div></div>
+        <div className="leads-list-toolbar"><div className="leads-search"><input type="text" placeholder="Search leads..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div></div>
         <div className="leads-table-wrapper">
           <table className="leads-table">
-            <thead><tr><th>Lead</th><th>Customer</th><th>Date</th><th>Status</th><th>Ticket</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Lead Information</th>
+                <th>Customer</th>
+                <th>Service Date</th>
+                <th>Status</th>
+                <th>Reference</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
               {filteredLeads.map(l => (
                 <tr key={l.id}>
-                  <td><div className="leads-name-main">{l.taskName}</div><div className="leads-name-sub">#AIM-L-{String(l.id).padStart(3, '0')}</div></td>
+                  <td>
+                    <div className="leads-name-main">{l.taskName}</div>
+                    <div className="leads-name-sub">#AIM-L-{String(l.id).padStart(3, '0')}</div>
+                  </td>
                   <td>{l.customerName}</td>
-                  <td>{l.taskStartDate?.split('T')[0]}</td>
-                  <td><button type="button" className="leads-status-btn" onClick={() => openStatusChangeModal(l)}>{l.status}</button></td>
-                  <td>{l.status === 'Confirm' ? <button type="button" className="leads-create-ticket-btn" onClick={() => navigate('/dashboard', { state: { openTickets: true } })}><FiFileText /> Ticket</button> : '--'}</td>
+                  <td>
+                    {l.status === 'Reschedule' && l.followUpDate ? (
+                      <div className="date-stack">
+                        <span className="date-value date-value--old">{l.taskStartDate?.split('T')[0]}</span>
+                        <div className="date-label">NEW DATE:</div>
+                        <span className="date-value date-value--new">{l.followUpDate?.split('T')[0]}</span>
+                      </div>
+                    ) : (
+                      <div className="date-value">{l.taskStartDate?.split('T')[0]}</div>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className={`status-badge status-badge--${l.status.toLowerCase()}`}
+                      onClick={() => openStatusChangeModal(l)}
+                    >
+                      {l.status === 'BID' && <FiAlertCircle />}
+                      {l.status === 'Confirm' && <FiCheckCircle />}
+                      {l.status === 'Reschedule' && <FiCalendar />}
+                      {l.status === 'Cancelled' && <FiXCircle />}
+                      {l.status}
+                    </button>
+                  </td>
+                  <td>
+                    {l.status === 'Confirm' ? (
+                      <button type="button" className="leads-create-ticket-btn" onClick={() => navigate('/dashboard', { state: { openTickets: true } })}>
+                        <FiFileText /> Ticket
+                      </button>
+                    ) : l.clientTicketNumber || '--'}
+                  </td>
                   <td className="leads-actions-cell">
-                    <button type="button" onClick={() => startEditLead(l.id)}><FiMoreVertical /></button>
+                    <button type="button" className="leads-actions-trigger" onClick={() => startEditLead(l.id)}>
+                      <FiMoreVertical />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -466,14 +508,46 @@ function LeadsPage() {
       {isStatusModalOpen && (
         <div className="lead-modal-backdrop" onClick={() => setIsStatusModalOpen(false)}>
           <div className="lead-modal" onClick={e => e.stopPropagation()}>
-            <header className="lead-modal-header"><h2>Update Status</h2></header>
-            <div className="status-buttons-grid">
-              {LEAD_STATUSES.map(s => <button key={s} className={`status-btn ${statusChangeData.newStatus === s ? 'active' : ''}`} onClick={() => setStatusChangeData(p => ({ ...p, newStatus: s }))}>{s}</button>)}
+            <header className="lead-modal-header">
+              <h2>Update Lead Status</h2>
+              <p>Change the current progress of: <strong>{statusChangeData.leadName}</strong></p>
+            </header>
+
+            <div className="lead-modal-content">
+              <div className="status-options-grid">
+                {[
+                  { id: 'BID', label: 'BID', icon: <FiAlertCircle /> },
+                  { id: 'Confirm', label: 'Confirm', icon: <FiCheckCircle /> },
+                  { id: 'Reschedule', label: 'Reschedule', icon: <FiCalendar /> },
+                  { id: 'Cancelled', label: 'Cancelled', icon: <FiXCircle /> }
+                ].map(opt => (
+                  <div
+                    key={opt.id}
+                    className={`status-option-card ${opt.id.toLowerCase()} ${statusChangeData.newStatus === opt.id ? 'active' : ''}`}
+                    onClick={() => setStatusChangeData(p => ({ ...p, newStatus: opt.id }))}
+                  >
+                    <div className="status-option-icon">{opt.icon}</div>
+                    <div className="status-option-label">{opt.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {statusChangeData.newStatus === 'Reschedule' && (
+                <div className="reschedule-date-box">
+                  <label>Select New Reschedule Date</label>
+                  <input
+                    type="date"
+                    value={followUpDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={e => setFollowUpDate(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
-            {statusChangeData.newStatus === 'Reschedule' && <input type="date" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)} />}
-            <div className="lead-modal-actions">
-              <button onClick={() => setIsStatusModalOpen(false)}>Cancel</button>
-              <button onClick={handleStatusUpdate}>Update</button>
+
+            <div className="lead-modal-footer">
+              <button className="btn-wow-secondary" onClick={() => setIsStatusModalOpen(false)}>Cancel</button>
+              <button className="btn-wow-primary" onClick={handleStatusUpdate}>Update Now</button>
             </div>
           </div>
         </div>
