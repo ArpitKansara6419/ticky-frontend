@@ -765,7 +765,7 @@ function TicketsPage() {
             <h2 className="tickets-section-title">Address</h2>
             <div className="tickets-grid">
               <label className="tickets-field tickets-field--full">
-                <span>Search Address (Google Places)</span>
+                <span>Address</span>
                 <Autocomplete
                   apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}

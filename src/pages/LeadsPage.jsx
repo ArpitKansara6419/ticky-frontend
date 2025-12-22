@@ -367,7 +367,7 @@ function LeadsPage() {
           <section className="leads-card">
             <h2 className="leads-section-title">Location</h2>
             <div className="leads-grid">
-              <label className="leads-field leads-field--full"><span>Google Search</span><Autocomplete apiKey={GOOGLE_MAPS_API_KEY} onPlaceSelected={handleGoogleAddressSelect} options={{ types: ['address'] }} className="google-autocomplete-input" style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '10px', border: '1px solid var(--border-subtle)', outline: 'none' }} /></label>
+              <label className="leads-field leads-field--full"><span>Address</span><Autocomplete apiKey={GOOGLE_MAPS_API_KEY} onPlaceSelected={handleGoogleAddressSelect} options={{ types: ['address'] }} className="google-autocomplete-input" style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '10px', border: '1px solid var(--border-subtle)', outline: 'none' }} /></label>
               <label className="leads-field"><span>Street *</span><input type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} required /></label>
               <label className="leads-field"><span>City *</span><input type="text" value={city} onChange={e => setCity(e.target.value)} required /></label>
               <label className="leads-field"><span>Country *</span><Select options={countryOptions} value={countryOptions.find(o => o.value === country)} onChange={handleCountrySelectChange} styles={customSelectStyles} /></label>

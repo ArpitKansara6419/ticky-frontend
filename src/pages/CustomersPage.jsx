@@ -81,10 +81,6 @@ function CustomersPage() {
     [personDraft],
   )
 
-  const canAddDocument = useMemo(
-    () => Boolean(documentDraft.title && documentDraft.file && documentDraft.expiryDate),
-    [documentDraft],
-  )
 
   const resetForm = () => {
     setCustomerType('company')
@@ -209,16 +205,25 @@ function CustomersPage() {
   }
 
   const handleDocumentFileChange = (event) => {
-    const file = event.target.files && event.target.files[0]
-    if (!file) return
-    setDocumentDraft((prev) => ({ ...prev, file, fileUrl: file.name }))
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const newDocs = Array.from(files).map(file => ({
+      title: file.name,
+      file,
+      fileUrl: file.name,
+      expiryDate: ''
+    }))
+
+    setDocuments(prev => [...prev, ...newDocs])
+    // Reset file input so user can pick again even the same file
+    event.target.value = ''
   }
 
-  const handleAddDocument = () => {
-    if (!canAddDocument) return
-    setDocuments((prev) => [...prev, documentDraft])
-    setDocumentDraft(initialDocument)
+  const removeDocument = (index) => {
+    setDocuments(prev => prev.filter((_, i) => i !== index))
   }
+
 
   const handleSubmitCustomer = async (event) => {
     event.preventDefault()
@@ -596,46 +601,82 @@ function CustomersPage() {
               <div className="pill-list">
                 {documents.map((d, index) => (
                   <div key={`${d.title}-${index}`} className="pill-list-item">
-                    <strong>{d.title}</strong>
-                    {d.expiryDate && <span>Expires: {d.expiryDate}</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <strong>{d.title}</strong>
+                      {d.expiryDate && <span>Expires: {d.expiryDate}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      className="pill-remove-btn"
+                      onClick={() => removeDocument(index)}
+                      style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      <FiX />
+                    </button>
                   </div>
                 ))}
               </div>
             )}
 
             <div className="customers-grid">
-              <label className="customers-field">
-                <span>Title</span>
-                <input
-                  type="text"
-                  value={documentDraft.title}
-                  onChange={(e) => handleDocumentDraftChange('title', e.target.value)}
-                  placeholder="Enter document title"
-                />
-              </label>
-              <label className="customers-field">
-                <span>Select Document</span>
-                <input type="file" onChange={handleDocumentFileChange} />
-              </label>
-              <label className="customers-field">
-                <span>Document Expiry Date</span>
-                <input
-                  type="date"
-                  value={documentDraft.expiryDate}
-                  onChange={(e) => handleDocumentDraftChange('expiryDate', e.target.value)}
-                />
-              </label>
-            </div>
+              <div className="customers-field">
+                <span style={{ display: 'block', marginBottom: '8px' }}>Select Document(s)</span>
+                <div
+                  className="document-dropzone"
+                  style={{
+                    border: '2px dashed var(--border-subtle)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    textAlign: 'center',
+                    background: 'rgba(249, 250, 251, 0.5)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleDocumentFileChange}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      opacity: 0,
+                      cursor: 'pointer',
+                      width: '100%'
+                    }}
+                  />
+                  <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                    <FiFileText style={{ fontSize: '24px', marginBottom: '8px', color: 'var(--primary)' }} /><br />
+                    Click to select files
+                  </div>
+                </div>
+              </div>
 
-            <div className="customers-actions-row">
-              <button
-                type="button"
-                className="customers-secondary-btn"
-                onClick={handleAddDocument}
-                disabled={!canAddDocument}
-              >
-                Add New Document
-              </button>
+              <div className="customers-field">
+                <span style={{ display: 'block', marginBottom: '8px' }}>Individual Document Details (Optional)</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
+                  <label className="customers-field" style={{ margin: 0 }}>
+                    <span style={{ fontSize: '11px' }}>Title</span>
+                    <input
+                      type="text"
+                      value={documentDraft.title}
+                      onChange={(e) => handleDocumentDraftChange('title', e.target.value)}
+                      placeholder="Enter title"
+                      style={{ padding: '6px 10px' }}
+                    />
+                  </label>
+                  <label className="customers-field" style={{ margin: 0 }}>
+                    <span style={{ fontSize: '11px' }}>Expiry Date</span>
+                    <input
+                      type="date"
+                      value={documentDraft.expiryDate}
+                      onChange={(e) => handleDocumentDraftChange('expiryDate', e.target.value)}
+                      style={{ padding: '6px 10px' }}
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -847,38 +888,35 @@ function CustomersPage() {
                     </td>
                   </tr>
                 ))
-              )
-              }
-            </tbody >
-          </table >
-        </div >
+              )}
+            </tbody>
+          </table>
+        </div>
 
-        {
-          filteredCustomers.length > PAGE_SIZE && (
-            <div className="customers-pagination">
-              <button
-                type="button"
-                className="customers-secondary-btn"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              >
-                Prev
-              </button>
-              <span className="customers-page-info">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                className="customers-secondary-btn"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              >
-                Next
-              </button>
-            </div>
-          )
-        }
-      </section >
+        {filteredCustomers.length > PAGE_SIZE && (
+          <div className="customers-pagination">
+            <button
+              type="button"
+              className="customers-secondary-btn"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            >
+              Prev
+            </button>
+            <span className="customers-page-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="customers-secondary-btn"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </section>
 
       {isDetailsOpen && customerDetails && (
         <div className="customer-modal-backdrop" role="dialog" aria-modal="true">
@@ -928,7 +966,11 @@ function CustomersPage() {
                   {customerDetails.documents.map((d) => (
                     <li key={d.id}>
                       <strong>{d.title}</strong>
-                      {d.expiryDate && <span className="customer-modal-expiry">Expires: {d.expiryDate}</span>}
+                      {d.expiryDate && (
+                        <span className="customer-modal-expiry">
+                          Expires: {new Date(d.expiryDate).toISOString().split('T')[0]}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -937,7 +979,7 @@ function CustomersPage() {
           </div>
         </div>
       )}
-    </section >
+    </section>
   )
 }
 
