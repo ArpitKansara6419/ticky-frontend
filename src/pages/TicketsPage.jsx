@@ -170,7 +170,7 @@ function TicketsPage() {
         inProgress: data.summary?.inProgressTickets || 0,
         resolved: data.summary?.resolvedTickets || 0,
       })
-      setTickets(data.tickets || [])
+      setTickets((data.tickets || []).sort((a, b) => a.id - b.id))
     } catch (err) {
       console.error('Load tickets error', err)
       setError(err.message || 'Unable to load tickets')
