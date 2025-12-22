@@ -399,7 +399,12 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                     <span className="ticket-mini-id">#AIM-T-{String(ticket.id).padStart(3, '0')}</span>
                     <span className={`ticket-mini-status status-${ticket.status?.toLowerCase().replace(' ', '-')}`}>{ticket.status}</span>
                   </div>
-                  <p className="ticket-mini-subject">{ticket.taskName || 'No Subject'}</p>
+                  <div className="ticket-mini-body">
+                    <p className="ticket-mini-subject"><strong>Subject:</strong> {ticket.taskName || 'No Subject'}</p>
+                    <p className="ticket-mini-info"><strong>Location:</strong> {ticket.city || '-'}, {ticket.country || '-'}</p>
+                    <p className="ticket-mini-info"><strong>Date & Time:</strong> {ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : ''} {ticket.taskTime || ''}</p>
+                    <p className="ticket-mini-info"><strong>Engineer:</strong> {ticket.engineerName || 'Unassigned'}</p>
+                  </div>
                 </div>
               ))}
             </div>

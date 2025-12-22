@@ -917,12 +917,27 @@
 }
 
 .ticket-mini-subject {
-  margin: 0;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 13px;
   color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.ticket-mini-info {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ticket-mini-info strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.ticket-mini-body {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(148, 163, 184, 0.05);
 }
 
 /* Insights / layout section */

@@ -351,6 +351,47 @@ function LeadsPage() {
               <label className="leads-field"><span>Type</span><select value={leadType} onChange={e => setLeadType(e.target.value)}>{LEAD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
               <label className="leads-field"><span>Customer *</span><select value={customerId} onChange={e => setCustomerId(e.target.value)} required><option value="">Select...</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
               <label className="leads-field"><span>Ticket #</span><input type="text" value={clientTicketNumber} onChange={e => setClientTicketNumber(e.target.value)} /></label>
+
+              {leadType === 'Dispatch' && (
+                <>
+                  <div className="leads-field leads-field--full" style={{ marginTop: '10px' }}>
+                    <span style={{ display: 'block', marginBottom: '8px' }}>Recurring</span>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                        <input type="radio" value="Yes" checked={isRecurring === 'Yes'} onChange={e => setIsRecurring(e.target.value)} /> Yes
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                        <input type="radio" value="No" checked={isRecurring === 'No'} onChange={e => setIsRecurring(e.target.value)} /> No
+                      </label>
+                    </div>
+                  </div>
+
+                  {isRecurring === 'Yes' && (
+                    <>
+                      <label className="leads-field"><span>Recurring Start Date</span><input type="date" value={recurringStartDate} onChange={e => setRecurringStartDate(e.target.value)} /></label>
+                      <label className="leads-field"><span>Recurring End Date</span><input type="date" value={recurringEndDate} onChange={e => setRecurringEndDate(e.target.value)} /></label>
+
+                      <div className="leads-field leads-field--full" style={{ marginTop: '10px' }}>
+                        <span style={{ display: 'block', marginBottom: '8px' }}>Total Weeks (Days)</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px' }}>
+                          {WEEKDAYS.map(day => (
+                            <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                              <input
+                                type="checkbox"
+                                checked={recurringDays.includes(day)}
+                                onChange={e => {
+                                  if (e.target.checked) setRecurringDays([...recurringDays, day])
+                                  else setRecurringDays(recurringDays.filter(d => d !== day))
+                                }}
+                              /> {day}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </section>
 

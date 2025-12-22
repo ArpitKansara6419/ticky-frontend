@@ -1120,6 +1120,7 @@ function TicketsPage() {
           <table className="tickets-table">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Ticket</th>
                 <th>Location</th>
                 <th>Date &amp; Time</th>
@@ -1145,6 +1146,7 @@ function TicketsPage() {
               ) : (
                 tickets.map((ticket) => (
                   <tr key={ticket.id}>
+                    <td>#AIM-T-{ticket.id}</td>
                     <td>{ticket.taskName}</td>
                     <td>
                       {ticket.city}, {ticket.country}
