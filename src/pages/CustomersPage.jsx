@@ -1,7 +1,7 @@
 // CustomersPage.jsx - Customers listing and Add Customer flow
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiMoreVertical, FiArrowLeft } from 'react-icons/fi'
+import { FiMoreVertical, FiArrowLeft, FiFileText, FiX } from 'react-icons/fi'
 import './CustomersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -79,6 +79,11 @@ function CustomersPage() {
   const canAddPerson = useMemo(
     () => Boolean(personDraft.name && personDraft.email && personDraft.contact),
     [personDraft],
+  )
+
+  const canAddDocument = useMemo(
+    () => Boolean(documentDraft.title && documentDraft.expiryDate),
+    [documentDraft],
   )
 
 
