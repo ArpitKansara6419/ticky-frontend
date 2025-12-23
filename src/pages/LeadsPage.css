@@ -60,7 +60,15 @@
   background: var(--card-bg);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--card-shadow);
-  transition: all 0.2s ease;
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.leads-summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-hover-shadow);
+  border-color: var(--primary-glow);
 }
 
 .leads-summary-card:hover {
@@ -506,14 +514,22 @@
 }
 
 .leads-primary-btn {
-  background: #4f46e5;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
-  padding: 12px 24px;
-  border-radius: 12px;
+  padding: 12px 28px;
+  border-radius: var(--radius-lg);
   border: none;
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px var(--primary-soft);
+}
+
+.leads-primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px var(--primary-glow);
+  filter: brightness(1.1);
 }
 
 .leads-primary-btn:hover {

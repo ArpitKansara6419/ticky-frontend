@@ -39,9 +39,17 @@
 
 .tickets-summary-card {
   background: var(--card-bg);
-  border-radius: 14px;
   border: 1px solid var(--border-subtle);
-  padding: 10px 12px;
+  box-shadow: var(--card-shadow);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tickets-summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-hover-shadow);
+  border-color: var(--primary-glow);
 }
 
 .summary-label {
@@ -247,13 +255,21 @@
 }
 
 .tickets-primary-btn {
-  border-radius: 999px;
-  border: none;
-  padding: 8px 18px;
-  font-size: 13px;
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: #ffffff;
+  padding: 10px 24px;
+  border-radius: var(--radius-lg);
+  border: none;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px var(--primary-soft);
+}
+
+.tickets-primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px var(--primary-glow);
+  filter: brightness(1.1);
 }
 
 .tickets-secondary-btn {

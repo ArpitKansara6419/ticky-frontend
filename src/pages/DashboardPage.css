@@ -1,20 +1,29 @@
 /* DashboardPage.css - Dashboard layout similar to provided Ticky UI, with updated sidebar, icons and theme */
 
 :root {
-  /* Common Brand Colors */
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: rgba(79, 70, 229, 0.1);
-  --primary-glow: rgba(79, 70, 229, 0.2);
+  /* Premium Palette - Indigo & Slate */
+  --primary: #6366f1;
+  /* Indigo 500 - Sophisticated & Modern */
+  --primary-hover: #4f46e5;
+  /* Indigo 600 */
+  --primary-soft: rgba(99, 102, 241, 0.1);
+  --primary-glow: rgba(99, 102, 241, 0.25);
+
   --success: #10b981;
   --success-soft: rgba(16, 185, 129, 0.1);
   --danger: #ef4444;
   --danger-soft: rgba(239, 68, 68, 0.1);
   --warning: #f59e0b;
   --warning-soft: rgba(245, 158, 11, 0.1);
+
   --sidebar-width: 260px;
   --sidebar-collapsed: 80px;
-  --transition-speed: 0.3s;
+  --transition-speed: 0.35s;
+
+  /* Elevation Radii */
+  --radius-xl: 20px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
 }
 
 .dashboard-shell {
@@ -23,46 +32,47 @@
   display: flex;
   background: var(--page-bg);
   color: var(--text-main);
-  transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  transition: background var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
+    color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dashboard-shell--light {
-  /* Sidebar */
-  --sidebar-bg: #111827;
+  /* Sidebar - Dark Professional */
+  --sidebar-bg: #0f172a;
   --sidebar-text: #94a3b8;
-  --sidebar-active-bg: rgba(255, 255, 255, 0.1);
-  --sidebar-active-text: #ffffff;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-active-text: #f8fafc;
 
   /* Layout */
-  --page-bg: #f1f5f9;
+  --page-bg: #f8fafc;
   --card-bg: #ffffff;
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --border-subtle: #e2e8f0;
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --border-subtle: #f1f5f9;
 
   /* Typography */
   --text-main: #0f172a;
-  --text-muted: #64748b;
+  --text-muted: #475569;
 
   /* Inputs */
-  --input-bg: #ffffff;
+  --input-bg: #f8fafc;
   --input-border: #e2e8f0;
-  --input-focus: #4f46e5;
+  --input-focus: var(--primary);
 }
 
 .dashboard-shell--dark {
-  /* Sidebar */
+  /* Sidebar - True Midnight */
   --sidebar-bg: #020617;
   --sidebar-text: #64748b;
   --sidebar-active-bg: rgba(255, 255, 255, 0.05);
   --sidebar-active-text: #f8fafc;
 
-  /* Layout */
+  /* Layout - Deep Midnight Palette */
   --page-bg: #020617;
-  --card-bg: #0f172a;
-  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-  --card-hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-  --border-subtle: #1e293b;
+  --card-bg: #0b1120;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --card-hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --border-subtle: rgba(255, 255, 255, 0.05);
 
   /* Typography */
   --text-main: #f8fafc;
@@ -72,6 +82,12 @@
   --input-bg: #1e293b;
   --input-border: #334155;
   --input-focus: #818cf8;
+}
+
+/* When Dashboard menu is active – use subtle green background */
+.dashboard-shell--dashboard-green {
+  --page-bg: #f0fdf4;
+}
 }
 
 /* When Dashboard menu is active – use subtle green background */
@@ -112,10 +128,14 @@
 }
 
 .sidebar-logo-text {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: lowercase;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .sidebar-logo-img {
@@ -158,21 +178,24 @@
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
   border: none;
   background: transparent;
   color: var(--sidebar-text);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 2px;
 }
 
 .sidebar-link:hover,
 .sidebar-signout:hover {
-  background: rgba(255, 255, 255, 0.09);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  transform: translateX(4px);
 }
 
 .sidebar-link-icon {
@@ -195,8 +218,13 @@
 }
 
 .sidebar-link--active {
-  background: rgba(255, 255, 255, 0.14);
-  color: var(--sidebar-active);
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+.sidebar-link--active .sidebar-link-icon {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .sidebar-settings {
@@ -268,22 +296,31 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 18px;
+  padding: 24px 32px;
   background: var(--card-bg);
+  border-radius: var(--radius-xl);
   box-shadow: var(--card-shadow);
   border: 1px solid var(--border-subtle);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  transition: box-shadow 0.3s ease;
+}
+
+.dashboard-header:hover {
+  box-shadow: var(--card-hover-shadow);
 }
 
 .dashboard-heading {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text-main);
 }
 
 .dashboard-subheading {
-  margin: 2px 0 0;
-  font-size: 12px;
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -477,10 +514,16 @@
 
 .dashboard-card-full {
   background: var(--card-bg);
+  border-radius: var(--radius-xl);
   box-shadow: var(--card-shadow);
   border: 1px solid var(--border-subtle);
-  padding: 18px 20px 14px;
-  margin-bottom: 22px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card-full:hover {
+  box-shadow: var(--card-hover-shadow);
 }
 
 .placeholder-card {
@@ -511,22 +554,22 @@
 }
 
 .quick-card {
-  border-radius: 18px;
-  padding: 14px 14px 12px;
+  border-radius: var(--radius-xl);
+  padding: 24px;
   background: var(--card-bg);
-  border: 1px dashed var(--border-subtle);
+  border: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
-  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+  box-shadow: var(--card-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .quick-card:hover {
   box-shadow: var(--card-hover-shadow);
-  transform: translateY(-2px);
-  border-style: solid;
+  transform: translateY(-6px);
+  border-color: var(--primary);
 }
 
 .quick-card-icon {
@@ -676,6 +719,15 @@
   background: var(--card-bg);
   box-shadow: var(--card-shadow);
   border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 20px 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.overview-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-hover-shadow);
+  border-color: var(--primary-glow);
 }
 
 .overview-header {
