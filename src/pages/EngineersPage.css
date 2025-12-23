@@ -13,7 +13,7 @@
 .engineers-title {
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-main);
   margin: 0 0 4px 0;
   display: flex;
   align-items: center;
@@ -21,7 +21,7 @@
 }
 
 .engineers-subtitle {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 14px;
   margin: 0;
 }
@@ -36,8 +36,8 @@
 }
 
 .status-badge--active {
-  background-color: #e6f4ea;
-  color: #1e8e3e;
+  background-color: var(--success-soft);
+  color: var(--success);
 }
 
 .status-badge--active::before {
@@ -59,7 +59,7 @@
 }
 
 .engineers-stat-card {
-  background: var(--bg-surface);
+  background: var(--card-bg);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 20px;
@@ -71,19 +71,19 @@
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-main);
   margin: 0 0 4px 0;
 }
 
 .stat-label {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin: 0;
 }
 
 /* Content Card */
 .engineers-content-card {
-  background: var(--bg-surface);
+  background: var(--card-bg);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   overflow: hidden;
@@ -105,15 +105,15 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .engineers-search input {
   width: 100%;
   padding: 10px 12px 10px 36px;
+  background: var(--input-bg);
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  font-size: 14px;
+  color: var(--text-main);
 }
 
 .engineers-table {
@@ -126,8 +126,8 @@
 .engineers-table th {
   text-align: left;
   padding: 12px 16px;
-  background: var(--bg-background);
-  color: var(--text-secondary);
+  background: var(--page-bg);
+  color: var(--text-muted);
   font-weight: 600;
   border: 1px solid var(--border-subtle);
 }
@@ -135,7 +135,7 @@
 .engineers-table td {
   padding: 12px 16px;
   border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .engineers-table tr:last-child td {
@@ -156,19 +156,19 @@
 }
 
 .status-pill--active {
-  background-color: #e6f4ea;
-  color: #1e8e3e;
+  background-color: var(--success-soft);
+  color: var(--success);
 }
 
 .status-pill--inactive {
-  background-color: #fce8e6;
-  color: #c5221f;
+  background-color: var(--danger-soft);
+  color: var(--danger);
 }
 
 .action-btn {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -221,7 +221,7 @@
 .engineers-empty {
   text-align: center;
   padding: 48px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .engineers-message {
@@ -232,8 +232,8 @@
 }
 
 .engineers-message--error {
-  background-color: #fce8e6;
-  color: #c5221f;
+  background-color: var(--danger-soft);
+  color: var(--danger);
 }
 
 @keyframes fadeIn {
@@ -253,7 +253,7 @@
   position: absolute;
   right: 0;
   top: 100%;
-  background: var(--bg-surface);
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -270,7 +270,7 @@
   background: none;
   border: none;
   font-size: 14px;
-  color: var(--text-primary);
+  color: var(--text-main);
   cursor: pointer;
   transition: background-color 0.2s;
 }

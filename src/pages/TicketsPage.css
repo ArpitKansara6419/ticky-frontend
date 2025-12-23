@@ -24,7 +24,7 @@
   border-radius: 999px;
   border: none;
   padding: 8px 18px;
-  background: #8b5cf6;
+  background: var(--primary);
   color: #ffffff;
   font-size: 13px;
   cursor: pointer;
@@ -140,15 +140,15 @@
 }
 
 .tickets-action-btn--view {
-  color: #4f46e5;
+  color: var(--primary);
 }
 
 .tickets-action-btn--edit {
-  color: #16a34a;
+  color: var(--success);
 }
 
 .tickets-action-btn--delete {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .tickets-message {
@@ -159,13 +159,13 @@
 }
 
 .tickets-message--error {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .tickets-message--success {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .tickets-message--inline {
@@ -251,7 +251,7 @@
   border: none;
   padding: 8px 18px;
   font-size: 13px;
-  background: #8b5cf6;
+  background: var(--primary);
   color: #ffffff;
   cursor: pointer;
 }
@@ -261,7 +261,7 @@
   border: 1px solid var(--border-subtle);
   padding: 8px 18px;
   font-size: 13px;
-  background: #f3f4f6;
+  background: var(--input-bg);
   color: var(--text-main);
   cursor: pointer;
 }

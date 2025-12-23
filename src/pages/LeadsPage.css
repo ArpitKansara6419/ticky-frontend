@@ -24,10 +24,10 @@
 
 .lead-modal {
   width: 500px;
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 0;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -57,11 +57,9 @@
 }
 
 .leads-summary-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px 24px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--card-shadow);
   transition: all 0.2s ease;
 }
 
@@ -74,7 +72,7 @@
 .summary-label {
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.025em;
   margin-bottom: 8px;
@@ -83,7 +81,7 @@
 .summary-value {
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 /* Modern Table Styling */
@@ -99,7 +97,7 @@
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-muted);
   letter-spacing: 0.05em;
   background: transparent;
   border: none;
@@ -119,19 +117,19 @@
 
 .leads-table td {
   padding: 14px 16px;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
 
 .leads-table td:first-child {
-  border-left: 1px solid #e2e8f0;
+  border-left: 1px solid var(--border-subtle);
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
 }
 
 .leads-table td:last-child {
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid var(--border-subtle);
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
 }
@@ -184,7 +182,7 @@
 
 .date-label {
   font-size: 10px;
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -378,7 +376,7 @@
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -410,7 +408,7 @@
 
 .date-remarks {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-muted);
   font-style: italic;
   margin-top: 3px;
   line-height: 1.4;
@@ -443,7 +441,7 @@
 .detail-item label {
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -484,11 +482,9 @@
 .leads-search input {
   height: 44px;
   padding: 0 20px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  width: 320px;
-  font-size: 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
 }
 
 .leads-header {
@@ -505,7 +501,7 @@
 }
 
 .leads-subtitle {
-  color: #64748b;
+  color: var(--text-muted);
   margin: 4px 0 0;
 }
 
@@ -574,17 +570,15 @@
 .leads-field span {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .leads-field input,
 .leads-field select,
 .leads-field textarea {
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  padding: 10px 14px;
-  font-size: 14px;
-  outline: none;
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
 }
 
 .leads-field--2\/3 {

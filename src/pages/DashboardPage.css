@@ -1,15 +1,20 @@
 /* DashboardPage.css - Dashboard layout similar to provided Ticky UI, with updated sidebar, icons and theme */
 
 :root {
-  --sidebar-active: #ffffff;
-  --sidebar-text: #e5e7eb;
-  --primary: #1b4c7a;
-  --primary-soft: rgba(27, 76, 122, 0.08);
-  --page-bg: #f4f5fb;
-  --card-bg: #ffffff;
-  --border-subtle: #e5e7f0;
-  --text-main: #111827;
-  --text-muted: #6b7280;
+  /* Common Brand Colors */
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: rgba(79, 70, 229, 0.1);
+  --primary-glow: rgba(79, 70, 229, 0.2);
+  --success: #10b981;
+  --success-soft: rgba(16, 185, 129, 0.1);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --warning: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.1);
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 80px;
+  --transition-speed: 0.3s;
 }
 
 .dashboard-shell {
@@ -18,35 +23,55 @@
   display: flex;
   background: var(--page-bg);
   color: var(--text-main);
-  transition: background 0.25s ease, color 0.25s ease;
+  transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
 .dashboard-shell--light {
-  --sidebar-bg: linear-gradient(180deg, #1b4c7a 0%, #102a43 100%);
-  --page-bg: #f4f5fb;
+  /* Sidebar */
+  --sidebar-bg: #111827;
+  --sidebar-text: #94a3b8;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.1);
+  --sidebar-active-text: #ffffff;
+
+  /* Layout */
+  --page-bg: #f1f5f9;
   --card-bg: #ffffff;
-  --border-subtle: #e5e7f0;
-  --text-main: #111827;
-  --text-muted: #6b7280;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --border-subtle: #e2e8f0;
+
+  /* Typography */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+
+  /* Inputs */
+  --input-bg: #ffffff;
+  --input-border: #e2e8f0;
+  --input-focus: #4f46e5;
 }
 
 .dashboard-shell--dark {
-  /* Professional Dark Theme (Slate/grayish blue tone) */
-  --sidebar-bg: #111827;
-  /* Gray 900 */
-  --page-bg: #030712;
-  /* Gray 950 - Near black but rich */
-  --card-bg: #1f2937;
-  /* Gray 800 */
-  --border-subtle: #374151;
-  /* Gray 700 */
-  --text-main: #f9fafb;
-  /* Gray 50 */
-  --text-muted: #9ca3af;
-  /* Gray 400 */
-  --sidebar-active: #ffffff;
-  --sidebar-text: #d1d5db;
-  /* Gray 300 */
+  /* Sidebar */
+  --sidebar-bg: #020617;
+  --sidebar-text: #64748b;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.05);
+  --sidebar-active-text: #f8fafc;
+
+  /* Layout */
+  --page-bg: #020617;
+  --card-bg: #0f172a;
+  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+  --card-hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --border-subtle: #1e293b;
+
+  /* Typography */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+
+  /* Inputs */
+  --input-bg: #1e293b;
+  --input-border: #334155;
+  --input-focus: #818cf8;
 }
 
 /* When Dashboard menu is active – use subtle green background */
@@ -57,20 +82,21 @@
 /* Sidebar */
 
 .dashboard-sidebar {
-  width: 230px;
+  width: var(--sidebar-width);
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
   display: flex;
   flex-direction: column;
-  padding: 20px 16px;
-  box-shadow: 6px 0 18px rgba(15, 23, 42, 0.25);
-  transition: width 0.25s ease;
+  padding: 24px 16px;
+  box-shadow: 6px 0 18px rgba(0, 0, 0, 0.1);
+  transition: width var(--transition-speed) ease;
   overflow-y: auto;
   flex-shrink: 0;
+  border-right: 1px solid var(--border-subtle);
 }
 
 .dashboard-shell--collapsed .dashboard-sidebar {
-  width: 76px;
+  width: var(--sidebar-collapsed);
 }
 
 .sidebar-top {
@@ -244,8 +270,7 @@
   gap: 16px;
   padding: 14px 18px;
   background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--card-shadow);
   border: 1px solid var(--border-subtle);
   margin-bottom: 20px;
 }
@@ -305,8 +330,8 @@
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  color: var(--danger);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -404,8 +429,7 @@
 /* Accordion */
 .dashboard-accordion {
   background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--card-shadow);
   border: 1px solid var(--border-subtle);
   overflow: hidden;
 }
@@ -453,8 +477,7 @@
 
 .dashboard-card-full {
   background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--card-shadow);
   border: 1px solid var(--border-subtle);
   padding: 18px 20px 14px;
   margin-bottom: 22px;
@@ -501,7 +524,7 @@
 }
 
 .quick-card:hover {
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--card-hover-shadow);
   transform: translateY(-2px);
   border-style: solid;
 }
@@ -537,8 +560,8 @@
 }
 
 .quick-card--ticket .quick-card-icon {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .quick-card--customer {
@@ -546,8 +569,8 @@
 }
 
 .quick-card--customer .quick-card-icon {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .quick-card--schedule {
@@ -555,8 +578,8 @@
 }
 
 .quick-card--schedule .quick-card-icon {
-  background: #fef3c7;
-  color: #d97706;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .quick-card--reports {
@@ -564,7 +587,7 @@
 }
 
 .quick-card--reports .quick-card-icon {
-  background: #ede9fe;
+  background: rgba(124, 58, 237, 0.1);
   color: #7c3aed;
 }
 
@@ -651,10 +674,8 @@
 
 .overview-card {
   background: var(--card-bg);
-  border-radius: 18px;
-  padding: 14px 14px 12px;
+  box-shadow: var(--card-shadow);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
 }
 
 .overview-header {
@@ -695,32 +716,32 @@
 }
 
 .overview-pill--up {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .overview-pill--down {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .overview-icon--receivable {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .overview-icon--payout {
-  background: #dcfce7;
-  color: #16a34a;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .overview-icon--leads {
-  background: #fef3c7;
-  color: #d97706;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .overview-icon--tickets {
-  background: #ede9fe;
+  background: rgba(124, 58, 237, 0.1);
   color: #7c3aed;
 }
 
@@ -1145,8 +1166,8 @@
 }
 
 .profile-message--error {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .profile-message--success {

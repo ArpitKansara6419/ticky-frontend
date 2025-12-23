@@ -895,7 +895,7 @@ function DashboardPage() {
   return (
     <div
       className={`dashboard-shell ${theme === 'dark' ? 'dashboard-shell--dark' : 'dashboard-shell--light'} ${isSidebarCollapsed ? 'dashboard-shell--collapsed' : ''
-        } ${activePage === 'dashboard' && theme === 'light' ? 'dashboard-shell--dashboard-green' : ''}`}
+        }`}
     >
       {/* Sidebar */}
       <aside className="dashboard-sidebar">
@@ -1059,7 +1059,7 @@ function DashboardPage() {
         error={profileError}
         success={profileSuccess}
       />
-    </div>
+    </div >
   )
 }
 

@@ -24,7 +24,7 @@
   border-radius: 999px;
   border: none;
   padding: 8px 18px;
-  background: #16a34a;
+  background: var(--success);
   color: #ffffff;
   font-size: 13px;
   cursor: pointer;
@@ -171,8 +171,8 @@
   margin-top: 8px;
   padding: 8px 10px;
   border-radius: 10px;
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  color: var(--danger);
   font-size: 12px;
 }
 
@@ -213,12 +213,13 @@
   border: 1px solid var(--border-subtle);
   padding: 6px 14px;
   font-size: 12px;
-  background: #ffffff;
+  background: var(--card-bg);
+  color: var(--text-main);
   cursor: pointer;
 }
 
 .type-pill--active {
-  background: #16a34a;
+  background: var(--success);
   border-color: #16a34a;
   color: #ffffff;
 }
@@ -282,7 +283,7 @@
 }
 
 .status-pill--active {
-  background: #16a34a;
+  background: var(--success);
   border-color: #16a34a;
   color: #ffffff;
 }
@@ -306,7 +307,8 @@
   border: 1px solid var(--border-subtle);
   padding: 6px 14px;
   font-size: 12px;
-  background: #ffffff;
+  background: var(--card-bg);
+  color: var(--text-main);
   cursor: pointer;
 }
 
@@ -316,7 +318,7 @@
 }
 
 .customers-secondary-btn--muted {
-  background: #f3f4f6;
+  background: var(--input-bg);
 }
 
 .customers-actions-footer {
@@ -355,7 +357,7 @@
 .customers-link-btn {
   border: none;
   background: none;
-  color: #16a34a;
+  color: var(--success);
   font-size: 12px;
   cursor: pointer;
 }
