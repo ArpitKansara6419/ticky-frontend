@@ -61,33 +61,27 @@
 }
 
 .dashboard-shell--dark {
-  /* Sidebar - True Midnight */
-  --sidebar-bg: #020617;
-  --sidebar-text: #64748b;
-  --sidebar-active-bg: rgba(255, 255, 255, 0.05);
-  --sidebar-active-text: #f8fafc;
+  /* Sidebar - Professional Slate */
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #94a3b8;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.1);
+  --sidebar-active-text: #ffffff;
 
-  /* Layout - Deep Midnight Palette */
-  --page-bg: #020617;
-  --card-bg: #0b1120;
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --card-hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-  --border-subtle: rgba(255, 255, 255, 0.05);
+  /* Layout - Soft Dark Palette (Slate 900/800 combo) */
+  --page-bg: #0f172a;
+  --card-bg: #1e293b;
+  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  --card-hover-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --border-subtle: rgba(255, 255, 255, 0.08);
 
-  /* Typography */
-  --text-main: #f8fafc;
+  /* Typography - PURE WHITE */
+  --text-main: #ffffff;
   --text-muted: #94a3b8;
 
   /* Inputs */
-  --input-bg: #1e293b;
-  --input-border: #334155;
+  --input-bg: #334155;
+  --input-border: #475569;
   --input-focus: #818cf8;
-}
-
-/* When Dashboard menu is active – use subtle green background */
-.dashboard-shell--dashboard-green {
-  --page-bg: #f0fdf4;
-}
 }
 
 /* When Dashboard menu is active – use subtle green background */
