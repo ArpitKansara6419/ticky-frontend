@@ -42,6 +42,40 @@ async function uploadToCloudinary(file) {
   return data.secure_url || data.url || ''
 }
 
+/**
+ * Calculates days remaining for a document expiry and returns 
+ * status-specific styling and labels.
+ */
+function getDocumentStatus(expiryStr) {
+  if (!expiryStr) return null;
+  const expiryDate = new Date(expiryStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = expiryDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  let color = 'inherit';
+  let background = 'transparent';
+  let label = '';
+
+  if (diffDays < 0) {
+    color = '#ef4444'; // Red
+    label = 'Expired';
+  } else if (diffDays <= 15) {
+    color = '#ef4444'; // Red
+    label = `${diffDays} days left`;
+  } else if (diffDays <= 30) {
+    color = '#f59e0b'; // Yellow/Orange
+    label = `${diffDays} days left`;
+  } else {
+    color = '#10b981'; // Green
+    label = `${diffDays} days left`;
+  }
+
+  return { color, label, diffDays, expiryDate: expiryDate.toISOString().split('T')[0] };
+}
+
 function CustomersPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -817,12 +851,28 @@ function CustomersPage() {
                     <td>
                       {customer.documentTitle ? (
                         <div className="customers-doc-pill">
-                          <span>{customer.documentTitle}</span>
-                          {customer.documentExpiryDate && (
-                            <span className="customers-doc-expiry">
-                              Expires: {new Date(customer.documentExpiryDate).toISOString().split('T')[0]}
-                            </span>
-                          )}
+                          <span className="doc-title-main">{customer.documentTitle}</span>
+                          {customer.documentExpiryDate && (() => {
+                            const status = getDocumentStatus(customer.documentExpiryDate);
+                            return (
+                              <div
+                                className="expiry-warning-badge"
+                                style={{
+                                  color: status.color,
+                                  fontWeight: '600',
+                                  fontSize: '11px',
+                                  marginTop: '2px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <span className="expiry-dot" style={{ background: status.color }} />
+                                {status.label}
+                                <span className="expiry-full-date">({status.expiryDate})</span>
+                              </div>
+                            );
+                          })()}
                         </div>
                       ) : (
                         '-'
