@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft, FiEye, FiEdit2, FiCopy, FiTrash2 } from 'react-icons/fi'
 import Select from 'react-select'
-import Autocomplete from 'react-google-autocomplete'
+import { usePlacesWidget } from 'react-google-autocomplete'
 import './LeadsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI'
 
 const LEAD_TYPES = ['Full time', 'Part time', 'Dispatch']
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -47,6 +47,15 @@ const customSelectStyles = {
 function LeadsPage() {
   const navigate = useNavigate()
   const [viewMode, setViewMode] = useState('list')
+
+  // Google Maps Places Autocomplete setup using hook (more stable)
+  const { ref: googleRef } = usePlacesWidget({
+    apiKey: GOOGLE_MAPS_API_KEY,
+    onPlaceSelected: (place) => handleGoogleAddressSelect(place),
+    options: {
+      types: ['address'],
+    },
+  })
 
   const [customers, setCustomers] = useState([])
   const [loadingCustomers, setLoadingCustomers] = useState(false)
@@ -432,10 +441,8 @@ function LeadsPage() {
             <div className="leads-grid">
               <label className="leads-field leads-field--full">
                 <span>Address (Search)</span>
-                <Autocomplete
-                  apiKey={GOOGLE_MAPS_API_KEY}
-                  onPlaceSelected={handleGoogleAddressSelect}
-                  options={{ types: ['address'] }}
+                <input
+                  ref={googleRef}
                   className="google-autocomplete-input"
                   placeholder="Start typing your address..."
                   style={{
