@@ -45,6 +45,7 @@ function RegisterPage() {
       // Save token (treat like rememberMe = true) and go directly to dashboard
       if (data.token) {
         localStorage.setItem('authToken', data.token)
+        localStorage.setItem('lastLoginTimestamp', Date.now().toString())
       }
 
       setSuccess('Registration successful. Logging you in...')

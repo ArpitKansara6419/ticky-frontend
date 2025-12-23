@@ -119,6 +119,9 @@ function LoginPage() {
         localStorage.setItem('userName', userName)
       }
 
+      // Record the exact time of login to show in Dashboard header
+      localStorage.setItem('lastLoginTimestamp', Date.now().toString())
+
       navigate('/dashboard')
     } catch (err) {
       console.error('Login error', err)

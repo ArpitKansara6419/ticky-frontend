@@ -631,14 +631,13 @@ function DashboardPage() {
   const [lastLoginDisplay, setLastLoginDisplay] = useState('just now')
 
   useEffect(() => {
-    const previous = localStorage.getItem('lastLoginTimestamp')
-    if (previous) {
-      const date = new Date(parseInt(previous, 10))
+    const loginTime = localStorage.getItem('lastLoginTimestamp')
+    if (loginTime) {
+      const date = new Date(parseInt(loginTime, 10))
       const formatted = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
         ' | ' + date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
       setLastLoginDisplay(formatted)
     }
-    localStorage.setItem('lastLoginTimestamp', Date.now().toString())
   }, [])
 
   const handleThemeToggle = () => {
