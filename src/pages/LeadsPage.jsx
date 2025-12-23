@@ -169,18 +169,38 @@ function LeadsPage() {
 
   const handleGoogleAddressSelect = async (place) => {
     if (!place || !place.address_components) return
-    let streetNo = '', route = '', loc = '', ctry = '', pc = ''
+
+    let streetNo = '', route = '', loc = '', ctry = '', pc = '', state = ''
+
     place.address_components.forEach(c => {
-      if (c.types.includes('street_number')) streetNo = c.long_name
-      if (c.types.includes('route')) route = c.long_name
-      if (c.types.includes('locality')) loc = c.long_name
-      if (c.types.includes('country')) ctry = c.long_name
-      if (c.types.includes('postal_code')) pc = c.long_name
+      const types = c.types
+      if (types.includes('street_number')) streetNo = c.long_name
+      if (types.includes('route')) route = c.long_name
+      if (types.includes('locality')) loc = c.long_name
+      if (types.includes('country')) ctry = c.long_name
+      if (types.includes('postal_code')) pc = c.long_name
+      if (types.includes('administrative_area_level_1')) state = c.long_name
     })
-    setAddressLine1(streetNo ? `${streetNo} ${route}` : route || place.name || '')
-    setCity(loc); setZipCode(pc); handleCountrySelectChange({ value: ctry })
+
+    // Address 1 (Street Number + Route)
+    const addr1 = streetNo ? `${streetNo} ${route}` : route || place.name || ''
+    setAddressLine1(addr1)
+
+    // City (Locality or State as fallback)
+    setCity(loc || state || '')
+
+    // Zip Code
+    setZipCode(pc)
+
+    // Country logic - sync with our dropdown
+    if (ctry) {
+      handleCountrySelectChange({ value: ctry })
+    }
+
+    // Auto Timezone based on Latitude/Longitude
     if (place.geometry?.location) {
-      const lat = place.geometry.location.lat(), lon = place.geometry.location.lng()
+      const lat = place.geometry.location.lat()
+      const lon = place.geometry.location.lng()
       try {
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`)
         const data = await res.json()
@@ -188,7 +208,9 @@ function LeadsPage() {
           setTimezone(data.timezone)
           setAvailableTimezones(prev => Array.from(new Set([data.timezone, ...prev])))
         }
-      } catch (e) { console.error(e) }
+      } catch (e) {
+        console.error('Timezone detection failed', e)
+      }
     }
   }
 
@@ -408,12 +430,89 @@ function LeadsPage() {
           <section className="leads-card">
             <h2 className="leads-section-title">Location</h2>
             <div className="leads-grid">
-              <label className="leads-field leads-field--full"><span>Address</span><Autocomplete apiKey={GOOGLE_MAPS_API_KEY} onPlaceSelected={handleGoogleAddressSelect} options={{ types: ['address'] }} className="google-autocomplete-input" style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: '10px', border: '1px solid var(--border-subtle)', outline: 'none' }} /></label>
-              <label className="leads-field"><span>Street *</span><input type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} required /></label>
-              <label className="leads-field"><span>City *</span><input type="text" value={city} onChange={e => setCity(e.target.value)} required /></label>
-              <label className="leads-field"><span>Country *</span><Select options={countryOptions} value={countryOptions.find(o => o.value === country)} onChange={handleCountrySelectChange} styles={customSelectStyles} /></label>
-              <label className="leads-field"><span>Zip *</span><input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} required /></label>
-              <label className="leads-field leads-field--2/3"><span>Timezone *</span><Select options={timezoneOptions} value={timezoneOptions.find(o => o.value === timezone)} onChange={o => setTimezone(o?.value)} styles={customSelectStyles} /></label>
+              <label className="leads-field leads-field--full">
+                <span>Address (Search)</span>
+                <Autocomplete
+                  apiKey={GOOGLE_MAPS_API_KEY}
+                  onPlaceSelected={handleGoogleAddressSelect}
+                  options={{ types: ['address'] }}
+                  className="google-autocomplete-input"
+                  placeholder="Start typing your address..."
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    padding: '0 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-main)',
+                    outline: 'none'
+                  }}
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Address 1 *</span>
+                <input
+                  type="text"
+                  value={addressLine1}
+                  onChange={e => setAddressLine1(e.target.value)}
+                  required
+                  placeholder="Street name / Building"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Apartment/Street 2</span>
+                <input
+                  type="text"
+                  value={addressLine2}
+                  onChange={e => setAddressLine2(e.target.value)}
+                  placeholder="Suite, Floor, etc."
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>City *</span>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={e => setCity(e.target.value)}
+                  required
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Country *</span>
+                <Select
+                  options={countryOptions}
+                  value={countryOptions.find(o => o.value === country)}
+                  onChange={handleCountrySelectChange}
+                  styles={customSelectStyles}
+                  placeholder="Select Country"
+                />
+              </label>
+
+              <label className="leads-field">
+                <span>Zip Code *</span>
+                <input
+                  type="text"
+                  value={zipCode}
+                  onChange={e => setZipCode(e.target.value)}
+                  required
+                />
+              </label>
+
+              <label className="leads-field leads-field--2/3">
+                <span>Timezone *</span>
+                <Select
+                  options={timezoneOptions}
+                  value={timezoneOptions.find(o => o.value === timezone)}
+                  onChange={o => setTimezone(o?.value)}
+                  styles={customSelectStyles}
+                  placeholder="Select Timezone"
+                />
+              </label>
             </div>
           </section>
 
