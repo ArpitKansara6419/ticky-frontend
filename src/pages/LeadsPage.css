@@ -109,8 +109,8 @@
 
 .leads-summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
+  box-shadow: var(--card-hover-shadow);
+  border-color: var(--border-subtle);
 }
 
 .summary-label {
@@ -322,12 +322,12 @@
 }
 
 .lead-modal-content::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: var(--border-subtle);
   border-radius: 10px;
 }
 
 .lead-modal-content::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
+  background: var(--text-muted);
 }
 
 .status-options-grid {
@@ -351,8 +351,8 @@
 }
 
 .status-option-card:hover {
-  background: #f3f4f6;
-  border-color: #e5e7eb;
+  background: var(--input-bg-hover, #f3f4f6);
+  border-color: var(--border-subtle);
 }
 
 .status-option-card.active {
@@ -447,7 +447,7 @@
 .reschedule-item {
   margin-top: 8px;
   padding-top: 6px;
-  border-top: 1px dashed #e2e8f0;
+  border-top: 1px dashed var(--border-subtle);
 }
 
 .date-remarks {
@@ -515,9 +515,9 @@
 
 .btn-wow-secondary {
   padding: 12px 28px;
-  background: #f3f4f6;
+  background: var(--input-bg);
   color: var(--text-main);
-  border: none;
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -569,9 +569,9 @@
 }
 
 .leads-primary-btn:hover {
-  background: #4338ca;
+  background: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 12px var(--primary-soft);
 }
 
 .leads-back {
