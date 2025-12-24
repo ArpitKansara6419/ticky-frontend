@@ -44,14 +44,14 @@
   --sidebar-active-text: #f8fafc;
 
   /* Layout */
-  --page-bg: #f8fafc;
+  --page-bg: #F4F4F4;
   --card-bg: #ffffff;
   --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
   --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --border-subtle: #f1f5f9;
 
   /* Typography */
-  --text-main: #0f172a;
+  --text-main: #0C2B4E;
   --text-muted: #475569;
 
   /* Inputs */
@@ -68,14 +68,14 @@
   --sidebar-active-text: #ffffff;
 
   /* Layout - Soft Dark Palette (Slate 900/800 combo) */
-  --page-bg: #0f172a;
+  --page-bg: #1B3C53;
   --card-bg: #1e293b;
   --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
   --card-hover-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   --border-subtle: rgba(255, 255, 255, 0.08);
 
   /* Typography - PURE WHITE */
-  --text-main: #ffffff;
+  --text-main: #E3E3E3;
   --text-muted: #94a3b8;
 
   /* Inputs */
