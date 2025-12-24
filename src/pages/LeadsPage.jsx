@@ -324,7 +324,8 @@ function LeadsPage() {
 
   const fillFormFromLead = (l) => {
     setTaskName(l.taskName); setCustomerId(String(l.customerId)); setLeadType(l.leadType); setClientTicketNumber(l.clientTicketNumber || '')
-    setTaskStartDate(l.taskStartDate?.split('T')[0]); setTaskEndDate(l.taskEndDate?.split('T')[0]); setTaskTime(l.taskTime?.slice(0, 5))
+    const effectiveStartDate = (l.status === 'Reschedule' && l.followUpDate) ? l.followUpDate : l.taskStartDate
+    setTaskStartDate(effectiveStartDate?.split('T')[0]); setTaskEndDate(l.taskEndDate?.split('T')[0]); setTaskTime(l.taskTime?.slice(0, 5))
     setScopeOfWork(l.scopeOfWork); setApartment(l.apartment || ''); setAddressLine1(l.addressLine1); setAddressLine2(l.addressLine2 || '')
     setCity(l.city); setCountry(l.country); setZipCode(l.zipCode); setTimezone(l.timezone)
     setCurrency(l.currency); setHourlyRate(l.hourlyRate); setHalfDayRate(l.halfDayRate); setFullDayRate(l.fullDayRate)
@@ -792,7 +793,7 @@ function LeadsPage() {
               <div className="details-grid">
                 <div className="detail-item"><label>Customer</label><span>{selectedLead.customerName}</span></div>
                 <div className="detail-item"><label>Type</label><span>{selectedLead.leadType}</span></div>
-                <div className="detail-item"><label>Service Date</label><span>{selectedLead.taskStartDate?.split('T')[0]}</span></div>
+                <div className="detail-item"><label>Service Date</label><span>{(selectedLead.status === 'Reschedule' && selectedLead.followUpDate) ? selectedLead.followUpDate.split('T')[0] : selectedLead.taskStartDate?.split('T')[0]}</span></div>
                 <div className="detail-item"><label>Time</label><span>{selectedLead.taskTime}</span></div>
                 <div className="detail-item--full"><label>Scope of Work</label><span>{selectedLead.scopeOfWork}</span></div>
                 <div className="detail-item"><label>Location</label><span>{selectedLead.city}, {selectedLead.country}</span></div>
