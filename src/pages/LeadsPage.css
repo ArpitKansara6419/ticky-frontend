@@ -12,6 +12,42 @@
   animation: fadeIn 0.3s ease;
 }
 
+/* Google Maps Autocomplete Dropdown Styling */
+.pac-container {
+  z-index: 9999 !important;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--card-hover-shadow);
+  margin-top: 4px;
+  font-family: inherit;
+  background-color: var(--card-bg) !important;
+}
+
+.pac-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-main) !important;
+}
+
+.pac-item:hover {
+  background-color: var(--primary-soft);
+}
+
+.pac-item-query {
+  color: var(--text-main) !important;
+  font-size: 14px;
+}
+
+.pac-matched {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.pac-icon {
+  margin-top: 2px;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
