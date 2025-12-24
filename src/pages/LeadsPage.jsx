@@ -7,7 +7,7 @@ import { usePlacesWidget } from 'react-google-autocomplete'
 import './LeadsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI'
+const GOOGLE_MAPS_API_KEY = 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI' // User Provided Key
 
 const LEAD_TYPES = ['Full time', 'Part time', 'Dispatch']
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
