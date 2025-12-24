@@ -53,7 +53,8 @@ function LeadsPage() {
     apiKey: GOOGLE_MAPS_API_KEY,
     onPlaceSelected: (place) => handleGoogleAddressSelect(place),
     options: {
-      types: ['address'],
+      types: [], // Empty array allows all types (Global Search: addresses, establishments, geocodes)
+      fields: ['address_components', 'geometry', 'formatted_address', 'name'],
     },
   })
 
@@ -444,7 +445,7 @@ function LeadsPage() {
                 <input
                   ref={googleRef}
                   className="google-autocomplete-input"
-                  placeholder="Start typing your address..."
+                  placeholder="Search Location (Enter area, landmark, or city)"
                   style={{
                     width: '100%',
                     height: '42px',
