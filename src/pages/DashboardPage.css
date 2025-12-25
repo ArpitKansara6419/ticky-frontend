@@ -38,9 +38,9 @@
 }
 
 .dashboard-shell--light {
-  /* Sidebar - Deep Professional Navy */
-  --sidebar-bg: #0B1437;
-  --sidebar-text: #8B92B0;
+  /* Sidebar - Professional Slate Blue */
+  --sidebar-bg: #1E293B;
+  --sidebar-text: #94A3B8;
   --sidebar-active-bg: rgba(91, 104, 244, 0.12);
   --sidebar-active-text: #ffffff;
 
