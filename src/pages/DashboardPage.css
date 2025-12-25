@@ -174,38 +174,40 @@
   align-items: center;
   width: 100%;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   border: none;
   background: transparent;
   color: var(--sidebar-text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  text-align: left;
 }
 
 .sidebar-link:hover,
 .sidebar-signout:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
-  transform: translateX(4px);
+  transform: translateX(2px);
 }
 
 .sidebar-link-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .sidebar-link-label {
   white-space: nowrap;
+  flex: 1;
 }
 
 .dashboard-shell--collapsed .sidebar-link-label {
@@ -215,11 +217,11 @@
 .sidebar-link--active {
   background: var(--primary) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .sidebar-link--active .sidebar-link-icon {
-  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .sidebar-settings {
