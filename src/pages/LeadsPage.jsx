@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft, FiEye, FiEdit2, FiCopy, FiTrash2 } from 'react-icons/fi'
 import Select from 'react-select'
-import { usePlacesWidget } from 'react-google-autocomplete'
+import Autocomplete from 'react-google-autocomplete'
 import './LeadsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const GOOGLE_MAPS_API_KEY = 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI' // User Provided Key
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI'
 
 const LEAD_TYPES = ['Full time', 'Part time', 'Dispatch']
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -49,14 +49,7 @@ function LeadsPage() {
   const [viewMode, setViewMode] = useState('list')
 
   // Google Maps Places Autocomplete setup using hook (more stable)
-  const { ref: googleRef } = usePlacesWidget({
-    apiKey: GOOGLE_MAPS_API_KEY,
-    onPlaceSelected: (place) => handleGoogleAddressSelect(place),
-    options: {
-      types: [], // Empty array allows all types (Global Search: addresses, establishments, geocodes)
-      fields: ['address_components', 'geometry', 'formatted_address', 'name'],
-    },
-  })
+  // Google Maps Places Autocomplete setup (using Autocomplete component now)
 
   const [customers, setCustomers] = useState([])
   const [loadingCustomers, setLoadingCustomers] = useState(false)
@@ -162,17 +155,30 @@ function LeadsPage() {
 
   const fetchCountries = () => {
     const staticCountries = [
-      { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'] },
-      { name: 'United Kingdom', timezones: ['Europe/London'] },
-      { name: 'India', timezones: ['Asia/Kolkata'] },
-      { name: 'Canada', timezones: ['America/Toronto', 'America/Vancouver'] },
-      { name: 'Australia', timezones: ['Australia/Sydney', 'Australia/Melbourne'] },
-      { name: 'Germany', timezones: ['Europe/Berlin'] },
-      { name: 'France', timezones: ['Europe/Paris'] },
-      { name: 'Italy', timezones: ['Europe/Rome'] },
-      { name: 'Spain', timezones: ['Europe/Madrid'] },
-      { name: 'Netherlands', timezones: ['Europe/Amsterdam'] },
-      { name: 'United Arab Emirates', timezones: ['Asia/Dubai'] }
+      { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
+      { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
+      { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
+      { name: 'Canada', timezones: ['America/Toronto', 'America/Vancouver'], code: 'CA' },
+      { name: 'Australia', timezones: ['Australia/Sydney', 'Australia/Melbourne'], code: 'AU' },
+      { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
+      { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
+      { name: 'Italy', timezones: ['Europe/Rome'], code: 'IT' },
+      { name: 'Spain', timezones: ['Europe/Madrid'], code: 'ES' },
+      { name: 'Netherlands', timezones: ['Europe/Amsterdam'], code: 'NL' },
+      { name: 'Poland', timezones: ['Europe/Warsaw'], code: 'PL' },
+      { name: 'Sweden', timezones: ['Europe/Stockholm'], code: 'SE' },
+      { name: 'Belgium', timezones: ['Europe/Brussels'], code: 'BE' },
+      { name: 'Austria', timezones: ['Europe/Vienna'], code: 'AT' },
+      { name: 'Switzerland', timezones: ['Europe/Zurich'], code: 'CH' },
+      { name: 'Ireland', timezones: ['Europe/Dublin'], code: 'IE' },
+      { name: 'Denmark', timezones: ['Europe/Copenhagen'], code: 'DK' },
+      { name: 'Norway', timezones: ['Europe/Oslo'], code: 'NO' },
+      { name: 'Finland', timezones: ['Europe/Helsinki'], code: 'FI' },
+      { name: 'Portugal', timezones: ['Europe/Lisbon'], code: 'PT' },
+      { name: 'China', timezones: ['Asia/Shanghai'], code: 'CN' },
+      { name: 'Japan', timezones: ['Asia/Tokyo'], code: 'JP' },
+      { name: 'Singapore', timezones: ['Asia/Singapore'], code: 'SG' },
+      { name: 'United Arab Emirates', timezones: ['Asia/Dubai'], code: 'AE' }
     ].sort((a, b) => a.name.localeCompare(b.name))
     setCountriesList(staticCountries)
   }
@@ -180,31 +186,29 @@ function LeadsPage() {
   const handleGoogleAddressSelect = async (place) => {
     if (!place || !place.address_components) return
 
-    let streetNo = '', route = '', loc = '', ctry = '', pc = '', state = ''
+    let streetNumber = ''
+    let route = ''
+    let cityLocality = ''
+    let countryName = ''
+    let postalCode = ''
 
-    place.address_components.forEach(c => {
-      const types = c.types
-      if (types.includes('street_number')) streetNo = c.long_name
-      if (types.includes('route')) route = c.long_name
-      if (types.includes('locality')) loc = c.long_name
-      if (types.includes('country')) ctry = c.long_name
-      if (types.includes('postal_code')) pc = c.long_name
-      if (types.includes('administrative_area_level_1')) state = c.long_name
+    place.address_components.forEach((component) => {
+      const types = component.types
+      if (types.includes('street_number')) streetNumber = component.long_name
+      if (types.includes('route')) route = component.long_name
+      if (types.includes('locality')) cityLocality = component.long_name
+      if (types.includes('country')) countryName = component.long_name
+      if (types.includes('postal_code')) postalCode = component.long_name
     })
 
-    // Address 1 (Street Number + Route)
-    const addr1 = streetNo ? `${streetNo} ${route}` : route || place.name || ''
-    setAddressLine1(addr1)
-
-    // City (Locality or State as fallback)
-    setCity(loc || state || '')
-
-    // Zip Code
-    setZipCode(pc)
+    const newAddressLine1 = (streetNumber && route) ? `${streetNumber} ${route}` : (route || place.name || '')
+    setAddressLine1(newAddressLine1)
+    setCity(cityLocality)
+    setZipCode(postalCode)
 
     // Country logic - sync with our dropdown
-    if (ctry) {
-      handleCountrySelectChange({ value: ctry })
+    if (countryName) {
+      handleCountrySelectChange({ value: countryName })
     }
 
     // Auto Timezone based on Latitude/Longitude
@@ -377,118 +381,146 @@ function LeadsPage() {
         </header>
 
         <form className="leads-form" onSubmit={handleSubmit}>
+          {/* Lead Information */}
           <section className="leads-card">
             <h2 className="leads-section-title">Lead Information</h2>
-            <div className="leads-grid">
-              <label className="leads-field leads-field--2/3"><span>Task Name *</span><input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} required /></label>
-              <label className="leads-field"><span>Type</span><select value={leadType} onChange={e => setLeadType(e.target.value)}>{LEAD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
-              <label className="leads-field"><span>Customer *</span><select value={customerId} onChange={e => setCustomerId(e.target.value)} required><option value="">Select...</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-              <label className="leads-field"><span>Ticket #</span><input type="text" value={clientTicketNumber} onChange={e => setClientTicketNumber(e.target.value)} /></label>
+            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+              <label className="leads-field">
+                <span>Task Name *</span>
+                <input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} required placeholder="Enter task name" />
+              </label>
 
-              {leadType === 'Dispatch' && (
-                <>
-                  <div className="leads-field leads-field--full" style={{ marginTop: '10px' }}>
-                    <span style={{ display: 'block', marginBottom: '8px' }}>Recurring</span>
-                    <div style={{ display: 'flex', gap: '20px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="radio" value="Yes" checked={isRecurring === 'Yes'} onChange={e => setIsRecurring(e.target.value)} /> Yes
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="radio" value="No" checked={isRecurring === 'No'} onChange={e => setIsRecurring(e.target.value)} /> No
-                      </label>
+              <label className="leads-field">
+                <span>Customer *</span>
+                <select value={customerId} onChange={e => setCustomerId(e.target.value)} required>
+                  <option value="">Select...</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+
+              <label className="leads-field">
+                <span>Type</span>
+                <select value={leadType} onChange={e => setLeadType(e.target.value)}>
+                  {LEAD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+
+              <label className="leads-field">
+                <span>Ticket #</span>
+                <input type="text" value={clientTicketNumber} onChange={e => setClientTicketNumber(e.target.value)} placeholder="Optional" />
+              </label>
+            </div>
+
+            {leadType === 'Dispatch' && (
+              <div style={{ marginTop: '16px', padding: '16px', background: 'var(--input-bg)', borderRadius: '12px' }}>
+                <div className="leads-field">
+                  <span style={{ display: 'block', marginBottom: '8px' }}>Recurring?</span>
+                  <div style={{ display: 'flex', gap: '20px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                      <input type="radio" value="Yes" checked={isRecurring === 'Yes'} onChange={e => setIsRecurring(e.target.value)} /> Yes
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                      <input type="radio" value="No" checked={isRecurring === 'No'} onChange={e => setIsRecurring(e.target.value)} /> No
+                    </label>
+                  </div>
+                </div>
+
+                {isRecurring === 'Yes' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                    <label className="leads-field"><span>Recurring Start Date</span><input type="date" value={recurringStartDate} onChange={e => setRecurringStartDate(e.target.value)} /></label>
+                    <label className="leads-field"><span>Recurring End Date</span><input type="date" value={recurringEndDate} onChange={e => setRecurringEndDate(e.target.value)} /></label>
+
+                    <div className="leads-field leads-field--full">
+                      <span style={{ display: 'block', marginBottom: '8px' }}>Recur on Days</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                        {WEEKDAYS.map(day => (
+                          <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', background: 'var(--card-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                            <input
+                              type="checkbox"
+                              checked={recurringDays.includes(day)}
+                              onChange={e => {
+                                if (e.target.checked) setRecurringDays([...recurringDays, day])
+                                else setRecurringDays(recurringDays.filter(d => d !== day))
+                              }}
+                            /> {day.slice(0, 3)}
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   </div>
-
-                  {isRecurring === 'Yes' && (
-                    <>
-                      <label className="leads-field"><span>Recurring Start Date</span><input type="date" value={recurringStartDate} onChange={e => setRecurringStartDate(e.target.value)} /></label>
-                      <label className="leads-field"><span>Recurring End Date</span><input type="date" value={recurringEndDate} onChange={e => setRecurringEndDate(e.target.value)} /></label>
-
-                      <div className="leads-field leads-field--full" style={{ marginTop: '10px' }}>
-                        <span style={{ display: 'block', marginBottom: '8px' }}>Total Weeks (Days)</span>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px' }}>
-                          {WEEKDAYS.map(day => (
-                            <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
-                              <input
-                                type="checkbox"
-                                checked={recurringDays.includes(day)}
-                                onChange={e => {
-                                  if (e.target.checked) setRecurringDays([...recurringDays, day])
-                                  else setRecurringDays(recurringDays.filter(d => d !== day))
-                                }}
-                              /> {day}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </section>
 
+          {/* Schedule & Scope */}
           <section className="leads-card">
             <h2 className="leads-section-title">Schedule & Scope</h2>
-            <div className="leads-grid">
-              <label className="leads-field"><span>Start Date *</span><input type="date" value={taskStartDate} onChange={e => setTaskStartDate(e.target.value)} required /></label>
-              <label className="leads-field"><span>End Date *</span><input type="date" value={taskEndDate} onChange={e => setTaskEndDate(e.target.value)} required /></label>
-              <label className="leads-field"><span>Time *</span><input type="time" value={taskTime} onChange={e => setTaskTime(e.target.value)} required /></label>
-              <label className="leads-field leads-field--full"><span>Scope *</span><textarea rows={2} value={scopeOfWork} onChange={e => setScopeOfWork(e.target.value)} required /></label>
+            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+              <label className="leads-field">
+                <span>Start Date *</span>
+                <input type="date" value={taskStartDate} onChange={e => setTaskStartDate(e.target.value)} required />
+              </label>
+              <label className="leads-field">
+                <span>End Date *</span>
+                <input type="date" value={taskEndDate} onChange={e => setTaskEndDate(e.target.value)} required />
+              </label>
+              <label className="leads-field">
+                <span>Time *</span>
+                <input type="time" value={taskTime} onChange={e => setTaskTime(e.target.value)} required />
+              </label>
+              <label className="leads-field leads-field--full">
+                <span>Scope of Work *</span>
+                <textarea rows={3} value={scopeOfWork} onChange={e => setScopeOfWork(e.target.value)} required placeholder="Describe requirements..." />
+              </label>
             </div>
           </section>
 
+          {/* Location */}
           <section className="leads-card">
             <h2 className="leads-section-title">Location</h2>
-            <div className="leads-grid">
+            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
               <label className="leads-field leads-field--full">
-                <span>Address (Search)</span>
-                <input
-                  ref={googleRef}
-                  className="google-autocomplete-input"
-                  placeholder="Search Location (Enter area, landmark, or city)"
+                <span>Details Address Search</span>
+                <Autocomplete
+                  apiKey={GOOGLE_MAPS_API_KEY}
+                  onPlaceSelected={handleGoogleAddressSelect}
+                  options={{
+                    types: ['address'],
+                  }}
+                  placeholder="Type to search global address..."
                   style={{
                     width: '100%',
                     height: '42px',
                     padding: '0 12px',
                     borderRadius: '10px',
-                    border: '1px solid var(--border-subtle)',
+                    border: '1px solid var(--border-subtle, #e5e7eb)',
+                    fontSize: '13px',
+                    outline: 'none',
                     background: 'var(--input-bg)',
-                    color: 'var(--text-main)',
-                    outline: 'none'
+                    color: 'var(--text-main)'
                   }}
                 />
               </label>
 
               <label className="leads-field">
-                <span>Address 1 *</span>
-                <input
-                  type="text"
-                  value={addressLine1}
-                  onChange={e => setAddressLine1(e.target.value)}
-                  required
-                  placeholder="Street name / Building"
-                />
+                <span>Address Line 1 *</span>
+                <input type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} required placeholder="Street / Building" />
               </label>
 
               <label className="leads-field">
-                <span>Apartment/Street 2</span>
-                <input
-                  type="text"
-                  value={addressLine2}
-                  onChange={e => setAddressLine2(e.target.value)}
-                  placeholder="Suite, Floor, etc."
-                />
+                <span>Apartment / Unit</span>
+                <input type="text" value={apartment} onChange={e => setApartment(e.target.value)} placeholder="Apt, Suite, Floor" />
+              </label>
+
+              <label className="leads-field">
+                <span>Address Line 2</span>
+                <input type="text" value={addressLine2} onChange={e => setAddressLine2(e.target.value)} placeholder="Additional address info" />
               </label>
 
               <label className="leads-field">
                 <span>City *</span>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                  required
-                />
+                <input type="text" value={city} onChange={e => setCity(e.target.value)} required />
               </label>
 
               <label className="leads-field">
@@ -504,15 +536,10 @@ function LeadsPage() {
 
               <label className="leads-field">
                 <span>Zip Code *</span>
-                <input
-                  type="text"
-                  value={zipCode}
-                  onChange={e => setZipCode(e.target.value)}
-                  required
-                />
+                <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} required />
               </label>
 
-              <label className="leads-field leads-field--2/3">
+              <label className="leads-field">
                 <span>Timezone *</span>
                 <Select
                   options={timezoneOptions}
@@ -525,24 +552,21 @@ function LeadsPage() {
             </div>
           </section>
 
+          {/* Project Details */}
           <section className="leads-card">
-            <h2 className="leads-section-title">Project Details</h2>
-            <div className="leads-grid">
-              <label className="leads-field leads-field--full">
+            <h2 className="leads-section-title">Tools & Equipment</h2>
+            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(1, 1fr)' }}>
+              <label className="leads-field">
                 <span>Tools Required</span>
-                <input
-                  type="text"
-                  value={toolsRequired}
-                  onChange={(e) => setToolsRequired(e.target.value)}
-                  placeholder="e.g. Drill, Laptop, Console cable"
-                />
+                <input type="text" value={toolsRequired} onChange={(e) => setToolsRequired(e.target.value)} placeholder="e.g. Drill, Laptop, Console cable" />
               </label>
             </div>
           </section>
 
+          {/* Pricing */}
           <section className="leads-card">
             <h2 className="leads-section-title">Pricing & Rates</h2>
-            <div className="leads-grid leads-grid--pricing">
+            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
               <label className="leads-field">
                 <span>Currency</span>
                 <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
@@ -551,34 +575,36 @@ function LeadsPage() {
                   ))}
                 </select>
               </label>
+
               <label className="leads-field">
-                <span>Hourly</span>
+                <span>Hourly Rate</span>
                 <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="0.00" />
               </label>
               <label className="leads-field">
-                <span>Half Day</span>
+                <span>Half Day Rate</span>
                 <input type="number" step="0.01" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} placeholder="0.00" />
               </label>
               <label className="leads-field">
-                <span>Full Day</span>
+                <span>Full Day Rate</span>
                 <input type="number" step="0.01" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} placeholder="0.00" />
               </label>
               <label className="leads-field">
-                <span>Monthly</span>
+                <span>Monthly Rate</span>
                 <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="0.00" />
               </label>
-              <label className="leads-field">
-                <span>Agreed Rate</span>
+              <label className="leads-field" style={{ gridColumn: 'span 2' }}>
+                <span>Agreed / Fixed Rate</span>
                 <input type="text" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} placeholder="Details" />
               </label>
             </div>
           </section>
 
+          {/* Additional Costs */}
           <section className="leads-card">
             <h2 className="leads-section-title">Additional Costs</h2>
-            <div className="leads-grid">
+            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
               <label className="leads-field">
-                <span>Travel/Day</span>
+                <span>Travel Cost / Day</span>
                 <input
                   type="number"
                   step="0.01"
