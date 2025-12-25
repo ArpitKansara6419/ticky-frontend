@@ -96,9 +96,8 @@ function LeadsPage() {
   const [taskTime, setTaskTime] = useState('09:00')
   const [scopeOfWork, setScopeOfWork] = useState('')
 
-  const [apartment, setApartment] = useState('')
+
   const [addressLine1, setAddressLine1] = useState('')
-  const [addressLine2, setAddressLine2] = useState('')
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
   const [zipCode, setZipCode] = useState('')
@@ -125,14 +124,7 @@ function LeadsPage() {
     setTaskEndDate('')
     setTaskTime('09:00')
     setScopeOfWork('')
-    setApartment('')
-    setIsRecurring('No')
-    setRecurringStartDate('')
-    setRecurringEndDate('')
-    setTotalWeeks('')
-    setRecurringDays([])
     setAddressLine1('')
-    setAddressLine2('')
     setCity('')
     setCountry('')
     setZipCode('')
@@ -314,7 +306,7 @@ function LeadsPage() {
         method: editingLeadId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({
           customerId: Number(customerId), taskName, leadType, clientTicketNumber, taskStartDate, taskEndDate, taskTime: taskTime + ':00',
-          scopeOfWork, apartment, addressLine1, addressLine2, city, country, zipCode, timezone, currency,
+          scopeOfWork, apartment: '', addressLine1, addressLine2: '', city, country, zipCode, timezone, currency,
           hourlyRate: Number(hourlyRate), halfDayRate: Number(halfDayRate), fullDayRate: Number(fullDayRate), monthlyRate: Number(monthlyRate),
           toolsRequired, agreedRate: Number(agreedRate), travelCostPerDay: Number(travelCostPerDay), totalCost: Number(totalCost), status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',')
@@ -330,7 +322,7 @@ function LeadsPage() {
     setTaskName(l.taskName); setCustomerId(String(l.customerId)); setLeadType(l.leadType); setClientTicketNumber(l.clientTicketNumber || '')
     const effectiveStartDate = ((l.status === 'Reschedule' || l.status === 'Confirm') && l.followUpDate) ? l.followUpDate : l.taskStartDate
     setTaskStartDate(effectiveStartDate?.split('T')[0]); setTaskEndDate(l.taskEndDate?.split('T')[0]); setTaskTime(l.taskTime?.slice(0, 5))
-    setScopeOfWork(l.scopeOfWork); setApartment(l.apartment || ''); setAddressLine1(l.addressLine1); setAddressLine2(l.addressLine2 || '')
+    setScopeOfWork(l.scopeOfWork); setAddressLine1(l.addressLine1);
     setCity(l.city); setCountry(l.country); setZipCode(l.zipCode); setTimezone(l.timezone)
     setCurrency(l.currency); setHourlyRate(l.hourlyRate); setHalfDayRate(l.halfDayRate); setFullDayRate(l.fullDayRate)
     setMonthlyRate(l.monthlyRate); setToolsRequired(l.toolsRequired || ''); setAgreedRate(l.agreedRate || '')
@@ -508,15 +500,7 @@ function LeadsPage() {
                 <input type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} required placeholder="Street / Building" />
               </label>
 
-              <label className="leads-field">
-                <span>Apartment / Unit</span>
-                <input type="text" value={apartment} onChange={e => setApartment(e.target.value)} placeholder="Apt, Suite, Floor" />
-              </label>
 
-              <label className="leads-field">
-                <span>Address Line 2</span>
-                <input type="text" value={addressLine2} onChange={e => setAddressLine2(e.target.value)} placeholder="Additional address info" />
-              </label>
 
               <label className="leads-field">
                 <span>City *</span>
