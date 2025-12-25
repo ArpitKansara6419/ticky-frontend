@@ -500,11 +500,9 @@ function LeadsPage() {
                 <input type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} required placeholder="Street / Building" />
               </label>
 
-
-
               <label className="leads-field">
                 <span>City *</span>
-                <input type="text" value={city} onChange={e => setCity(e.target.value)} required />
+                <input type="text" value={city} onChange={e => setCity(e.target.value)} required placeholder="Enter city" />
               </label>
 
               <label className="leads-field">
@@ -520,10 +518,10 @@ function LeadsPage() {
 
               <label className="leads-field">
                 <span>Zip Code *</span>
-                <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} required />
+                <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} required placeholder="Enter zip code" />
               </label>
 
-              <label className="leads-field">
+              <label className="leads-field leads-field--full">
                 <span>Timezone *</span>
                 <Select
                   options={timezoneOptions}

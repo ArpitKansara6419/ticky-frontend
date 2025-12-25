@@ -841,7 +841,7 @@ function TicketsPage() {
                 />
               </label>
 
-              <label className="tickets-field">
+              <label className="tickets-field tickets-field--full">
                 <span>
                   Timezone <span className="field-required">*</span>
                 </span>
