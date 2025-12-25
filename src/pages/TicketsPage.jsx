@@ -760,12 +760,12 @@ function TicketsPage() {
             </div>
           </section>
 
-          {/* Address */}
+          {/* Location */}
           <section className="tickets-card">
-            <h2 className="tickets-section-title">Address</h2>
+            <h2 className="tickets-section-title">Location</h2>
             <div className="tickets-grid">
               <label className="tickets-field tickets-field--full">
-                <span>Address</span>
+                <span>Address Search</span>
                 <Autocomplete
                   apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}
@@ -780,20 +780,10 @@ function TicketsPage() {
                     borderRadius: '10px',
                     border: '1px solid var(--border-subtle, #e5e7eb)',
                     fontSize: '13px',
-                    outline: 'none'
+                    outline: 'none',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-main)'
                   }}
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Apartment <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={apartment}
-                  onChange={(e) => setApartment(e.target.value)}
-                  placeholder="Enter apartment/unit number"
                 />
               </label>
 
@@ -805,27 +795,7 @@ function TicketsPage() {
                   type="text"
                   value={addressLine1}
                   onChange={(e) => setAddressLine1(e.target.value)}
-                  placeholder="Enter address line 1"
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>Address Line 2</span>
-                <input
-                  type="text"
-                  value={addressLine2}
-                  onChange={(e) => setAddressLine2(e.target.value)}
-                  placeholder="Enter address line 2 (optional)"
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>Apartment / Suite</span>
-                <input
-                  type="text"
-                  value={apartment}
-                  onChange={(e) => setApartment(e.target.value)}
-                  placeholder="Apt, Suite, Unit, etc."
+                  placeholder="Street / Building"
                 />
               </label>
 
@@ -871,7 +841,7 @@ function TicketsPage() {
                 />
               </label>
 
-              <label className="tickets-field tickets-field--full">
+              <label className="tickets-field">
                 <span>
                   Timezone <span className="field-required">*</span>
                 </span>
