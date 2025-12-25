@@ -46,6 +46,7 @@ const customSelectStyles = {
 
 function LeadsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [viewMode, setViewMode] = useState('list')
 
   // Google Maps Places Autocomplete setup using hook (more stable)
@@ -293,6 +294,17 @@ function LeadsPage() {
     }
     fetchInit(); loadLeads(); fetchCountries()
   }, [])
+
+  // Handle navigation from dashboard's "New Lead" button
+  useEffect(() => {
+    if (location.state?.openForm) {
+      setViewMode('form')
+      resetForm()
+      // Clear state so it doesn't persist
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
+
 
   const filteredLeads = useMemo(() => {
     const t = searchTerm.toLowerCase().trim()
