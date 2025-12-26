@@ -245,13 +245,30 @@ function LeadsPage() {
 
   const handleStatusUpdate = async () => {
     try {
-      const { leadId, newStatus } = statusChangeData
+      const { leadId, newStatus, currentStatus } = statusChangeData
       if (newStatus === 'Reschedule' && !followUpDate) return alert('Select follow-up date')
+
+      // Prevent rescheduling to the same date if already rescheduled
+      if (newStatus === 'Reschedule' && currentStatus === 'Reschedule') {
+        const currentLead = leads.find(l => l.id === leadId)
+        if (currentLead && currentLead.followUpDate) {
+          const currentDate = currentLead.followUpDate.split('T')[0]
+          if (currentDate === followUpDate) {
+            return alert('Cannot reschedule to the same date. Please select a different date.')
+          }
+        }
+      }
+
       const res = await fetch(`${API_BASE_URL}/leads/${leadId}/status`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ status: newStatus, followUpDate: followUpDate || null, statusChangeReason: statusChangeReason || null })
       })
-      if (!res.ok) throw new Error('Update failed')
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.message || 'Update failed')
+      }
+
       setIsStatusModalOpen(false); loadLeads()
     } catch (e) { alert(e.message) }
   }
