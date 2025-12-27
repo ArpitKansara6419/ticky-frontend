@@ -79,6 +79,8 @@ function DashboardHome({ onNavigate, insightsLayout }) {
   // Real-time Calendar State
   const [currentDate, setCurrentDate] = useState(new Date()) // tracks the mont/year view
   const [selectedDate, setSelectedDate] = useState(new Date()) // tracks clicked date
+  const [isYearPickerOpen, setIsYearPickerOpen] = useState(false)
+  const [yearPickerBase, setYearPickerBase] = useState(new Date().getFullYear())
 
   const [tickets, setTickets] = useState([])
 
@@ -184,28 +186,46 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                 ))}
               </select>
             </label>
-            <label className="filter-control-nano">
-              <span>Year</span>
-              <input
-                type="number"
-                className="nano-year-input"
-                value={currentDate.getFullYear()}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val.length <= 4) {
-                    const newYear = parseInt(val, 10);
-                    if (!isNaN(newYear)) {
-                      setCurrentDate(new Date(newYear, currentDate.getMonth(), 1));
-                    }
-                  }
+            <div className="year-picker-container">
+              <button
+                type="button"
+                className="year-picker-toggle"
+                onClick={() => {
+                  setIsYearPickerOpen(!isYearPickerOpen)
+                  setYearPickerBase(currentDate.getFullYear())
                 }}
-                onBlur={(e) => {
-                  if (!e.target.value) {
-                    setCurrentDate(new Date(new Date().getFullYear(), currentDate.getMonth(), 1));
-                  }
-                }}
-              />
-            </label>
+              >
+                {currentDate.getFullYear()} <FiChevronDown />
+              </button>
+
+              {isYearPickerOpen && (
+                <div className="year-picker-popover">
+                  <header className="year-picker-header">
+                    <button type="button" onClick={() => setYearPickerBase(b => b - 12)}><FiChevronLeft /></button>
+                    <span>{yearPickerBase - 5} - {yearPickerBase + 6}</span>
+                    <button type="button" onClick={() => setYearPickerBase(b => b + 12)}><FiChevronRight /></button>
+                  </header>
+                  <div className="year-picker-grid">
+                    {Array.from({ length: 12 }).map((_, i) => {
+                      const y = yearPickerBase - 5 + i
+                      return (
+                        <button
+                          key={y}
+                          type="button"
+                          className={`year-picker-btn ${y === currentDate.getFullYear() ? 'active' : ''}`}
+                          onClick={() => {
+                            setCurrentDate(new Date(y, currentDate.getMonth(), 1))
+                            setIsYearPickerOpen(false)
+                          }}
+                        >
+                          {y}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
             <button type="button" className="filter-today-btn" onClick={goToToday}>
               Today
             </button>
