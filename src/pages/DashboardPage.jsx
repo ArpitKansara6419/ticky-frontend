@@ -192,8 +192,8 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   setCurrentDate(new Date(newYear, currentDate.getMonth(), 1))
                 }}
               >
-                {Array.from({ length: 5 }).map((_, i) => {
-                  const y = new Date().getFullYear() - 2 + i // Show 2 years back to 2 years forward
+                {Array.from({ length: 21 }).map((_, i) => {
+                  const y = new Date().getFullYear() - 10 + i // Show 10 years back to 10 years forward
                   return <option key={y} value={y}>{y}</option>
                 })}
               </select>
