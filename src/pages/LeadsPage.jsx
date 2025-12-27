@@ -741,8 +741,15 @@ function LeadsPage() {
                   </td>
                   <td>
                     {l.status === 'Confirm' ? (
-                      <button type="button" className="leads-create-ticket-btn" onClick={() => navigate('/dashboard', { state: { openTickets: true } })}>
-                        <FiFileText /> Ticket
+                      <button
+                        type="button"
+                        className="leads-create-ticket-btn"
+                        onClick={() => {
+                          localStorage.setItem('selectedLeadForTicket', JSON.stringify(l))
+                          navigate('/dashboard', { state: { openTickets: true } })
+                        }}
+                      >
+                        <FiFileText /> Ticket <span className="ticket-count-badge-mini">{l.ticketCount || 0}</span>
                       </button>
                     ) : l.clientTicketNumber || '--'}
                   </td>
