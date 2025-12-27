@@ -447,9 +447,7 @@ function LeadsPage() {
                 </div>
 
                 {isRecurring === 'Yes' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
-                    <label className="leads-field"><span>Recurring Start Date</span><input type="date" value={recurringStartDate} onChange={e => setRecurringStartDate(e.target.value)} /></label>
-                    <label className="leads-field"><span>Recurring End Date</span><input type="date" value={recurringEndDate} onChange={e => setRecurringEndDate(e.target.value)} /></label>
+                  <div style={{ marginTop: '16px' }}>
 
                     <div className="leads-field leads-field--full">
                       <span style={{ display: 'block', marginBottom: '8px' }}>Recur on Days</span>
