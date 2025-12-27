@@ -681,14 +681,58 @@
   color: var(--text-main);
 }
 
+.filter-control-nano {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.nano-year-input {
+  width: 55px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--card-bg);
+  color: var(--text-main);
+  text-align: center;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.nano-year-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+/* Hide arrows for number input */
+.nano-year-input::-webkit-outer-spin-button,
+.nano-year-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .filter-today-btn {
   border-radius: 999px;
   border: 1px solid var(--border-subtle);
   padding: 4px 14px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  margin-top: auto;
   font-size: 12px;
   background: var(--card-bg);
   color: var(--text-main);
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-today-btn:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .filter-footer {

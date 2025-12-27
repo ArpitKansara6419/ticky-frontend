@@ -184,19 +184,27 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                 ))}
               </select>
             </label>
-            <label className="filter-control">
-              <select
+            <label className="filter-control-nano">
+              <span>Year</span>
+              <input
+                type="number"
+                className="nano-year-input"
                 value={currentDate.getFullYear()}
                 onChange={(e) => {
-                  const newYear = parseInt(e.target.value, 10)
-                  setCurrentDate(new Date(newYear, currentDate.getMonth(), 1))
+                  const val = e.target.value;
+                  if (val.length <= 4) {
+                    const newYear = parseInt(val, 10);
+                    if (!isNaN(newYear)) {
+                      setCurrentDate(new Date(newYear, currentDate.getMonth(), 1));
+                    }
+                  }
                 }}
-              >
-                {Array.from({ length: 21 }).map((_, i) => {
-                  const y = new Date().getFullYear() - 10 + i // Show 10 years back to 10 years forward
-                  return <option key={y} value={y}>{y}</option>
-                })}
-              </select>
+                onBlur={(e) => {
+                  if (!e.target.value) {
+                    setCurrentDate(new Date(new Date().getFullYear(), currentDate.getMonth(), 1));
+                  }
+                }}
+              />
             </label>
             <button type="button" className="filter-today-btn" onClick={goToToday}>
               Today
