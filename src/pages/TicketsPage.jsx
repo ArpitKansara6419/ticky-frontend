@@ -552,9 +552,15 @@ function TicketsPage() {
         setCustomerId(String(parsedLead.customerId || ''))
         setLeadId(String(parsedLead.id))
         setTaskName(parsedLead.taskName || '')
+
+        // Use followUpDate as the "latest" date if available, otherwise fallback to taskStartDate/End
+        const latestDate = parsedLead.followUpDate || parsedLead.taskStartDate;
+        const latestEndDate = parsedLead.followUpDate || parsedLead.taskEndDate;
+
         // Ensure dates are in YYYY-MM-DD for the <input type="date" />
-        setTaskStartDate(parsedLead.taskStartDate ? String(parsedLead.taskStartDate).split('T')[0] : '')
-        setTaskEndDate(parsedLead.taskEndDate ? String(parsedLead.taskEndDate).split('T')[0] : '')
+        setTaskStartDate(latestDate ? String(latestDate).split('T')[0] : '')
+        setTaskEndDate(latestEndDate ? String(latestEndDate).split('T')[0] : '')
+
         setTaskTime(parsedLead.taskTime || '00:00')
         setScopeOfWork(parsedLead.scopeOfWork || '')
 

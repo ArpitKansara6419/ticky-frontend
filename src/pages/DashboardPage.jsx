@@ -145,13 +145,13 @@ function DashboardHome({ onNavigate, insightsLayout }) {
     fetchTickets()
   }, [])
 
-  // Filter tickets for a specific date (based on createdAt)
+  // Filter tickets for a specific date (based on taskStartDate)
   const getTicketsForDate = (date) => {
     if (!date) return []
     return tickets.filter(t => {
-      if (!t.createdAt) return false
-      const tDate = new Date(t.createdAt)
-      return tDate.toDateString() === date.toDateString()
+      if (!t.taskStartDate) return false;
+      const tDate = new Date(t.taskStartDate);
+      return tDate.toDateString() === date.toDateString();
     })
   }
 
@@ -415,8 +415,8 @@ function DashboardHome({ onNavigate, insightsLayout }) {
               <span className="ticket-summary-label">Total Tickets (Month)</span>
               <span className="ticket-summary-value">
                 {tickets.filter(t => {
-                  const d = new Date(t.createdAt)
-                  return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()
+                  const d = t.taskStartDate ? new Date(t.taskStartDate) : null;
+                  return d && d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
                 }).length}
               </span>
             </div>
