@@ -675,7 +675,9 @@ function DashboardPage() {
   useEffect(() => {
     if (location.state?.openLeads) {
       setActivePage('leads')
-      // Clear state so it doesn't persist
+      window.history.replaceState({}, document.title)
+    } else if (location.state?.openCustomers) {
+      setActivePage('customers')
       window.history.replaceState({}, document.title)
     } else if (location.state?.openTickets) {
       setActivePage('tickets')
@@ -780,11 +782,14 @@ function DashboardPage() {
       if (isSettingsOpen) setIsSettingsOpen(false)
       return
     }
+    // Clear and replace state to prevent persistence of 'openForm' from dashboard cards
+    navigate('/dashboard', { state: {}, replace: true })
     setActivePage(id)
     if (isSettingsOpen) setIsSettingsOpen(false)
   }
 
   const handleSettingsItemClick = (id) => {
+    navigate('/dashboard', { state: {}, replace: true })
     setActivePage(id)
     setIsSettingsOpen(false)
   }

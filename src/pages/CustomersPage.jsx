@@ -197,6 +197,7 @@ function CustomersPage() {
   useEffect(() => {
     if (location.state?.openForm) {
       setViewMode('form')
+      resetForm()
       window.history.replaceState({}, document.title)
     }
   }, [location])
