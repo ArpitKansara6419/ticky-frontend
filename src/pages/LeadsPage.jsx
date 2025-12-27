@@ -749,7 +749,7 @@ function LeadsPage() {
                           navigate('/dashboard', { state: { openTickets: true } })
                         }}
                       >
-                        <FiFileText /> Ticket <span className="ticket-count-badge-mini">{l.ticketCount || 0}</span>
+                        <FiFileText /> Ticket
                       </button>
                     ) : l.clientTicketNumber || '--'}
                   </td>

@@ -94,12 +94,7 @@ function TicketsPage() {
         taskEndDate &&
         taskTime &&
         scopeOfWork &&
-        engineerName &&
-        apartment &&
-        addressLine1 &&
-        city &&
-        country &&
-        zipCode,
+        engineerName
       ),
     [
       customerId,
@@ -108,12 +103,7 @@ function TicketsPage() {
       taskEndDate,
       taskTime,
       scopeOfWork,
-      engineerName,
-      apartment,
-      addressLine1,
-      city,
-      country,
-      zipCode,
+      engineerName
     ],
   )
 
@@ -170,7 +160,7 @@ function TicketsPage() {
         inProgress: data.summary?.inProgressTickets || 0,
         resolved: data.summary?.resolvedTickets || 0,
       })
-      setTickets((data.tickets || []).sort((a, b) => a.id - b.id))
+      setTickets((data.tickets || []).sort((a, b) => b.id - a.id))
     } catch (err) {
       console.error('Load tickets error', err)
       setError(err.message || 'Unable to load tickets')
