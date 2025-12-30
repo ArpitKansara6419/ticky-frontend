@@ -344,7 +344,7 @@ function LeadsPage() {
           customerId: Number(customerId), taskName, leadType, clientTicketNumber, taskStartDate, taskEndDate, taskTime: taskTime + ':00',
           scopeOfWork, apartment: '', addressLine1, addressLine2: '', city, country, zipCode, timezone, currency,
           hourlyRate: Number(hourlyRate), halfDayRate: Number(halfDayRate), fullDayRate: Number(fullDayRate), monthlyRate: Number(monthlyRate),
-          toolsRequired, agreedRate: Number(agreedRate), travelCostPerDay: Number(travelCostPerDay), totalCost: Number(totalCost), status,
+          toolsRequired, agreedRate, travelCostPerDay: Number(travelCostPerDay), totalCost: Number(totalCost), status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',')
         })
       })
