@@ -255,10 +255,10 @@ function LeadsPage() {
           return alert('Reschedule date must be in the future.')
         }
 
-        if (currentStatus === 'Reschedule') {
+        if (currentStatus === 'Reschedule' || currentStatus === 'Confirm') {
           const currentLead = leads.find(l => l.id === leadId)
           if (currentLead && currentLead.followUpDate) {
-            const currentDateStr = currentLead.follow_up_date?.split('T')[0] || currentLead.followUpDate?.split('T')[0]
+            const currentDateStr = new Date(currentLead.follow_up_date || currentLead.followUpDate).toISOString().split('T')[0]
             if (currentDateStr === followUpDate) {
               return alert('Cannot reschedule to the same date. Please select a different date.')
             }
