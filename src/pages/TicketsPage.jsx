@@ -82,6 +82,8 @@ function TicketsPage() {
   const [fullDayRate, setFullDayRate] = useState('')
   const [monthlyRate, setMonthlyRate] = useState('')
   const [agreedRate, setAgreedRate] = useState('')
+  const [travelCostPerDay, setTravelCostPerDay] = useState('')
+  const [totalCost, setTotalCost] = useState('')
 
   const [status, setStatus] = useState('Open')
 
@@ -139,6 +141,8 @@ function TicketsPage() {
     setFullDayRate('')
     setMonthlyRate('')
     setAgreedRate('')
+    setTravelCostPerDay('')
+    setTotalCost('')
     setStatus('Open')
     setError('')
     setSuccess('')
@@ -399,6 +403,8 @@ function TicketsPage() {
         fullDayRate: fullDayRate !== '' ? Number(fullDayRate) : null,
         monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : null,
         agreedRate,
+        travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
+        totalCost: totalCost !== '' ? Number(totalCost) : null,
         status,
       }
 
@@ -494,6 +500,8 @@ function TicketsPage() {
     setFullDayRate(ticket.fullDayRate != null ? String(ticket.fullDayRate) : '')
     setMonthlyRate(ticket.monthlyRate != null ? String(ticket.monthlyRate) : '')
     setAgreedRate(ticket.agreedRate || '')
+    setTravelCostPerDay(ticket.travelCostPerDay != null ? String(ticket.travelCostPerDay) : '')
+    setTotalCost(ticket.totalCost != null ? String(ticket.totalCost) : '')
     setStatus(ticket.status || 'Open')
   }
 
@@ -592,6 +600,8 @@ function TicketsPage() {
         setFullDayRate(parsedLead.fullDayRate != null ? String(parsedLead.fullDayRate) : '')
         setMonthlyRate(parsedLead.monthlyRate != null ? String(parsedLead.monthlyRate) : '')
         setAgreedRate(parsedLead.agreedRate || '')
+        setTravelCostPerDay(parsedLead.travelCostPerDay != null ? String(parsedLead.travelCostPerDay) : '')
+        setTotalCost(parsedLead.totalCost != null ? String(parsedLead.totalCost) : '')
 
         setViewMode('form')
       }
@@ -980,6 +990,34 @@ function TicketsPage() {
                   type="text"
                   value={agreedRate}
                   onChange={(e) => setAgreedRate(e.target.value)}
+                  placeholder="Details"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Additional Costs */}
+          <section className="tickets-card">
+            <h2 className="tickets-section-title">Additional Costs</h2>
+            <div className="tickets-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+              <label className="tickets-field">
+                <span>Travel Cost / Day</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={travelCostPerDay}
+                  onChange={(e) => setTravelCostPerDay(e.target.value)}
+                  placeholder="0.00"
+                />
+              </label>
+              <label className="tickets-field">
+                <span>Tool Cost</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={totalCost}
+                  onChange={(e) => setTotalCost(e.target.value)}
+                  placeholder="0.00"
                 />
               </label>
             </div>

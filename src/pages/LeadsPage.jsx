@@ -911,6 +911,10 @@ function LeadsPage() {
                   <span>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
                 </div>
                 <div className="detail-item">
+                  <label>Travel Cost / Day</label>
+                  <span>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
+                </div>
+                <div className="detail-item">
                   <label>Agreed Rate</label>
                   <span>{selectedLead.agreedRate || '--'}</span>
                 </div>
