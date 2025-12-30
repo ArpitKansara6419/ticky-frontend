@@ -248,13 +248,20 @@ function LeadsPage() {
       const { leadId, newStatus, currentStatus } = statusChangeData
       if (newStatus === 'Reschedule' && !followUpDate) return alert('Select follow-up date')
 
-      // Prevent rescheduling to the same date if already rescheduled
-      if (newStatus === 'Reschedule' && currentStatus === 'Reschedule') {
-        const currentLead = leads.find(l => l.id === leadId)
-        if (currentLead && currentLead.followUpDate) {
-          const currentDate = currentLead.followUpDate.split('T')[0]
-          if (currentDate === followUpDate) {
-            return alert('Cannot reschedule to the same date. Please select a different date.')
+      // Prevent rescheduling to the same date or past dates
+      if (newStatus === 'Reschedule') {
+        const todayStr = new Date().toISOString().split('T')[0]
+        if (followUpDate <= todayStr) {
+          return alert('Reschedule date must be in the future.')
+        }
+
+        if (currentStatus === 'Reschedule') {
+          const currentLead = leads.find(l => l.id === leadId)
+          if (currentLead && currentLead.followUpDate) {
+            const currentDateStr = currentLead.follow_up_date?.split('T')[0] || currentLead.followUpDate?.split('T')[0]
+            if (currentDateStr === followUpDate) {
+              return alert('Cannot reschedule to the same date. Please select a different date.')
+            }
           }
         }
       }
@@ -828,25 +835,83 @@ function LeadsPage() {
         <div className="lead-modal-backdrop" onClick={() => setIsLeadModalOpen(false)}>
           <div className="lead-modal lead-modal--details" onClick={e => e.stopPropagation()}>
             <header className="lead-modal-header">
-              <h2>Lead Details</h2>
-              <p>#{String(selectedLead.id).padStart(3, '0')} - {selectedLead.taskName}</p>
+              <div className="lead-modal-header-info">
+                <h2>Lead Details</h2>
+                <div className="lead-badge-id">#{String(selectedLead.id).padStart(3, '0')}</div>
+              </div>
+              <p className="lead-modal-subtitle">{selectedLead.taskName}</p>
             </header>
             <div className="lead-modal-content">
               <div className="details-grid">
-                <div className="detail-item"><label>Customer</label><span>{selectedLead.customerName}</span></div>
-                <div className="detail-item"><label>Type</label><span>{selectedLead.leadType}</span></div>
-                <div className="detail-item"><label>Service Date</label><span>{((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) ? selectedLead.followUpDate.split('T')[0] : selectedLead.taskStartDate?.split('T')[0]}</span></div>
-                <div className="detail-item"><label>Time</label><span>{selectedLead.taskTime}</span></div>
-                <div className="detail-item--full"><label>Scope of Work</label><span>{selectedLead.scopeOfWork}</span></div>
-                <div className="detail-item"><label>Location</label><span>{selectedLead.city}, {selectedLead.country}</span></div>
-                <div className="detail-item"><label>Address</label><span>{selectedLead.addressLine1} {selectedLead.addressLine2}</span></div>
-                <div className="detail-item"><label>Tools Required</label><span>{selectedLead.toolsRequired || '--'}</span></div>
-                <div className="detail-item"><label>Tool Cost</label><span>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span></div>
-                <div className="detail-item"><label>Status</label><span>{selectedLead.status}</span></div>
+                <div className="detail-item">
+                  <label>Customer</label>
+                  <span>{selectedLead.customerName}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Type / Category</label>
+                  <span>{selectedLead.leadType || '--'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Service Date</label>
+                  <span>{((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) ? selectedLead.followUpDate.split('T')[0] : selectedLead.taskStartDate?.split('T')[0]}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Task Time</label>
+                  <span>{selectedLead.taskTime}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Location</label>
+                  <span>{selectedLead.city}, {selectedLead.country}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Timezone</label>
+                  <span>{selectedLead.timezone || '--'}</span>
+                </div>
+                <div className="detail-item--full">
+                  <label>Address</label>
+                  <span>{selectedLead.addressLine1} {selectedLead.addressLine2 ? `, ${selectedLead.addressLine2}` : ''}</span>
+                </div>
+                <div className="detail-item--full">
+                  <label>Scope of Work</label>
+                  <p className="scope-text">{selectedLead.scopeOfWork}</p>
+                </div>
+                <div className="detail-item">
+                  <label>Tools Required</label>
+                  <span>{selectedLead.toolsRequired || '--'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Status</label>
+                  <span className={`status-pill ${selectedLead.status?.toLowerCase()}`}>{selectedLead.status}</span>
+                </div>
+                <div className="detail-item--full divider"></div>
+                <div className="detail-item">
+                  <label>Hourly Rate</label>
+                  <span>{selectedLead.currency} {selectedLead.hourlyRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Half Day Rate</label>
+                  <span>{selectedLead.currency} {selectedLead.halfDayRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Full Day Rate</label>
+                  <span>{selectedLead.currency} {selectedLead.fullDayRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Monthly Rate</label>
+                  <span>{selectedLead.currency} {selectedLead.monthlyRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Tool Cost</label>
+                  <span>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Agreed Rate</label>
+                  <span>{selectedLead.agreedRate || '--'}</span>
+                </div>
               </div>
             </div>
             <div className="lead-modal-footer">
-              <button className="btn-wow-secondary" onClick={() => setIsLeadModalOpen(false)}>Close</button>
+              <button className="btn-wow-secondary" onClick={() => setIsLeadModalOpen(false)}>Close Window</button>
             </div>
           </div>
         </div>

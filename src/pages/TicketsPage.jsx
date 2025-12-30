@@ -551,6 +551,7 @@ function TicketsPage() {
 
         setCustomerId(String(parsedLead.customerId || ''))
         setLeadId(String(parsedLead.id))
+        setClientName(parsedLead.customerName || '')
         setTaskName(parsedLead.taskName || '')
 
         // Use followUpDate as the "latest" date if available, otherwise fallback to taskStartDate/End

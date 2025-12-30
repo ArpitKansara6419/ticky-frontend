@@ -884,26 +884,72 @@
 }
 
 /* Lead Details Modal Specific */
-.lead-modal--details {
-  width: 640px;
+.lead-modal-header-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.date-label {
-  font-size: 10px;
-  font-weight: 700;
+.lead-badge-id {
+  background: var(--primary-soft);
   color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 2px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.date-remarks {
-  font-size: 11px;
+.lead-modal-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
   color: var(--text-muted);
-  font-style: italic;
-  margin-top: 2px;
-  padding-left: 8px;
-  border-left: 2px solid var(--primary-soft);
+  font-weight: 500;
+}
+
+.scope-text {
+  font-size: 14px;
+  color: var(--text-main);
+  background: var(--input-bg);
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-pill.bid {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.status-pill.confirm {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.status-pill.reschedule {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.status-pill.cancelled {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.detail-item--full.divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 8px 0;
 }
 
 @media (max-width: 1024px) {
