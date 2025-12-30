@@ -343,8 +343,14 @@ function LeadsPage() {
         body: JSON.stringify({
           customerId: Number(customerId), taskName, leadType, clientTicketNumber, taskStartDate, taskEndDate, taskTime: taskTime + ':00',
           scopeOfWork, apartment: '', addressLine1, addressLine2: '', city, country, zipCode, timezone, currency,
-          hourlyRate: Number(hourlyRate), halfDayRate: Number(halfDayRate), fullDayRate: Number(fullDayRate), monthlyRate: Number(monthlyRate),
-          toolsRequired, agreedRate, travelCostPerDay: Number(travelCostPerDay), totalCost: Number(totalCost), status,
+          hourlyRate: hourlyRate !== '' ? Number(hourlyRate) : null,
+          halfDayRate: halfDayRate !== '' ? Number(halfDayRate) : null,
+          fullDayRate: fullDayRate !== '' ? Number(fullDayRate) : null,
+          monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : null,
+          toolsRequired, agreedRate,
+          travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
+          totalCost: totalCost !== '' ? Number(totalCost) : null,
+          status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',')
         })
       })
@@ -360,9 +366,9 @@ function LeadsPage() {
     setTaskStartDate(effectiveStartDate?.split('T')[0]); setTaskEndDate(l.taskEndDate?.split('T')[0]); setTaskTime(l.taskTime?.slice(0, 5))
     setScopeOfWork(l.scopeOfWork); setAddressLine1(l.addressLine1);
     setCity(l.city); setCountry(l.country); setZipCode(l.zipCode); setTimezone(l.timezone)
-    setCurrency(l.currency); setHourlyRate(l.hourlyRate); setHalfDayRate(l.halfDayRate); setFullDayRate(l.fullDayRate)
-    setMonthlyRate(l.monthlyRate); setToolsRequired(l.toolsRequired || ''); setAgreedRate(l.agreedRate || '')
-    setTravelCostPerDay(l.travelCostPerDay); setTotalCost(l.totalCost); setStatus(l.status)
+    setCurrency(l.currency); setHourlyRate(l.hourlyRate != null ? String(l.hourlyRate) : ''); setHalfDayRate(l.halfDayRate != null ? String(l.halfDayRate) : ''); setFullDayRate(l.fullDayRate != null ? String(l.fullDayRate) : '')
+    setMonthlyRate(l.monthlyRate != null ? String(l.monthlyRate) : ''); setToolsRequired(l.toolsRequired || ''); setAgreedRate(l.agreedRate || '')
+    setTravelCostPerDay(l.travelCostPerDay != null ? String(l.travelCostPerDay) : ''); setTotalCost(l.totalCost != null ? String(l.totalCost) : ''); setStatus(l.status)
     setIsRecurring(l.isRecurring || 'No'); setRecurringStartDate(l.recurringStartDate?.split('T')[0])
     setRecurringEndDate(l.recurringEndDate?.split('T')[0]); setTotalWeeks(l.totalWeeks || ''); setRecurringDays(l.recurringDays?.split(',') || [])
     const match = countriesList.find(c => c.name === l.country)
