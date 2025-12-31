@@ -778,16 +778,30 @@ function LeadsPage() {
                   </td>
                   <td>
                     {l.status === 'Confirm' ? (
-                      <button
-                        type="button"
-                        className="leads-create-ticket-btn"
-                        onClick={() => {
-                          localStorage.setItem('selectedLeadForTicket', JSON.stringify(l))
-                          navigate('/dashboard', { state: { openTickets: true } })
-                        }}
-                      >
-                        <FiFileText /> Ticket
-                      </button>
+                      l.existingTicketId ? (
+                        <button
+                          type="button"
+                          className="leads-create-ticket-btn"
+                          style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', borderColor: 'rgba(59, 130, 246, 0.2)' }}
+                          onClick={() => {
+                            localStorage.setItem('editTicketId', l.existingTicketId)
+                            navigate('/dashboard', { state: { openTickets: true } })
+                          }}
+                        >
+                          <FiEye /> View Ticket
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="leads-create-ticket-btn"
+                          onClick={() => {
+                            localStorage.setItem('selectedLeadForTicket', JSON.stringify(l))
+                            navigate('/dashboard', { state: { openTickets: true } })
+                          }}
+                        >
+                          <FiFileText /> Ticket
+                        </button>
+                      )
                     ) : l.clientTicketNumber || '--'}
                   </td>
                   <td className="leads-actions-cell">

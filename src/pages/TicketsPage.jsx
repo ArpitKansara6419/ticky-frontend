@@ -611,6 +611,15 @@ function TicketsPage() {
     localStorage.removeItem('selectedLeadForTicket')
   }, [leads, countriesList])
 
+  // Handle external edit request (e.g. from Leads Page)
+  useEffect(() => {
+    const ticketIdToEdit = localStorage.getItem('editTicketId')
+    if (ticketIdToEdit) {
+      localStorage.removeItem('editTicketId')
+      startEditTicket(Number(ticketIdToEdit))
+    }
+  }, [])
+
   if (viewMode === 'form') {
     return (
       <section className="tickets-page">
