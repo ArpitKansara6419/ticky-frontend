@@ -237,38 +237,55 @@ function LeadsPage() {
   const timezoneOptions = useMemo(() => availableTimezones.map(t => ({ value: t, label: t })), [availableTimezones])
 
   const openStatusChangeModal = (lead) => {
-    setStatusChangeData({ leadId: lead.id, leadName: lead.taskName, currentStatus: lead.status, newStatus: lead.status })
-    setFollowUpDate(lead.followUpDate ? lead.followUpDate.split('T')[0] : '')
-    setStatusChangeReason(lead.statusChangeReason || '')
+    setStatusChangeData({
+      leadId: lead.id,
+      leadName: lead.taskName,
+      currentStatus: lead.status,
+      newStatus: lead.status
+    })
+
+    // Use followUpDate if available, otherwise taskStartDate
+    const currentActiveDate = lead.followUpDate || lead.taskStartDate
+    setFollowUpDate(currentActiveDate ? currentActiveDate.split('T')[0] : '')
+
+    setStatusChangeReason('')
     setIsStatusModalOpen(true)
   }
 
   const handleStatusUpdate = async () => {
     try {
       const { leadId, newStatus, currentStatus } = statusChangeData
-      if (newStatus === 'Reschedule' && !followUpDate) return alert('Select follow-up date')
 
-      // Prevent rescheduling to the same date or past dates
+      // Real-time Scenario Validations
+      if (newStatus === 'Reschedule' && !followUpDate) return alert('A new date is required for rescheduling.')
+      if (newStatus === 'Confirm' && !followUpDate) return alert('Please confirm the service date.')
+      if (newStatus === 'Cancelled' && !statusChangeReason) return alert('Please provide a reason for cancellation.')
+
       if (newStatus === 'Reschedule') {
         const todayStr = new Date().toISOString().split('T')[0]
         if (followUpDate <= todayStr) {
-          return alert('Reschedule date must be in the future.')
+          return alert('The rescheduled date must be in the future.')
         }
 
-        if (currentStatus === 'Reschedule' || currentStatus === 'Confirm') {
-          const currentLead = leads.find(l => l.id === leadId)
-          if (currentLead && currentLead.followUpDate) {
-            const currentDateStr = new Date(currentLead.follow_up_date || currentLead.followUpDate).toISOString().split('T')[0]
-            if (currentDateStr === followUpDate) {
-              return alert('Cannot reschedule to the same date. Please select a different date.')
-            }
+        const currentLead = leads.find(l => l.id === leadId)
+        const currentActiveDate = currentLead?.followUpDate || currentLead?.taskStartDate
+        if (currentActiveDate) {
+          const currentDateStr = new Date(currentActiveDate).toISOString().split('T')[0]
+          if (currentDateStr === followUpDate) {
+            return alert('The new date must be different from the current service date.')
           }
         }
       }
 
       const res = await fetch(`${API_BASE_URL}/leads/${leadId}/status`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ status: newStatus, followUpDate: followUpDate || null, statusChangeReason: statusChangeReason || null })
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          status: newStatus,
+          followUpDate: followUpDate || null,
+          statusChangeReason: statusChangeReason || null
+        })
       })
 
       if (!res.ok) {
@@ -276,7 +293,8 @@ function LeadsPage() {
         throw new Error(errorData.message || 'Update failed')
       }
 
-      setIsStatusModalOpen(false); loadLeads()
+      setIsStatusModalOpen(false)
+      loadLeads()
     } catch (e) { alert(e.message) }
   }
 
@@ -719,20 +737,28 @@ function LeadsPage() {
                         }
                       } catch (e) { history = []; }
 
+                      const reschedules = history.filter(h => h.toStatus === 'Reschedule' && h.newDate);
+                      const currentActiveDate = l.followUpDate || l.taskStartDate;
+
                       return (
                         <div className="date-stack">
-                          <span className={`date-value ${history.filter(h => h.date).length > 0 ? 'date-value--old' : ''}`}>
+                          <span className={`date-value ${reschedules.length > 0 ? 'date-value--old' : ''}`}>
                             {l.taskStartDate?.split('T')[0]}
                           </span>
-                          {history.filter(h => h.date).map((h, i, arr) => (
+                          {reschedules.map((h, i) => (
                             <div key={i} className="reschedule-item">
-                              <div className="date-label">RESCHEDULE {i + 1}:</div>
-                              <span className={`date-value ${i === arr.length - 1 ? 'date-value--new' : 'date-value--old'}`}>
-                                {h.date}
+                              <div className="date-label">RESCHEDULED TO:</div>
+                              <span className={`date-value ${h.newDate === currentActiveDate?.split('T')[0] ? 'date-value--new' : 'date-value--old'}`}>
+                                {h.newDate}
                               </span>
-                              {h.remarks && <div className="date-remarks">{h.remarks}</div>}
                             </div>
                           ))}
+                          {l.status === 'Confirm' && l.followUpDate && (
+                            <div className="reschedule-item" style={{ color: '#15803d' }}>
+                              <div className="date-label">CONFIRMED FOR:</div>
+                              <span className="date-value date-value--new">{l.followUpDate.split('T')[0]}</span>
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
@@ -806,22 +832,22 @@ function LeadsPage() {
                 ))}
               </div>
 
-              {statusChangeData.newStatus === 'Reschedule' && (
+              {(statusChangeData.newStatus === 'Reschedule' || statusChangeData.newStatus === 'Confirm') && (
                 <div className="reschedule-date-box">
-                  <label>Select New Reschedule Date</label>
+                  <label>{statusChangeData.newStatus === 'Confirm' ? 'Confirm Service Date' : 'Select New Reschedule Date'}</label>
                   <input
                     type="date"
                     value={followUpDate}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={statusChangeData.newStatus === 'Reschedule' ? new Date().toISOString().split('T')[0] : undefined}
                     onChange={e => setFollowUpDate(e.target.value)}
                   />
                 </div>
               )}
 
               <div className="remarks-box">
-                <label>Remarks / Note</label>
+                <label>Remarks / Note {statusChangeData.newStatus === 'Cancelled' && <span style={{ color: '#ef4444' }}>*</span>}</label>
                 <textarea
-                  placeholder="Enter reason or additional notes..."
+                  placeholder={statusChangeData.newStatus === 'Cancelled' ? "Please explain why the lead was cancelled..." : "Enter reason or additional notes..."}
                   value={statusChangeReason}
                   onChange={e => setStatusChangeReason(e.target.value)}
                   rows={3}
