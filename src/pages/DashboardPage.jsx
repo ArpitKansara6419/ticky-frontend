@@ -147,13 +147,24 @@ function DashboardHome({ onNavigate, insightsLayout }) {
     fetchTickets()
   }, [])
 
-  // Filter tickets for a specific date (based on taskStartDate)
+  // Filter tickets for a specific date (based on range taskStartDate to taskEndDate)
   const getTicketsForDate = (date) => {
     if (!date) return []
+    // Normalize date to midnight for accurate comparison
+    const checkDate = new Date(date)
+    checkDate.setHours(0, 0, 0, 0)
+
     return tickets.filter(t => {
       if (!t.taskStartDate) return false;
-      const tDate = new Date(t.taskStartDate);
-      return tDate.toDateString() === date.toDateString();
+
+      const start = new Date(t.taskStartDate)
+      start.setHours(0, 0, 0, 0)
+
+      // If no end date, treat it as a single day task
+      const end = t.taskEndDate ? new Date(t.taskEndDate) : new Date(start)
+      end.setHours(0, 0, 0, 0)
+
+      return checkDate >= start && checkDate <= end
     })
   }
 
