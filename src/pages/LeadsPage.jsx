@@ -898,8 +898,12 @@ function LeadsPage() {
                   <span>{selectedLead.leadType || '--'}</span>
                 </div>
                 <div className="detail-item">
-                  <label>Service Date</label>
+                  <label>Start Date</label>
                   <span>{((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) ? selectedLead.followUpDate.split('T')[0] : selectedLead.taskStartDate?.split('T')[0]}</span>
+                </div>
+                <div className="detail-item">
+                  <label>End Date</label>
+                  <span>{selectedLead.taskEndDate ? selectedLead.taskEndDate.split('T')[0] : '--'}</span>
                 </div>
                 <div className="detail-item">
                   <label>Task Time</label>

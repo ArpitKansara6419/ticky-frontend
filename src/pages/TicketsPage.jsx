@@ -564,7 +564,7 @@ function TicketsPage() {
 
         // Use followUpDate as the "latest" date if available, otherwise fallback to taskStartDate/End
         const latestDate = parsedLead.followUpDate || parsedLead.taskStartDate;
-        const latestEndDate = parsedLead.followUpDate || parsedLead.taskEndDate;
+        const latestEndDate = parsedLead.taskEndDate || latestDate;
 
         // Ensure dates are in YYYY-MM-DD for the <input type="date" />
         setTaskStartDate(latestDate ? String(latestDate).split('T')[0] : '')
