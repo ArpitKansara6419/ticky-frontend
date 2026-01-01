@@ -1206,48 +1206,90 @@ function TicketsPage() {
       </section>
 
       {isTicketModalOpen && selectedTicket && (
-        <div className="ticket-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="ticket-modal">
+        <div className="ticket-modal-backdrop" onClick={handleCloseTicketModal} role="dialog" aria-modal="true">
+          <div className="ticket-modal ticket-modal--details" onClick={e => e.stopPropagation()}>
             <header className="ticket-modal-header">
-              <div>
-                <h2 className="ticket-modal-title">{selectedTicket.taskName}</h2>
-                <p className="ticket-modal-sub">
-                  Customer: {selectedTicket.customerName} | Engineer: {selectedTicket.engineerName}
-                </p>
+              <div className="ticket-modal-header-info">
+                <h2>Ticket Details</h2>
+                <div className="ticket-badge-id">#AIM-T-{String(selectedTicket.id).padStart(3, '0')}</div>
               </div>
-              <button type="button" className="ticket-modal-close" onClick={handleCloseTicketModal}>
-                ×
-              </button>
+              <p className="ticket-modal-subtitle">{selectedTicket.taskName}</p>
+              <button type="button" className="ticket-modal-close-btn" onClick={handleCloseTicketModal}>×</button>
             </header>
 
-            <section className="ticket-modal-section">
-              <h3>Schedule</h3>
-              <p className="ticket-modal-line">
-                {selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : ''} - {selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : ''} {selectedTicket.taskTime}
-              </p>
-            </section>
+            <div className="ticket-modal-content">
+              <div className="details-grid">
+                <div className="detail-item">
+                  <label>Customer</label>
+                  <span>{selectedTicket.customerName}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Assigned Engineer</label>
+                  <span>{selectedTicket.engineerName || '--'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Schedule</label>
+                  <span>
+                    {selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : ''} to {selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : ''}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <label>Time</label>
+                  <span>{selectedTicket.taskTime}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Status</label>
+                  <span className={`status-pill ${selectedTicket.status?.toLowerCase().replace(' ', '-')}`}>
+                    {selectedTicket.status}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <label>City / Country</label>
+                  <span>{selectedTicket.city}, {selectedTicket.country}</span>
+                </div>
 
-            <section className="ticket-modal-section">
-              <h3>Scope of Work</h3>
-              <p className="ticket-modal-line">{selectedTicket.scopeOfWork}</p>
-            </section>
+                <div className="detail-item--full divider"></div>
 
-            <section className="ticket-modal-section">
-              <h3>Location</h3>
-              <p className="ticket-modal-line">Apartment: {selectedTicket.apartment}</p>
-              <p className="ticket-modal-line">Address: {selectedTicket.addressLine1}</p>
-              {selectedTicket.addressLine2 && (
-                <p className="ticket-modal-line">Address Line 2: {selectedTicket.addressLine2}</p>
-              )}
-              <p className="ticket-modal-line">
-                {selectedTicket.city}, {selectedTicket.country} - {selectedTicket.zipCode}
-              </p>
-            </section>
+                <div className="detail-item--full">
+                  <label>Address</label>
+                  <span>
+                    {selectedTicket.apartment && `${selectedTicket.apartment}, `}
+                    {selectedTicket.addressLine1}
+                    {selectedTicket.addressLine2 && `, ${selectedTicket.addressLine2}`}
+                    {` - ${selectedTicket.zipCode}`}
+                  </span>
+                </div>
 
-            <section className="ticket-modal-section">
-              <h3>Status</h3>
-              <p className="ticket-modal-line">{selectedTicket.status}</p>
-            </section>
+                <div className="detail-item--full">
+                  <label>Scope of Work</label>
+                  <p className="scope-text">{selectedTicket.scopeOfWork}</p>
+                </div>
+
+                <div className="detail-item--full divider"></div>
+
+                <div className="detail-item">
+                  <label>Travel Cost / Day</label>
+                  <span>{selectedTicket.currency} {selectedTicket.travelCostPerDay || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Hourly Rate</label>
+                  <span>{selectedTicket.currency} {selectedTicket.hourlyRate || '0.00'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="ticket-modal-footer">
+              <button className="btn-wow-secondary" onClick={handleCloseTicketModal}>Close</button>
+              <button
+                className="btn-wow-primary"
+                onClick={() => {
+                  handleCloseTicketModal();
+                  startEditTicket(selectedTicket.id);
+                }}
+              >
+                Edit Ticket
+              </button>
+            </div>
           </div>
         </div>
       )}
