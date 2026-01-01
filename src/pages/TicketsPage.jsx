@@ -1228,10 +1228,12 @@ function TicketsPage() {
                   <span>{selectedTicket.engineerName || '--'}</span>
                 </div>
                 <div className="detail-item">
-                  <label>Schedule</label>
-                  <span>
-                    {selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : ''} to {selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : ''}
-                  </span>
+                  <label>Start Date</label>
+                  <span>{selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '--'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>End Date</label>
+                  <span>{selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : '--'}</span>
                 </div>
                 <div className="detail-item">
                   <label>Time</label>
