@@ -792,11 +792,15 @@ function LeadsPage() {
                             const label = h.toStatus === 'Confirm' ? 'CONFIRMED FOR:' : 'RESCHEDULED TO:';
                             const color = h.toStatus === 'Confirm' ? '#15803d' : 'inherit';
 
+                            const hStartDate = h.newDate;
+                            const hEndDate = h.newEndDate || (isLast ? endDateStr : null);
+                            const hIsMultiDay = hEndDate && hEndDate > hStartDate;
+
                             return (
                               <div key={i} className="reschedule-item" style={{ color }}>
                                 <div className="date-label">{label}</div>
                                 <span className={`date-value ${isLast ? 'date-value--new' : 'date-value--old'}`}>
-                                  {h.newDate} {isLast && isMultiDay && h.toStatus === 'Confirm' ? ` - Ends ${endDateStr}` : ''}
+                                  {hStartDate}{hIsMultiDay ? ` to ${hEndDate}` : ''}
                                 </span>
                               </div>
                             );
