@@ -614,9 +614,34 @@ function TicketsPage() {
   // Handle external edit request (e.g. from Leads Page)
   useEffect(() => {
     const ticketIdToEdit = localStorage.getItem('editTicketId')
+    const syncLeadToTicket = localStorage.getItem('syncLeadToTicket')
+
     if (ticketIdToEdit) {
       localStorage.removeItem('editTicketId')
-      startEditTicket(Number(ticketIdToEdit))
+
+      const proceedSync = async () => {
+        await startEditTicket(Number(ticketIdToEdit))
+
+        // If we specifically requested a sync from manual button
+        if (syncLeadToTicket) {
+          localStorage.removeItem('syncLeadToTicket')
+          try {
+            const parsedLead = JSON.parse(syncLeadToTicket)
+            // Force the latest dates from lead into the form
+            // Priority: followUpDate (if Confirm/Reschedule) > taskStartDate
+            const latestDate = parsedLead.followUpDate || parsedLead.taskStartDate
+            const latestEndDate = parsedLead.taskEndDate || latestDate
+
+            if (latestDate) setTaskStartDate(latestDate.split('T')[0])
+            if (latestEndDate) setTaskEndDate(latestEndDate.split('T')[0])
+            console.log("Ticket dates synced from Lead manual action.")
+          } catch (e) {
+            console.error("Manual sync failed", e)
+          }
+        }
+      }
+
+      proceedSync()
     }
   }, [])
 
