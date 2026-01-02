@@ -317,6 +317,14 @@ function LeadsPage() {
   }
 
   useEffect(() => {
+    if (taskStartDate && taskEndDate) {
+      if (taskEndDate < taskStartDate) {
+        setTaskEndDate(taskStartDate)
+      }
+    }
+  }, [taskStartDate, taskEndDate])
+
+  useEffect(() => {
     const total = leads.length
     const bid = leads.filter(l => l.status === 'BID').length
     const confirmed = leads.filter(l => l.status === 'Confirm').length
