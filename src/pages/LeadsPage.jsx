@@ -758,34 +758,34 @@ function LeadsPage() {
                         }
                       } catch (e) { history = []; }
 
-                      const reschedules = history.filter(h => h.toStatus === 'Reschedule' && h.newDate);
-                      const currentActiveDate = l.followUpDate || l.taskStartDate;
                       const startDateStr = l.taskStartDate?.split('T')[0];
                       const endDateStr = l.taskEndDate?.split('T')[0];
                       const isMultiDay = endDateStr && endDateStr > startDateStr;
-                      const baseDisplay = isMultiDay ? `${startDateStr} to ${endDateStr}` : startDateStr;
+
+                      const originalDate = (history.length > 0 && history[0].prevDate) ? history[0].prevDate : startDateStr;
+                      const currentActiveDateStr = l.followUpDate ? l.followUpDate.split('T')[0] : startDateStr;
 
                       return (
                         <div className="date-stack">
-                          <span className={`date-value ${reschedules.length > 0 ? 'date-value--old' : ''}`}>
-                            {baseDisplay}
+                          <span className={`date-value ${history.length > 0 ? 'date-value--old' : ''}`}>
+                            {originalDate}
                           </span>
-                          {reschedules.map((h, i) => (
-                            <div key={i} className="reschedule-item">
-                              <div className="date-label">RESCHEDULED TO:</div>
-                              <span className={`date-value ${h.newDate === currentActiveDate?.split('T')[0] ? 'date-value--new' : 'date-value--old'}`}>
-                                {h.newDate}
-                              </span>
-                            </div>
-                          ))}
-                          {l.status === 'Confirm' && l.followUpDate && (
-                            <div className="reschedule-item" style={{ color: '#15803d' }}>
-                              <div className="date-label">CONFIRMED FOR:</div>
-                              <span className="date-value date-value--new">
-                                {l.followUpDate.split('T')[0]} {isMultiDay ? ` - Ends ${endDateStr}` : ''}
-                              </span>
-                            </div>
-                          )}
+
+                          {history.map((h, i) => {
+                            if (!h.newDate || h.newDate === originalDate) return null;
+                            const isLast = i === history.length - 1;
+                            const label = h.toStatus === 'Confirm' ? 'CONFIRMED FOR:' : 'RESCHEDULED TO:';
+                            const color = h.toStatus === 'Confirm' ? '#15803d' : 'inherit';
+
+                            return (
+                              <div key={i} className="reschedule-item" style={{ color }}>
+                                <div className="date-label">{label}</div>
+                                <span className={`date-value ${isLast ? 'date-value--new' : 'date-value--old'}`}>
+                                  {h.newDate} {isLast && isMultiDay && h.toStatus === 'Confirm' ? ` - Ends ${endDateStr}` : ''}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })()}
