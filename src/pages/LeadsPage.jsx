@@ -747,11 +747,15 @@ function LeadsPage() {
 
                       const reschedules = history.filter(h => h.toStatus === 'Reschedule' && h.newDate);
                       const currentActiveDate = l.followUpDate || l.taskStartDate;
+                      const startDateStr = l.taskStartDate?.split('T')[0];
+                      const endDateStr = l.taskEndDate?.split('T')[0];
+                      const isMultiDay = endDateStr && endDateStr > startDateStr;
+                      const baseDisplay = isMultiDay ? `${startDateStr} to ${endDateStr}` : startDateStr;
 
                       return (
                         <div className="date-stack">
                           <span className={`date-value ${reschedules.length > 0 ? 'date-value--old' : ''}`}>
-                            {l.taskStartDate?.split('T')[0]} {l.taskEndDate && l.taskEndDate !== l.taskStartDate ? ` to ${l.taskEndDate.split('T')[0]}` : ''}
+                            {baseDisplay}
                           </span>
                           {reschedules.map((h, i) => (
                             <div key={i} className="reschedule-item">
@@ -765,7 +769,7 @@ function LeadsPage() {
                             <div className="reschedule-item" style={{ color: '#15803d' }}>
                               <div className="date-label">CONFIRMED FOR:</div>
                               <span className="date-value date-value--new">
-                                {l.taskStartDate?.split('T')[0]} {l.taskEndDate && l.taskEndDate !== l.taskStartDate ? ` to ${l.taskEndDate.split('T')[0]}` : ''}
+                                {l.followUpDate.split('T')[0]} {isMultiDay ? ` - Ends ${endDateStr}` : ''}
                               </span>
                             </div>
                           )}
