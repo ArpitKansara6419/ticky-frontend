@@ -56,7 +56,6 @@ function getDocumentStatus(expiryStr) {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   let color = 'inherit';
-  let background = 'transparent';
   let label = '';
 
   if (diffDays < 0) {
