@@ -751,7 +751,7 @@ function LeadsPage() {
                       return (
                         <div className="date-stack">
                           <span className={`date-value ${reschedules.length > 0 ? 'date-value--old' : ''}`}>
-                            {l.taskStartDate?.split('T')[0]}
+                            {l.taskStartDate?.split('T')[0]} {l.taskEndDate && l.taskEndDate !== l.taskStartDate ? ` to ${l.taskEndDate.split('T')[0]}` : ''}
                           </span>
                           {reschedules.map((h, i) => (
                             <div key={i} className="reschedule-item">
@@ -764,7 +764,9 @@ function LeadsPage() {
                           {l.status === 'Confirm' && l.followUpDate && (
                             <div className="reschedule-item" style={{ color: '#15803d' }}>
                               <div className="date-label">CONFIRMED FOR:</div>
-                              <span className="date-value date-value--new">{l.followUpDate.split('T')[0]}</span>
+                              <span className="date-value date-value--new">
+                                {l.taskStartDate?.split('T')[0]} {l.taskEndDate && l.taskEndDate !== l.taskStartDate ? ` to ${l.taskEndDate.split('T')[0]}` : ''}
+                              </span>
                             </div>
                           )}
                         </div>
