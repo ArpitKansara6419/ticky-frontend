@@ -430,7 +430,7 @@ function CustomersPage() {
       'selectedCustomerForLead',
       JSON.stringify({ id: customer.id, name: customer.name, accountEmail: customer.accountEmail }),
     )
-    navigate('/dashboard', { state: { openLeads: true } })
+    navigate('/dashboard', { state: { openLeads: true, openForm: true } })
   }
 
   const handleCloseDetails = () => {

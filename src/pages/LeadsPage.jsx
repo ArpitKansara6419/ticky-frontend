@@ -350,6 +350,19 @@ function LeadsPage() {
     if (location.state?.openForm) {
       setViewMode('form')
       resetForm()
+
+      // Auto-select customer if coming from Customers page
+      const storedCustomer = localStorage.getItem('selectedCustomerForLead')
+      if (storedCustomer) {
+        try {
+          const customer = JSON.parse(storedCustomer)
+          setCustomerId(String(customer.id))
+          localStorage.removeItem('selectedCustomerForLead')
+        } catch (e) {
+          console.error("Failed to parse stored customer", e)
+        }
+      }
+
       // Clear state so it doesn't persist
       window.history.replaceState({}, document.title)
     }

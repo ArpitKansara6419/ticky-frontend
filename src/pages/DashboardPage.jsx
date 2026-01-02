@@ -714,13 +714,13 @@ function DashboardPage() {
   useEffect(() => {
     if (location.state?.openLeads) {
       setActivePage('leads')
-      window.history.replaceState({}, document.title)
+      if (!location.state.openForm) window.history.replaceState({}, document.title)
     } else if (location.state?.openCustomers) {
       setActivePage('customers')
-      window.history.replaceState({}, document.title)
+      if (!location.state.openForm) window.history.replaceState({}, document.title)
     } else if (location.state?.openTickets) {
       setActivePage('tickets')
-      window.history.replaceState({}, document.title)
+      if (!location.state.openForm) window.history.replaceState({}, document.title)
     }
   }, [location])
 
