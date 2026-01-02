@@ -779,32 +779,19 @@ function LeadsPage() {
                   <td>
                     {l.status === 'Confirm' ? (
                       l.existingTicketId ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <button
-                            type="button"
-                            className="leads-create-ticket-btn"
-                            style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', borderColor: 'rgba(59, 130, 246, 0.2)', padding: '4px 8px', fontSize: '11px' }}
-                            onClick={() => {
-                              localStorage.setItem('editTicketId', l.existingTicketId)
-                              navigate('/dashboard', { state: { openTickets: true } })
-                            }}
-                          >
-                            <FiEye /> View Ticket
-                          </button>
-                          <button
-                            type="button"
-                            className="leads-create-ticket-btn"
-                            style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.2)', padding: '4px 8px', fontSize: '11px' }}
-                            onClick={() => {
-                              // Force sync by passing lead data as well
-                              localStorage.setItem('editTicketId', l.existingTicketId)
-                              localStorage.setItem('syncLeadToTicket', JSON.stringify(l))
-                              navigate('/dashboard', { state: { openTickets: true } })
-                            }}
-                          >
-                            <FiRefreshCw /> Update Ticket
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          className="leads-create-ticket-btn"
+                          style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', borderColor: 'rgba(59, 130, 246, 0.2)' }}
+                          onClick={() => {
+                            // Automatically sync lead data to ticket when viewing
+                            localStorage.setItem('editTicketId', l.existingTicketId)
+                            localStorage.setItem('syncLeadToTicket', JSON.stringify(l))
+                            navigate('/dashboard', { state: { openTickets: true } })
+                          }}
+                        >
+                          <FiEye /> View Ticket
+                        </button>
                       ) : (
                         <button
                           type="button"
