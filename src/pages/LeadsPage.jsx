@@ -79,7 +79,17 @@ function LeadsPage() {
     newStatus: ''
   })
   const [followUpDate, setFollowUpDate] = useState('')
+  const [statusChangeEndDate, setStatusChangeEndDate] = useState('')
   const [statusChangeReason, setStatusChangeReason] = useState('')
+
+  // Sync status modal end date with start date
+  useEffect(() => {
+    if (followUpDate && statusChangeEndDate) {
+      if (statusChangeEndDate < followUpDate) {
+        setStatusChangeEndDate(followUpDate)
+      }
+    }
+  }, [followUpDate, statusChangeEndDate])
 
   // Form Fields
   const [taskName, setTaskName] = useState('')
@@ -244,10 +254,12 @@ function LeadsPage() {
       newStatus: lead.status
     })
 
-    // Use followUpDate if available, otherwise taskStartDate
-    const currentActiveDate = lead.followUpDate || lead.taskStartDate
-    setFollowUpDate(currentActiveDate ? currentActiveDate.split('T')[0] : '')
+    // Default the dates to current lead's dates (using followUpDate history if available)
+    const currentStart = (lead.followUpDate || lead.taskStartDate)?.split('T')[0] || ''
+    const currentEnd = lead.taskEndDate?.split('T')[0] || ''
 
+    setFollowUpDate(currentStart)
+    setStatusChangeEndDate(currentEnd)
     setStatusChangeReason('')
     setIsStatusModalOpen(true)
   }
@@ -263,17 +275,19 @@ function LeadsPage() {
 
       if (newStatus === 'Reschedule') {
         const todayStr = new Date().toISOString().split('T')[0]
-        if (followUpDate <= todayStr) {
-          return alert('The rescheduled date must be in the future.')
+        if (followUpDate < todayStr) {
+          return alert('The new start date must be in the future.')
+        }
+        if (statusChangeEndDate < followUpDate) {
+          return alert('The new end date cannot be before the new start date.')
         }
 
         const currentLead = leads.find(l => l.id === leadId)
-        const currentActiveDate = currentLead?.followUpDate || currentLead?.taskStartDate
-        if (currentActiveDate) {
-          const currentDateStr = new Date(currentActiveDate).toISOString().split('T')[0]
-          if (currentDateStr === followUpDate) {
-            return alert('The new date must be different from the current service date.')
-          }
+        const currentStartDate = currentLead?.taskStartDate?.split('T')[0]
+        const currentEndDate = currentLead?.taskEndDate?.split('T')[0]
+
+        if (currentStartDate === followUpDate && currentEndDate === statusChangeEndDate) {
+          return alert('The new dates must be different from the current service dates.')
         }
       }
 
@@ -284,6 +298,7 @@ function LeadsPage() {
         body: JSON.stringify({
           status: newStatus,
           followUpDate: followUpDate || null,
+          newEndDate: statusChangeEndDate || null,
           statusChangeReason: statusChangeReason || null
         })
       })
@@ -876,14 +891,25 @@ function LeadsPage() {
               </div>
 
               {(statusChangeData.newStatus === 'Reschedule' || statusChangeData.newStatus === 'Confirm') && (
-                <div className="reschedule-date-box">
-                  <label>{statusChangeData.newStatus === 'Confirm' ? 'Confirm Service Date' : 'Select New Reschedule Date'}</label>
-                  <input
-                    type="date"
-                    value={followUpDate}
-                    min={statusChangeData.newStatus === 'Reschedule' ? new Date().toISOString().split('T')[0] : undefined}
-                    onChange={e => setFollowUpDate(e.target.value)}
-                  />
+                <div className="reschedule-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div className="reschedule-date-box">
+                    <label>New Start Date</label>
+                    <input
+                      type="date"
+                      value={followUpDate}
+                      min={statusChangeData.newStatus === 'Reschedule' ? new Date().toISOString().split('T')[0] : undefined}
+                      onChange={e => setFollowUpDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="reschedule-date-box">
+                    <label>New End Date</label>
+                    <input
+                      type="date"
+                      value={statusChangeEndDate}
+                      min={followUpDate}
+                      onChange={e => setStatusChangeEndDate(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
