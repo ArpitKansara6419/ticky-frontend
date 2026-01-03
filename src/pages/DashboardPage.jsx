@@ -426,6 +426,13 @@ function DashboardHome({ onNavigate, insightsLayout }) {
             {selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
           </h3>
 
+          <div className="ticket-summary" style={{ margin: '12px 0 15px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '15px' }}>
+            <div className="ticket-summary-item">
+              <span className="ticket-summary-label">Total Tickets (Daily)</span>
+              <span className="ticket-summary-value">{selectedTickets.length}</span>
+            </div>
+          </div>
+
           {selectedTickets.length === 0 ? (
             <div className="ticket-details-empty">
               <p>No tickets generated on this date.</p>
@@ -448,18 +455,6 @@ function DashboardHome({ onNavigate, insightsLayout }) {
               ))}
             </div>
           )}
-
-          <div className="ticket-summary" style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)', paddingTop: '15px' }}>
-            <div className="ticket-summary-item">
-              <span className="ticket-summary-label">Total Tickets (Month)</span>
-              <span className="ticket-summary-value">
-                {tickets.filter(t => {
-                  const d = t.taskStartDate ? new Date(t.taskStartDate) : null;
-                  return d && d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
-                }).length}
-              </span>
-            </div>
-          </div>
         </aside>
       </section>
 
