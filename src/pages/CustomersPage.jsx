@@ -281,16 +281,15 @@ function CustomersPage() {
       if (!name || !accountEmail) {
         throw new Error('Please fill in required fields.')
       }
-      if (persons.length === 0 && !canAddPerson) {
+      const finalPersons = [...persons]
+      if (canAddPerson) finalPersons.push(personDraft)
+
+      if (finalPersons.length === 0) {
         throw new Error('Please add at least one authorised person.')
       }
-      if (persons.length === 0 && canAddPerson) {
-        // Auto-add the first person if user filled but forgot to click Add Person
-        setPersons((prev) => [...prev, personDraft])
-      }
-      if (documents.length === 0 && canAddDocument) {
-        setDocuments((prev) => [...prev, documentDraft])
-      }
+
+      const finalDocuments = [...documents]
+      if (canAddDocument) finalDocuments.push(documentDraft)
 
       let profileImageUrl = ''
       if (profileFile) {
@@ -298,7 +297,7 @@ function CustomersPage() {
       }
 
       const documentsWithUrls = []
-      for (const doc of documents.length ? documents : canAddDocument ? [documentDraft] : []) {
+      for (const doc of finalDocuments) {
         let url = doc.fileUrl
         if (doc.file) {
           url = await uploadToCloudinary(doc.file)
@@ -870,32 +869,37 @@ function CustomersPage() {
                     <td>{customer.authorizedPersonName || '-'}</td>
                     <td>
                       {customer.documentTitle ? (
-                        <div className="customers-doc-pill">
-                          <span className="doc-title-main">{customer.documentTitle}</span>
-                          {customer.documentExpiryDate && (() => {
-                            const status = getDocumentStatus(customer.documentExpiryDate);
-                            return (
-                              <div
-                                className="expiry-warning-badge"
-                                style={{
-                                  color: status.color,
-                                  fontWeight: '600',
-                                  fontSize: '11px',
-                                  marginTop: '2px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                              >
-                                <span className="expiry-dot" style={{ background: status.color }} />
-                                {status.label}
-                                <span className="expiry-full-date">({status.expiryDate})</span>
-                              </div>
-                            );
-                          })()}
+                        <div className="customers-doc-container">
+                          <div className="customers-doc-pill">
+                            <span className="doc-title-main">{customer.documentTitle}</span>
+                            {customer.documentCount > 1 && (
+                              <span className="doc-count-badge">+{customer.documentCount - 1} more</span>
+                            )}
+                            {customer.documentExpiryDate && (() => {
+                              const status = getDocumentStatus(customer.documentExpiryDate);
+                              return (
+                                <div
+                                  className="expiry-warning-badge"
+                                  style={{
+                                    color: status.color,
+                                    fontWeight: '600',
+                                    fontSize: '11px',
+                                    marginTop: '2px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  <span className="expiry-dot" style={{ background: status.color }} />
+                                  {status.label}
+                                  <span className="expiry-full-date">({status.expiryDate})</span>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                       ) : (
-                        '-'
+                        <span className="no-docs-hint">No documents</span>
                       )}
                     </td>
                     <td>
