@@ -244,19 +244,27 @@ function CustomersPage() {
   }
 
   const handleDocumentFileChange = (event) => {
-    const files = event.target.files
-    if (!files || files.length === 0) return
+    const file = event.target.files && event.target.files[0]
+    if (!file) return
 
-    const newDocs = Array.from(files).map(file => ({
-      title: file.name,
+    // Auto-fill title with filename if empty
+    setDocumentDraft(prev => ({
+      ...prev,
       file,
       fileUrl: file.name,
-      expiryDate: ''
+      title: prev.title || file.name
     }))
 
-    setDocuments(prev => [...prev, ...newDocs])
     // Reset file input so user can pick again even the same file
     event.target.value = ''
+  }
+
+  const handleAddDocument = () => {
+    if (!documentDraft.file && !documentDraft.fileUrl) return
+    if (!documentDraft.title) return
+
+    setDocuments(prev => [...prev, { ...documentDraft }])
+    setDocumentDraft(initialDocument)
   }
 
   const removeDocument = (index) => {
@@ -636,86 +644,98 @@ function CustomersPage() {
               <h2>Upload Documents</h2>
             </div>
 
-            {documents.length > 0 && (
-              <div className="pill-list">
-                {documents.map((d, index) => (
-                  <div key={`${d.title}-${index}`} className="pill-list-item">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <strong>{d.title}</strong>
-                      {d.expiryDate && <span>Expires: {d.expiryDate}</span>}
-                    </div>
-                    <button
-                      type="button"
-                      className="pill-remove-btn"
-                      onClick={() => removeDocument(index)}
-                      style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                    >
-                      <FiX />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="customers-grid">
-              <div className="customers-field">
-                <span style={{ display: 'block', marginBottom: '8px' }}>Select Document(s)</span>
+            <div className="document-manager">
+              <div className="document-controls">
                 <div
-                  className="document-dropzone"
-                  style={{
-                    border: '2px dashed var(--border-subtle)',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    textAlign: 'center',
-                    background: 'rgba(249, 250, 251, 0.5)',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`document-dropzone ${documentDraft.file ? 'has-file' : ''}`}
+                  onClick={() => document.getElementById('customer-file-upload').click()}
                 >
                   <input
+                    id="customer-file-upload"
                     type="file"
-                    multiple
                     onChange={handleDocumentFileChange}
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      opacity: 0,
-                      cursor: 'pointer',
-                      width: '100%'
-                    }}
+                    style={{ display: 'none' }}
                   />
-                  <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                    <FiFileText style={{ fontSize: '24px', marginBottom: '8px', color: 'var(--primary)' }} /><br />
-                    Click to select files
+                  <FiFileText className="dropzone-icon" />
+                  <div className="dropzone-text">
+                    {documentDraft.file ? (
+                      <span className="selected-filename">{documentDraft.file.name}</span>
+                    ) : (
+                      'Click to select a file'
+                    )}
                   </div>
                 </div>
-              </div>
 
-              <div className="customers-field">
-                <span style={{ display: 'block', marginBottom: '8px' }}>Individual Document Details (Optional)</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
-                  <label className="customers-field" style={{ margin: 0 }}>
-                    <span style={{ fontSize: '11px' }}>Title</span>
+                <div className="document-draft-fields">
+                  <div className="draft-field">
+                    <label>Title</label>
                     <input
                       type="text"
                       value={documentDraft.title}
                       onChange={(e) => handleDocumentDraftChange('title', e.target.value)}
-                      placeholder="Enter title"
-                      style={{ padding: '6px 10px' }}
+                      placeholder="e.g. Passport, Trading License"
                     />
-                  </label>
-                  <label className="customers-field" style={{ margin: 0 }}>
-                    <span style={{ fontSize: '11px' }}>Expiry Date</span>
+                  </div>
+                  <div className="draft-field">
+                    <label>Expiry Date</label>
                     <input
                       type="date"
                       value={documentDraft.expiryDate}
                       onChange={(e) => handleDocumentDraftChange('expiryDate', e.target.value)}
-                      style={{ padding: '6px 10px' }}
                     />
-                  </label>
+                  </div>
+                  <button
+                    type="button"
+                    className="add-doc-btn"
+                    onClick={handleAddDocument}
+                    disabled={!documentDraft.file && !documentDraft.fileUrl || !documentDraft.title}
+                  >
+                    Add Document
+                  </button>
                 </div>
               </div>
+
+              {documents.length > 0 && (
+                <div className="document-preview-table-wrapper">
+                  <table className="document-preview-table">
+                    <thead>
+                      <tr>
+                        <th>Document Title</th>
+                        <th>Expiry Date</th>
+                        <th>File Name</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {documents.map((d, index) => (
+                        <tr key={index}>
+                          <td className="doc-title-cell">{d.title}</td>
+                          <td className="doc-expiry-cell">
+                            {d.expiryDate ? (
+                              <span className="expiry-date-tag">{d.expiryDate}</span>
+                            ) : (
+                              <span className="no-expiry">No Expiry</span>
+                            )}
+                          </td>
+                          <td className="doc-filename-cell">
+                            <span className="filename-chip">{d.file ? d.file.name : d.fileUrl}</span>
+                          </td>
+                          <td className="doc-action-cell">
+                            <button
+                              type="button"
+                              className="remove-doc-btn"
+                              onClick={() => removeDocument(index)}
+                              title="Remove"
+                            >
+                              <FiX />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </section>
 
