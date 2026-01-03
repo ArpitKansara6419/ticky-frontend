@@ -470,11 +470,21 @@ function TicketsPage() {
     setCountry(ticket.country || '')
     setZipCode(ticket.zipCode || '')
     setTimezone(ticket.timezone || '')
-    // Update timezone list for the selected country (if country exists in our list)
-    // NOTE: In a real scenario, we might want to wait for countriesList to load or
-    // set availableTimezones if we can match the country.
-    // For simplicity, we just set the timezone value.
-    // The country select will trigger handleCountryChange if changed.
+
+    // Populate availableTimezones based on the country when editing
+    if (ticket.country && countriesList.length > 0) {
+      const matchedCountry = countriesList.find((c) => c.name === ticket.country)
+      if (matchedCountry) {
+        setAvailableTimezones(matchedCountry.timezones || [])
+      } else {
+        // Fallback: if existing timezone is set but country not in list, at least show the current one
+        if (ticket.timezone) setAvailableTimezones([ticket.timezone])
+      }
+    } else if (ticket.timezone) {
+      // Emergency fallback if list hasn't loaded yet
+      setAvailableTimezones([ticket.timezone])
+    }
+
     setPocDetails(ticket.pocDetails || '')
     setReDetails(ticket.reDetails || '')
     setCallInvites(ticket.callInvites || '')
