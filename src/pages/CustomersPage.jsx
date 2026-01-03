@@ -318,7 +318,7 @@ function CustomersPage() {
         address,
         profileImageUrl,
         status,
-        persons: persons.length ? persons : [personDraft],
+        persons: finalPersons,
         documents: documentsWithUrls,
       }
 
