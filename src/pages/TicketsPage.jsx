@@ -734,13 +734,6 @@ function TicketsPage() {
 
               <label className="tickets-field">
                 <span>
-                  Task Time <span className="field-required">*</span>
-                </span>
-                <input type="time" value={taskTime} onChange={(e) => setTaskTime(e.target.value)} />
-              </label>
-
-              <label className="tickets-field">
-                <span>
                   Task Start Date <span className="field-required">*</span>
                 </span>
                 <input type="date" value={taskStartDate} onChange={(e) => setTaskStartDate(e.target.value)} />
@@ -751,6 +744,13 @@ function TicketsPage() {
                   Task End Date <span className="field-required">*</span>
                 </span>
                 <input type="date" value={taskEndDate} onChange={(e) => setTaskEndDate(e.target.value)} />
+              </label>
+
+              <label className="tickets-field">
+                <span>
+                  Task Time <span className="field-required">*</span>
+                </span>
+                <input type="time" value={taskTime} onChange={(e) => setTaskTime(e.target.value)} />
               </label>
 
               <label className="tickets-field tickets-field--full">

@@ -873,7 +873,7 @@ function CustomersPage() {
                     <td>
                       {customer.documentTitle ? (
                         <div className="customers-doc-container">
-                          <div className="customers-doc-pill">
+                          <div className="customers-doc-pill" title={customer.allDocumentTitles || ''}>
                             <span className="doc-title-main">{customer.documentTitle}</span>
                             {customer.documentCount > 1 && (
                               <span className="doc-count-badge">+{customer.documentCount - 1} more</span>
