@@ -221,17 +221,26 @@
   font-size: 10px;
 }
 
+.customers-doc-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .doc-count-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--primary);
   color: white;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 999px;
-  margin-left: 6px;
+  margin-left: 8px;
   text-transform: uppercase;
-  vertical-align: middle;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px var(--primary-glow);
 }
 
 .no-docs-hint {

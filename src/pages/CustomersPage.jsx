@@ -115,7 +115,7 @@ function CustomersPage() {
   )
 
   const canAddDocument = useMemo(
-    () => Boolean(documentDraft.title && documentDraft.expiryDate),
+    () => Boolean(documentDraft.title && (documentDraft.file || documentDraft.fileUrl)),
     [documentDraft],
   )
 
@@ -300,7 +300,8 @@ function CustomersPage() {
       for (const doc of finalDocuments) {
         let url = doc.fileUrl
         if (doc.file) {
-          url = await uploadToCloudinary(doc.file)
+          const uploadedUrl = await uploadToCloudinary(doc.file)
+          if (uploadedUrl) url = uploadedUrl
         }
         documentsWithUrls.push({
           title: doc.title,
@@ -321,6 +322,8 @@ function CustomersPage() {
         persons: finalPersons,
         documents: documentsWithUrls,
       }
+
+      console.log('Submitting Customer Payload:', payload)
 
       const isEditing = Boolean(editingCustomerId)
       const url = isEditing
