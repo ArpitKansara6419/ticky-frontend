@@ -833,3 +833,64 @@
     gap: 8px;
   }
 }
+
+.customer-modal-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.customer-modal-doc-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.customer-modal-doc-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-soft);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.doc-card-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-card-icon {
+  font-size: 20px;
+  color: var(--primary);
+  opacity: 0.8;
+}
+
+.doc-card-expiry {
+  font-size: 11px;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.doc-view-link {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--primary);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s ease;
+}
+
+.doc-view-link:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}

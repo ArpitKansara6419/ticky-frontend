@@ -1,7 +1,7 @@
 // CustomersPage.jsx - Customers listing and Add Customer flow
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiMoreVertical, FiArrowLeft, FiFileText, FiX } from 'react-icons/fi'
+import { FiMoreVertical, FiArrowLeft, FiFileText, FiX, FiEye } from 'react-icons/fi'
 import './CustomersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -873,7 +873,12 @@ function CustomersPage() {
                     <td>
                       {customer.documentTitle ? (
                         <div className="customers-doc-container">
-                          <div className="customers-doc-pill" title={customer.allDocumentTitles || ''}>
+                          <div
+                            className="customers-doc-pill"
+                            style={{ cursor: 'pointer' }}
+                            title="Click to view all documents"
+                            onClick={() => handleViewCustomer(customer.id)}
+                          >
                             <span className="doc-title-main">{customer.documentTitle}</span>
                             {customer.documentCount > 1 && (
                               <span className="doc-count-badge">+{customer.documentCount - 1} more</span>
@@ -1044,18 +1049,37 @@ function CustomersPage() {
               {customerDetails.documents.length === 0 ? (
                 <p className="customer-modal-empty">No documents uploaded.</p>
               ) : (
-                <ul className="customer-modal-list">
-                  {customerDetails.documents.map((d) => (
-                    <li key={d.id}>
-                      <strong>{d.title}</strong>
-                      {d.expiryDate && (
-                        <span className="customer-modal-expiry">
-                          Expires: {new Date(d.expiryDate).toISOString().split('T')[0]}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                <div className="customer-modal-doc-grid">
+                  {customerDetails.documents.map((d) => {
+                    const status = d.expiryDate ? getDocumentStatus(d.expiryDate) : null;
+                    return (
+                      <div key={d.id} className="customer-modal-doc-card">
+                        <div className="doc-card-info">
+                          <FiFileText className="doc-card-icon" />
+                          <div>
+                            <strong>{d.title}</strong>
+                            {status && (
+                              <div className="doc-card-expiry" style={{ color: status.color }}>
+                                {status.label} ({status.expiryDate})
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {d.fileUrl && (
+                          <a
+                            href={d.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="doc-view-link"
+                            title="View / Download"
+                          >
+                            <FiEye />
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </section>
           </div>
