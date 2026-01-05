@@ -1117,16 +1117,7 @@ function TicketsPage() {
           <h1 className="tickets-title">Support Tickets</h1>
           <p className="tickets-subtitle">Manage customer support requests.</p>
         </div>
-        <button
-          type="button"
-          className="tickets-primary-btn"
-          onClick={() => {
-            setViewMode('form')
-            loadDropdowns()
-          }}
-        >
-          + Create Ticket
-        </button>
+        <div />
       </header>
 
       <section className="tickets-summary-row">
