@@ -57,6 +57,7 @@ function TicketsPage() {
   const [availableTimezones, setAvailableTimezones] = useState([])
 
   const [engineerName, setEngineerName] = useState('')
+  const [engineerId, setEngineerId] = useState('')
 
   const [apartment, setApartment] = useState('')
   const [addressLine1, setAddressLine1] = useState('')
@@ -120,6 +121,7 @@ function TicketsPage() {
     setScopeOfWork('')
     setTools('')
     setEngineerName('')
+    setEngineerId('')
     setApartment('')
     setAddressLine1('')
     setAddressLine2('')
@@ -385,6 +387,7 @@ function TicketsPage() {
         scopeOfWork,
         tools,
         engineerName,
+        engineerId: engineerId ? Number(engineerId) : null,
         apartment,
         addressLine1,
         addressLine2,
@@ -463,6 +466,7 @@ function TicketsPage() {
     setScopeOfWork(ticket.scopeOfWork || '')
     setTools(ticket.tools || '')
     setEngineerName(ticket.engineerName || '')
+    setEngineerId(ticket.engineerId ? String(ticket.engineerId) : '')
     setApartment(ticket.apartment || '')
     setAddressLine1(ticket.addressLine1 || '')
     setAddressLine2(ticket.addressLine2 || '')
@@ -796,13 +800,18 @@ function TicketsPage() {
                   Select Engineer <span className="field-required">*</span>
                 </span>
                 <select
-                  value={engineerName}
-                  onChange={(e) => setEngineerName(e.target.value)}
+                  value={engineerId}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    setEngineerId(id)
+                    const eng = engineers.find(en => String(en.id) === String(id))
+                    if (eng) setEngineerName(eng.name)
+                  }}
                   disabled={loadingDropdowns}
                 >
                   <option value="">Choose an engineer...</option>
                   {engineers.map((eng) => (
-                    <option key={eng.id} value={eng.name}>
+                    <option key={eng.id} value={eng.id}>
                       {eng.name} ({eng.email})
                     </option>
                   ))}
