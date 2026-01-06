@@ -291,9 +291,9 @@ function CustomersPage() {
       const finalDocuments = [...documents]
       if (canAddDocument) finalDocuments.push(documentDraft)
 
-      let profileImageUrl = ''
+      let finalProfileImageUrl = editingCustomerId ? profilePreview : ''
       if (profileFile) {
-        profileImageUrl = await uploadToCloudinary(profileFile)
+        finalProfileImageUrl = await uploadToCloudinary(profileFile)
       }
 
       const documentsWithUrls = []
@@ -317,7 +317,7 @@ function CustomersPage() {
         companyRegistrationNo,
         vatNumber,
         address,
-        profileImageUrl,
+        profileImageUrl: finalProfileImageUrl,
         status,
         persons: finalPersons,
         documents: documentsWithUrls,
@@ -458,7 +458,7 @@ function CustomersPage() {
             <FiArrowLeft />
           </button>
           <div>
-            <h1 className="customers-title">Add Customer</h1>
+            <h1 className="customers-title">{editingCustomerId ? 'Update Customer' : 'Add Customer'}</h1>
             <p className="customers-subtitle">Capture customer details and documents.</p>
           </div>
         </header>
@@ -755,7 +755,7 @@ function CustomersPage() {
               Cancel
             </button>
             <button type="submit" className="customers-primary-btn" disabled={saving}>
-              {saving ? 'Saving...' : 'Add Customer'}
+              {saving ? 'Saving...' : (editingCustomerId ? 'Update' : 'Add Customer')}
             </button>
           </div>
         </form>
@@ -857,7 +857,7 @@ function CustomersPage() {
                       <div className="customers-name-cell">
                         {customer.profileImageUrl && (
                           <img
-                            src={customer.profileImageUrl}
+                            src={customer.profileImageUrl.startsWith('http') ? customer.profileImageUrl : `${API_BASE_URL.replace('/api', '')}${customer.profileImageUrl}`}
                             alt={customer.name}
                             className="customers-avatar"
                           />
@@ -1067,7 +1067,7 @@ function CustomersPage() {
                         </div>
                         {d.fileUrl && (
                           <a
-                            href={d.fileUrl}
+                            href={d.fileUrl.startsWith('http') ? d.fileUrl : `${API_BASE_URL.replace('/api', '')}${d.fileUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="doc-view-link"
