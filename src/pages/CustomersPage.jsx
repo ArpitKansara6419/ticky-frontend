@@ -75,6 +75,18 @@ function getDocumentStatus(expiryStr) {
   return { color, label, diffDays, expiryDate: expiryDate.toISOString().split('T')[0] };
 }
 
+/**
+ * Helper to read a file as a data URL (base64)
+ */
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function CustomersPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -301,12 +313,17 @@ function CustomersPage() {
         let url = doc.fileUrl
         if (doc.file) {
           const uploadedUrl = await uploadToCloudinary(doc.file)
-          if (uploadedUrl) url = uploadedUrl
+          if (uploadedUrl) {
+            url = uploadedUrl
+          } else {
+            // Fallback to base64 if Cloudinary is missing
+            url = await readFileAsDataURL(doc.file)
+          }
         }
         documentsWithUrls.push({
           title: doc.title,
           fileUrl: url,
-          expiryDate: doc.expiryDate,
+          expiryDate: doc.expiryDate ? String(doc.expiryDate).split('T')[0] : null,
         })
       }
 
@@ -400,7 +417,7 @@ function CustomersPage() {
           title: d.title,
           file: null,
           fileUrl: d.fileUrl,
-          expiryDate: d.expiryDate || '',
+          expiryDate: d.expiryDate ? String(d.expiryDate).split('T')[0] : '',
         })),
       )
       setDocumentDraft(initialDocument)
@@ -1060,14 +1077,14 @@ function CustomersPage() {
                             <strong>{d.title}</strong>
                             {status && (
                               <div className="doc-card-expiry" style={{ color: status.color }}>
-                                {status.label} ({status.expiryDate})
+                                {status.label} ({String(status.expiryDate).split('T')[0]})
                               </div>
                             )}
                           </div>
                         </div>
                         {d.fileUrl && (
                           <a
-                            href={d.fileUrl.startsWith('http') ? d.fileUrl : `${API_BASE_URL.replace('/api', '')}${d.fileUrl}`}
+                            href={d.fileUrl.startsWith('http') || d.fileUrl.startsWith('data:') ? d.fileUrl : `${API_BASE_URL.replace(/\/api\/?$/, '')}/${d.fileUrl.startsWith('/') ? d.fileUrl.slice(1) : d.fileUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="doc-view-link"
