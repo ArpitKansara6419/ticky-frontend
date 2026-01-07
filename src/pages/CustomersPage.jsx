@@ -308,7 +308,18 @@ function CustomersPage() {
 
       let finalProfileImageUrl = editingCustomerId ? profilePreview : ''
       if (profileFile) {
-        finalProfileImageUrl = await uploadToCloudinary(profileFile)
+        try {
+          const uploadedUrl = await uploadToCloudinary(profileFile)
+          if (uploadedUrl) {
+            finalProfileImageUrl = uploadedUrl
+          } else {
+            // Fallback to Base64 if Cloudinary is missing
+            finalProfileImageUrl = await readFileAsDataURL(profileFile)
+          }
+        } catch (uploadErr) {
+          console.error('Cloudinary upload failed, falling back to Base64', uploadErr)
+          finalProfileImageUrl = await readFileAsDataURL(profileFile)
+        }
       }
 
       const documentsWithUrls = []
@@ -921,24 +932,46 @@ function CustomersPage() {
                     <td>#AIM-C-{customer.id}</td>
                     <td>
                       <div className="customers-name-cell">
-                        {customer.profileImageUrl && !brokenImages[customer.id] ? (
+                        {customer.profileImageUrl &&
+                          customer.profileImageUrl !== 'null' &&
+                          customer.profileImageUrl !== 'undefined' &&
+                          !brokenImages[customer.id] ? (
                           <img
                             src={(() => {
-                              const url = customer.profileImageUrl
+                              const url = String(customer.profileImageUrl)
                               if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
+                                console.log('Image URL (absolute/data/blob):', url);
                                 return url
                               }
-                              const base = API_BASE_URL.replace(/\/api\/?$/, '')
+                              // Handle local uploads folder
+                              const base = (API_BASE_URL || '').replace(/\/api\/?$/, '')
                               const path = url.startsWith('/') ? url : `/${url}`
-                              // If it looks like a local file (no directory), try prefixing with /uploads
+
+                              // If it's just a filename, assume /uploads/
                               if (!url.includes('/') && !url.includes('\\')) {
-                                return `${base}/uploads${path}`
+                                const finalUrl = `${base}/uploads${path}`;
+                                console.log('Image URL (local filename):', finalUrl);
+                                return finalUrl;
                               }
-                              return `${base}${path}`
+
+                              // If it already contains 'uploads' but not at start
+                              if (url.includes('uploads') && !url.startsWith('uploads') && !url.startsWith('/uploads')) {
+                                const finalUrl = `${base}${path}`;
+                                console.log('Image URL (local path with uploads):', finalUrl);
+                                return finalUrl;
+                              }
+
+                              // Default to base + path
+                              const finalUrl = `${base}${path}`;
+                              console.log('Image URL (default local path):', finalUrl);
+                              return finalUrl;
                             })()}
                             alt={customer.name}
                             className="customers-avatar"
-                            onError={() => setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))}
+                            onError={(e) => {
+                              console.warn('Image failed to load:', e.target.src)
+                              setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))
+                            }}
                           />
                         ) : (
                           <div className="customers-avatar-fallback">
