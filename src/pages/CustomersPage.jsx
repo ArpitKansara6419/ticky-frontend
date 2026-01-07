@@ -940,38 +940,21 @@ function CustomersPage() {
                             src={(() => {
                               const url = String(customer.profileImageUrl)
                               if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
-                                console.log('Image URL (absolute/data/blob):', url);
                                 return url
                               }
-                              // Handle local uploads folder
+                              // Handle local paths
                               const base = (API_BASE_URL || '').replace(/\/api\/?$/, '')
                               const path = url.startsWith('/') ? url : `/${url}`
 
-                              // If it's just a filename, assume /uploads/
+                              // If it's a filename from uploads, prepend /uploads
                               if (!url.includes('/') && !url.includes('\\')) {
-                                const finalUrl = `${base}/uploads${path}`;
-                                console.log('Image URL (local filename):', finalUrl);
-                                return finalUrl;
+                                return `${base}/uploads${path}`
                               }
-
-                              // If it already contains 'uploads' but not at start
-                              if (url.includes('uploads') && !url.startsWith('uploads') && !url.startsWith('/uploads')) {
-                                const finalUrl = `${base}${path}`;
-                                console.log('Image URL (local path with uploads):', finalUrl);
-                                return finalUrl;
-                              }
-
-                              // Default to base + path
-                              const finalUrl = `${base}${path}`;
-                              console.log('Image URL (default local path):', finalUrl);
-                              return finalUrl;
+                              return `${base}${path}`
                             })()}
                             alt={customer.name}
                             className="customers-avatar"
-                            onError={(e) => {
-                              console.warn('Image failed to load:', e.target.src)
-                              setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))
-                            }}
+                            onError={() => setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))}
                           />
                         ) : (
                           <div className="customers-avatar-fallback">
@@ -1126,7 +1109,26 @@ function CustomersPage() {
           <div className="customer-modal">
             <header className="customer-modal-header">
               <div className="customer-modal-main">
-                <div className="customer-modal-avatar">{customerDetails.customer.name[0]}</div>
+                {customerDetails.customer.profileImageUrl ? (
+                  <img
+                    src={(() => {
+                      const url = String(customerDetails.customer.profileImageUrl)
+                      if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
+                        return url
+                      }
+                      const base = (API_BASE_URL || '').replace(/\/api\/?$/, '')
+                      const path = url.startsWith('/') ? url : `/${url}`
+                      if (!url.includes('/') && !url.includes('\\')) {
+                        return `${base}/uploads${path}`
+                      }
+                      return `${base}${path}`
+                    })()}
+                    alt={customerDetails.customer.name}
+                    className="customer-modal-avatar"
+                  />
+                ) : (
+                  <div className="customer-modal-avatar">{customerDetails.customer.name[0]}</div>
+                )}
                 <div>
                   <h2 className="customer-modal-title">{customerDetails.customer.name}</h2>
                   <p className="customer-modal-sub">
