@@ -287,8 +287,8 @@ function CustomersPage() {
   }
 
 
-  const handleSubmitCustomer = async (event) => {
-    event.preventDefault()
+  const handleSubmitCustomer = async (e) => {
+    e.preventDefault()
     setSaving(true)
     setError('')
 
@@ -296,6 +296,9 @@ function CustomersPage() {
       if (!name || !accountEmail) {
         throw new Error('Please fill in required fields.')
       }
+
+      console.log('Starting customer submission...', { name, profileFile: profileFile?.name })
+
       const finalPersons = [...persons]
       if (canAddPerson) finalPersons.push(personDraft)
 
@@ -307,19 +310,22 @@ function CustomersPage() {
       if (canAddDocument) finalDocuments.push(documentDraft)
 
       let finalProfileImageUrl = editingCustomerId ? profilePreview : ''
+
       if (profileFile) {
-        try {
-          const uploadedUrl = await uploadToCloudinary(profileFile)
-          if (uploadedUrl) {
-            finalProfileImageUrl = uploadedUrl
-          } else {
-            // Fallback to Base64 if Cloudinary is missing
-            finalProfileImageUrl = await readFileAsDataURL(profileFile)
-          }
-        } catch (uploadErr) {
-          console.error('Cloudinary upload failed, falling back to Base64', uploadErr)
+        console.log('Processing new profile image...')
+        const uploadedUrl = await uploadToCloudinary(profileFile)
+        if (uploadedUrl) {
+          finalProfileImageUrl = uploadedUrl
+        } else {
+          console.log('Cloudinary skipped, using DataURL fallback.')
           finalProfileImageUrl = await readFileAsDataURL(profileFile)
         }
+      }
+
+      // Final check: if it's still a blob URL (happens if we don't process it correctly), clear it
+      if (finalProfileImageUrl.startsWith('blob:')) {
+        console.warn('Final image URL is still a blob, reverting to empty.')
+        finalProfileImageUrl = ''
       }
 
       const documentsWithUrls = []
@@ -330,7 +336,7 @@ function CustomersPage() {
           if (uploadedUrl) {
             url = uploadedUrl
           } else {
-            // Fallback to base64 if Cloudinary is missing
+            console.log(`Document "${doc.title}" using DataURL fallback.`)
             url = await readFileAsDataURL(doc.file)
           }
         }
@@ -623,11 +629,35 @@ function CustomersPage() {
                 />
               </label>
 
-              <div className="customers-field">
-                <span>Upload Profile Picture</span>
-                <div className="profile-upload-row">
-                  <input type="file" accept="image/*" onChange={handleProfileFileChange} />
-                  {profilePreview && <img src={profilePreview} alt="Preview" className="profile-upload-preview" />}
+              <div className="customers-field customers-field--full">
+                <span>Profile Picture</span>
+                <div className="profile-upload-zone">
+                  <div
+                    className="avatar-edit-circle"
+                    onClick={() => document.getElementById('profile-file-input').click()}
+                  >
+                    {profilePreview ? (
+                      <img src={profilePreview} alt="Preview" className="avatar-preview-img" />
+                    ) : (
+                      <div className="avatar-placeholder">
+                        <FiMoreVertical style={{ transform: 'rotate(90deg)' }} />
+                      </div>
+                    )}
+                    <div className="avatar-edit-overlay">
+                      <span>Change</span>
+                    </div>
+                  </div>
+                  <input
+                    id="profile-file-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileFileChange}
+                    style={{ display: 'none' }}
+                  />
+                  <div className="profile-upload-info">
+                    <p className="upload-main-text">Click circle to upload photo</p>
+                    <p className="upload-sub-text">JPG, PNG or GIF. Max 5MB.</p>
+                  </div>
                 </div>
               </div>
 
