@@ -136,6 +136,22 @@
   height: 32px;
   border-radius: 999px;
   object-fit: cover;
+  flex-shrink: 0;
+}
+
+.customers-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .customers-name-main {

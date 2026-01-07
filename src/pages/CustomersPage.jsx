@@ -101,6 +101,9 @@ function CustomersPage() {
   const [summary, setSummary] = useState({ totalCustomers: 0, activeCustomers: 0, totalTickets: 0, totalRevenue: 0 })
   const [customers, setCustomers] = useState([])
   const [editingCustomerId, setEditingCustomerId] = useState(null)
+  const [selectedTicket, setSelectedTicket] = useState(null)
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+  const [brokenImages, setBrokenImages] = useState({})
   const [customerDetails, setCustomerDetails] = useState(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [menuCustomerId, setMenuCustomerId] = useState(null)
@@ -918,12 +921,29 @@ function CustomersPage() {
                     <td>#AIM-C-{customer.id}</td>
                     <td>
                       <div className="customers-name-cell">
-                        {customer.profileImageUrl && (
+                        {customer.profileImageUrl && !brokenImages[customer.id] ? (
                           <img
-                            src={customer.profileImageUrl.startsWith('http') ? customer.profileImageUrl : `${API_BASE_URL.replace('/api', '')}${customer.profileImageUrl}`}
+                            src={(() => {
+                              const url = customer.profileImageUrl
+                              if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
+                                return url
+                              }
+                              const base = API_BASE_URL.replace(/\/api\/?$/, '')
+                              const path = url.startsWith('/') ? url : `/${url}`
+                              // If it looks like a local file (no directory), try prefixing with /uploads
+                              if (!url.includes('/') && !url.includes('\\')) {
+                                return `${base}/uploads${path}`
+                              }
+                              return `${base}${path}`
+                            })()}
                             alt={customer.name}
                             className="customers-avatar"
+                            onError={() => setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))}
                           />
+                        ) : (
+                          <div className="customers-avatar-fallback">
+                            {customer.name ? customer.name[0].toUpperCase() : '?'}
+                          </div>
                         )}
                         <div>
                           <div className="customers-name-main">{customer.name}</div>
