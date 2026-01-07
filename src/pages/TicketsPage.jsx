@@ -13,6 +13,33 @@ const TIMEZONES = [
   'US Eastern (UTC-05:00)',
 ]
 
+const STATIC_COUNTRIES = [
+  { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
+  { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
+  { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
+  { name: 'Canada', timezones: ['America/Toronto', 'America/Vancouver'], code: 'CA' },
+  { name: 'Australia', timezones: ['Australia/Sydney', 'Australia/Melbourne'], code: 'AU' },
+  { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
+  { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
+  { name: 'Italy', timezones: ['Europe/Rome'], code: 'IT' },
+  { name: 'Spain', timezones: ['Europe/Madrid'], code: 'ES' },
+  { name: 'Netherlands', timezones: ['Europe/Amsterdam'], code: 'NL' },
+  { name: 'Poland', timezones: ['Europe/Warsaw'], code: 'PL' },
+  { name: 'Sweden', timezones: ['Europe/Stockholm'], code: 'SE' },
+  { name: 'Belgium', timezones: ['Europe/Brussels'], code: 'BE' },
+  { name: 'Austria', timezones: ['Europe/Vienna'], code: 'AT' },
+  { name: 'Switzerland', timezones: ['Europe/Zurich'], code: 'CH' },
+  { name: 'Ireland', timezones: ['Europe/Dublin'], code: 'IE' },
+  { name: 'Denmark', timezones: ['Europe/Copenhagen'], code: 'DK' },
+  { name: 'Norway', timezones: ['Europe/Oslo'], code: 'NO' },
+  { name: 'Finland', timezones: ['Europe/Helsinki'], code: 'FI' },
+  { name: 'Portugal', timezones: ['Europe/Lisbon'], code: 'PT' },
+  { name: 'China', timezones: ['Asia/Shanghai'], code: 'CN' },
+  { name: 'Japan', timezones: ['Asia/Tokyo'], code: 'JP' },
+  { name: 'Singapore', timezones: ['Asia/Singapore'], code: 'SG' },
+  { name: 'United Arab Emirates', timezones: ['Asia/Dubai'], code: 'AE' }
+].sort((a, b) => a.name.localeCompare(b.name))
+
 const CURRENCIES = [
   { value: 'USD', label: 'Dollar (USD)' },
   { value: 'EUR', label: 'Euro (EUR)' },
@@ -212,34 +239,7 @@ function TicketsPage() {
 
   // Fetch countries - using hardcoded list for stability
   const fetchCountries = async () => {
-    const staticCountries = [
-      { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
-      { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
-      { name: 'India', timezones: ['Asia/Kolkata'], code: 'IN' },
-      { name: 'Canada', timezones: ['America/Toronto', 'America/Vancouver'], code: 'CA' },
-      { name: 'Australia', timezones: ['Australia/Sydney', 'Australia/Melbourne'], code: 'AU' },
-      { name: 'Germany', timezones: ['Europe/Berlin'], code: 'DE' },
-      { name: 'France', timezones: ['Europe/Paris'], code: 'FR' },
-      { name: 'Italy', timezones: ['Europe/Rome'], code: 'IT' },
-      { name: 'Spain', timezones: ['Europe/Madrid'], code: 'ES' },
-      { name: 'Netherlands', timezones: ['Europe/Amsterdam'], code: 'NL' },
-      { name: 'Poland', timezones: ['Europe/Warsaw'], code: 'PL' },
-      { name: 'Sweden', timezones: ['Europe/Stockholm'], code: 'SE' },
-      { name: 'Belgium', timezones: ['Europe/Brussels'], code: 'BE' },
-      { name: 'Austria', timezones: ['Europe/Vienna'], code: 'AT' },
-      { name: 'Switzerland', timezones: ['Europe/Zurich'], code: 'CH' },
-      { name: 'Ireland', timezones: ['Europe/Dublin'], code: 'IE' },
-      { name: 'Denmark', timezones: ['Europe/Copenhagen'], code: 'DK' },
-      { name: 'Norway', timezones: ['Europe/Oslo'], code: 'NO' },
-      { name: 'Finland', timezones: ['Europe/Helsinki'], code: 'FI' },
-      { name: 'Portugal', timezones: ['Europe/Lisbon'], code: 'PT' },
-      { name: 'China', timezones: ['Asia/Shanghai'], code: 'CN' },
-      { name: 'Japan', timezones: ['Asia/Tokyo'], code: 'JP' },
-      { name: 'Singapore', timezones: ['Asia/Singapore'], code: 'SG' },
-      { name: 'United Arab Emirates', timezones: ['Asia/Dubai'], code: 'AE' }
-    ].sort((a, b) => a.name.localeCompare(b.name))
-
-    setCountriesList(staticCountries)
+    setCountriesList(STATIC_COUNTRIES)
   }
 
   // Handle country selection and auto-populate timezone
@@ -638,11 +638,17 @@ function TicketsPage() {
         setZipCode(parsedLead.zipCode || '')
         setTimezone(parsedLead.timezone || '')
 
-        // Sync timezones if we have the country list
-        if (parsedLead.country && countriesList.length > 0) {
-          const matched = countriesList.find(c => c.name === parsedLead.country)
+        // Sync timezones immediately using static list
+        if (parsedLead.country) {
+          const matched = STATIC_COUNTRIES.find(c => c.name === parsedLead.country)
           if (matched) {
             setAvailableTimezones(matched.timezones || [])
+            // If lead has a specific timezone, use it, otherwise use the first one from matched
+            if (parsedLead.timezone) {
+              setTimezone(parsedLead.timezone)
+            } else if (matched.timezones && matched.timezones.length > 0) {
+              setTimezone(matched.timezones[0])
+            }
           }
         }
 
