@@ -451,6 +451,52 @@ function CustomersPage() {
     }
   }
 
+  const handleViewDocument = (fileUrl) => {
+    if (!fileUrl) return;
+
+    if (fileUrl.startsWith('data:')) {
+      try {
+        const [parts, base64Data] = fileUrl.split(',');
+        const mime = parts.split(':')[1].split(';')[0];
+        const binary = atob(base64Data);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+        const blob = new Blob([array], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Use a temporary link to open the blob URL
+        const blobWin = window.open(blobUrl, '_blank');
+        if (!blobWin || blobWin.closed || typeof blobWin.closed === 'undefined') {
+          // If blocked, try direct download/open
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.target = '_blank';
+          const filename = `document_${Date.now()}.${mime.split('/')[1] || 'bin'}`;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      } catch (err) {
+        console.error('Base64 decode error', err);
+        window.open(fileUrl, '_blank');
+      }
+    } else if (fileUrl.startsWith('http')) {
+      window.open(fileUrl, '_blank');
+    } else {
+      const base = API_BASE_URL.replace(/\/api\/?$/, '');
+      const filename = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
+      const fullUrl = filename.includes('uploads/')
+        ? `${base}/${filename}`
+        : `${base}/uploads/${filename}`;
+
+      // For PDF/Images, we want to open them. 
+      // If the file is missing, the server might redirect. 
+      // We can't easily check for file existence without a proxy, so we just open.
+      window.open(fullUrl, '_blank');
+    }
+  };
+
   const handleCreateLeadFromCustomer = (customer) => {
     if (!customer) return
     localStorage.setItem(
@@ -731,7 +777,7 @@ function CustomersPage() {
                           <td className="doc-title-cell">{d.title}</td>
                           <td className="doc-expiry-cell">
                             {d.expiryDate ? (
-                              <span className="expiry-date-tag">{d.expiryDate}</span>
+                              <span className="expiry-date-tag">{d.expiryDate ? String(d.expiryDate).split('T')[0] : '-'}</span>
                             ) : (
                               <span className="no-expiry">No Expiry</span>
                             )}
@@ -1083,15 +1129,15 @@ function CustomersPage() {
                           </div>
                         </div>
                         {d.fileUrl && (
-                          <a
-                            href={d.fileUrl.startsWith('http') || d.fileUrl.startsWith('data:') ? d.fileUrl : `${API_BASE_URL.replace(/\/api\/?$/, '')}/${d.fileUrl.startsWith('/') ? d.fileUrl.slice(1) : d.fileUrl}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
                             className="doc-view-link"
+                            onClick={() => handleViewDocument(d.fileUrl)}
                             title="View / Download"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
                           >
                             <FiEye />
-                          </a>
+                          </button>
                         )}
                       </div>
                     );

@@ -409,6 +409,8 @@ function TicketsPage() {
         travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
         totalCost: totalCost !== '' ? Number(totalCost) : null,
         status,
+        taskStartDate: taskStartDate ? String(taskStartDate).split('T')[0] : null,
+        taskEndDate: taskEndDate ? String(taskEndDate).split('T')[0] : null,
       }
 
       const isEditing = Boolean(editingTicketId)
@@ -518,6 +520,46 @@ function TicketsPage() {
     setTotalCost(ticket.totalCost != null ? String(ticket.totalCost) : '')
     setStatus(ticket.status || 'Open')
   }
+
+  const handleViewDocument = (fileUrl) => {
+    if (!fileUrl) return;
+
+    if (fileUrl.startsWith('data:')) {
+      try {
+        const [parts, base64Data] = fileUrl.split(',');
+        const mime = parts.split(':')[1].split(';')[0];
+        const binary = atob(base64Data);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+        const blob = new Blob([array], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const blobWin = window.open(blobUrl, '_blank');
+        if (!blobWin || blobWin.closed || typeof blobWin.closed === 'undefined') {
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.target = '_blank';
+          const filename = `document_${Date.now()}.${mime.split('/')[1] || 'bin'}`;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      } catch (err) {
+        console.error('Base64 decode error', err);
+        window.open(fileUrl, '_blank');
+      }
+    } else if (fileUrl.startsWith('http')) {
+      window.open(fileUrl, '_blank');
+    } else {
+      const base = API_BASE_URL.replace(/\/api\/?$/, '');
+      const filename = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
+      const fullUrl = filename.includes('uploads/')
+        ? `${base}/${filename}`
+        : `${base}/uploads/${filename}`;
+      window.open(fullUrl, '_blank');
+    }
+  };
 
   const startEditTicket = async (ticketId) => {
     try {
@@ -1311,6 +1353,31 @@ function TicketsPage() {
                 <div className="detail-item">
                   <label>Hourly Rate</label>
                   <span>{selectedTicket.currency} {selectedTicket.hourlyRate || '0.00'}</span>
+                </div>
+
+                <div className="detail-item--full divider"></div>
+
+                <div className="detail-item--full">
+                  <label>Customer Documents</label>
+                  <div className="ticket-docs-list" style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {selectedTicket.documentsLabel ? (
+                      selectedTicket.documentsLabel.split(', ').map((docName, idx) => (
+                        <div key={idx} style={{ background: 'var(--bg-lighter)', padding: '6px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
+                          <span style={{ fontSize: '0.9rem' }}>{docName}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleViewDocument(docName)}
+                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            title="View"
+                          >
+                            <FiEye size={16} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No documents linked.</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
