@@ -12,34 +12,51 @@ const initialPerson = { name: '', email: '', contact: '' }
 const initialDocument = { title: '', file: null, fileUrl: '', expiryDate: '' }
 const PAGE_SIZE = 10
 
-async function uploadToCloudinary(file) {
+async function uploadProfileImage(file) {
   if (!file) return ''
 
-  // If Cloudinary config is missing, do NOT fall back to base64.
-  // Base64 strings are too large for most backends and cause 413 Payload Too Large errors.
-  if (!CLOUDINARY_UPLOAD_URL) {
-    console.warn('Cloudinary configuration is missing. Image upload skipped.')
-    return ''
+  // 1. Try Cloudinary if configured
+  if (CLOUDINARY_UPLOAD_URL && CLOUDINARY_UPLOAD_PRESET) {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+
+      const res = await fetch(CLOUDINARY_UPLOAD_URL, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        return data.secure_url || data.url || ''
+      }
+      console.warn('Cloudinary upload failed, failing over to local server:', data)
+    } catch (err) {
+      console.error('Cloudinary upload error:', err)
+    }
   }
 
-  const formData = new FormData()
-  formData.append('file', file)
-  if (CLOUDINARY_UPLOAD_PRESET) {
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+  // 2. Try Local Server Upload
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+    const data = await res.json()
+    if (res.ok) {
+      // Backend returns "uploads/filename.jpg"
+      return data.url
+    }
+    console.warn('Local upload failed:', data)
+  } catch (err) {
+    console.error('Local upload error:', err)
   }
 
-  const res = await fetch(CLOUDINARY_UPLOAD_URL, {
-    method: 'POST',
-    body: formData,
-  })
-
-  const data = await res.json()
-
-  if (!res.ok) {
-    throw new Error(data.error?.message || 'Cloudinary upload failed')
-  }
-
-  return data.secure_url || data.url || ''
+  // 3. Fallback to Base64 (Last Resort)
+  return await readFileAsDataURL(file)
 }
 
 /**
@@ -351,37 +368,38 @@ function CustomersPage() {
 
       console.log('Current profileFile state:', profileFile)
       if (profileFile) {
-        console.log('Processing new profile image...')
-        const uploadedUrl = await uploadToCloudinary(profileFile)
-        console.log('Cloudinary upload result:', uploadedUrl)
+        console.log('Uploading profile image...')
+        const uploadedUrl = await uploadProfileImage(profileFile)
+        console.log('Upload result:', uploadedUrl)
         if (uploadedUrl) {
           finalProfileImageUrl = uploadedUrl
-        } else {
-          console.log('Cloudinary skipped, calling DataURL fallback...')
-          const base64 = await readFileAsDataURL(profileFile)
-          console.log('Base64 conversion length:', base64?.length)
-          finalProfileImageUrl = base64
         }
       } else {
-        console.log('No profileFile selected, finalProfileImageUrl will be:', finalProfileImageUrl)
+        console.log('No profileFile selected, keeping:', finalProfileImageUrl)
       }
 
       // Final check: if it's still a blob URL (happens if we don't process it correctly), clear it
-      if (finalProfileImageUrl.startsWith('blob:')) {
+      if (finalProfileImageUrl && finalProfileImageUrl.startsWith('blob:')) {
         console.warn('Final image URL is still a blob, reverting to empty.')
         finalProfileImageUrl = ''
+      }
+
+      // Clean up local paths just in case (e.g. remove leading slashes if they are not absolute)
+      if (finalProfileImageUrl && !finalProfileImageUrl.startsWith('http') && !finalProfileImageUrl.startsWith('data:')) {
+        // If it looks like "/uploads/..." make it "uploads/..."
+        if (finalProfileImageUrl.startsWith('/')) {
+          finalProfileImageUrl = finalProfileImageUrl.substring(1)
+        }
       }
 
       const documentsWithUrls = []
       for (const doc of finalDocuments) {
         let url = doc.fileUrl
         if (doc.file) {
-          const uploadedUrl = await uploadToCloudinary(doc.file)
+          // Use the same unified upload for documents too
+          const uploadedUrl = await uploadProfileImage(doc.file)
           if (uploadedUrl) {
             url = uploadedUrl
-          } else {
-            console.log(`Document "${doc.title}" using DataURL fallback.`)
-            url = await readFileAsDataURL(doc.file)
           }
         }
         documentsWithUrls.push({
