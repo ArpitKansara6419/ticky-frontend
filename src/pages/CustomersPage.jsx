@@ -125,15 +125,25 @@ function getAvatarUrl(url, apiBaseUrl) {
     return urlStr;
   }
 
-  // 2. Relative paths -> Point to Backend /api/uploads
-  // Ensure we use the full API_BASE_URL (e.g. https://.../api)
+  // 2. Relative paths -> Point to Backend /uploads
+  // API_BASE_URL usually ends with /api (e.g. https://awokta.com/api)
+  // But static files are often served from root (https://awokta.com/uploads/...) OR /api/uploads
+  // Logic: 
+  // If the server serves via /api/uploads, then keep /api. 
+  // If the server serves via /uploads (root), strip /api.
+  // PREVIOUSLY: We added app.use('/api/uploads') in server.js.
+  // So: https://awokta.com/api/uploads/filename.jpg SHOULD work.
+
+  // LET'S TRY BOTH: Return the path that includes /api/ first as that is what we configured.
   const base = (apiBaseUrl || '').replace(/\/$/, '');
 
-  // Remove leading slash from user path to be safe
+  // Remove leading slash
   const pathPart = urlStr.startsWith('/') ? urlStr.substring(1) : urlStr;
 
-  // If it already starts with 'uploads/', append to base
+  // If it already starts with 'uploads/'
   if (pathPart.startsWith('uploads/')) {
+    // If base already has /api, then result is .../api/uploads/...
+    // This matches our new server.js route.
     return `${base}/${pathPart}`;
   }
 
