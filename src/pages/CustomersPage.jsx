@@ -239,7 +239,7 @@ function CustomersPage() {
       })
       const fetchedCustomers = data.customers || []
       // Sort customers by ID (ascending) as per user request
-      const sortedCustomers = fetchedCustomers.sort((a, b) => a.id - b.id)
+      const sortedCustomers = fetchedCustomers.sort((a, b) => b.id - a.id)
       setCustomers(sortedCustomers)
 
       // Fetch Tickets for Real-time count
