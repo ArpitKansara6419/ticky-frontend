@@ -97,41 +97,31 @@ function getAvatarUrl(url, apiBaseUrl) {
   let urlStr = url.trim().replace(/\\/g, '/');
   if (!urlStr) return null;
 
-  // 0. Ignore local disk paths accidentally saved from some environments
-  if (urlStr.includes(':/') || urlStr.startsWith('Users/') || urlStr.startsWith('/Users/')) {
-    // We allow data/blob/http later, so this check should be more specific if possible
-    // but typically : / after the first char in a local path means C:/...
-    if (urlStr.match(/^[a-zA-Z]:\//)) {
-      console.warn('Detected local disk path in avatar URL:', urlStr);
-      return null;
-    }
+  // 0. Ignore and return null for local disk paths
+  if (urlStr.match(/^[a-zA-Z]:\//) || urlStr.startsWith('Users/') || urlStr.startsWith('/Users/')) {
+    console.warn('Detected local disk path in avatar URL:', urlStr);
+    return null;
   }
 
-  // 1. Absolute URLs (Cloudinary, absolute S3, etc.)
+  // 1. Absolute URLs
   if (urlStr.startsWith('http') || urlStr.startsWith('data:') || urlStr.startsWith('blob:')) {
-    // If it's a localhost URL from a different environment, try to fix it
-    if (urlStr.includes('localhost:') || urlStr.includes('127.0.0.1:')) {
-      const base = (apiBaseUrl || '').replace(/\/api\/?$/, '');
-      if (base && !base.includes('localhost') && !base.includes('127.0.0.1')) {
-        const match = urlStr.match(/:\d+(\/.*)$/);
-        if (match && match[1]) return `${base}${match[1]}`;
-      }
-    }
     return urlStr;
   }
 
-  // 2. Local relative paths or filenames
-  const base = (apiBaseUrl || '').replace(/\/api\/?$/, '');
-  const path = urlStr.startsWith('/') ? urlStr : `/${urlStr}`;
+  // 2. Relative paths -> Point to Backend /api/uploads
+  // Ensure we use the full API_BASE_URL (e.g. https://.../api)
+  const base = (apiBaseUrl || '').replace(/\/$/, '');
 
-  // If it's just a filename (e.g. "avatar-123.jpg") or already starts with uploads
-  // If it doesn't have any slashes, it's a filename in /uploads/
-  if (!urlStr.includes('/')) {
-    return `${base}/uploads${path}`;
+  // Remove leading slash from user path to be safe
+  const pathPart = urlStr.startsWith('/') ? urlStr.substring(1) : urlStr;
+
+  // If it already starts with 'uploads/', append to base
+  if (pathPart.startsWith('uploads/')) {
+    return `${base}/${pathPart}`;
   }
 
-  // If it has slashes, it's a path like "uploads/foo.jpg" or "/uploads/foo.jpg"
-  return `${base}${path}`;
+  // Otherwise, prepend 'uploads/'
+  return `${base}/uploads/${pathPart}`;
 }
 
 function CustomersPage() {
