@@ -87,6 +87,43 @@ function readFileAsDataURL(file) {
   });
 }
 
+/**
+ * Robustly constructs the avatar URL based on various formats.
+ */
+function getAvatarUrl(url, apiBaseUrl) {
+  if (!url || url === 'null' || url === 'undefined') return null;
+
+  const urlStr = String(url);
+
+  // 1. Absolute URLs (Cloudinary, absolute S3, etc.)
+  if (urlStr.startsWith('http') || urlStr.startsWith('data:') || urlStr.startsWith('blob:')) {
+    // If it's a localhost URL from a different environment, try to fix it
+    if (urlStr.includes('localhost:') || urlStr.includes('127.0.0.1:')) {
+      const base = (apiBaseUrl || '').replace(/\/api\/?$/, '');
+      if (base && !base.includes('localhost') && !base.includes('127.0.0.1')) {
+        // Extract the filename/path after the port
+        const match = urlStr.match(/:\d+(\/.*)$/);
+        if (match && match[1]) {
+          return `${base}${match[1]}`;
+        }
+      }
+    }
+    return urlStr;
+  }
+
+  // 2. Local relative paths or filenames
+  const base = (apiBaseUrl || '').replace(/\/api\/?$/, '');
+  const path = urlStr.startsWith('/') ? urlStr : `/${urlStr}`;
+
+  // If it's just a filename (e.g. "avatar-123.jpg"), prepend /uploads
+  if (!urlStr.includes('/') && !urlStr.includes('\\')) {
+    return `${base}/uploads${path}`;
+  }
+
+  // Otherwise assume it's already a path like "/uploads/..."
+  return `${base}${path}`;
+}
+
 function CustomersPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -976,35 +1013,24 @@ function CustomersPage() {
                     <td>#AIM-C-{customer.id}</td>
                     <td>
                       <div className="customers-name-cell">
-                        {customer.profileImageUrl &&
-                          customer.profileImageUrl !== 'null' &&
-                          customer.profileImageUrl !== 'undefined' &&
-                          !brokenImages[customer.id] ? (
-                          <img
-                            src={(() => {
-                              const url = String(customer.profileImageUrl)
-                              if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
-                                return url
-                              }
-                              // Handle local paths
-                              const base = (API_BASE_URL || '').replace(/\/api\/?$/, '')
-                              const path = url.startsWith('/') ? url : `/${url}`
-
-                              // If it's a filename from uploads, prepend /uploads
-                              if (!url.includes('/') && !url.includes('\\')) {
-                                return `${base}/uploads${path}`
-                              }
-                              return `${base}${path}`
-                            })()}
-                            alt={customer.name}
-                            className="customers-avatar"
-                            onError={() => setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))}
-                          />
-                        ) : (
-                          <div className="customers-avatar-fallback">
-                            {customer.name ? customer.name[0].toUpperCase() : '?'}
-                          </div>
-                        )}
+                        {(() => {
+                          const avatarUrl = getAvatarUrl(customer.profileImageUrl, API_BASE_URL);
+                          if (avatarUrl && !brokenImages[customer.id]) {
+                            return (
+                              <img
+                                src={avatarUrl}
+                                alt={customer.name}
+                                className="customers-avatar"
+                                onError={() => setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))}
+                              />
+                            );
+                          }
+                          return (
+                            <div className="customers-avatar-fallback">
+                              {customer.name ? customer.name[0].toUpperCase() : '?'}
+                            </div>
+                          );
+                        })()}
                         <div>
                           <div className="customers-name-main">{customer.name}</div>
                           <div className="customers-name-sub">{customer.accountEmail}</div>
@@ -1153,26 +1179,34 @@ function CustomersPage() {
           <div className="customer-modal">
             <header className="customer-modal-header">
               <div className="customer-modal-main">
-                {customerDetails.customer.profileImageUrl ? (
-                  <img
-                    src={(() => {
-                      const url = String(customerDetails.customer.profileImageUrl)
-                      if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) {
-                        return url
-                      }
-                      const base = (API_BASE_URL || '').replace(/\/api\/?$/, '')
-                      const path = url.startsWith('/') ? url : `/${url}`
-                      if (!url.includes('/') && !url.includes('\\')) {
-                        return `${base}/uploads${path}`
-                      }
-                      return `${base}${path}`
-                    })()}
-                    alt={customerDetails.customer.name}
-                    className="customer-modal-avatar"
-                  />
-                ) : (
-                  <div className="customer-modal-avatar">{customerDetails.customer.name[0]}</div>
-                )}
+                {(() => {
+                  const avatarUrl = getAvatarUrl(customerDetails.customer.profileImageUrl, API_BASE_URL);
+                  if (avatarUrl) {
+                    return (
+                      <img
+                        src={avatarUrl}
+                        alt={customerDetails.customer.name}
+                        className="customer-modal-avatar"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          // Show fallback if modal image fails
+                          const parent = e.target.parentElement;
+                          if (parent) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'customer-modal-avatar';
+                            fallback.innerText = customerDetails.customer.name[0]?.toUpperCase() || '?';
+                            parent.insertBefore(fallback, e.target);
+                          }
+                        }}
+                      />
+                    );
+                  }
+                  return (
+                    <div className="customer-modal-avatar">
+                      {customerDetails.customer.name[0]?.toUpperCase() || '?'}
+                    </div>
+                  );
+                })()}
                 <div>
                   <h2 className="customer-modal-title">{customerDetails.customer.name}</h2>
                   <p className="customer-modal-sub">
