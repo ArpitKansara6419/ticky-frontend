@@ -240,6 +240,7 @@ function CustomersPage() {
   const handleProfileFileChange = (event) => {
     const file = event.target.files && event.target.files[0]
     if (!file) return
+    console.log('File selected:', file.name, file.size)
     setProfileFile(file)
     setProfilePreview(URL.createObjectURL(file))
   }
@@ -311,15 +312,21 @@ function CustomersPage() {
 
       let finalProfileImageUrl = editingCustomerId ? profilePreview : ''
 
+      console.log('Current profileFile state:', profileFile)
       if (profileFile) {
         console.log('Processing new profile image...')
         const uploadedUrl = await uploadToCloudinary(profileFile)
+        console.log('Cloudinary upload result:', uploadedUrl)
         if (uploadedUrl) {
           finalProfileImageUrl = uploadedUrl
         } else {
-          console.log('Cloudinary skipped, using DataURL fallback.')
-          finalProfileImageUrl = await readFileAsDataURL(profileFile)
+          console.log('Cloudinary skipped, calling DataURL fallback...')
+          const base64 = await readFileAsDataURL(profileFile)
+          console.log('Base64 conversion length:', base64?.length)
+          finalProfileImageUrl = base64
         }
+      } else {
+        console.log('No profileFile selected, finalProfileImageUrl will be:', finalProfileImageUrl)
       }
 
       // Final check: if it's still a blob URL (happens if we don't process it correctly), clear it
@@ -878,7 +885,14 @@ function CustomersPage() {
           <h1 className="customers-title">Customers</h1>
           <p className="customers-subtitle">Manage your customer relationships.</p>
         </div>
-        <button type="button" className="customers-primary-btn" onClick={() => setViewMode('form')}>
+        <button
+          type="button"
+          className="customers-primary-btn"
+          onClick={() => {
+            resetForm()
+            setViewMode('form')
+          }}
+        >
           + Add Customer
         </button>
       </header>
