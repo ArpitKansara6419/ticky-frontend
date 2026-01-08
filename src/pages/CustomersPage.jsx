@@ -93,13 +93,18 @@ function readFileAsDataURL(file) {
 function getAvatarUrl(url, apiBaseUrl) {
   if (!url || url === 'null' || url === 'undefined' || typeof url !== 'string') return null;
 
-  const urlStr = url.trim();
+  // Normalize backslashes to forward slashes for cross-platform compatibility
+  let urlStr = url.trim().replace(/\\/g, '/');
   if (!urlStr) return null;
 
   // 0. Ignore local disk paths accidentally saved from some environments
-  if (urlStr.includes(':\\') || urlStr.startsWith('Users/') || urlStr.startsWith('/Users/')) {
-    console.warn('Detected local disk path in avatar URL, returning null:', urlStr);
-    return null;
+  if (urlStr.includes(':/') || urlStr.startsWith('Users/') || urlStr.startsWith('/Users/')) {
+    // We allow data/blob/http later, so this check should be more specific if possible
+    // but typically : / after the first char in a local path means C:/...
+    if (urlStr.match(/^[a-zA-Z]:\//)) {
+      console.warn('Detected local disk path in avatar URL:', urlStr);
+      return null;
+    }
   }
 
   // 1. Absolute URLs (Cloudinary, absolute S3, etc.)
@@ -119,11 +124,13 @@ function getAvatarUrl(url, apiBaseUrl) {
   const base = (apiBaseUrl || '').replace(/\/api\/?$/, '');
   const path = urlStr.startsWith('/') ? urlStr : `/${urlStr}`;
 
-  // If it's just a filename (e.g. "avatar-123.jpg"), prepend /uploads
-  if (!urlStr.includes('/') && !urlStr.includes('\\')) {
+  // If it's just a filename (e.g. "avatar-123.jpg") or already starts with uploads
+  // If it doesn't have any slashes, it's a filename in /uploads/
+  if (!urlStr.includes('/')) {
     return `${base}/uploads${path}`;
   }
 
+  // If it has slashes, it's a path like "uploads/foo.jpg" or "/uploads/foo.jpg"
   return `${base}${path}`;
 }
 
@@ -1019,17 +1026,25 @@ function CustomersPage() {
                         {(() => {
                           const avatarUrl = getAvatarUrl(customer.profileImageUrl, API_BASE_URL);
                           if (avatarUrl && !brokenImages[customer.id]) {
+                            // Debug log for the first few rows to verify paths in console
+                            if (customer.id % 5 === 0) {
+                              console.log(`[Avatar Debug] CID:${customer.id} URL:${avatarUrl}`);
+                            }
                             return (
                               <img
+                                key={`img-${customer.id}-${avatarUrl}`}
                                 src={avatarUrl}
                                 alt={customer.name}
                                 className="customers-avatar"
-                                onError={() => setBrokenImages((prev) => ({ ...prev, [customer.id]: true }))}
+                                onError={(e) => {
+                                  console.warn(`Failed to load avatar for ${customer.name}:`, avatarUrl);
+                                  setBrokenImages((prev) => ({ ...prev, [customer.id]: true }));
+                                }}
                               />
                             );
                           }
                           return (
-                            <div className="customers-avatar-fallback">
+                            <div className="customers-avatar-fallback" key={`fallback-${customer.id}`}>
                               {customer.name ? customer.name[0].toUpperCase() : '?'}
                             </div>
                           );

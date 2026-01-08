@@ -224,8 +224,12 @@
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary);
+  background-color: #eef2ff;
+  /* Hardcoded fallback */
+  background: var(--primary-soft, #eef2ff);
+  color: #2563eb;
+  /* Hardcoded fallback */
+  color: var(--primary, #2563eb);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,6 +237,7 @@
   font-size: 14px;
   flex-shrink: 0;
   text-transform: uppercase;
+  border: 1px solid rgba(37, 99, 235, 0.1);
 }
 
 .customers-name-main {
