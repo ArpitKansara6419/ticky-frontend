@@ -91,9 +91,16 @@ function readFileAsDataURL(file) {
  * Robustly constructs the avatar URL based on various formats.
  */
 function getAvatarUrl(url, apiBaseUrl) {
-  if (!url || url === 'null' || url === 'undefined') return null;
+  if (!url || url === 'null' || url === 'undefined' || typeof url !== 'string') return null;
 
-  const urlStr = String(url);
+  const urlStr = url.trim();
+  if (!urlStr) return null;
+
+  // 0. Ignore local disk paths accidentally saved from some environments
+  if (urlStr.includes(':\\') || urlStr.startsWith('Users/') || urlStr.startsWith('/Users/')) {
+    console.warn('Detected local disk path in avatar URL, returning null:', urlStr);
+    return null;
+  }
 
   // 1. Absolute URLs (Cloudinary, absolute S3, etc.)
   if (urlStr.startsWith('http') || urlStr.startsWith('data:') || urlStr.startsWith('blob:')) {
@@ -101,11 +108,8 @@ function getAvatarUrl(url, apiBaseUrl) {
     if (urlStr.includes('localhost:') || urlStr.includes('127.0.0.1:')) {
       const base = (apiBaseUrl || '').replace(/\/api\/?$/, '');
       if (base && !base.includes('localhost') && !base.includes('127.0.0.1')) {
-        // Extract the filename/path after the port
         const match = urlStr.match(/:\d+(\/.*)$/);
-        if (match && match[1]) {
-          return `${base}${match[1]}`;
-        }
+        if (match && match[1]) return `${base}${match[1]}`;
       }
     }
     return urlStr;
@@ -120,7 +124,6 @@ function getAvatarUrl(url, apiBaseUrl) {
     return `${base}/uploads${path}`;
   }
 
-  // Otherwise assume it's already a path like "/uploads/..."
   return `${base}${path}`;
 }
 
