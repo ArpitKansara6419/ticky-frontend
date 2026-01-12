@@ -1166,6 +1166,27 @@ function TicketsPage() {
     )
   }
 
+  const handleDeleteAllTickets = async () => {
+    if (!window.confirm('Are you sure you want to PERMANENTLY DELETE ALL TICKETS? This action cannot be undone.')) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/tickets`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        setTickets([]);
+        setSummary({ total: 0, open: 0, inProgress: 0, resolved: 0 });
+        alert('All tickets deleted successfully.');
+      } else {
+        alert('Failed to delete tickets.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error deleting tickets.');
+    } finally {
+      setLoading(false);
+      loadTickets(); // Refresh just in case
+    }
+  };
+
   // LIST VIEW
   return (
     <section className="tickets-page">
@@ -1197,6 +1218,15 @@ function TicketsPage() {
       </section>
 
       <section className="tickets-card">
+        <div style={{ padding: '0 20px 10px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            className="tickets-primary-btn"
+            style={{ backgroundColor: '#EF4444', borderColor: '#EF4444' }}
+            onClick={handleDeleteAllTickets}
+          >
+            DELETE ALL TICKETS
+          </button>
+        </div>
         <div className="tickets-list-toolbar">
           <div className="tickets-search">
             <input type="text" placeholder="Search tickets..." disabled />
