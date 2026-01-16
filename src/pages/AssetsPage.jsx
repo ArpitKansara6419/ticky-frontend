@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiBox, FiUser, FiCheckCircle, FiTool, FiTrash2, FiEdit2, FiX } from 'react-icons/fi';
-import './CustomersPage.css'; // Reusing customer styles for consistency
+import './AssetsPage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -56,7 +56,7 @@ const AssetsPage = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure?')) return;
+        if (!window.confirm('Are you sure you want to delete this asset?')) return;
         await fetch(`${API_BASE_URL}/assets/${id}`, { method: 'DELETE' });
         fetchAssets();
         fetchStats();
@@ -66,7 +66,8 @@ const AssetsPage = () => {
         e.preventDefault();
         const payload = {
             ...formData,
-            assigned_to: formData.status === 'Assigned' ? formData.assigned_to : null
+            assigned_to: formData.status === 'Assigned' ? formData.assigned_to : null,
+            cost: parseFloat(formData.cost) || 0
         };
 
         const url = editingAsset ? `${API_BASE_URL}/assets/${editingAsset.id}` : `${API_BASE_URL}/assets`;
@@ -102,57 +103,57 @@ const AssetsPage = () => {
     };
 
     return (
-        <div className="customers-page">
+        <div className="assets-page">
             {/* Header */}
-            <header className="page-header">
-                <div>
-                    <h2 className="page-title">Asset Management</h2>
-                    <p className="page-subtitle">Track tools, equipment, and company assets.</p>
+            <header className="assets-header">
+                <div className="assets-title">
+                    <h2>Asset Management</h2>
+                    <p>Track tools, equipment, and company assets efficiently.</p>
                 </div>
-                <button className="add-btn" onClick={() => { setEditingAsset(null); setIsModalOpen(true); }}>
+                <button className="assets-add-btn" onClick={() => { setEditingAsset(null); setIsModalOpen(true); }}>
                     <FiPlus /> Add New Asset
                 </button>
             </header>
 
             {/* Stats Cards */}
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <div className="stat-icon stat-icon--blue"><FiBox /></div>
-                    <div className="stat-info">
+            <div className="assets-stats-grid">
+                <div className="asset-stat-card">
+                    <div className="asset-stat-icon asset-stat-icon--blue"><FiBox /></div>
+                    <div className="asset-stat-info">
                         <h3>{stats.total}</h3>
                         <p>Total Assets</p>
                     </div>
                 </div>
-                <div className="stat-card">
-                    <div className="stat-icon stat-icon--green"><FiCheckCircle /></div>
-                    <div className="stat-info">
+                <div className="asset-stat-card">
+                    <div className="asset-stat-icon asset-stat-icon--green"><FiCheckCircle /></div>
+                    <div className="asset-stat-info">
                         <h3>{stats.available}</h3>
                         <p>Available</p>
                     </div>
                 </div>
-                <div className="stat-card">
-                    <div className="stat-icon stat-icon--orange"><FiUser /></div>
-                    <div className="stat-info">
+                <div className="asset-stat-card">
+                    <div className="asset-stat-icon asset-stat-icon--orange"><FiUser /></div>
+                    <div className="asset-stat-info">
                         <h3>{stats.assigned}</h3>
                         <p>Assigned</p>
                     </div>
                 </div>
-                <div className="stat-card">
-                    <div className="stat-icon stat-icon--red"><FiTool /></div>
-                    <div className="stat-info">
+                <div className="asset-stat-card">
+                    <div className="asset-stat-icon asset-stat-icon--red"><FiTool /></div>
+                    <div className="asset-stat-info">
                         <h3>{stats.maintenance}</h3>
                         <p>Maintenance</p>
                     </div>
                 </div>
             </div>
 
-            {/* Search */}
-            <div className="filters-bar">
-                <div className="search-box">
+            {/* Filter & Search */}
+            <div className="assets-filter-bar">
+                <div className="assets-search">
                     <FiSearch />
                     <input
                         type="text"
-                        placeholder="Search assets..."
+                        placeholder="Search assets by name or serial..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -160,8 +161,8 @@ const AssetsPage = () => {
             </div>
 
             {/* Table */}
-            <div className="table-container">
-                <table className="data-table">
+            <div className="assets-table-container">
+                <table className="assets-table">
                     <thead>
                         <tr>
                             <th>Asset Name</th>
@@ -170,32 +171,40 @@ const AssetsPage = () => {
                             <th>Status</th>
                             <th>Assigned To</th>
                             <th>Cost ($)</th>
-                            <th>Actions</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {assets.map(asset => (
                             <tr key={asset.id}>
-                                <td style={{ fontWeight: '500' }}>{asset.name}</td>
-                                <td style={{ color: '#666' }}>{asset.serial_number || '--'}</td>
-                                <td><span className="badge badge--gray">{asset.type}</span></td>
                                 <td>
-                                    <span className={`badge badge--${asset.status === 'Available' ? 'success' : asset.status === 'Assigned' ? 'warning' : 'danger'}`}>
+                                    <div className="asset-name">{asset.name}</div>
+                                    <div style={{ fontSize: '12px', color: '#718096' }}>{asset.description}</div>
+                                </td>
+                                <td>
+                                    {asset.serial_number ? <span className="asset-serial">{asset.serial_number}</span> : <span style={{ color: '#cbd5e0' }}>--</span>}
+                                </td>
+                                <td><span style={{ fontWeight: 500, color: '#4a5568' }}>{asset.type}</span></td>
+                                <td>
+                                    <span className={`asset-badge asset-badge--${asset.status.toLowerCase()}`}>
                                         {asset.status}
                                     </span>
                                 </td>
-                                <td>{asset.engineer_name || '--'}</td>
-                                <td>{asset.cost}</td>
+                                <td>{asset.engineer_name || <span style={{ color: '#cbd5e0' }}>Unassigned</span>}</td>
+                                <td style={{ fontFamily: 'monospace' }}>{asset.cost}</td>
                                 <td>
-                                    <div className="action-buttons">
-                                        <button className="icon-btn" onClick={() => openEdit(asset)}><FiEdit2 /></button>
-                                        <button className="icon-btn icon-btn--danger" onClick={() => handleDelete(asset.id)}><FiTrash2 /></button>
+                                    <div className="asset-actions" style={{ justifyContent: 'flex-end' }}>
+                                        <button className="asset-action-btn" title="Edit" onClick={() => openEdit(asset)}><FiEdit2 /></button>
+                                        <button className="asset-action-btn asset-action-btn--delete" title="Delete" onClick={() => handleDelete(asset.id)}><FiTrash2 /></button>
                                     </div>
                                 </td>
                             </tr>
                         ))}
                         {assets.length === 0 && !loading && (
-                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No assets found.</td></tr>
+                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>No assets found matching your search.</td></tr>
+                        )}
+                        {loading && (
+                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>Loading assets...</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -203,23 +212,23 @@ const AssetsPage = () => {
 
             {/* Create/Edit Modal */}
             {isModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '500px' }}>
-                        <div className="modal-header">
+                <div className="assets-modal-overlay">
+                    <div className="assets-modal">
+                        <div className="assets-modal-header">
                             <h3>{editingAsset ? 'Edit Asset' : 'Add New Asset'}</h3>
-                            <button className="close-btn" onClick={() => setIsModalOpen(false)}><FiX /></button>
+                            <button className="assets-modal-close" onClick={() => setIsModalOpen(false)}><FiX /></button>
                         </div>
                         <form onSubmit={handleSubmit}>
-                            <div className="form-group">
+                            <div className="assets-form-group">
                                 <label>Asset Name</label>
-                                <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                <input required placeholder="e.g. Hilti Drill X2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                             </div>
-                            <div className="form-row">
-                                <div className="form-group">
+                            <div className="assets-form-row">
+                                <div className="assets-form-group">
                                     <label>Serial Number</label>
-                                    <input value={formData.serial_number} onChange={e => setFormData({ ...formData, serial_number: e.target.value })} />
+                                    <input placeholder="SN-12345" value={formData.serial_number} onChange={e => setFormData({ ...formData, serial_number: e.target.value })} />
                                 </div>
-                                <div className="form-group">
+                                <div className="assets-form-group">
                                     <label>Type</label>
                                     <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                                         <option>Tool</option>
@@ -230,8 +239,8 @@ const AssetsPage = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="form-row">
-                                <div className="form-group">
+                            <div className="assets-form-row">
+                                <div className="assets-form-group">
                                     <label>Status</label>
                                     <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
                                         <option>Available</option>
@@ -240,14 +249,14 @@ const AssetsPage = () => {
                                         <option>Retired</option>
                                     </select>
                                 </div>
-                                <div className="form-group">
+                                <div className="assets-form-group">
                                     <label>Cost</label>
-                                    <input type="number" step="0.01" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} />
+                                    <input type="number" step="0.01" placeholder="0.00" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} />
                                 </div>
                             </div>
 
                             {formData.status === 'Assigned' && (
-                                <div className="form-group">
+                                <div className="assets-form-group">
                                     <label>Assign To Engineer</label>
                                     <select required value={formData.assigned_to} onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}>
                                         <option value="">Select Engineer</option>
@@ -256,14 +265,14 @@ const AssetsPage = () => {
                                 </div>
                             )}
 
-                            <div className="form-group">
+                            <div className="assets-form-group">
                                 <label>Description</label>
-                                <textarea rows="2" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}></textarea>
+                                <textarea rows="2" placeholder="Condition, purchase info, etc." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}></textarea>
                             </div>
 
-                            <div className="modal-actions">
+                            <div className="assets-modal-actions">
                                 <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn-primary">{editingAsset ? 'Update' : 'Create'}</button>
+                                <button type="submit" className="btn-primary">{editingAsset ? 'Update Asset' : 'Create Asset'}</button>
                             </div>
                         </form>
                     </div>
