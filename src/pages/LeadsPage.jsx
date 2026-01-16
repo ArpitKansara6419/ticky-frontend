@@ -777,30 +777,71 @@ function LeadsPage() {
                       const endDateStr = l.taskEndDate?.split('T')[0];
                       const isMultiDay = endDateStr && endDateStr > startDateStr;
 
-                      const originalDate = (history.length > 0 && history[0].prevDate) ? history[0].prevDate : startDateStr;
-                      const currentActiveDateStr = l.followUpDate ? l.followUpDate.split('T')[0] : startDateStr;
+                      // Filter redundant history (e.g. Confirm -> Confirm on same date)
+                      const cleanHistory = history.filter((h, i) => {
+                        if (i === 0) return true;
+                        const prev = history[i - 1];
+                        // Remove duplicates: same status transition to same date
+                        if (h.toStatus === prev.toStatus && h.newDate === prev.newDate) return false;
+                        // Remove Confirm -> Confirm if date didn't change
+                        if (h.fromStatus === 'Confirm' && h.toStatus === 'Confirm' && h.newDate === h.prevDate) return false;
+                        return true;
+                      });
+
+                      // Check if this is a simple "BID -> Confirm" on the same date
+                      const firstH = cleanHistory[0];
+                      const isSimpleConfirm = cleanHistory.length === 1 &&
+                        firstH.fromStatus === 'BID' &&
+                        firstH.toStatus === 'Confirm' &&
+                        firstH.prevDate === firstH.newDate;
+
+                      // 1. BID Status: Just show date
+                      if (l.status === 'BID') {
+                        return (
+                          <div className="date-value">
+                            {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
+                          </div>
+                        );
+                      }
+
+                      // 2. Simple Confirm (No date change): Show Green Text, No Strikethrough
+                      if (l.status === 'Confirm' && (cleanHistory.length === 0 || isSimpleConfirm)) {
+                        return (
+                          <div style={{ color: '#15803d', fontWeight: '500' }}>
+                            <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>Confirmed For</div>
+                            {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
+                          </div>
+                        );
+                      }
+
+                      // 3. Complex History (Date changed or Rescheduled): Show Stack
+                      const originalDate = (cleanHistory.length > 0 && cleanHistory[0].prevDate) ? cleanHistory[0].prevDate : startDateStr;
 
                       return (
                         <div className="date-stack">
-                          <span className={`date-value ${history.length > 0 ? 'date-value--old' : ''}`}>
+                          {/* Original Date struck through */}
+                          <span className="date-value date-value--old" style={{ textDecoration: 'line-through', color: '#9ca3af' }}>
                             {originalDate}
                           </span>
 
-                          {history.map((h, i) => {
-                            if (!h.newDate || h.newDate === originalDate) return null;
-                            const isLast = i === history.length - 1;
-                            const label = h.toStatus === 'Confirm' ? 'CONFIRMED FOR:' : 'RESCHEDULED TO:';
-                            const color = h.toStatus === 'Confirm' ? '#15803d' : 'inherit';
+                          {cleanHistory.map((h, i) => {
+                            // Skip if date is same as 'original' and it's the first confirm (handled above? no, if we are here, it's complex)
+                            // Actually, map all significant changes
 
-                            const hStartDate = h.newDate;
-                            const hEndDate = h.newEndDate || (isLast ? endDateStr : null);
-                            const hIsMultiDay = hEndDate && hEndDate > hStartDate;
+                            const label = h.toStatus === 'Confirm' ? 'CONFIRMED FOR:' : 'RESCHEDULED TO:';
+                            const color = h.toStatus === 'Confirm' ? '#15803d' : '#f59e0b';
+                            const isLast = i === cleanHistory.length - 1;
+
+                            // Use history specific end date if available, else current if last
+                            const hStart = h.newDate;
+                            const hEnd = h.newEndDate || (isLast ? endDateStr : null);
+                            const hMulti = hEnd && hEnd > hStart;
 
                             return (
-                              <div key={i} className="reschedule-item" style={{ color }}>
-                                <div className="date-label">{label}</div>
+                              <div key={i} className="reschedule-item" style={{ color, marginTop: '4px' }}>
+                                <div className="date-label" style={{ fontSize: '10px', opacity: 0.8 }}>{label}</div>
                                 <span className={`date-value ${isLast ? 'date-value--new' : 'date-value--old'}`}>
-                                  {hStartDate}{hIsMultiDay ? ` to ${hEndDate}` : ''}
+                                  {hStart}{hMulti ? ` to ${hEnd}` : ''}
                                 </span>
                               </div>
                             );
