@@ -1,0 +1,277 @@
+/* CustomerReceivablePage.css */
+
+.receivable-page {
+    padding: 30px;
+    background-color: #f8f9fc;
+    min-height: 100%;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+.receivable-header {
+    margin-bottom: 30px;
+}
+
+.receivable-title h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0;
+}
+
+/* Stats Cards */
+.receivable-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.receivable-stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.stat-icon-wrapper {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.stat-icon--blue {
+    background: #ebf8ff;
+    color: #3182ce;
+}
+
+.stat-icon--amber {
+    background: #fffaf0;
+    color: #dd6b20;
+}
+
+.stat-icon--green {
+    background: #f0fff4;
+    color: #38a169;
+}
+
+.stat-content h3 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #718096;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Tabs */
+.receivable-tabs {
+    display: flex;
+    gap: 24px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+}
+
+.receivable-tab {
+    background: none;
+    border: none;
+    padding: 12px 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #718096;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.receivable-tab--active {
+    color: #3182ce;
+}
+
+.receivable-tab--active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #3182ce;
+    border-radius: 2px 2px 0 0;
+}
+
+/* Grid Layout */
+.receivable-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+.unbilled-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.unbilled-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.unbilled-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.unbilled-customer h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #2d3748;
+}
+
+.unbilled-customer p {
+    margin: 2px 0 0 0;
+    font-size: 13px;
+    color: #718096;
+}
+
+.unbilled-amount {
+    background: #ebf8ff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-align: right;
+}
+
+.unbilled-amount h4 {
+    margin: 0;
+    color: #2b6cb0;
+    font-size: 18px;
+}
+
+.unbilled-amount span {
+    font-size: 11px;
+    color: #4299e1;
+    display: block;
+}
+
+.create-invoice-btn {
+    margin-top: auto;
+    width: 100%;
+    background: #4299e1;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.create-invoice-btn:hover {
+    background: #3182ce;
+}
+
+/* Invoices Table */
+.invoices-table-container {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.invoices-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.invoices-table th {
+    background: #f7fafc;
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #718096;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.invoices-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid #edf2f7;
+    color: #2d3748;
+    font-size: 14px;
+}
+
+.invoice-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.invoice-status--paid {
+    background: #f0fff4;
+    color: #38a169;
+}
+
+.invoice-status--unpaid {
+    background: #fffaf0;
+    color: #dd6b20;
+}
+
+.invoice-status--overdue {
+    background: #fff5f5;
+    color: #e53e3e;
+}
+
+.action-btn {
+    background: transparent;
+    border: 1px solid #cbd5e0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: #4a5568;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #edf2f7;
+}
+
+/* Modal */
+.cr-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.cr-modal {
+    background: white;
+    width: 100%;
+    max-width: 600px;
+    border-radius: 12px;
+    padding: 30px;
+}
