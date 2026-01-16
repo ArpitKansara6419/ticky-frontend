@@ -806,10 +806,11 @@ function LeadsPage() {
 
                       // 2. Cancelled Status: Show Cancelled Label
                       if (l.status === 'Cancelled') {
+                        const latestActiveDate = l.followUpDate ? l.followUpDate.split('T')[0] : startDateStr;
                         return (
                           <div style={{ color: '#ef4444', fontWeight: '500', display: 'flex', flexDirection: 'column' }}>
                             <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '12px' }}>
-                              {startDateStr}
+                              {latestActiveDate}
                             </span>
                             <span style={{ fontSize: '13px', marginTop: '2px' }}>CANCELLED</span>
                           </div>
