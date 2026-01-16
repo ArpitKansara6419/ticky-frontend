@@ -6,6 +6,7 @@ import CustomersPage from './CustomersPage'
 import LeadsPage from './LeadsPage'
 import TicketsPage from './TicketsPage'
 import EngineersPage from './EngineersPage'
+import AssetsPage from './AssetsPage'
 import {
   FiHome,
   FiUsers,
@@ -925,6 +926,10 @@ function DashboardPage() {
 
     if (activePage === 'tickets') {
       return <TicketsPage />
+    }
+
+    if (activePage === 'assetManagement') {
+      return <AssetsPage />
     }
 
     return <GenericPage pageId={activePage} />
