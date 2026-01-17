@@ -10,6 +10,7 @@ import AssetsPage from './AssetsPage'
 import EngineerPayoutPage from './EngineerPayoutPage'
 import CustomerReceivablePage from './CustomerReceivablePage'
 import MeetingPage from './MeetingPage'
+import AttendancePage from './AttendancePage'
 import {
   FiHome,
   FiUsers,
@@ -945,6 +946,10 @@ function DashboardPage() {
 
     if (activePage === 'meeting') {
       return <MeetingPage />
+    }
+
+    if (activePage === 'attendance') {
+      return <AttendancePage />
     }
 
     return <GenericPage pageId={activePage} />
