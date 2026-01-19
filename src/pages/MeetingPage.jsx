@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiVideo, FiCalendar, FiPlus, FiTrash2, FiClock } from 'react-icons/fi';
+import { FiVideo, FiCalendar, FiPlus, FiTrash2, FiClock, FiUsers, FiX, FiCheck } from 'react-icons/fi';
 import './MeetingPage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -8,6 +8,12 @@ const MeetingPage = () => {
     const [meetings, setMeetings] = useState([]);
     const [activeCall, setActiveCall] = useState(null);
     const [showModal, setShowModal] = useState(false);
+
+    // Participants State
+    const [engineers, setEngineers] = useState([]);
+    const [customers, setCustomers] = useState([]);
+    const [selectedParticipants, setSelectedParticipants] = useState([]); // Array of {type, id, name}
+
     const [formData, setFormData] = useState({
         title: '',
         scheduled_at: new Date().toISOString().slice(0, 16)
@@ -15,6 +21,7 @@ const MeetingPage = () => {
 
     useEffect(() => {
         fetchMeetings();
+        fetchParticipantsData();
     }, []);
 
     const fetchMeetings = async () => {
@@ -24,17 +31,40 @@ const MeetingPage = () => {
         } catch (e) { console.error(e); }
     };
 
+    const fetchParticipantsData = async () => {
+        try {
+            const [engRes, custRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/engineers`),
+                fetch(`${API_BASE_URL}/customers`)
+            ]);
+            if (engRes.ok) {
+                const data = await engRes.json();
+                setEngineers(data.engineers || []);
+            }
+            if (custRes.ok) {
+                setCustomers(await custRes.json());
+            }
+        } catch (e) { console.error(e); }
+    };
+
     const handleCreate = async (e) => {
         e.preventDefault();
         try {
+            const payload = {
+                ...formData,
+                participants: selectedParticipants.map(p => ({ type: p.type, id: p.id }))
+            };
+
             const res = await fetch(`${API_BASE_URL}/meetings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
+
             if (res.ok) {
                 setShowModal(false);
                 setFormData({ title: '', scheduled_at: new Date().toISOString().slice(0, 16) });
+                setSelectedParticipants([]);
                 fetchMeetings();
             }
         } catch (e) { console.error(e); }
@@ -46,6 +76,17 @@ const MeetingPage = () => {
             await fetch(`${API_BASE_URL}/meetings/${id}`, { method: 'DELETE' });
             fetchMeetings();
         } catch (e) { console.error(e); }
+    };
+
+    const toggleParticipant = (type, id, name) => {
+        const identifier = `${type}-${id}`;
+        const exists = selectedParticipants.find(p => `${p.type}-${p.id}` === identifier);
+
+        if (exists) {
+            setSelectedParticipants(prev => prev.filter(p => `${p.type}-${p.id}` !== identifier));
+        } else {
+            setSelectedParticipants(prev => [...prev, { type, id, name }]);
+        }
     };
 
     // If active call, render full screen video interface
@@ -118,8 +159,12 @@ const MeetingPage = () => {
             {/* Modal */}
             {showModal && (
                 <div className="meeting-modal-overlay">
-                    <div className="meeting-modal">
-                        <h3>Schedule Meeting</h3>
+                    <div className="meeting-modal" style={{ width: '500px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0 }}>Schedule Meeting</h3>
+                            <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}><FiX /></button>
+                        </div>
+
                         <form className="meeting-form" onSubmit={handleCreate}>
                             <label>Meeting Title</label>
                             <input
@@ -136,6 +181,36 @@ const MeetingPage = () => {
                                 value={formData.scheduled_at}
                                 onChange={e => setFormData({ ...formData, scheduled_at: e.target.value })}
                             />
+
+                            <label style={{ marginTop: '10px' }}>Invite Participants (Optional)</label>
+                            <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', marginBottom: '20px' }}>
+                                <div style={{ fontSize: '12px', color: '#718096', marginBottom: '6px', fontWeight: 600 }}>Engineers</div>
+                                {engineers.map(e => (
+                                    <div
+                                        key={`eng-${e.id}`}
+                                        onClick={() => toggleParticipant('Engineer', e.id, e.name)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', borderRadius: '4px', background: selectedParticipants.find(p => p.type === 'Engineer' && p.id === e.id) ? '#ebf8ff' : 'transparent' }}
+                                    >
+                                        <div style={{ width: '16px', height: '16px', border: '1px solid #cbd5e0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white' }}>
+                                            {selectedParticipants.find(p => p.type === 'Engineer' && p.id === e.id) && <FiCheck size={12} color="#3182ce" />}
+                                        </div>
+                                        <span style={{ fontSize: '14px' }}>{e.name}</span>
+                                    </div>
+                                ))}
+                                <div style={{ fontSize: '12px', color: '#718096', marginBottom: '6px', marginTop: '10px', fontWeight: 600 }}>Customers</div>
+                                {customers.map(c => (
+                                    <div
+                                        key={`cust-${c.id}`}
+                                        onClick={() => toggleParticipant('Customer', c.id, c.name)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', borderRadius: '4px', background: selectedParticipants.find(p => p.type === 'Customer' && p.id === c.id) ? '#ebf8ff' : 'transparent' }}
+                                    >
+                                        <div style={{ width: '16px', height: '16px', border: '1px solid #cbd5e0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'white' }}>
+                                            {selectedParticipants.find(p => p.type === 'Customer' && p.id === c.id) && <FiCheck size={12} color="#3182ce" />}
+                                        </div>
+                                        <span style={{ fontSize: '14px' }}>{c.name} ({c.company})</span>
+                                    </div>
+                                ))}
+                            </div>
 
                             <div className="meeting-actions">
                                 <button type="button" onClick={() => setShowModal(false)} style={{ padding: '10px', border: 'none', background: '#edf2f7', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
