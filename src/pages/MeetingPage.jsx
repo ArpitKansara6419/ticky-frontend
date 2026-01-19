@@ -42,7 +42,8 @@ const MeetingPage = () => {
                 setEngineers(data.engineers || []);
             }
             if (custRes.ok) {
-                setCustomers(await custRes.json());
+                const data = await custRes.json();
+                setCustomers(data.customers || []);
             }
         } catch (e) { console.error(e); }
     };
