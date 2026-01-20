@@ -46,7 +46,7 @@ const CURRENCIES = [
   { value: 'GBP', label: 'Pound (GBP)' },
 ]
 
-const TICKET_STATUSES = ['Open', 'In Progress', 'Resolved']
+const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break']
 
 function TicketsPage() {
   const [viewMode, setViewMode] = useState('list') // list | form
@@ -113,7 +113,7 @@ function TicketsPage() {
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
   const [totalCost, setTotalCost] = useState('')
 
-  const [status, setStatus] = useState('Open')
+  const [status, setStatus] = useState('Assigned')
 
   const canSubmit = useMemo(
     () =>
@@ -172,7 +172,7 @@ function TicketsPage() {
     setAgreedRate('')
     setTravelCostPerDay('')
     setTotalCost('')
-    setStatus('Open')
+    setStatus('Assigned')
     setError('')
     setSuccess('')
     setEditingTicketId(null)
