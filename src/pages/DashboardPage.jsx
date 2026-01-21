@@ -949,7 +949,7 @@ function DashboardPage() {
     }
 
     if (activePage === 'attendance') {
-      return <AttendancePage />
+      return <AttendancePage user={profileForm} />
     }
 
     return <GenericPage pageId={activePage} />
