@@ -27,7 +27,8 @@ const AttendancePage = ({ user }) => {
                 const data = await res.json();
                 setRecords(Array.isArray(data) ? data : []);
             } else {
-                throw new Error('Failed to fetch attendance data');
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to fetch attendance data');
             }
         } catch (e) {
             console.error(e);
