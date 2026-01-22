@@ -252,7 +252,8 @@
 .monthly-grid-table {
     width: max-content;
     min-width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 0.85rem;
 }
 
@@ -275,28 +276,35 @@
 .sticky-col {
     position: sticky;
     background-color: var(--white) !important;
-    z-index: 2;
+    z-index: 10;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
 }
 
 .first-col {
     left: 0;
     width: 60px;
+    min-width: 60px;
+    max-width: 60px;
 }
 
 .second-col {
     left: 60px;
-    width: 200px;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
     text-align: left !important;
 }
 
 .third-col {
-    left: 260px;
+    left: 310px;
     width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    border-right: 2px solid var(--border-color) !important;
 }
 
 .monthly-grid-table thead th.sticky-col {
-    z-index: 10;
+    z-index: 20;
     background-color: var(--bg-soft) !important;
 }
 
