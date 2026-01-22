@@ -178,7 +178,7 @@ const AttendancePage = ({ user }) => {
                                         }
                                         <div className="eng-details">
                                             <span className="engineer-name">{r.name}</span>
-                                            <span className="engineer-id-small">ENG-{r.id}</span>
+                                            <span className="engineer-id-small">#AIM-E-{r.id}</span>
                                         </div>
                                     </div>
                                 </td>

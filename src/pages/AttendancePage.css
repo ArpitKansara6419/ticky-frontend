@@ -274,7 +274,7 @@
 
 .sticky-col {
     position: sticky;
-    background: var(--white);
+    background-color: var(--white) !important;
     z-index: 2;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
 }
@@ -296,8 +296,8 @@
 }
 
 .monthly-grid-table thead th.sticky-col {
-    z-index: 3;
-    background: var(--bg-soft);
+    z-index: 10;
+    background-color: var(--bg-soft) !important;
 }
 
 .day-col {
