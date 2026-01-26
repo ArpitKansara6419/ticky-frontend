@@ -1358,6 +1358,14 @@ function TicketsPage() {
                     {selectedTicket.status}
                   </span>
                 </div>
+                {selectedTicket.engineerStatus === 'Declined' && (
+                  <div className="detail-item--full" style={{ marginTop: '8px' }}>
+                    <label style={{ color: '#ef4444' }}>Decline Reason</label>
+                    <div className="scope-text" style={{ borderColor: '#ef4444', color: '#991b1b', background: '#fef2f2' }}>
+                      {selectedTicket.declineReason || 'No reason provided'}
+                    </div>
+                  </div>
+                )}
                 <div className="detail-item">
                   <label>City / Country</label>
                   <span>{selectedTicket.city}, {selectedTicket.country}</span>

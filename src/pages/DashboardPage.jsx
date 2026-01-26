@@ -145,7 +145,12 @@ function DashboardHome({ onNavigate, insightsLayout }) {
         const res = await fetch(`${API_BASE_URL}/tickets`, { credentials: 'include' })
         const data = await res.json()
         if (res.ok) {
-          setTickets((data.tickets || []).sort((a, b) => a.id - b.id))
+          const sorted = (data.tickets || []).sort((a, b) => {
+            if (a.status === 'Resolved' && b.status !== 'Resolved') return 1;
+            if (a.status !== 'Resolved' && b.status === 'Resolved') return -1;
+            return b.id - a.id;
+          });
+          setTickets(sorted);
         }
       } catch (err) {
         console.error('Failed to load tickets for dashboard', err)
