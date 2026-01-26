@@ -696,6 +696,26 @@ function DashboardPage() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [insightsLayout] = useState('split')
+  const [approvalsCount, setApprovalsCount] = useState(0)
+
+  // Fetch pending approvals count for sidebar badge
+  const fetchApprovalsCount = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/approvals/count`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setApprovalsCount(data.count || 0)
+      }
+    } catch (err) {
+      console.error('Failed to fetch approvals count', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchApprovalsCount()
+    const interval = setInterval(fetchApprovalsCount, 30000) // update every 30s
+    return () => clearInterval(interval)
+  }, [])
   const [profileForm, setProfileForm] = useState(() => {
     const storedName = localStorage.getItem('userName') || 'Test User'
     const storedEmail = localStorage.getItem('userEmail') || 'test@example.com'
@@ -998,6 +1018,9 @@ function DashboardPage() {
             >
               <span className="sidebar-link-icon">
                 <item.icon />
+                {item.id === 'approvals' && approvalsCount > 0 && (
+                  <span className="sidebar-badge">{approvalsCount}</span>
+                )}
               </span>
               <span className="sidebar-link-label">{item.label}</span>
             </button>

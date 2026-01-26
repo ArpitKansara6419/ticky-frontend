@@ -203,6 +203,26 @@
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
+  position: relative;
+}
+
+.sidebar-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+  border: 1.5px solid var(--sidebar-bg);
 }
 
 .sidebar-link-label {
