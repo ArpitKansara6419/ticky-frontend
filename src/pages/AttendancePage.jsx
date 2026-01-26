@@ -4,6 +4,24 @@ import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// Hardcoded Public Holidays for 2026 (Sync with Mobile)
+const PUBLIC_HOLIDAYS = [
+    '2026-01-26', // Republic Day
+    '2026-03-08', // Maha Shivaratri
+    '2026-03-25', // Holi
+    '2026-04-11', // Eid ul-Fitr
+    '2026-04-14', // Ambedkar Jayanti
+    '2026-04-21', // Ram Navami
+    '2026-05-01', // May Day
+    '2026-08-15', // Independence Day
+    '2026-08-26', // Janmashtami
+    '2026-10-02', // Gandhi Jayanti
+    '2026-10-12', // Dussehra
+    '2026-10-31', // Diwali
+    '2026-11-01', // Diwali (Day 2)
+    '2026-12-25', // Christmas
+];
+
 const AttendancePage = ({ user }) => {
     const [viewMode, setViewMode] = useState('daily'); // 'daily' or 'monthly'
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -160,47 +178,85 @@ const AttendancePage = ({ user }) => {
                         <th className="sticky-col first-col">SR NO.</th>
                         <th className="sticky-col second-col">ENGINEER</th>
                         <th className="sticky-col third-col">JOB TYPE</th>
-                        {days.map(d => <th key={d} className="day-col">{d}</th>)}
+                        {days.map(d => {
+                            const dateObj = new Date(year, month - 1, d);
+                            const isToday = new Date().toDateString() === dateObj.toDateString();
+                            const isSunday = dateObj.getDay() === 0;
+                            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                            const isHoliday = PUBLIC_HOLIDAYS.includes(dateStr);
+
+                            return (
+                                <th key={d} className={`day-col ${isToday ? 'is-today' : ''} ${isSunday ? 'is-sunday' : ''} ${isHoliday ? 'is-holiday' : ''}`}>
+                                    {d}
+                                    {isToday && <span className="today-badge">Today</span>}
+                                </th>
+                            );
+                        })}
+                        <th className="summary-col present">P</th>
+                        <th className="summary-col absent">A</th>
+                        <th className="summary-col leave">L</th>
                     </tr>
                 </thead>
                 <tbody>
                     {filteredMonthly.length === 0 ? (
-                        <tr><td colSpan={days.length + 3} className="table-empty">No engineers found.</td></tr>
+                        <tr><td colSpan={days.length + 6} className="table-empty">No engineers found.</td></tr>
                     ) : (
-                        filteredMonthly.map((r, idx) => (
-                            <tr key={r.id} className={r.email === currentUserEmail ? 'is-current-user' : ''}>
-                                <td className="sticky-col first-col center-text">{idx + 1}</td>
-                                <td className="sticky-col second-col">
-                                    <div className="engineer-profile-sm">
-                                        {r.avatar_url ?
-                                            <img src={r.avatar_url} alt="" className="avatar-img" /> :
-                                            <div className="avatar-placeholder">{r.name?.charAt(0)}</div>
-                                        }
-                                        <div className="eng-details">
-                                            <span className="engineer-name">{r.name}</span>
-                                            <span className="engineer-id-small">#AIM-E-{r.id}</span>
+                        filteredMonthly.map((r, idx) => {
+                            let pCount = 0, aCount = 0, lCount = 0;
+                            days.forEach(d => {
+                                const status = r.attendance[d];
+                                if (status === 'Present') pCount++;
+                                else if (status === 'Absent') aCount++;
+                                else if (status === 'Leave') lCount++;
+                                else if (status === 'Half Day') pCount += 0.5;
+                            });
+
+                            return (
+                                <tr key={r.id} className={r.email === currentUserEmail ? 'is-current-user' : ''}>
+                                    <td className="sticky-col first-col center-text">{idx + 1}</td>
+                                    <td className="sticky-col second-col">
+                                        <div className="engineer-profile-sm">
+                                            {r.avatar_url ?
+                                                <img src={r.avatar_url} alt="" className="avatar-img" /> :
+                                                <div className="avatar-placeholder">{r.name?.charAt(0)}</div>
+                                            }
+                                            <div className="eng-details">
+                                                <span className="engineer-name">{r.name}</span>
+                                                <span className="engineer-id-small">#AIM-E-{r.id}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td className="sticky-col third-col">{r.employment_type}</td>
-                                {days.map(d => {
-                                    const status = r.attendance[d];
-                                    let char = '-';
-                                    let statusClass = 'empty';
+                                    </td>
+                                    <td className="sticky-col third-col">{r.employment_type}</td>
+                                    {days.map(d => {
+                                        const status = r.attendance[d];
+                                        const dateObj = new Date(year, month - 1, d);
+                                        const isToday = new Date().toDateString() === dateObj.toDateString();
+                                        const isSunday = dateObj.getDay() === 0;
+                                        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                        const isHoliday = PUBLIC_HOLIDAYS.includes(dateStr);
 
-                                    if (status === 'Present') { char = 'P'; statusClass = 'present'; }
-                                    else if (status === 'Absent') { char = 'A'; statusClass = 'absent'; }
-                                    else if (status === 'Leave') { char = 'L'; statusClass = 'leave'; }
-                                    else if (status === 'Half Day') { char = 'H'; statusClass = 'half'; }
+                                        let char = '-';
+                                        let statusClass = 'empty';
 
-                                    return (
-                                        <td key={d} className={`day-cell ${statusClass}`}>
-                                            {char}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))
+                                        if (status === 'Present') { char = 'P'; statusClass = 'present'; }
+                                        else if (status === 'Absent') { char = 'A'; statusClass = 'absent'; }
+                                        else if (status === 'Leave') { char = 'L'; statusClass = 'leave'; }
+                                        else if (status === 'Half Day') { char = 'H'; statusClass = 'half'; }
+                                        else if (isSunday) { char = 'OFF'; statusClass = 'weekoff'; }
+                                        else if (isHoliday) { char = 'H'; statusClass = 'holiday'; }
+
+                                        return (
+                                            <td key={d} className={`day-cell ${statusClass} ${isToday ? 'is-today' : ''}`}>
+                                                {char}
+                                            </td>
+                                        );
+                                    })}
+                                    <td className="summary-cell present">{pCount}</td>
+                                    <td className="summary-cell absent">{aCount}</td>
+                                    <td className="summary-cell leave">{lCount}</td>
+                                </tr>
+                            );
+                        })
                     )}
                 </tbody>
             </table>
@@ -303,9 +359,21 @@ const AttendancePage = ({ user }) => {
                         <button onClick={viewMode === 'daily' ? fetchAttendance : fetchMonthlyAttendance} className="retry-btn">Retry</button>
                     </div>
                 ) : (
-                    <div className="att-table-wrapper">
-                        {viewMode === 'daily' ? renderDailyTable() : renderMonthlyTable()}
-                    </div>
+                    <>
+                        <div className="att-table-wrapper">
+                            {viewMode === 'daily' ? renderDailyTable() : renderMonthlyTable()}
+                        </div>
+                        {viewMode === 'monthly' && (
+                            <div className="attendance-legend section-spacer">
+                                <div className="legend-item"><span className="legend-box present">P</span> Present</div>
+                                <div className="legend-item"><span className="legend-box absent">A</span> Absent</div>
+                                <div className="legend-item"><span className="legend-box leave">L</span> Leave</div>
+                                <div className="legend-item"><span className="legend-box half">H</span> Half Day</div>
+                                <div className="legend-item"><span className="legend-box weekoff">OFF</span> Week Off</div>
+                                <div className="legend-item"><span className="legend-box holiday">H</span> Public Holiday</div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </section>
