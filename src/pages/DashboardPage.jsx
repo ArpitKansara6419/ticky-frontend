@@ -11,6 +11,7 @@ import EngineerPayoutPage from './EngineerPayoutPage'
 import CustomerReceivablePage from './CustomerReceivablePage'
 import MeetingPage from './MeetingPage'
 import AttendancePage from './AttendancePage'
+import ApprovalsPage from './ApprovalsPage'
 import {
   FiHome,
   FiUsers,
@@ -66,6 +67,7 @@ const MAIN_MENU_ITEMS = [
   { id: 'leaves', label: 'Leaves', icon: FiCoffee },
   { id: 'library', label: 'Library', icon: FiBookOpen },
   { id: 'training', label: 'Training', icon: FiMonitor },
+  { id: 'approvals', label: 'Approvals', icon: FiShield },
   { id: 'notifications', label: 'Notifications', icon: FiBell },
   { id: 'profile', label: 'Profile', icon: FiUser },
 ]
@@ -950,6 +952,10 @@ function DashboardPage() {
 
     if (activePage === 'attendance') {
       return <AttendancePage user={profileForm} />
+    }
+
+    if (activePage === 'approvals') {
+      return <ApprovalsPage />
     }
 
     return <GenericPage pageId={activePage} />
