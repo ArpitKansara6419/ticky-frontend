@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiCalendar, FiClock, FiUser, FiUserCheck, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { FiCalendar, FiClock, FiUser, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight } from 'react-icons/fi';
 import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -33,7 +33,45 @@ const AttendancePage = ({ user }) => {
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
+    const tableContainerRef = useRef(null);
+    const todayColRef = useRef(null);
+
     const currentUserEmail = user?.email;
+
+    // Auto-scroll to today in monthly view
+    useEffect(() => {
+        if (viewMode === 'monthly' && !loading && tableContainerRef.current && todayColRef.current) {
+            setTimeout(() => {
+                const container = tableContainerRef.current;
+                const todayHeader = todayColRef.current;
+                const containerWidth = container.offsetWidth;
+                const scrollLeft = todayHeader.offsetLeft - (containerWidth / 2) + (todayHeader.offsetWidth / 2);
+                container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            }, 500);
+        }
+    }, [viewMode, loading, monthlyRecords]);
+
+    // Calculate Today's Stats from Monthly Data
+    const todayStats = useMemo(() => {
+        if (viewMode !== 'monthly') return null;
+        const currentDay = new Date().getDate();
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+
+        if (month !== currentMonth || year !== currentYear) return null;
+
+        let present = 0, absent = 0, leave = 0, onHold = 0;
+        monthlyRecords.forEach(r => {
+            const status = r.attendance[currentDay];
+            if (status === 'Present') present++;
+            else if (status === 'Absent') absent++;
+            else if (status === 'Leave') leave++;
+            else if (status === 'Half Day') present += 0.5;
+            else onHold++;
+        });
+
+        return { present, absent, leave, total: monthlyRecords.length };
+    }, [monthlyRecords, month, year, viewMode]);
 
     useEffect(() => {
         if (viewMode === 'daily') {
@@ -171,7 +209,7 @@ const AttendancePage = ({ user }) => {
     );
 
     const renderMonthlyTable = () => (
-        <div className="monthly-grid-container">
+        <div className="monthly-grid-container" ref={tableContainerRef}>
             <table className="monthly-grid-table">
                 <thead>
                     <tr>
@@ -186,7 +224,11 @@ const AttendancePage = ({ user }) => {
                             const isHoliday = PUBLIC_HOLIDAYS.includes(dateStr);
 
                             return (
-                                <th key={d} className={`day-col ${isToday ? 'is-today' : ''} ${isSunday ? 'is-sunday' : ''} ${isHoliday ? 'is-holiday' : ''}`}>
+                                <th
+                                    key={d}
+                                    ref={isToday ? todayColRef : null}
+                                    className={`day-col ${isToday ? 'is-today' : ''} ${isSunday ? 'is-sunday' : ''} ${isHoliday ? 'is-holiday' : ''}`}
+                                >
                                     {d}
                                     {isToday && <span className="today-badge">Today</span>}
                                 </th>
@@ -327,6 +369,35 @@ const AttendancePage = ({ user }) => {
                     </div>
                 )}
             </div>
+
+            {viewMode === 'monthly' && todayStats && (
+                <div className="today-overview-ribbon section-spacer">
+                    <div className="ribbon-content">
+                        <div className="ribbon-label">
+                            <FiActivity className="ribbon-icon" />
+                            <span>Today's Pulse</span>
+                        </div>
+                        <div className="ribbon-stats">
+                            <div className="r-stat present"><strong>{todayStats.present}</strong> Present</div>
+                            <div className="r-stat absent"><strong>{todayStats.absent}</strong> Absent</div>
+                            <div className="r-stat leave"><strong>{todayStats.leave}</strong> Leave</div>
+                        </div>
+                        <button
+                            className="jump-today-btn"
+                            onClick={() => {
+                                const container = tableContainerRef.current;
+                                const todayHeader = todayColRef.current;
+                                if (container && todayHeader) {
+                                    const scrollLeft = todayHeader.offsetLeft - (container.offsetWidth / 2) + (todayHeader.offsetWidth / 2);
+                                    container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+                                }
+                            }}
+                        >
+                            Jump to Today <FiArrowRight />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {viewMode === 'daily' && (
                 <div className="attendance-stats-grid section-spacer">
