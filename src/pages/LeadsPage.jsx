@@ -438,6 +438,10 @@ function LeadsPage() {
     const l = leads.find(x => x.id === id)
     if (l) {
       fillFormFromLead(l)
+      // Clear dates for clone as per requirement
+      setTaskStartDate('')
+      setTaskEndDate('')
+
       setEditingLeadId(null) // Clear ID to represent a new clone
       setViewMode('form')
     }
