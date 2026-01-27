@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FiCalendar, FiClock, FiUser, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiUser, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight, FiX, FiCheckCircle, FiMinusCircle, FiTarget } from 'react-icons/fi';
 import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -32,6 +32,7 @@ const AttendancePage = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedEngineer, setSelectedEngineer] = useState(null); // For individual calendar view
 
     const tableContainerRef = useRef(null);
     const todayColRef = useRef(null);
@@ -138,9 +139,20 @@ const AttendancePage = ({ user }) => {
     };
 
     const handleToday = () => {
-        setDate(new Date().toISOString().split('T')[0]);
-        setMonth(new Date().getMonth() + 1);
-        setYear(new Date().getFullYear());
+        const today = new Date();
+        setDate(today.toISOString().split('T')[0]);
+        setMonth(today.getMonth() + 1);
+        setYear(today.getFullYear());
+    };
+
+    const isWeekend = (y, m, d) => {
+        const dateObj = new Date(y, m - 1, d);
+        return dateObj.getDay() === 0; // Sunday
+    };
+
+    const isPublicHoliday = (y, m, d) => {
+        const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        return PUBLIC_HOLIDAYS.includes(dateStr);
     };
 
     const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
@@ -154,58 +166,99 @@ const AttendancePage = ({ user }) => {
     const presentCount = records.filter(r => r.status === 'Present').length;
 
     const renderDailyTable = () => (
-        <table className="premium-table">
-            <thead>
-                <tr>
-                    <th>Engineer</th>
-                    <th>Status</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
-                    <th>Work Duration</th>
-                </tr>
-            </thead>
-            <tbody>
-                {records.length === 0 ? (
-                    <tr><td colSpan="5" className="table-empty">No attendance records for this date.</td></tr>
-                ) : (
-                    records.map(r => {
-                        const start = r.check_in_time ? new Date(r.check_in_time) : null;
-                        const end = r.check_out_time ? new Date(r.check_out_time) : null;
-                        let duration = '-';
-                        if (start && end) {
-                            const diff = (end - start) / 1000 / 3600;
-                            duration = `${diff.toFixed(1)} hrs`;
-                        } else if (start) {
-                            duration = 'Active Now';
-                        }
+        <div className="daily-view-premium">
+            <div className="daily-status-banner">
+                <div className="banner-item">
+                    <FiCheckCircle className="icon present" />
+                    <div className="details">
+                        <span className="label">Present</span>
+                        <span className="value">{presentCount}</span>
+                    </div>
+                </div>
+                <div className="banner-item">
+                    <FiMinusCircle className="icon absent" />
+                    <div className="details">
+                        <span className="label">Absent</span>
+                        <span className="value">{records.filter(r => r.status === 'Absent').length}</span>
+                    </div>
+                </div>
+                <div className="banner-item">
+                    <FiTarget className="icon total" />
+                    <div className="details">
+                        <span className="label">Scheduled</span>
+                        <span className="value">{records.length}</span>
+                    </div>
+                </div>
+            </div>
 
-                        return (
-                            <tr key={r.id} className={r.email === currentUserEmail ? 'is-current-user' : ''}>
-                                <td>
-                                    <div className="engineer-profile-sm">
-                                        {r.avatar_url ?
-                                            <img src={r.avatar_url} alt="" className="avatar-img" /> :
-                                            <div className="avatar-placeholder">{r.engineer_name?.charAt(0)}</div>
-                                        }
-                                        <span className="engineer-name">{r.engineer_name}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span className={`status-pill status-pill--${r.status.toLowerCase()}`}>
-                                        {r.status}
-                                    </span>
-                                </td>
-                                <td className="time-cell">{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                                <td className="time-cell">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                                <td className={`duration-cell ${duration === 'Active Now' ? 'active' : ''}`}>
-                                    {duration}
-                                </td>
-                            </tr>
-                        );
-                    })
-                )}
-            </tbody>
-        </table>
+            <table className="premium-table modern">
+                <thead>
+                    <tr>
+                        <th>Engineer Profile</th>
+                        <th>Attendance Status</th>
+                        <th>Timing Log</th>
+                        <th>Work Duration</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {records.length === 0 ? (
+                        <tr><td colSpan="5" className="table-empty">No attendance records for {new Date(date).toLocaleDateString()}.</td></tr>
+                    ) : (
+                        records.map(r => {
+                            const start = r.check_in_time ? new Date(r.check_in_time) : null;
+                            const end = r.check_out_time ? new Date(r.check_out_time) : null;
+                            let duration = '-';
+                            if (start && end) {
+                                const diff = (end - start) / 1000 / 3600;
+                                duration = `${diff.toFixed(1)} hrs`;
+                            } else if (start) {
+                                duration = 'Active Now';
+                            }
+
+                            return (
+                                <tr key={r.id} className={r.email === currentUserEmail ? 'is-current-user' : ''}>
+                                    <td>
+                                        <div className="engineer-profile-sm">
+                                            {r.avatar_url ?
+                                                <img src={r.avatar_url} alt="" className="avatar-img" /> :
+                                                <div className="avatar-placeholder">{r.engineer_name?.charAt(0)}</div>
+                                            }
+                                            <div className="eng-text-info">
+                                                <span className="engineer-name">{r.engineer_name}</span>
+                                                <span className="engineer-email-small">{r.email}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className={`status-pill modern status-pill--${r.status.toLowerCase()}`}>
+                                            {r.status}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="timing-log">
+                                            <span className="time in">In: {start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
+                                            <span className="time out">Out: {end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
+                                        </div>
+                                    </td>
+                                    <td className={`duration-cell ${duration === 'Active Now' ? 'active' : ''}`}>
+                                        {duration}
+                                    </td>
+                                    <td>
+                                        <button className="view-log-btn" onClick={() => {
+                                            const engData = monthlyRecords.find(m => m.email === r.email);
+                                            if (engData) setSelectedEngineer(engData);
+                                        }}>
+                                            Full Calendar
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })
+                    )}
+                </tbody>
+            </table>
+        </div>
     );
 
     const renderMonthlyTable = () => (
@@ -262,7 +315,7 @@ const AttendancePage = ({ user }) => {
                                                 <img src={r.avatar_url} alt="" className="avatar-img" /> :
                                                 <div className="avatar-placeholder">{r.name?.charAt(0)}</div>
                                             }
-                                            <div className="eng-details">
+                                            <div className="eng-details pointer" onClick={() => setSelectedEngineer(r)}>
                                                 <span className="engineer-name">{r.name}</span>
                                                 <span className="engineer-id-small">#AIM-E-{r.id}</span>
                                             </div>
@@ -447,6 +500,63 @@ const AttendancePage = ({ user }) => {
                     </>
                 )}
             </div>
+
+            {selectedEngineer && (
+                <div className="modal-overlay active">
+                    <div className="engineer-calendar-modal">
+                        <header className="modal-header">
+                            <div className="header-left">
+                                <div className="avatar-placeholder big">{selectedEngineer.name?.charAt(0)}</div>
+                                <div>
+                                    <h3>{selectedEngineer.name}'s Attendance</h3>
+                                    <p>{['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1]} {year}</p>
+                                </div>
+                            </div>
+                            <button className="close-modal" onClick={() => setSelectedEngineer(null)}><FiX /></button>
+                        </header>
+
+                        <div className="modal-body">
+                            <div className="calendar-grid">
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                    <div key={day} className="calendar-day-header">{day}</div>
+                                ))}
+                                {Array.from({ length: new Date(year, month - 1, 1).getDay() }).map((_, i) => (
+                                    <div key={`empty-${i}`} className="calendar-cell empty"></div>
+                                ))}
+                                {days.map(d => {
+                                    const status = selectedEngineer.attendance[d];
+                                    const weekend = isWeekend(year, month, d);
+                                    const holiday = isPublicHoliday(year, month, d);
+                                    const isToday = new Date().getDate() === d && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
+
+                                    return (
+                                        <div key={d} className={`calendar-cell ${isToday ? 'is-today' : ''} ${weekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''}`}>
+                                            <span className="day-num">{d}</span>
+                                            <div className="status-indicator">
+                                                {status === 'Present' && <span className="p-dot present">P</span>}
+                                                {status === 'Absent' && <span className="p-dot absent">A</span>}
+                                                {status === 'Leave' && <span className="p-dot leave">L</span>}
+                                                {status === 'Half Day' && <span className="p-dot half">H</span>}
+                                                {!status && weekend && <span className="p-dot weekoff">OFF</span>}
+                                                {!status && holiday && <span className="p-dot holi">H</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="modal-footer-stats">
+                                <div className="f-stat"><FiCheckCircle color="#16a34a" /> <span>Present: <strong>{
+                                    Object.values(selectedEngineer.attendance).filter(v => v === 'Present').length +
+                                    (Object.values(selectedEngineer.attendance).filter(v => v === 'Half Day').length * 0.5)
+                                }</strong></span></div>
+                                <div className="f-stat"><FiMinusCircle color="#e11d48" /> <span>Absent: <strong>{Object.values(selectedEngineer.attendance).filter(v => v === 'Absent').length}</strong></span></div>
+                                <div className="f-stat"><FiCalendar color="#ca8a04" /> <span>Leave: <strong>{Object.values(selectedEngineer.attendance).filter(v => v === 'Leave').length}</strong></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };
