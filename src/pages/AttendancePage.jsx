@@ -131,7 +131,7 @@ const AttendancePage = ({ user }) => {
                     <div className="stat-icon-wrapper"><FiTarget /></div>
                     <div>
                         <h3>{loading ? '-' : dailyStats.total}</h3>
-                        <p>Total Strength</p>
+                        <p>Total Engineers Assigned</p>
                     </div>
                 </div>
                 <div className="stat-card success-gradient">
