@@ -4,6 +4,24 @@ import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// Hardcoded Public Holidays for Header Highlighting (Sync with Mobile)
+const PUBLIC_HOLIDAYS = [
+    '2026-01-26', // Republic Day
+    '2026-03-08', // Maha Shivaratri
+    '2026-03-25', // Holi
+    '2026-04-11', // Eid ul-Fitr
+    '2026-04-14', // Ambedkar Jayanti
+    '2026-04-21', // Ram Navami
+    '2026-05-01', // May Day
+    '2026-08-15', // Independence Day
+    '2026-08-26', // Janmashtami
+    '2026-10-02', // Gandhi Jayanti
+    '2026-10-12', // Dussehra
+    '2026-10-31', // Diwali
+    '2026-11-01', // Diwali (Day 2)
+    '2026-12-25', // Christmas
+];
+
 // AttendancePage.jsx - Global Edition
 import { FiInfo, FiGlobe } from 'react-icons/fi';
 
