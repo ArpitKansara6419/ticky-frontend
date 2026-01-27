@@ -678,8 +678,8 @@ function ApprovalsModal({ isOpen, onClose }) {
             <FiX />
           </button>
         </header>
-        <div className="profile-modal-body" style={{ padding: '0' }}>
-          <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <div className="profile-modal-body" style={{ padding: '0', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ maxHeight: '70vh', overflowY: 'auto', width: '100%' }}>
             <ApprovalsPage />
           </div>
         </div>
