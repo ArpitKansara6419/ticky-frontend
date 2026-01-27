@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FiCheck, FiX, FiAlertCircle, FiClock, FiUser, FiTag, FiFileText, FiHistory, FiInbox } from 'react-icons/fi'
+import { FiCheck, FiX, FiAlertCircle, FiClock, FiUser, FiTag, FiFileText, FiRotateCcw, FiInbox } from 'react-icons/fi'
 import './ApprovalsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -68,7 +68,7 @@ function ApprovalsPage() {
     const renderEmptyState = () => (
         <div className="approvals-empty">
             <div className="empty-icon-wrapper">
-                {activeTab === 'pending' ? <FiInbox /> : <FiHistory />}
+                {activeTab === 'pending' ? <FiInbox /> : <FiRotateCcw />}
             </div>
             <h3>{activeTab === 'pending' ? 'All caught up!' : 'No history found'}</h3>
             <p>{activeTab === 'pending' ? 'No pending approval requests at the moment.' : 'Your processed requests will appear here.'}</p>
@@ -152,7 +152,7 @@ function ApprovalsPage() {
                     className={`tab-item ${activeTab === 'history' ? 'active' : ''}`}
                     onClick={() => setActiveTab('history')}
                 >
-                    <FiHistory /> History
+                    <FiRotateCcw /> History
                 </button>
             </nav>
 

@@ -381,8 +381,6 @@ function TicketsPage() {
         leadId: leadId ? Number(leadId) : null,
         clientName,
         taskName,
-        taskStartDate,
-        taskEndDate,
         taskTime,
         scopeOfWork,
         tools,
