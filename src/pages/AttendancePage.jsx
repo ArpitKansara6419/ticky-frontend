@@ -131,7 +131,7 @@ const AttendancePage = ({ user }) => {
                     <div className="stat-icon-wrapper"><FiTarget /></div>
                     <div>
                         <h3>{loading ? '-' : dailyStats.total}</h3>
-                        <p>Total Scheduled</p>
+                        <p>Total Strength</p>
                     </div>
                 </div>
                 <div className="stat-card success-gradient">
@@ -250,7 +250,7 @@ const AttendancePage = ({ user }) => {
                     <div className="pulse-ribbon">
                         <div className="pulse-header">
                             <FiActivity className="pulse-icon" />
-                            <span>Today's Live Pulse</span>
+                            <span>Today's Overview</span>
                         </div>
                         <div className="pulse-metrics">
                             <div className="p-metric present"><strong>{monthlyStats.present}</strong> Present</div>
