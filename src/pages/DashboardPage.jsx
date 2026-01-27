@@ -67,7 +67,6 @@ const MAIN_MENU_ITEMS = [
   { id: 'leaves', label: 'Leaves', icon: FiCoffee },
   { id: 'library', label: 'Library', icon: FiBookOpen },
   { id: 'training', label: 'Training', icon: FiMonitor },
-  { id: 'training', label: 'Training', icon: FiMonitor },
   { id: 'notifications', label: 'Notifications', icon: FiBell },
   { id: 'profile', label: 'Profile', icon: FiUser },
 ]
@@ -883,7 +882,7 @@ function DashboardPage() {
   const handleSettingsItemClick = (id) => {
     navigate('/dashboard', { state: {}, replace: true })
     setActivePage(id)
-    setIsSettingsOpen(false)
+    // Removed setIsSettingsOpen(false) so menu stays open
   }
 
   const handleAvatarChange = (event) => {
