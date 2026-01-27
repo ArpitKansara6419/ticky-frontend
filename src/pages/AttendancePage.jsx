@@ -193,15 +193,35 @@ const AttendancePage = ({ user }) => {
                                         <td className="mono-text">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
                                         <td className={`duration ${duration === 'Active' ? 'text-green' : ''}`}>{duration}</td>
                                         <td>
-                                            <button className="icon-btn" onClick={() => {
-                                                // Find engineer in monthly records context if possible, or fetch
-                                                // For now, we need to switch to monthly or show modal. 
-                                                // This might need monthly data to be pre-loaded or fetched on demand.
-                                                // Simplified: Just set selected logic if we had data, else maybe redirect.
-                                                // Let's assume we want to open the modal. We need their monthly data.
-                                                // For this specific requirement, we'll auto-fetch in the modal if needed, 
-                                                // but to keep it simple, we'll just show what we have or placeholder.
-                                                alert("Switch to Monthly View to see full calendar for this engineer.");
+                                            <button className="icon-btn" onClick={async () => {
+                                                // Fetch monthly data for this specific engineer to show in modal
+                                                try {
+                                                    const currentYear = new Date().getFullYear();
+                                                    const currentMonth = new Date().getMonth() + 1;
+
+                                                    // We need to fetch monthly data to show the calendar
+                                                    // Since we don't have it in daily view, we fetch it now
+                                                    // Optimistically set a temp loading state or just fetch
+                                                    setLoading(true);
+                                                    const res = await fetch(`${API_BASE_URL}/attendance/monthly?year=${currentYear}&month=${currentMonth}`, { credentials: 'include' });
+                                                    if (res.ok) {
+                                                        const data = await res.json();
+                                                        if (Array.isArray(data)) {
+                                                            const engData = data.find(e => e.email === r.email);
+                                                            if (engData) {
+                                                                setSelectedEngineer(engData);
+                                                                setMonth(currentMonth);
+                                                                setYear(currentYear);
+                                                            } else {
+                                                                alert("No monthly data found for this engineer.");
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (e) {
+                                                    console.error(e);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
                                             }}>
                                                 <FiCalendar />
                                             </button>
