@@ -67,7 +67,7 @@ const MAIN_MENU_ITEMS = [
   { id: 'leaves', label: 'Leaves', icon: FiCoffee },
   { id: 'library', label: 'Library', icon: FiBookOpen },
   { id: 'training', label: 'Training', icon: FiMonitor },
-  { id: 'approvals', label: 'Approvals', icon: FiShield },
+  { id: 'training', label: 'Training', icon: FiMonitor },
   { id: 'notifications', label: 'Notifications', icon: FiBell },
   { id: 'profile', label: 'Profile', icon: FiUser },
 ]
@@ -663,6 +663,31 @@ function ProfileModal({ isOpen, onClose, form, onChange, onSubmit, onAvatarChang
   )
 }
 
+function ApprovalsModal({ isOpen, onClose }) {
+  if (!isOpen) return null
+
+  return (
+    <div className="profile-modal-backdrop" role="dialog" aria-modal="true">
+      <div className="profile-modal" style={{ maxWidth: '800px', width: '90%' }}>
+        <header className="profile-modal-header">
+          <div>
+            <h2 className="section-title">Approval Requests</h2>
+            <p className="section-subtitle">Review pending engineer requests.</p>
+          </div>
+          <button type="button" className="profile-modal-close" onClick={onClose}>
+            <FiX />
+          </button>
+        </header>
+        <div className="profile-modal-body" style={{ padding: '0' }}>
+          <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            <ApprovalsPage />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -695,6 +720,7 @@ function DashboardPage() {
   }
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [isApprovalsModalOpen, setIsApprovalsModalOpen] = useState(false)
   const [insightsLayout] = useState('split')
   const [approvalsCount, setApprovalsCount] = useState(0)
 
@@ -979,9 +1005,7 @@ function DashboardPage() {
       return <AttendancePage user={profileForm} />
     }
 
-    if (activePage === 'approvals') {
-      return <ApprovalsPage />
-    }
+
 
     return <GenericPage pageId={activePage} />
   }
@@ -1086,6 +1110,37 @@ function DashboardPage() {
             >
               {theme === 'light' ? <FiMoon /> : <FiSun />}
             </button>
+
+            <button
+              className="dashboard-theme-toggle" // Reusing same style for icon button
+              type="button"
+              aria-label="Approvals"
+              onClick={() => setIsApprovalsModalOpen(true)}
+              style={{ position: 'relative' }}
+            >
+              <FiShield />
+              {approvalsCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '10px',
+                  borderRadius: '50%',
+                  width: '16px',
+                  height: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  border: '2px solid white'
+                }}>
+                  {approvalsCount}
+                </span>
+              )}
+            </button>
+
             <button
               type="button"
               className="dashboard-user-info"
@@ -1155,6 +1210,11 @@ function DashboardPage() {
         saving={profileSaving}
         error={profileError}
         success={profileSuccess}
+      />
+
+      <ApprovalsModal
+        isOpen={isApprovalsModalOpen}
+        onClose={() => setIsApprovalsModalOpen(false)}
       />
     </div >
   )
