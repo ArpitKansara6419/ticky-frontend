@@ -4,23 +4,42 @@ import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Hardcoded Public Holidays for 2026 (Sync with Mobile)
-const PUBLIC_HOLIDAYS = [
-    '2026-01-26', // Republic Day
-    '2026-03-08', // Maha Shivaratri
-    '2026-03-25', // Holi
-    '2026-04-11', // Eid ul-Fitr
-    '2026-04-14', // Ambedkar Jayanti
-    '2026-04-21', // Ram Navami
-    '2026-05-01', // May Day
-    '2026-08-15', // Independence Day
-    '2026-08-26', // Janmashtami
-    '2026-10-02', // Gandhi Jayanti
-    '2026-10-12', // Dussehra
-    '2026-10-31', // Diwali
-    '2026-11-01', // Diwali (Day 2)
-    '2026-12-25', // Christmas
-];
+// AttendancePage.jsx - Global Edition
+import { FiInfo, FiGlobe } from 'react-icons/fi';
+
+// Country Configurations (Holidays & Weekends)
+const COUNTRY_CONFIG = {
+    'IN': {
+        name: 'India',
+        flag: '🇮🇳',
+        weekend: [0], // Sunday
+        holidays: ['2026-01-26', '2026-08-15', '2026-10-02', '2026-10-31', '2026-12-25']
+    },
+    'US': {
+        name: 'USA',
+        flag: '🇺🇸',
+        weekend: [0, 6], // Sat, Sun
+        holidays: ['2026-01-01', '2026-07-04', '2026-11-26', '2026-12-25']
+    },
+    'GB': {
+        name: 'UK',
+        flag: '🇬🇧',
+        weekend: [0, 6],
+        holidays: ['2026-01-01', '2026-12-25', '2026-12-26']
+    },
+    'AE': {
+        name: 'UAE',
+        flag: '🇦🇪',
+        weekend: [5, 6], // Fri, Sat (Traditional) or Sat, Sun (Modern) - using Fri/Sat for demo variety
+        holidays: ['2026-12-02']
+    },
+    'DEFAULT': {
+        name: 'Global',
+        flag: '🌍',
+        weekend: [0],
+        holidays: []
+    }
+};
 
 const AttendancePage = ({ user }) => {
     const [viewMode, setViewMode] = useState('daily'); // 'daily' or 'monthly'
@@ -145,14 +164,21 @@ const AttendancePage = ({ user }) => {
         setYear(today.getFullYear());
     };
 
-    const isWeekend = (y, m, d) => {
-        const dateObj = new Date(y, m - 1, d);
-        return dateObj.getDay() === 0; // Sunday
+    const getEngineerConfig = (countryCode) => {
+        return COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG['DEFAULT'];
     };
 
-    const isPublicHoliday = (y, m, d) => {
+    const isWeekend = (y, m, d, countryCode = 'IN') => {
+        const dateObj = new Date(y, m - 1, d);
+        const day = dateObj.getDay();
+        const config = getEngineerConfig(countryCode);
+        return config.weekend.includes(day);
+    };
+
+    const isPublicHoliday = (y, m, d, countryCode = 'IN') => {
         const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        return PUBLIC_HOLIDAYS.includes(dateStr);
+        const config = getEngineerConfig(countryCode);
+        return config.holidays.includes(dateStr);
     };
 
     const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
@@ -225,7 +251,12 @@ const AttendancePage = ({ user }) => {
                                                 <div className="avatar-placeholder">{r.engineer_name?.charAt(0)}</div>
                                             }
                                             <div className="eng-text-info">
-                                                <span className="engineer-name">{r.engineer_name}</span>
+                                                <span className="engineer-name">
+                                                    {r.engineer_name}
+                                                    <span className="country-flag" title={`Based in ${getEngineerConfig(r.country).name}`}>
+                                                        {getEngineerConfig(r.country || 'IN').flag}
+                                                    </span>
+                                                </span>
                                                 <span className="engineer-email-small">{r.email}</span>
                                             </div>
                                         </div>
@@ -316,19 +347,22 @@ const AttendancePage = ({ user }) => {
                                                 <div className="avatar-placeholder">{r.name?.charAt(0)}</div>
                                             }
                                             <div className="eng-details pointer" onClick={() => setSelectedEngineer(r)}>
-                                                <span className="engineer-name">{r.name}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span className="engineer-name">{r.name}</span>
+                                                    <span title={getEngineerConfig(r.country || 'IN').name}>{getEngineerConfig(r.country || 'IN').flag}</span>
+                                                </div>
                                                 <span className="engineer-id-small">#AIM-E-{r.id}</span>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="sticky-col third-col">{r.employment_type}</td>
                                     {days.map(d => {
+                                        const countryCode = r.country || 'IN'; // Default to IN if missing
                                         const status = r.attendance[d];
                                         const dateObj = new Date(year, month - 1, d);
                                         const isToday = new Date().toDateString() === dateObj.toDateString();
-                                        const isSunday = dateObj.getDay() === 0;
-                                        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                                        const isHoliday = PUBLIC_HOLIDAYS.includes(dateStr);
+                                        const isSun = isWeekend(year, month, d, countryCode);
+                                        const isHoli = isPublicHoliday(year, month, d, countryCode);
 
                                         let char = '-';
                                         let statusClass = 'empty';
@@ -337,8 +371,8 @@ const AttendancePage = ({ user }) => {
                                         else if (status === 'Absent') { char = 'A'; statusClass = 'absent'; }
                                         else if (status === 'Leave') { char = 'L'; statusClass = 'leave'; }
                                         else if (status === 'Half Day') { char = 'H'; statusClass = 'half'; }
-                                        else if (isSunday) { char = 'OFF'; statusClass = 'weekoff'; }
-                                        else if (isHoliday) { char = 'H'; statusClass = 'holiday'; }
+                                        else if (isSun) { char = 'OFF'; statusClass = 'weekoff'; }
+                                        else if (isHoli) { char = 'H'; statusClass = 'holiday'; }
 
                                         return (
                                             <td key={d} className={`day-cell ${statusClass} ${isToday ? 'is-today' : ''}`}>
@@ -364,8 +398,11 @@ const AttendancePage = ({ user }) => {
                 <div>
                     <h2 className="section-title">Engineer Attendance</h2>
                     <p className="section-subtitle">
-                        {viewMode === 'daily' ? 'Daily check-in and working hours.' : 'Monthly attendance overview grid.'}
+                        {viewMode === 'daily' ? 'Daily check-in and working hours.' : 'Monthly attendance with global holiday tracking.'}
                     </p>
+                    <div className="info-badge">
+                        <FiGlobe /> <span>Location-based Holidays Active</span>
+                    </div>
                 </div>
 
                 <div className="attendance-view-toggle">
@@ -524,9 +561,10 @@ const AttendancePage = ({ user }) => {
                                     <div key={`empty-${i}`} className="calendar-cell empty"></div>
                                 ))}
                                 {days.map(d => {
+                                    const countryCode = selectedEngineer.country || 'IN';
                                     const status = selectedEngineer.attendance[d];
-                                    const weekend = isWeekend(year, month, d);
-                                    const holiday = isPublicHoliday(year, month, d);
+                                    const weekend = isWeekend(year, month, d, countryCode);
+                                    const holiday = isPublicHoliday(year, month, d, countryCode);
                                     const isToday = new Date().getDate() === d && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
 
                                     return (
