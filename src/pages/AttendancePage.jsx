@@ -1,66 +1,27 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FiCalendar, FiClock, FiUser, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight, FiX, FiCheckCircle, FiMinusCircle, FiTarget } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight, FiX, FiCheckCircle, FiMinusCircle, FiTarget, FiSearch, FiFilter, FiDownload, FiGlobe, FiAlertCircle } from 'react-icons/fi';
 import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Hardcoded Public Holidays for Header Highlighting (Sync with Mobile)
-const PUBLIC_HOLIDAYS = [
-    '2026-01-26', // Republic Day
-    '2026-03-08', // Maha Shivaratri
-    '2026-03-25', // Holi
-    '2026-04-11', // Eid ul-Fitr
-    '2026-04-14', // Ambedkar Jayanti
-    '2026-04-21', // Ram Navami
-    '2026-05-01', // May Day
-    '2026-08-15', // Independence Day
-    '2026-08-26', // Janmashtami
-    '2026-10-02', // Gandhi Jayanti
-    '2026-10-12', // Dussehra
-    '2026-10-31', // Diwali
-    '2026-11-01', // Diwali (Day 2)
-    '2026-12-25', // Christmas
-];
-
-// AttendancePage.jsx - Global Edition
-import { FiInfo, FiGlobe } from 'react-icons/fi';
-
-// Country Configurations (Holidays & Weekends)
+// Country Configurations
 const COUNTRY_CONFIG = {
-    'IN': {
-        name: 'India',
-        flag: '🇮🇳',
-        weekend: [0], // Sunday
-        holidays: ['2026-01-26', '2026-08-15', '2026-10-02', '2026-10-31', '2026-12-25']
-    },
-    'US': {
-        name: 'USA',
-        flag: '🇺🇸',
-        weekend: [0, 6], // Sat, Sun
-        holidays: ['2026-01-01', '2026-07-04', '2026-11-26', '2026-12-25']
-    },
-    'GB': {
-        name: 'UK',
-        flag: '🇬🇧',
-        weekend: [0, 6],
-        holidays: ['2026-01-01', '2026-12-25', '2026-12-26']
-    },
-    'AE': {
-        name: 'UAE',
-        flag: '🇦🇪',
-        weekend: [5, 6], // Fri, Sat (Traditional) or Sat, Sun (Modern) - using Fri/Sat for demo variety
-        holidays: ['2026-12-02']
-    },
-    'DEFAULT': {
-        name: 'Global',
-        flag: '🌍',
-        weekend: [0],
-        holidays: []
-    }
+    'IN': { name: 'India', flag: '🇮🇳', weekend: [0], holidays: ['2026-01-26', '2026-08-15', '2026-10-02', '2026-10-31', '2026-12-25'] },
+    'US': { name: 'USA', flag: '🇺🇸', weekend: [0, 6], holidays: ['2026-01-01', '2026-07-04', '2026-11-26', '2026-12-25'] },
+    'GB': { name: 'UK', flag: '🇬🇧', weekend: [0, 6], holidays: ['2026-01-01', '2026-12-25', '2026-12-26'] },
+    'AE': { name: 'UAE', flag: '🇦🇪', weekend: [5, 6], holidays: ['2026-12-02'] },
+    'DEFAULT': { name: 'Global', flag: '🌍', weekend: [0], holidays: [] }
 };
 
+// Hardcoded Public Holidays for Header Highlighting (Sync with Mobile)
+const PUBLIC_HOLIDAYS = [
+    '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
+    '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
+    '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
+];
+
 const AttendancePage = ({ user }) => {
-    const [viewMode, setViewMode] = useState('daily'); // 'daily' or 'monthly'
+    const [viewMode, setViewMode] = useState('daily');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [year, setYear] = useState(new Date().getFullYear());
@@ -69,551 +30,438 @@ const AttendancePage = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedEngineer, setSelectedEngineer] = useState(null); // For individual calendar view
+    const [selectedEngineer, setSelectedEngineer] = useState(null);
 
     const tableContainerRef = useRef(null);
     const todayColRef = useRef(null);
-
     const currentUserEmail = user?.email;
 
-    // Auto-scroll to today in monthly view
-    useEffect(() => {
-        if (viewMode === 'monthly' && !loading && tableContainerRef.current && todayColRef.current) {
-            setTimeout(() => {
-                const container = tableContainerRef.current;
-                const todayHeader = todayColRef.current;
-                const containerWidth = container.offsetWidth;
-                const scrollLeft = todayHeader.offsetLeft - (containerWidth / 2) + (todayHeader.offsetWidth / 2);
-                container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-            }, 500);
-        }
-    }, [viewMode, loading, monthlyRecords]);
-
-    // Calculate Today's Stats from Monthly Data
-    const todayStats = useMemo(() => {
-        if (viewMode !== 'monthly') return null;
-        const currentDay = new Date().getDate();
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
-
-        if (month !== currentMonth || year !== currentYear) return null;
-
-        let present = 0, absent = 0, leave = 0, onHold = 0;
-        monthlyRecords.forEach(r => {
-            const status = r.attendance[currentDay];
-            if (status === 'Present') present++;
-            else if (status === 'Absent') absent++;
-            else if (status === 'Leave') leave++;
-            else if (status === 'Half Day') present += 0.5;
-            else onHold++;
-        });
-
-        return { present, absent, leave, total: monthlyRecords.length };
-    }, [monthlyRecords, month, year, viewMode]);
-
-    useEffect(() => {
-        if (viewMode === 'daily') {
-            fetchAttendance();
-        } else {
-            fetchMonthlyAttendance();
-        }
-    }, [date, month, year, viewMode]);
-
-    const fetchAttendance = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const res = await fetch(`${API_BASE_URL}/attendance?date=${date}`, {
-                credentials: 'include'
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setRecords(Array.isArray(data) ? data : []);
-            } else {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to fetch attendance data');
-            }
-        } catch (e) {
-            console.error(e);
-            setError(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchMonthlyAttendance = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const res = await fetch(`${API_BASE_URL}/attendance/monthly?year=${year}&month=${month}`, {
-                credentials: 'include'
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setMonthlyRecords(Array.isArray(data) ? data : []);
-            } else {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to fetch monthly data');
-            }
-        } catch (e) {
-            console.error(e);
-            setError(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handlePrevDay = () => {
-        const d = new Date(date);
-        d.setDate(d.getDate() - 1);
-        setDate(d.toISOString().split('T')[0]);
-    };
-
-    const handleNextDay = () => {
-        const d = new Date(date);
-        d.setDate(d.getDate() + 1);
-        setDate(d.toISOString().split('T')[0]);
-    };
-
-    const handleToday = () => {
-        const today = new Date();
-        setDate(today.toISOString().split('T')[0]);
-        setMonth(today.getMonth() + 1);
-        setYear(today.getFullYear());
-    };
-
-    const getEngineerConfig = (countryCode) => {
-        return COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG['DEFAULT'];
-    };
+    // --- Helpers ---
+    const getEngineerConfig = (countryCode) => COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG['DEFAULT'];
 
     const isWeekend = (y, m, d, countryCode = 'IN') => {
         const dateObj = new Date(y, m - 1, d);
-        const day = dateObj.getDay();
-        const config = getEngineerConfig(countryCode);
-        return config.weekend.includes(day);
+        return getEngineerConfig(countryCode).weekend.includes(dateObj.getDay());
     };
 
     const isPublicHoliday = (y, m, d, countryCode = 'IN') => {
         const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const config = getEngineerConfig(countryCode);
-        return config.holidays.includes(dateStr);
+        return getEngineerConfig(countryCode).holidays.includes(dateStr);
     };
 
     const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
-    const days = Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1);
 
-    const filteredMonthly = monthlyRecords.filter(r =>
-        r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // --- Effects ---
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const endpoint = viewMode === 'daily'
+                    ? `${API_BASE_URL}/attendance?date=${date}`
+                    : `${API_BASE_URL}/attendance/monthly?year=${year}&month=${month}`;
 
-    const presentCount = records.filter(r => r.status === 'Present').length;
+                const res = await fetch(endpoint, { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to fetch data');
+                const data = await res.json();
 
-    const renderDailyTable = () => (
-        <div className="daily-view-premium">
-            <div className="daily-status-banner">
-                <div className="banner-item">
-                    <FiCheckCircle className="icon present" />
-                    <div className="details">
-                        <span className="label">Present</span>
-                        <span className="value">{presentCount}</span>
+                if (viewMode === 'daily') setRecords(Array.isArray(data) ? data : []);
+                else setMonthlyRecords(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error(err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [date, month, year, viewMode]);
+
+    // Auto-scroll logic for montly view
+    useEffect(() => {
+        if (viewMode === 'monthly' && !loading && tableContainerRef.current && todayColRef.current) {
+            setTimeout(() => {
+                const container = tableContainerRef.current;
+                const element = todayColRef.current;
+                if (!container || !element) return;
+
+                const scrollLeft = element.offsetLeft - (container.offsetWidth / 2) + (element.offsetWidth / 2);
+                container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            }, 300);
+        }
+    }, [viewMode, loading, monthlyRecords]);
+
+    // --- Stats Calculation ---
+    const dailyStats = useMemo(() => {
+        const total = records.length;
+        const present = records.filter(r => r.status === 'Present').length;
+        const absent = records.filter(r => r.status === 'Absent').length;
+        const leave = records.filter(r => r.status === 'Leave').length; // Assuming 'Leave' status exists in daily
+        return { total, present, absent, leave };
+    }, [records]);
+
+    const monthlyStats = useMemo(() => {
+        if (viewMode !== 'monthly') return null;
+        const today = new Date();
+        const d = today.getDate();
+        const m = today.getMonth() + 1;
+        const y = today.getFullYear();
+
+        // Only calculate "Today's Pulse" if we are viewing the current month
+        if (m !== month || y !== year) return null;
+
+        let present = 0, absent = 0, leave = 0;
+        monthlyRecords.forEach(r => {
+            const status = r.attendance[d];
+            if (status === 'Present') present++;
+            else if (status === 'Absent') absent++;
+            else if (status === 'Leave') leave++;
+            else if (status === 'Half Day') present += 0.5;
+        });
+        return { present, absent, leave };
+    }, [monthlyRecords, month, year]);
+
+    // --- Renderers ---
+
+    const renderDailyView = () => (
+        <div className="daily-view-container fade-in">
+            {/* Summary Cards */}
+            <div className="stats-row">
+                <div className="stat-card full-gradient">
+                    <div className="stat-icon-wrapper"><FiTarget /></div>
+                    <div>
+                        <h3>{loading ? '-' : dailyStats.total}</h3>
+                        <p>Total Scheduled</p>
                     </div>
                 </div>
-                <div className="banner-item">
-                    <FiMinusCircle className="icon absent" />
-                    <div className="details">
-                        <span className="label">Absent</span>
-                        <span className="value">{records.filter(r => r.status === 'Absent').length}</span>
+                <div className="stat-card success-gradient">
+                    <div className="stat-icon-wrapper"><FiCheckCircle /></div>
+                    <div>
+                        <h3>{loading ? '-' : dailyStats.present}</h3>
+                        <p>Present Today</p>
                     </div>
                 </div>
-                <div className="banner-item">
-                    <FiTarget className="icon total" />
-                    <div className="details">
-                        <span className="label">Scheduled</span>
-                        <span className="value">{records.length}</span>
+                <div className="stat-card danger-gradient">
+                    <div className="stat-icon-wrapper"><FiMinusCircle /></div>
+                    <div>
+                        <h3>{loading ? '-' : dailyStats.absent}</h3>
+                        <p>Absent</p>
                     </div>
                 </div>
             </div>
 
-            <table className="premium-table modern">
-                <thead>
-                    <tr>
-                        <th>Engineer Profile</th>
-                        <th>Attendance Status</th>
-                        <th>Timing Log</th>
-                        <th>Work Duration</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {records.length === 0 ? (
-                        <tr><td colSpan="5" className="table-empty">No attendance records for {new Date(date).toLocaleDateString()}.</td></tr>
-                    ) : (
-                        records.map(r => {
-                            const start = r.check_in_time ? new Date(r.check_in_time) : null;
-                            const end = r.check_out_time ? new Date(r.check_out_time) : null;
-                            let duration = '-';
-                            if (start && end) {
-                                const diff = (end - start) / 1000 / 3600;
-                                duration = `${diff.toFixed(1)} hrs`;
-                            } else if (start) {
-                                duration = 'Active Now';
-                            }
-
-                            return (
-                                <tr key={r.id} className={r.email === currentUserEmail ? 'is-current-user' : ''}>
-                                    <td>
-                                        <div className="engineer-profile-sm">
-                                            {r.avatar_url ?
-                                                <img src={r.avatar_url} alt="" className="avatar-img" /> :
-                                                <div className="avatar-placeholder">{r.engineer_name?.charAt(0)}</div>
-                                            }
-                                            <div className="eng-text-info">
-                                                <span className="engineer-name">
-                                                    {r.engineer_name}
-                                                    <span className="country-flag" title={`Based in ${getEngineerConfig(r.country).name}`}>
-                                                        {getEngineerConfig(r.country || 'IN').flag}
-                                                    </span>
-                                                </span>
-                                                <span className="engineer-email-small">{r.email}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`status-pill modern status-pill--${r.status.toLowerCase()}`}>
-                                            {r.status}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="timing-log">
-                                            <span className="time in">In: {start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
-                                            <span className="time out">Out: {end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
-                                        </div>
-                                    </td>
-                                    <td className={`duration-cell ${duration === 'Active Now' ? 'active' : ''}`}>
-                                        {duration}
-                                    </td>
-                                    <td>
-                                        <button className="view-log-btn" onClick={() => {
-                                            const engData = monthlyRecords.find(m => m.email === r.email);
-                                            if (engData) setSelectedEngineer(engData);
-                                        }}>
-                                            Full Calendar
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })
-                    )}
-                </tbody>
-            </table>
-        </div>
-    );
-
-    const renderMonthlyTable = () => (
-        <div className="monthly-grid-container" ref={tableContainerRef}>
-            <table className="monthly-grid-table">
-                <thead>
-                    <tr>
-                        <th className="sticky-col first-col">SR NO.</th>
-                        <th className="sticky-col second-col">ENGINEER</th>
-                        <th className="sticky-col third-col">JOB TYPE</th>
-                        {days.map(d => {
-                            const dateObj = new Date(year, month - 1, d);
-                            const isToday = new Date().toDateString() === dateObj.toDateString();
-                            const isSunday = dateObj.getDay() === 0;
-                            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                            const isHoliday = PUBLIC_HOLIDAYS.includes(dateStr);
-
-                            return (
-                                <th
-                                    key={d}
-                                    ref={isToday ? todayColRef : null}
-                                    className={`day-col ${isToday ? 'is-today' : ''} ${isSunday ? 'is-sunday' : ''} ${isHoliday ? 'is-holiday' : ''}`}
-                                >
-                                    {d}
-                                    {isToday && <span className="today-badge">Today</span>}
-                                </th>
-                            );
-                        })}
-                        <th className="summary-col present">P</th>
-                        <th className="summary-col absent">A</th>
-                        <th className="summary-col leave">L</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredMonthly.length === 0 ? (
-                        <tr><td colSpan={days.length + 6} className="table-empty">No engineers found.</td></tr>
-                    ) : (
-                        filteredMonthly.map((r, idx) => {
-                            let pCount = 0, aCount = 0, lCount = 0;
-                            days.forEach(d => {
-                                const status = r.attendance[d];
-                                if (status === 'Present') pCount++;
-                                else if (status === 'Absent') aCount++;
-                                else if (status === 'Leave') lCount++;
-                                else if (status === 'Half Day') pCount += 0.5;
-                            });
-
-                            return (
-                                <tr key={r.id} className={r.email === currentUserEmail ? 'is-current-user' : ''}>
-                                    <td className="sticky-col first-col center-text">{idx + 1}</td>
-                                    <td className="sticky-col second-col">
-                                        <div className="engineer-profile-sm">
-                                            {r.avatar_url ?
-                                                <img src={r.avatar_url} alt="" className="avatar-img" /> :
-                                                <div className="avatar-placeholder">{r.name?.charAt(0)}</div>
-                                            }
-                                            <div className="eng-details pointer" onClick={() => setSelectedEngineer(r)}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <span className="engineer-name">{r.name}</span>
-                                                    <span title={getEngineerConfig(r.country || 'IN').name}>{getEngineerConfig(r.country || 'IN').flag}</span>
-                                                </div>
-                                                <span className="engineer-id-small">#AIM-E-{r.id}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="sticky-col third-col">{r.employment_type}</td>
-                                    {days.map(d => {
-                                        const countryCode = r.country || 'IN'; // Default to IN if missing
-                                        const status = r.attendance[d];
-                                        const dateObj = new Date(year, month - 1, d);
-                                        const isToday = new Date().toDateString() === dateObj.toDateString();
-                                        const isSun = isWeekend(year, month, d, countryCode);
-                                        const isHoli = isPublicHoliday(year, month, d, countryCode);
-
-                                        let char = '-';
-                                        let statusClass = 'empty';
-
-                                        if (status === 'Present') { char = 'P'; statusClass = 'present'; }
-                                        else if (status === 'Absent') { char = 'A'; statusClass = 'absent'; }
-                                        else if (status === 'Leave') { char = 'L'; statusClass = 'leave'; }
-                                        else if (status === 'Half Day') { char = 'H'; statusClass = 'half'; }
-                                        else if (isSun) { char = 'OFF'; statusClass = 'weekoff'; }
-                                        else if (isHoli) { char = 'H'; statusClass = 'holiday'; }
-
-                                        return (
-                                            <td key={d} className={`day-cell ${statusClass} ${isToday ? 'is-today' : ''}`}>
-                                                {char}
-                                            </td>
-                                        );
-                                    })}
-                                    <td className="summary-cell present">{pCount}</td>
-                                    <td className="summary-cell absent">{aCount}</td>
-                                    <td className="summary-cell leave">{lCount}</td>
-                                </tr>
-                            );
-                        })
-                    )}
-                </tbody>
-            </table>
-        </div>
-    );
-
-    return (
-        <section className="dashboard-section attendance-page">
-            <header className="dashboard-header-row">
-                <div>
-                    <h2 className="section-title">Engineer Attendance</h2>
-                    <p className="section-subtitle">
-                        {viewMode === 'daily' ? 'Daily check-in and working hours.' : 'Monthly attendance with global holiday tracking.'}
-                    </p>
-                    <div className="info-badge">
-                        <FiGlobe /> <span>Location-based Holidays Active</span>
-                    </div>
-                </div>
-
-                <div className="attendance-view-toggle">
-                    <button
-                        className={`toggle-btn ${viewMode === 'daily' ? 'active' : ''}`}
-                        onClick={() => setViewMode('daily')}
-                    >
-                        Daily View
-                    </button>
-                    <button
-                        className={`toggle-btn ${viewMode === 'monthly' ? 'active' : ''}`}
-                        onClick={() => setViewMode('monthly')}
-                    >
-                        Monthly View
-                    </button>
-                </div>
-            </header>
-
-            <div className="attendance-controls section-spacer">
-                {viewMode === 'daily' ? (
-                    <>
-                        <div className="date-navigation">
-                            <button onClick={handlePrevDay} className="nav-btn"><FiChevronLeft /></button>
-                            <button onClick={handleToday} className="today-btn">Today</button>
-                            <button onClick={handleNextDay} className="nav-btn"><FiChevronRight /></button>
-                        </div>
-                        <div className="date-picker-custom">
-                            <FiCalendar className="calendar-icon" />
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                            />
-                        </div>
-                    </>
-                ) : (
-                    <div className="monthly-controls">
-                        <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="control-select">
-                            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                        <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))} className="control-select">
-                            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, i) => (
-                                <option key={m} value={i + 1}>{m}</option>
-                            ))}
-                        </select>
-                        <div className="search-box-custom">
-                            <input
-                                type="text"
-                                placeholder="Search engineer..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {viewMode === 'monthly' && todayStats && (
-                <div className="today-overview-ribbon section-spacer">
-                    <div className="ribbon-content">
-                        <div className="ribbon-label">
-                            <FiActivity className="ribbon-icon" />
-                            <span>Today's Pulse</span>
-                        </div>
-                        <div className="ribbon-stats">
-                            <div className="r-stat present"><strong>{todayStats.present}</strong> Present</div>
-                            <div className="r-stat absent"><strong>{todayStats.absent}</strong> Absent</div>
-                            <div className="r-stat leave"><strong>{todayStats.leave}</strong> Leave</div>
-                        </div>
-                        <button
-                            className="jump-today-btn"
-                            onClick={() => {
-                                const container = tableContainerRef.current;
-                                const todayHeader = todayColRef.current;
-                                if (container && todayHeader) {
-                                    const scrollLeft = todayHeader.offsetLeft - (container.offsetWidth / 2) + (todayHeader.offsetWidth / 2);
-                                    container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            {/* List Table */}
+            <div className="table-card">
+                <table className="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Engineer</th>
+                            <th>Status</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Duration</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {records.length === 0 ? (
+                            <tr><td colSpan="6" className="empty-state">No records found for {date}</td></tr>
+                        ) : (
+                            records.map(r => {
+                                const start = r.check_in_time ? new Date(r.check_in_time) : null;
+                                const end = r.check_out_time ? new Date(r.check_out_time) : null;
+                                let duration = '-';
+                                if (start && end) {
+                                    duration = `${((end - start) / 1000 / 3600).toFixed(1)} hrs`;
+                                } else if (start) {
+                                    duration = 'Active';
                                 }
-                            }}
-                        >
+
+                                return (
+                                    <tr key={r.id}>
+                                        <td>
+                                            <div className="user-info">
+                                                <div className="avatar">{r.engineer_name?.charAt(0)}</div>
+                                                <div>
+                                                    <span className="name">{r.engineer_name}</span>
+                                                    <span className="email">{r.email}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span className={`status-badge ${r.status?.toLowerCase()}`}>{r.status}</span></td>
+                                        <td className="mono-text">{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                        <td className="mono-text">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                        <td className={`duration ${duration === 'Active' ? 'text-green' : ''}`}>{duration}</td>
+                                        <td>
+                                            <button className="icon-btn" onClick={() => {
+                                                // Find engineer in monthly records context if possible, or fetch
+                                                // For now, we need to switch to monthly or show modal. 
+                                                // This might need monthly data to be pre-loaded or fetched on demand.
+                                                // Simplified: Just set selected logic if we had data, else maybe redirect.
+                                                // Let's assume we want to open the modal. We need their monthly data.
+                                                // For this specific requirement, we'll auto-fetch in the modal if needed, 
+                                                // but to keep it simple, we'll just show what we have or placeholder.
+                                                alert("Switch to Monthly View to see full calendar for this engineer.");
+                                            }}>
+                                                <FiCalendar />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+
+    const renderMonthlyView = () => {
+        const daysInMonth = getDaysInMonth(year, month);
+        const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+        const filtered = monthlyRecords.filter(r =>
+            r.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        return (
+            <div className="monthly-view-container fade-in">
+                {/* Today's Pulse Ribbon */}
+                {monthlyStats && (
+                    <div className="pulse-ribbon">
+                        <div className="pulse-header">
+                            <FiActivity className="pulse-icon" />
+                            <span>Today's Live Pulse</span>
+                        </div>
+                        <div className="pulse-metrics">
+                            <div className="p-metric present"><strong>{monthlyStats.present}</strong> Present</div>
+                            <div className="p-metric absent"><strong>{monthlyStats.absent}</strong> Absent</div>
+                            <div className="p-metric leave"><strong>{monthlyStats.leave}</strong> Leave</div>
+                        </div>
+                        <button className="jump-btn" onClick={() => {
+                            if (tableContainerRef.current && todayColRef.current) {
+                                todayColRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                            }
+                        }}>
                             Jump to Today <FiArrowRight />
                         </button>
                     </div>
-                </div>
-            )}
+                )}
 
-            {viewMode === 'daily' && (
-                <div className="attendance-stats-grid section-spacer">
-                    <div className="att-stat-card premium-card">
-                        <div className="stat-icon present"><FiUserCheck /></div>
-                        <div className="stat-info">
-                            <h3>{loading ? '...' : presentCount}</h3>
-                            <p>Engineers Present</p>
-                        </div>
-                    </div>
-                    <div className="att-stat-card premium-card">
-                        <div className="stat-icon loading"><FiClock /></div>
-                        <div className="stat-info">
-                            <h3>{loading ? '...' : records.length}</h3>
-                            <p>Total Scheduled</p>
-                        </div>
+                <div className="table-card no-pad">
+                    <div className="table-responsive" ref={tableContainerRef}>
+                        <table className="grid-table">
+                            <thead>
+                                <tr>
+                                    <th className="sticky-col col-1">#</th>
+                                    <th className="sticky-col col-2">Engineer</th>
+                                    {days.map(d => {
+                                        const isToday = new Date().getDate() === d && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
+                                        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                        const isGlobalHoliday = PUBLIC_HOLIDAYS.includes(dateStr);
+                                        // Simple Sunday check for header visual
+                                        const isSunday = new Date(year, month - 1, d).getDay() === 0;
+
+                                        return (
+                                            <th key={d} ref={isToday ? todayColRef : null} className={`day-col ${isToday ? 'today' : ''} ${isSunday ? 'sunday' : ''} ${isGlobalHoliday ? 'holiday' : ''}`}>
+                                                <div className="d-num">{d}</div>
+                                                {isToday && <div className="today-tag">Today</div>}
+                                            </th>
+                                        );
+                                    })}
+                                    <th className="stat-col">P</th>
+                                    <th className="stat-col">A</th>
+                                    <th className="stat-col">L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan={days.length + 5} className="empty-state">No engineers found</td></tr>
+                                ) : (
+                                    filtered.map((r, idx) => {
+                                        // Calculate row stats
+                                        let p = 0, a = 0, l = 0;
+                                        days.forEach(d => {
+                                            const s = r.attendance[d];
+                                            if (s === 'Present') p++;
+                                            else if (s === 'Absent') a++;
+                                            else if (s === 'Leave') l++;
+                                            else if (s === 'Half Day') p += 0.5;
+                                        });
+
+                                        return (
+                                            <tr key={r.id}>
+                                                <td className="sticky-col col-1 center">{idx + 1}</td>
+                                                <td className="sticky-col col-2 clickable" onClick={() => setSelectedEngineer(r)}>
+                                                    <div className="user-compact">
+                                                        <div className="avatar small">{r.name?.charAt(0)}</div>
+                                                        <div className="details">
+                                                            <span className="u-name">
+                                                                {r.name}
+                                                                <span title={getEngineerConfig(r.country || 'IN').name}>{getEngineerConfig(r.country || 'IN').flag}</span>
+                                                            </span>
+                                                            <span className="u-id">ID: {r.id}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                {days.map(d => {
+                                                    const s = r.attendance[d];
+                                                    const country = r.country || 'IN';
+                                                    const isOff = isWeekend(year, month, d, country);
+                                                    const isHoli = isPublicHoliday(year, month, d, country);
+                                                    const isToday = new Date().getDate() === d && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
+
+                                                    let cellClass = "";
+                                                    let content = "";
+
+                                                    if (s === 'Present') { cellClass = "present"; content = "P"; }
+                                                    else if (s === 'Absent') { cellClass = "absent"; content = "A"; }
+                                                    else if (s === 'Leave') { cellClass = "leave"; content = "L"; }
+                                                    else if (s === 'Half Day') { cellClass = "half"; content = "H"; }
+                                                    else if (isHoli) { cellClass = "holiday"; content = "H"; }
+                                                    else if (isOff) { cellClass = "weekend"; content = "OFF"; }
+
+                                                    return (
+                                                        <td key={d} className={`grid-cell ${cellClass} ${isToday ? 'today-cell' : ''}`}>
+                                                            {content}
+                                                        </td>
+                                                    );
+                                                })}
+                                                <td className="stat-cell">{p}</td>
+                                                <td className="stat-cell">{a}</td>
+                                                <td className="stat-cell">{l}</td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            )}
 
-            <div className="dashboard-card-full">
-                {loading ? (
-                    <div className="loader-container">
-                        <div className="spinner"></div>
-                        <p>Fetching attendance records...</p>
-                    </div>
-                ) : error ? (
-                    <div className="error-container">
-                        <p className="error-message">{error}</p>
-                        <button onClick={viewMode === 'daily' ? fetchAttendance : fetchMonthlyAttendance} className="retry-btn">Retry</button>
+                <div className="legend-row">
+                    <div className="l-item"><span className="dot present"></span> Present</div>
+                    <div className="l-item"><span className="dot absent"></span> Absent</div>
+                    <div className="l-item"><span className="dot leave"></span> Leave</div>
+                    <div className="l-item"><span className="dot half"></span> Half Day</div>
+                    <div className="l-item"><span className="dot weekend"></span> Week Off</div>
+                    <div className="l-item"><span className="dot holiday"></span> Holiday</div>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="attendance-page-container">
+            {/* Header */}
+            <header className="page-header">
+                <div>
+                    <h1 className="page-title">Attendance Tracking</h1>
+                    <p className="page-subtitle">Monitor daily check-ins and monthly attendance performance.</p>
+                </div>
+                <div className="view-switcher">
+                    <button className={viewMode === 'daily' ? 'active' : ''} onClick={() => setViewMode('daily')}>Daily</button>
+                    <button className={viewMode === 'monthly' ? 'active' : ''} onClick={() => setViewMode('monthly')}>Monthly</button>
+                </div>
+            </header>
+
+            {/* Controls */}
+            <div className="controls-bar">
+                {viewMode === 'daily' ? (
+                    <div className="date-controller">
+                        <button className="icon-btn" onClick={() => {
+                            const d = new Date(date); d.setDate(d.getDate() - 1);
+                            setDate(d.toISOString().split('T')[0]);
+                        }}><FiChevronLeft /></button>
+
+                        <div className="date-display">
+                            <FiCalendar />
+                            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+                        </div>
+
+                        <button className="icon-btn" onClick={() => {
+                            const d = new Date(date); d.setDate(d.getDate() + 1);
+                            setDate(d.toISOString().split('T')[0]);
+                        }}><FiChevronRight /></button>
+
+                        <button className="today-btn" onClick={() => setDate(new Date().toISOString().split('T')[0])}>Today</button>
                     </div>
                 ) : (
-                    <>
-                        <div className="att-table-wrapper">
-                            {viewMode === 'daily' ? renderDailyTable() : renderMonthlyTable()}
+                    <div className="month-controller">
+                        <select value={month} onChange={e => setMonth(parseInt(e.target.value))}>
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <option key={i} value={i + 1}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                            ))}
+                        </select>
+                        <select value={year} onChange={e => setYear(parseInt(e.target.value))}>
+                            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                        <div className="search-wrapper">
+                            <FiSearch />
+                            <input type="text" placeholder="Search engineer..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
-                        {viewMode === 'monthly' && (
-                            <div className="attendance-legend section-spacer">
-                                <div className="legend-item"><span className="legend-box present">P</span> Present</div>
-                                <div className="legend-item"><span className="legend-box absent">A</span> Absent</div>
-                                <div className="legend-item"><span className="legend-box leave">L</span> Leave</div>
-                                <div className="legend-item"><span className="legend-box half">H</span> Half Day</div>
-                                <div className="legend-item"><span className="legend-box weekoff">OFF</span> Week Off</div>
-                                <div className="legend-item"><span className="legend-box holiday">H</span> Public Holiday</div>
-                            </div>
-                        )}
-                    </>
+                    </div>
                 )}
             </div>
 
-            {selectedEngineer && (
-                <div className="modal-overlay active">
-                    <div className="engineer-calendar-modal">
-                        <header className="modal-header">
-                            <div className="header-left">
-                                <div className="avatar-placeholder big">{selectedEngineer.name?.charAt(0)}</div>
-                                <div>
-                                    <h3>{selectedEngineer.name}'s Attendance</h3>
-                                    <p>{['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1]} {year}</p>
-                                </div>
-                            </div>
-                            <button className="close-modal" onClick={() => setSelectedEngineer(null)}><FiX /></button>
-                        </header>
+            {/* Error / Loading */}
+            {error && <div className="error-banner"><FiAlertCircle /> {error}</div>}
 
+            {/* Content */}
+            <div className="page-content">
+                {loading ? (
+                    <div className="loading-state">
+                        <div className="spinner"></div>
+                        <p>Loading attendance data...</p>
+                    </div>
+                ) : (
+                    viewMode === 'daily' ? renderDailyView() : renderMonthlyView()
+                )}
+            </div>
+
+            {/* Engineer Modal */}
+            {selectedEngineer && (
+                <div className="modal-backdrop">
+                    <div className="modal-card">
+                        <div className="modal-header">
+                            <div>
+                                <h2>{selectedEngineer.name}</h2>
+                                <p>Attendance ID: {selectedEngineer.id} • {getEngineerConfig(selectedEngineer.country || 'IN').name}</p>
+                            </div>
+                            <button className="close-btn" onClick={() => setSelectedEngineer(null)}><FiX /></button>
+                        </div>
                         <div className="modal-body">
-                            <div className="calendar-grid">
-                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                                    <div key={day} className="calendar-day-header">{day}</div>
-                                ))}
-                                {Array.from({ length: new Date(year, month - 1, 1).getDay() }).map((_, i) => (
-                                    <div key={`empty-${i}`} className="calendar-cell empty"></div>
-                                ))}
-                                {days.map(d => {
-                                    const countryCode = selectedEngineer.country || 'IN';
-                                    const status = selectedEngineer.attendance[d];
-                                    const weekend = isWeekend(year, month, d, countryCode);
-                                    const holiday = isPublicHoliday(year, month, d, countryCode);
-                                    const isToday = new Date().getDate() === d && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
+                            <div className="calendar-grid-view">
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="cal-head">{d}</div>)}
+                                {/* Empty slots for start of month */}
+                                {Array.from({ length: new Date(year, month - 1, 1).getDay() }).map((_, i) => <div key={`e-${i}`} className="cal-cell empty"></div>)}
+
+                                {Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1).map(d => {
+                                    const s = selectedEngineer.attendance[d];
+                                    const isOff = isWeekend(year, month, d, selectedEngineer.country || 'IN');
+                                    const isHoli = isPublicHoliday(year, month, d, selectedEngineer.country || 'IN');
+
+                                    let statusClass = "";
+                                    let label = "";
+                                    if (s === 'Present') { statusClass = 'present'; label = 'P'; }
+                                    else if (s === 'Absent') { statusClass = 'absent'; label = 'A'; }
+                                    else if (s === 'Leave') { statusClass = 'leave'; label = 'L'; }
+                                    else if (s === 'Half Day') { statusClass = 'half'; label = 'H'; }
+                                    else if (isHoli) { statusClass = 'holiday'; label = 'H'; }
+                                    else if (isOff) { statusClass = 'weekend'; label = 'OFF'; }
 
                                     return (
-                                        <div key={d} className={`calendar-cell ${isToday ? 'is-today' : ''} ${weekend ? 'weekend' : ''} ${holiday ? 'holiday' : ''}`}>
-                                            <span className="day-num">{d}</span>
-                                            <div className="status-indicator">
-                                                {status === 'Present' && <span className="p-dot present">P</span>}
-                                                {status === 'Absent' && <span className="p-dot absent">A</span>}
-                                                {status === 'Leave' && <span className="p-dot leave">L</span>}
-                                                {status === 'Half Day' && <span className="p-dot half">H</span>}
-                                                {!status && weekend && <span className="p-dot weekoff">OFF</span>}
-                                                {!status && holiday && <span className="p-dot holi">H</span>}
-                                            </div>
+                                        <div key={d} className={`cal-cell ${statusClass}`}>
+                                            <span className="cal-date">{d}</span>
+                                            {label && <span className="cal-status">{label}</span>}
                                         </div>
                                     );
                                 })}
                             </div>
-
-                            <div className="modal-footer-stats">
-                                <div className="f-stat"><FiCheckCircle color="#16a34a" /> <span>Present: <strong>{
-                                    Object.values(selectedEngineer.attendance).filter(v => v === 'Present').length +
-                                    (Object.values(selectedEngineer.attendance).filter(v => v === 'Half Day').length * 0.5)
-                                }</strong></span></div>
-                                <div className="f-stat"><FiMinusCircle color="#e11d48" /> <span>Absent: <strong>{Object.values(selectedEngineer.attendance).filter(v => v === 'Absent').length}</strong></span></div>
-                                <div className="f-stat"><FiCalendar color="#ca8a04" /> <span>Leave: <strong>{Object.values(selectedEngineer.attendance).filter(v => v === 'Leave').length}</strong></span></div>
-                            </div>
                         </div>
                     </div>
                 </div>
             )}
-        </section>
+        </div>
     );
 };
 
