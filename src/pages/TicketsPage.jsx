@@ -62,6 +62,13 @@ function TicketsPage() {
   const [editingTicketId, setEditingTicketId] = useState(null)
   const [filterTicketIdHandled, setFilterTicketIdHandled] = useState(false)
 
+  // Extra data modules
+  const [ticketNotes, setTicketNotes] = useState([])
+  const [ticketAttachments, setTicketAttachments] = useState([])
+  const [ticketExpenses, setTicketExpenses] = useState([])
+  const [newAdminNote, setNewAdminNote] = useState('')
+  const [addingNote, setAddingNote] = useState(false)
+
   // Form data
   const [customers, setCustomers] = useState([])
   const [leads, setLeads] = useState([])
@@ -458,9 +465,56 @@ function TicketsPage() {
       }
       setSelectedTicket(data.ticket)
       setIsTicketModalOpen(true)
+
+      // Fetch extra info
+      fetchTicketExtras(ticketId)
     } catch (err) {
       console.error('View ticket error', err)
       setError(err.message || 'Unable to load ticket details')
+    }
+  }
+
+  const fetchTicketExtras = async (ticketId) => {
+    try {
+      const [notesRes, attachRes, expRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/tickets/${ticketId}/notes`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/tickets/${ticketId}/attachments`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/tickets/${ticketId}/expenses`, { credentials: 'include' }),
+      ])
+
+      if (notesRes.ok) {
+        let d = await notesRes.json();
+        setTicketNotes(d.notes || []);
+      }
+      if (attachRes.ok) {
+        let d = await attachRes.json();
+        setTicketAttachments(d.attachments || []);
+      }
+      if (expRes.ok) {
+        let d = await expRes.json();
+        setTicketExpenses(d.expenses || []);
+      }
+    } catch (e) {
+      console.error('Error fetching ticket extras', e)
+    }
+  }
+
+  const handleAddAdminNote = async () => {
+    if (!newAdminNote.trim()) return
+    try {
+      setAddingNote(true)
+      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newAdminNote, authorType: 'admin' }),
+        credentials: 'include'
+      })
+      if (res.ok) {
+        setNewAdminNote('')
+        fetchTicketExtras(selectedTicket.id)
+      }
+    } finally {
+      setAddingNote(false)
     }
   }
 
@@ -1427,6 +1481,86 @@ function TicketsPage() {
                       ))
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No documents linked.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="detail-item--full divider"></div>
+
+                {/* Notes Section */}
+                <div className="detail-item--full">
+                  <label>Service Notes / Timeline</label>
+                  <div className="admin-notes-list" style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                    {ticketNotes.length === 0 ? (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>No notes yet.</p>
+                    ) : (
+                      ticketNotes.map((n, idx) => (
+                        <div key={n.id || idx} style={{ marginBottom: '10px', padding: '10px', background: n.author_type === 'admin' ? '#f0f9ff' : '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: n.author_type === 'admin' ? '#0369a1' : '#334155' }}>
+                              {n.author_type === 'admin' ? 'ADMIN (YOU)' : 'ENGINEER'}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(n.created_at).toLocaleString()}</span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e293b', whiteSpace: 'pre-wrap' }}>{n.content}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <input
+                      type="text"
+                      placeholder="Add a reply..."
+                      value={newAdminNote}
+                      onChange={e => setNewAdminNote(e.target.value)}
+                      style={{ flex: 1, fontSize: '0.85rem', padding: '8px 12px', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}
+                    />
+                    <button
+                      onClick={handleAddAdminNote}
+                      disabled={addingNote || !newAdminNote}
+                      style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+                    >
+                      {addingNote ? '...' : 'Reply'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="detail-item--full divider"></div>
+
+                {/* Attachments Section */}
+                <div className="detail-item--full">
+                  <label>Engineer Uploads</label>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    {ticketAttachments.length === 0 ? (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No attachments uploaded yet.</span>
+                    ) : (
+                      ticketAttachments.map((a, idx) => (
+                        <a key={a.id || idx} href={`https://awokta.com/${a.file_url}`} target="_blank" rel="noreferrer" style={{ width: '80px', height: '80px', borderRadius: '8px', border: '1px solid var(--border-subtle)', overflow: 'hidden', display: 'block' }}>
+                          <img src={`https://awokta.com/${a.file_url}`} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </a>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="detail-item--full divider"></div>
+
+                {/* Expenses Section */}
+                <div className="detail-item--full">
+                  <label>Reported Expenses</label>
+                  <div style={{ marginTop: '8px' }}>
+                    {ticketExpenses.length === 0 ? (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No expenses reported.</span>
+                    ) : (
+                      ticketExpenses.map((ex, idx) => (
+                        <div key={ex.id || idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px', marginBottom: '4px', border: '1px solid var(--border-subtle)' }}>
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>{ex.description}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(ex.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <div style={{ fontWeight: '800', color: '#166534', fontSize: '0.9rem' }}>{selectedTicket.currency} {parseFloat(ex.amount).toFixed(2)}</div>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
