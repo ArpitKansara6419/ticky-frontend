@@ -319,7 +319,7 @@ const AttendancePage = ({ user }) => {
                                                                 {r.name}
                                                                 <span title={getEngineerConfig(r.country || 'IN').name}>{getEngineerConfig(r.country || 'IN').flag}</span>
                                                             </span>
-                                                            <span className="u-id">ID: {r.id}</span>
+                                                            <span className="u-id">ID: #AIM-E-{r.id}</span>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -445,7 +445,7 @@ const AttendancePage = ({ user }) => {
                         <div className="modal-header">
                             <div>
                                 <h2>{selectedEngineer.name}</h2>
-                                <p>Attendance ID: {selectedEngineer.id} • {getEngineerConfig(selectedEngineer.country || 'IN').name}</p>
+                                <p>Attendance ID: #AIM-E-{selectedEngineer.id} • {getEngineerConfig(selectedEngineer.country || 'IN').name}</p>
                             </div>
                             <button className="close-btn" onClick={() => setSelectedEngineer(null)}><FiX /></button>
                         </div>

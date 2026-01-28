@@ -662,7 +662,7 @@ function ProfileModal({ isOpen, onClose, form, onChange, onSubmit, onAvatarChang
   )
 }
 
-function ApprovalsModal({ isOpen, onClose }) {
+function ApprovalsModal({ isOpen, onClose, onViewTicket }) {
   if (!isOpen) return null
 
   return (
@@ -679,7 +679,7 @@ function ApprovalsModal({ isOpen, onClose }) {
         </header>
         <div className="profile-modal-body" style={{ padding: '0', display: 'flex', flexDirection: 'column' }}>
           <div style={{ maxHeight: '70vh', overflowY: 'auto', width: '100%' }}>
-            <ApprovalsPage />
+            <ApprovalsPage onViewTicket={onViewTicket} />
           </div>
         </div>
       </div>
@@ -1214,6 +1214,11 @@ function DashboardPage() {
       <ApprovalsModal
         isOpen={isApprovalsModalOpen}
         onClose={() => setIsApprovalsModalOpen(false)}
+        onViewTicket={(ticketId) => {
+          setIsApprovalsModalOpen(false);
+          setActivePage('tickets');
+          navigate('/dashboard', { state: { openTickets: true, filterTicketId: ticketId } });
+        }}
       />
     </div >
   )

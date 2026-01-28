@@ -4,7 +4,7 @@ import './ApprovalsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-function ApprovalsPage() {
+function ApprovalsPage({ onViewTicket }) {
     const [approvals, setApprovals] = useState([])
     const [history, setHistory] = useState([])
     const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'history'
@@ -88,7 +88,11 @@ function ApprovalsPage() {
 
             <div className="approval-card-content">
                 <div className="content-main">
-                    <h3 className="task-title">
+                    <h3 className="task-title"
+                        onClick={() => onViewTicket && onViewTicket(approval.ticketId)}
+                        style={{ cursor: 'pointer', color: '#3182ce' }}
+                        title="Click to view ticket details"
+                    >
                         <FiTag className="icon-subtle" />
                         {approval.taskName}
                         <span className="ticket-id">#{approval.ticketId}</span>
@@ -132,6 +136,11 @@ function ApprovalsPage() {
                     <div className={`status-footer status-${approval.requestStatus?.toLowerCase()}`}>
                         {approval.requestStatus === 'Approved' ? <FiCheck /> : <FiX />}
                         <span>{approval.requestStatus}</span>
+                        {approval.processedAt && (
+                            <div className="processed-date" style={{ fontSize: '10px', color: '#a0aec0', marginTop: '4px', fontWeight: 'normal' }}>
+                                {new Date(approval.processedAt).toLocaleDateString()}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -1,5 +1,6 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { FiEye, FiEdit2, FiTrash2, FiX } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
@@ -49,6 +50,7 @@ const CURRENCIES = [
 const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break']
 
 function TicketsPage() {
+  const location = useLocation()
   const [viewMode, setViewMode] = useState('list') // list | form
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -58,6 +60,7 @@ function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
   const [editingTicketId, setEditingTicketId] = useState(null)
+  const [filterTicketIdHandled, setFilterTicketIdHandled] = useState(false)
 
   // Form data
   const [customers, setCustomers] = useState([])
@@ -194,6 +197,12 @@ function TicketsPage() {
         resolved: data.summary?.resolvedTickets || 0,
       })
       setTickets((data.tickets || []).sort((a, b) => b.id - a.id))
+
+      // Handle initial filter if coming from dashboard/approvals
+      if (location.state?.filterTicketId && !filterTicketIdHandled) {
+        setFilterTicketIdHandled(true)
+        openTicketModal(location.state.filterTicketId)
+      }
     } catch (err) {
       console.error('Load tickets error', err)
       setError(err.message || 'Unable to load tickets')
