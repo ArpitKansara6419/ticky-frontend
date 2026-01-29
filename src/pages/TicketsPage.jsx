@@ -468,6 +468,10 @@ function TicketsPage() {
 
       // Fetch extra info
       fetchTicketExtras(ticketId)
+
+      // Mark notes as read
+      fetch(`${API_BASE_URL}/tickets/${ticketId}/notes/read`, { method: 'POST', credentials: 'include' })
+        .catch(err => console.error('Failed to mark notes as read', err))
     } catch (err) {
       console.error('View ticket error', err)
       setError(err.message || 'Unable to load ticket details')
