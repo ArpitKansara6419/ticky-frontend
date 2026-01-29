@@ -1337,7 +1337,7 @@ function TicketsPage() {
                 </tr>
               ) : (
                 tickets.map((ticket) => (
-                  <tr key={ticket.id}>
+                  <tr key={ticket.id} className={ticket.unreadNotesCount > 0 ? 'ticket-row--unread' : ''}>
                     <td>#AIM-T-{ticket.id}</td>
                     <td>{ticket.taskName}</td>
                     <td>
@@ -1347,7 +1347,12 @@ function TicketsPage() {
                       {ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : ''} - {ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : ''} {ticket.taskTime}
                     </td>
                     <td>{ticket.customerName}</td>
-                    <td>{ticket.engineerName || '-'}</td>
+                    <td>
+                      {ticket.engineerName || '-'}
+                      {ticket.unreadNotesCount > 0 && (
+                        <span className="unread-dot-wow" title={`${ticket.unreadNotesCount} unread notes from engineer`}></span>
+                      )}
+                    </td>
                     <td>{ticket.status}</td>
                     <td className="tickets-actions-cell">
                       <button
