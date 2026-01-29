@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -1284,6 +1284,13 @@ function TicketsPage() {
 
       <section className="tickets-card">
         <div style={{ padding: '0 20px 10px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            className="tickets-primary-btn"
+            style={{ backgroundColor: '#10B981', borderColor: '#10B981', marginRight: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            onClick={() => window.location.href = `${API_BASE_URL}/reports/tickets/export`}
+          >
+            <FiDownload /> EXPORT REPORT
+          </button>
           <button
             className="tickets-primary-btn"
             style={{ backgroundColor: '#EF4444', borderColor: '#EF4444' }}

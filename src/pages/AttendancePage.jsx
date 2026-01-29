@@ -378,7 +378,14 @@ const AttendancePage = ({ user }) => {
                     <h1 className="page-title">Attendance Tracking</h1>
                     <p className="page-subtitle">Monitor daily check-ins and monthly attendance performance.</p>
                 </div>
-                <div className="view-switcher">
+                <div className="view-switcher" style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        className="tickets-primary-btn"
+                        style={{ height: '40px', padding: '0 15px', backgroundColor: '#10B981', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}
+                        onClick={() => window.location.href = `${API_BASE_URL}/reports/attendance/export`}
+                    >
+                        <FiDownload /> Export
+                    </button>
                     <button className={viewMode === 'daily' ? 'active' : ''} onClick={() => setViewMode('daily')}>Daily</button>
                     <button className={viewMode === 'monthly' ? 'active' : ''} onClick={() => setViewMode('monthly')}>Monthly</button>
                 </div>
