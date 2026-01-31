@@ -76,7 +76,14 @@ function ApprovalsPage({ onViewTicket }) {
     )
 
     const renderCard = (approval) => (
-        <div key={approval.id} className={`approval-card ${approval.requestStatus?.toLowerCase()}`}>
+        <div key={approval.id}
+            className={`approval-card ${approval.requestStatus?.toLowerCase()} clickable`}
+            onClick={(e) => {
+                // Prevent navigation if clicking action buttons
+                if (e.target.closest('.approval-actions') || e.target.closest('.icon-btn')) return;
+                onViewTicket && onViewTicket(approval.ticketId);
+            }}
+        >
             <div className="approval-card-header">
                 <span className={`type-badge type-${approval.approvalType?.toLowerCase().replace(' ', '-')}`}>
                     {approval.approvalType}
@@ -88,11 +95,7 @@ function ApprovalsPage({ onViewTicket }) {
 
             <div className="approval-card-content">
                 <div className="content-main">
-                    <h3 className="task-title"
-                        onClick={() => onViewTicket && onViewTicket(approval.ticketId)}
-                        style={{ cursor: 'pointer', color: '#3182ce' }}
-                        title="Click to view ticket details"
-                    >
+                    <h3 className="task-title">
                         <FiTag className="icon-subtle" />
                         {approval.taskName}
                         <span className="ticket-id">#{approval.ticketId}</span>
@@ -109,6 +112,20 @@ function ApprovalsPage({ onViewTicket }) {
                         </div>
                     </div>
 
+                    {approval.approvalType === 'Early Closure' && (
+                        <div className="date-highlight-section">
+                            <div className="date-item">
+                                <label>Original End Date</label>
+                                <span className="date-val original">{approval.currentEndDate ? new Date(approval.currentEndDate).toLocaleDateString() : 'N/A'}</span>
+                            </div>
+                            <div className="date-arrow">→</div>
+                            <div className="date-item">
+                                <label>Proposed End Date</label>
+                                <span className="date-val proposed">{approval.newDate ? new Date(approval.newDate).toLocaleDateString() : 'Today'}</span>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="reason-section">
                         <label>Reason provided:</label>
                         <p>{approval.reason || 'No reason provided.'}</p>
@@ -119,14 +136,20 @@ function ApprovalsPage({ onViewTicket }) {
                     <div className="approval-actions">
                         <button
                             className="btn-action btn-reject"
-                            onClick={() => handleProcess(approval.id, 'Rejected')}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleProcess(approval.id, 'Rejected');
+                            }}
                             disabled={processingId === approval.id}
                         >
                             <FiX /> Reject
                         </button>
                         <button
                             className="btn-action btn-approve"
-                            onClick={() => handleProcess(approval.id, 'Approved')}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleProcess(approval.id, 'Approved');
+                            }}
                             disabled={processingId === approval.id}
                         >
                             <FiCheck /> Approve
