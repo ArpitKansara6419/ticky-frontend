@@ -6,11 +6,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Country Configurations
 const COUNTRY_CONFIG = {
-    'IN': { name: 'India', flag: '🇮🇳', weekend: [0], holidays: ['2026-01-26', '2026-08-15', '2026-10-02', '2026-10-31', '2026-12-25'] },
+    'IN': { name: 'India', flag: '🇮🇳', weekend: [0, 6], holidays: ['2026-01-26', '2026-08-15', '2026-10-02', '2026-10-31', '2026-12-25'] },
     'US': { name: 'USA', flag: '🇺🇸', weekend: [0, 6], holidays: ['2026-01-01', '2026-07-04', '2026-11-26', '2026-12-25'] },
     'GB': { name: 'UK', flag: '🇬🇧', weekend: [0, 6], holidays: ['2026-01-01', '2026-12-25', '2026-12-26'] },
-    'AE': { name: 'UAE', flag: '🇦🇪', weekend: [5, 6], holidays: ['2026-12-02'] },
-    'DEFAULT': { name: 'Global', flag: '🌍', weekend: [0], holidays: [] }
+    'AE': { name: 'UAE', flag: '🇦🇪', weekend: [0, 6], holidays: ['2026-12-02'] },
+    'DEFAULT': { name: 'Global', flag: '🌍', weekend: [0, 6], holidays: [] }
 };
 
 // Hardcoded Public Holidays for Header Highlighting (Sync with Mobile)
@@ -294,11 +294,12 @@ const AttendancePage = ({ user }) => {
                                         const isToday = new Date().getDate() === d && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
                                         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                                         const isGlobalHoliday = PUBLIC_HOLIDAYS.includes(dateStr);
-                                        // Simple Sunday check for header visual
-                                        const isSunday = new Date(year, month - 1, d).getDay() === 0;
+                                        // Header visual: mark Saturday and Sunday as weekend
+                                        const dayOfWk = new Date(year, month - 1, d).getDay();
+                                        const isWeekendHeader = dayOfWk === 0 || dayOfWk === 6;
 
                                         return (
-                                            <th key={d} ref={isToday ? todayColRef : null} className={`day-col ${isToday ? 'today' : ''} ${isSunday ? 'sunday' : ''} ${isGlobalHoliday ? 'holiday' : ''}`}>
+                                            <th key={d} ref={isToday ? todayColRef : null} className={`day-col ${isToday ? 'today' : ''} ${isWeekendHeader ? 'sunday' : ''} ${isGlobalHoliday ? 'holiday' : ''}`}>
                                                 <div className="d-num">{d}</div>
                                                 {isToday && <div className="today-tag">Today</div>}
                                             </th>
