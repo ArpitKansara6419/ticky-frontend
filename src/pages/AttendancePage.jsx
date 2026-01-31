@@ -157,19 +157,24 @@ const AttendancePage = ({ user }) => {
                         <tr>
                             <th>Engineer</th>
                             <th>Status</th>
+                            <th>Arrival Time</th>
+                            <th>Late Arrival</th>
                             <th>Check In</th>
                             <th>Check Out</th>
+                            <th>Break Time</th>
                             <th>Duration</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {records.length === 0 ? (
-                            <tr><td colSpan="6" className="empty-state">No records found for {date}</td></tr>
+                            <tr><td colSpan="11" className="empty-state">No records found for {date}</td></tr>
                         ) : (
                             records.map(r => {
                                 const start = r.check_in_time ? new Date(r.check_in_time) : null;
                                 const end = r.check_out_time ? new Date(r.check_out_time) : null;
+                                const arrival = r.arrival_time ? new Date(r.arrival_time) : null;
+
                                 let duration = '-';
                                 if (start && end) {
                                     duration = `${((end - start) / 1000 / 3600).toFixed(1)} hrs`;
@@ -177,8 +182,16 @@ const AttendancePage = ({ user }) => {
                                     duration = 'Active';
                                 }
 
+                                const formatBreakTime = (seconds) => {
+                                    if (!seconds) return '0m';
+                                    const mins = Math.floor(seconds / 60);
+                                    if (mins < 60) return `${mins}m`;
+                                    const hrs = (mins / 60).toFixed(1);
+                                    return `${hrs}h`;
+                                };
+
                                 return (
-                                    <tr key={r.id}>
+                                    <tr key={r.id || r.engineer_id}>
                                         <td>
                                             <div className="user-info">
                                                 <div className="avatar">{r.engineer_name?.charAt(0)}</div>
@@ -189,8 +202,11 @@ const AttendancePage = ({ user }) => {
                                             </div>
                                         </td>
                                         <td><span className={`status-badge ${r.status?.toLowerCase()}`}>{r.status}</span></td>
+                                        <td className="mono-text">{arrival ? arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                        <td className="text-secondary">{r.late_time || '-'}</td>
                                         <td className="mono-text">{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
                                         <td className="mono-text">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                        <td>{formatBreakTime(r.break_time)}</td>
                                         <td className={`duration ${duration === 'Active' ? 'text-green' : ''}`}>{duration}</td>
                                         <td>
                                             <button className="icon-btn" onClick={async () => {
