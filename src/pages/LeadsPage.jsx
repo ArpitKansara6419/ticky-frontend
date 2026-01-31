@@ -124,6 +124,7 @@ function LeadsPage() {
 
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
   const [totalCost, setTotalCost] = useState('')
+  const [billingType, setBillingType] = useState('Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
 
   const resetForm = () => {
@@ -150,6 +151,7 @@ function LeadsPage() {
     setAgreedRate('')
     setTravelCostPerDay('')
     setTotalCost('')
+    setBillingType('Hourly')
     setStatus(LEAD_STATUSES[0])
     setFormError('')
     setFormSuccess('')
@@ -404,8 +406,9 @@ function LeadsPage() {
           toolsRequired, agreedRate,
           travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
           totalCost: totalCost !== '' ? Number(totalCost) : null,
+          billingType,
           status,
-          isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',')
+          isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',') \n
         })
       })
       if (!res.ok) throw new Error('Save failed')
@@ -422,8 +425,9 @@ function LeadsPage() {
     setCity(l.city); setCountry(l.country); setZipCode(l.zipCode); setTimezone(l.timezone)
     setCurrency(l.currency); setHourlyRate(l.hourlyRate != null ? String(l.hourlyRate) : ''); setHalfDayRate(l.halfDayRate != null ? String(l.halfDayRate) : ''); setFullDayRate(l.fullDayRate != null ? String(l.fullDayRate) : '')
     setMonthlyRate(l.monthlyRate != null ? String(l.monthlyRate) : ''); setToolsRequired(l.toolsRequired || ''); setAgreedRate(l.agreedRate || '')
-    setTravelCostPerDay(l.travelCostPerDay != null ? String(l.travelCostPerDay) : ''); setTotalCost(l.totalCost != null ? String(l.totalCost) : ''); setStatus(l.status)
-    setIsRecurring(l.isRecurring || 'No'); setRecurringStartDate(l.recurringStartDate?.split('T')[0])
+    setTravelCostPerDay(l.travelCostPerDay != null ? String(l.travelCostPerDay) : ''); setTotalCost(l.totalCost != null ? String(l.totalCost) : '')
+    setBillingType(l.billingType || 'Hourly'); setStatus(l.status)
+    setIsRecurring(l.isRecurring || 'No'); setRecurringStartDate(l.recurringStartDate?.split('T')[0]) \n
     setRecurringEndDate(l.recurringEndDate?.split('T')[0]); setTotalWeeks(l.totalWeeks || ''); setRecurringDays(l.recurringDays?.split(',') || [])
     const match = countriesList.find(c => c.name === l.country)
     if (match) setAvailableTimezones(match.timezones)
@@ -657,6 +661,18 @@ function LeadsPage() {
               </label>
 
               <label className="leads-field">
+                <span>Billing Type</span>
+                <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
+                  <option value="Hourly">Hourly Only (min 2 hrs)</option>
+                  <option value="Half Day + Hourly">Half Day + Hourly</option>
+                  <option value="Full Day + OT">Full Day + OT</option>
+                  <option value="Monthly + OT">Monthly + OT (OT/Weekend/Holiday)</option>
+                  <option value="Agreed Rate">Agreed Rate</option>
+                  <option value="Cancellation">Cancellation / Reschedule</option>
+                </select>
+              </label>
+
+              <label className="leads-field">
                 <span>Hourly Rate</span>
                 <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="0.00" />
               </label>
@@ -710,8 +726,8 @@ function LeadsPage() {
             <button type="button" className="leads-secondary-btn" onClick={() => setViewMode('list')}>Cancel</button>
             <button type="submit" className="leads-primary-btn" disabled={saving}>{saving ? 'Saving...' : 'Save Lead'}</button>
           </div>
-        </form>
-      </section>
+        </form >
+      </section >
     )
   }
 

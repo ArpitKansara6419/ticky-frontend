@@ -124,6 +124,7 @@ function TicketsPage() {
   const [totalCost, setTotalCost] = useState('')
 
   const [status, setStatus] = useState('Assigned')
+  const [billingType, setBillingType] = useState('Hourly')
 
   const canSubmit = useMemo(
     () =>
@@ -183,6 +184,7 @@ function TicketsPage() {
     setTravelCostPerDay('')
     setTotalCost('')
     setStatus('Assigned')
+    setBillingType('Hourly')
     setError('')
     setSuccess('')
     setEditingTicketId(null)
@@ -422,6 +424,7 @@ function TicketsPage() {
         agreedRate,
         travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
         totalCost: totalCost !== '' ? Number(totalCost) : null,
+        billingType,
         status,
         taskStartDate: taskStartDate ? String(taskStartDate).split('T')[0] : null,
         taskEndDate: taskEndDate ? String(taskEndDate).split('T')[0] : null,
@@ -583,6 +586,7 @@ function TicketsPage() {
     setAgreedRate(ticket.agreedRate || '')
     setTravelCostPerDay(ticket.travelCostPerDay != null ? String(ticket.travelCostPerDay) : '')
     setTotalCost(ticket.totalCost != null ? String(ticket.totalCost) : '')
+    setBillingType(ticket.billingType || 'Hourly')
     setStatus(ticket.status || 'Open')
   }
 
@@ -1110,6 +1114,19 @@ function TicketsPage() {
                   ))}
                 </select>
               </label>
+
+              <label className="tickets-field">
+                <span>Billing Type</span>
+                <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
+                  <option value="Hourly">Hourly Only (min 2 hrs)</option>
+                  <option value="Half Day + Hourly">Half Day + Hourly</option>
+                  <option value="Full Day + OT">Full Day + OT</option>
+                  <option value="Monthly + OT">Monthly + OT (OT/Weekend/Holiday)</option>
+                  <option value="Agreed Rate">Agreed Rate</option>
+                  <option value="Cancellation">Cancellation / Reschedule</option>
+                </select>
+              </label>
+
               <label className="tickets-field">
                 <span>Hourly Rate</span>
                 <input
