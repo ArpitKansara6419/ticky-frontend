@@ -408,7 +408,7 @@ function LeadsPage() {
           totalCost: totalCost !== '' ? Number(totalCost) : null,
           billingType,
           status,
-          isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',') \n
+          isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',')
         })
       })
       if (!res.ok) throw new Error('Save failed')
@@ -427,7 +427,7 @@ function LeadsPage() {
     setMonthlyRate(l.monthlyRate != null ? String(l.monthlyRate) : ''); setToolsRequired(l.toolsRequired || ''); setAgreedRate(l.agreedRate || '')
     setTravelCostPerDay(l.travelCostPerDay != null ? String(l.travelCostPerDay) : ''); setTotalCost(l.totalCost != null ? String(l.totalCost) : '')
     setBillingType(l.billingType || 'Hourly'); setStatus(l.status)
-    setIsRecurring(l.isRecurring || 'No'); setRecurringStartDate(l.recurringStartDate?.split('T')[0]) \n
+    setIsRecurring(l.isRecurring || 'No'); setRecurringStartDate(l.recurringStartDate?.split('T')[0])
     setRecurringEndDate(l.recurringEndDate?.split('T')[0]); setTotalWeeks(l.totalWeeks || ''); setRecurringDays(l.recurringDays?.split(',') || [])
     const match = countriesList.find(c => c.name === l.country)
     if (match) setAvailableTimezones(match.timezones)
