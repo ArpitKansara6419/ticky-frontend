@@ -12,7 +12,6 @@ import CustomerReceivablePage from './CustomerReceivablePage'
 import MeetingPage from './MeetingPage'
 import AttendancePage from './AttendancePage'
 import ApprovalsPage from './ApprovalsPage'
-import SampleReportsPage from './SampleReportsPage'
 import {
   FiHome,
   FiUsers,
@@ -1042,9 +1041,7 @@ function DashboardPage() {
     if (activePage === 'attendance') {
       return <AttendancePage user={profileForm} />
     }
-    if (activePage === 'sampleReports') {
-      return <SampleReportsPage />
-    }
+
 
 
     return <GenericPage pageId={activePage} />
