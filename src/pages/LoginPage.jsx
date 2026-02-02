@@ -8,7 +8,6 @@ import appStoreBadge from '../assets/app.svg'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-
 // EyeIcon - simple outline eye icon for show password
 const EyeIcon = () => (
   <svg
