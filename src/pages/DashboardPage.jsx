@@ -12,6 +12,7 @@ import CustomerReceivablePage from './CustomerReceivablePage'
 import MeetingPage from './MeetingPage'
 import AttendancePage from './AttendancePage'
 import ApprovalsPage from './ApprovalsPage'
+import SampleReportsPage from './SampleReportsPage'
 import {
   FiHome,
   FiUsers,
@@ -89,6 +90,14 @@ function DashboardHome({ onNavigate, insightsLayout }) {
   const [yearPickerBase, setYearPickerBase] = useState(new Date().getFullYear())
 
   const [tickets, setTickets] = useState([])
+  const [stats, setStats] = useState({
+    totalResolved: 0,
+    totalRevenue: '0.00',
+    pendingApprovals: 0,
+    activeLeads: 0,
+    currentMonthRevenue: '0.00',
+    prevMonthRevenue: '0.00',
+  })
 
   // Helpers for Calendar
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate()
@@ -155,7 +164,17 @@ function DashboardHome({ onNavigate, insightsLayout }) {
         console.error('Failed to load tickets for dashboard', err)
       }
     }
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/insights/stats`, { credentials: 'include' })
+        const data = await res.json()
+        if (res.ok) setStats(data)
+      } catch (err) {
+        console.error('Failed to load dashboard stats', err)
+      }
+    }
     fetchTickets()
+    fetchStats()
   }, [])
 
   // Filter tickets for a specific date (based on range taskStartDate to taskEndDate)
@@ -333,10 +352,13 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   <div className="overview-icon overview-icon--receivable">
                     <FiFileText />
                   </div>
-                  <span className="overview-label">Customer Receivables</span>
+                  <span className="overview-label">Total Revenue</span>
                 </div>
-                <p className="overview-value">₹ 1,24,500</p>
-                <span className="overview-pill overview-pill--up">19.1%&nbsp;▲</span>
+                <p className="overview-value">€ {stats.totalRevenue}</p>
+                <span className={`overview-pill ${parseFloat(stats.currentMonthRevenue) >= parseFloat(stats.prevMonthRevenue) ? 'overview-pill--up' : 'overview-pill--down'}`}>
+                  {stats.currentMonthRevenue > 0 ? (((stats.currentMonthRevenue - stats.prevMonthRevenue) / (stats.prevMonthRevenue > 0 ? stats.prevMonthRevenue : 1)) * 100).toFixed(1) : '0.0'}%&nbsp;
+                  {parseFloat(stats.currentMonthRevenue) >= parseFloat(stats.prevMonthRevenue) ? '▲' : '▼'}
+                </span>
               </div>
 
               <div className="overview-card">
@@ -344,10 +366,10 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   <div className="overview-icon overview-icon--payout">
                     <FiCreditCard />
                   </div>
-                  <span className="overview-label">Engineer Payout</span>
+                  <span className="overview-label">Pending Approvals</span>
                 </div>
-                <p className="overview-value">₹ 84,200</p>
-                <span className="overview-pill overview-pill--up">15.2%&nbsp;▲</span>
+                <p className="overview-value">{stats.pendingApprovals}</p>
+                <span className="overview-pill">Action Required</span>
               </div>
 
               <div className="overview-card">
@@ -355,10 +377,10 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   <div className="overview-icon overview-icon--leads">
                     <FiTarget />
                   </div>
-                  <span className="overview-label">Leads</span>
+                  <span className="overview-label">Active Leads</span>
                 </div>
-                <p className="overview-value">94</p>
-                <span className="overview-pill overview-pill--down">94.7%&nbsp;▼</span>
+                <p className="overview-value">{stats.activeLeads}</p>
+                <span className="overview-pill overview-pill--up">In Pipeline</span>
               </div>
 
               <div className="overview-card">
@@ -366,10 +388,10 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   <div className="overview-icon overview-icon--tickets">
                     <FiTag />
                   </div>
-                  <span className="overview-label">Total Tickets</span>
+                  <span className="overview-label">Resolved Tickets</span>
                 </div>
-                <p className="overview-value">218</p>
-                <span className="overview-pill overview-pill--up">33.3%&nbsp;▲</span>
+                <p className="overview-value">{stats.totalResolved}</p>
+                <span className="overview-pill overview-pill--up">Completed</span>
               </div>
             </div>
           </div>
@@ -1020,7 +1042,9 @@ function DashboardPage() {
     if (activePage === 'attendance') {
       return <AttendancePage user={profileForm} />
     }
-
+    if (activePage === 'sampleReports') {
+      return <SampleReportsPage />
+    }
 
 
     return <GenericPage pageId={activePage} />
