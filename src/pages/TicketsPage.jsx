@@ -1168,7 +1168,7 @@ function TicketsPage() {
                   <option value="Full Day + OT">Full Day + OT</option>
                   <option value="Monthly + OT">Monthly + OT (OT/Weekend/Holiday)</option>
                   <option value="Agreed Rate">Agreed Rate</option>
-                  <option value="Cancellation">Cancellation / Reschedule</option>
+                  <option value="Cancellation">Cancellation / Reschedule - Hourly Only (min 2 hrs)</option>
                 </select>
               </label>
 
