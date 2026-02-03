@@ -277,37 +277,72 @@ function TicketsPage() {
   const handleGoogleAddressSelect = async (place) => {
     if (!place || !place.address_components) return
 
+    // Parse all address components
     let streetNumber = ''
     let route = ''
-    let cityLocality = ''
+    let sublocality = ''
+    let locality = ''
+    let adminArea1 = ''
+    let adminArea2 = ''
     let countryName = ''
+    let countryCode = ''
     let postalCode = ''
+    let apartment = ''
 
     place.address_components.forEach((component) => {
       const types = component.types
       if (types.includes('street_number')) streetNumber = component.long_name
       if (types.includes('route')) route = component.long_name
-      if (types.includes('locality')) cityLocality = component.long_name
-      if (types.includes('country')) countryName = component.long_name
+      if (types.includes('sublocality') || types.includes('sublocality_level_1')) sublocality = component.long_name
+      if (types.includes('locality')) locality = component.long_name
+      if (types.includes('administrative_area_level_1')) adminArea1 = component.long_name
+      if (types.includes('administrative_area_level_2')) adminArea2 = component.long_name
+      if (types.includes('country')) {
+        countryName = component.long_name
+        countryCode = component.short_name
+      }
       if (types.includes('postal_code')) postalCode = component.long_name
+      if (types.includes('subpremise')) apartment = component.long_name
     })
 
-    const newAddressLine1 = (streetNumber && route) ? `${streetNumber} ${route}` : (route || place.name || '')
-    setAddressLine1(newAddressLine1)
-    setCity(cityLocality)
-    setZipCode(postalCode)
-    setCountry(countryName)
+    // Build clean address line 1
+    const addressParts = [streetNumber, route].filter(Boolean)
+    const newAddressLine1 = addressParts.length > 0 ? addressParts.join(' ') : (place.name || '')
+    setAddressLine1(newAddressLine1.trim())
 
-    // Handle Country selection with timezones
-    const selected = countriesList.find(c => c.name === countryName)
+    // Set apartment if available
+    if (apartment) {
+      setApartment(apartment.trim())
+    }
+
+    // Set city with fallback logic
+    const cityValue = locality || sublocality || adminArea2 || ''
+    setCity(cityValue.trim())
+
+    // Set postal code
+    setZipCode(postalCode.trim())
+
+    // Country matching - try to find exact match in our list
     let countryTimezones = []
-    if (selected && selected.timezones.length > 0) {
-      setAvailableTimezones(selected.timezones)
-      setTimezone(selected.timezones[0])
-      countryTimezones = selected.timezones
-    } else {
-      setAvailableTimezones([])
-      setTimezone('')
+    if (countryName) {
+      const matchedCountry = countriesList.find(c =>
+        c.name.toLowerCase() === countryName.toLowerCase() ||
+        c.code === countryCode
+      )
+
+      if (matchedCountry) {
+        setCountry(matchedCountry.name)
+        if (matchedCountry.timezones.length > 0) {
+          setAvailableTimezones(matchedCountry.timezones)
+          setTimezone(matchedCountry.timezones[0])
+          countryTimezones = matchedCountry.timezones
+        }
+      } else {
+        // If no exact match, still set the country name
+        setCountry(countryName)
+        setAvailableTimezones([])
+        setTimezone('')
+      }
     }
 
     // Try to get precise timezone if geometry exists

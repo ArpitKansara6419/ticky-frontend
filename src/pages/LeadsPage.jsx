@@ -191,29 +191,57 @@ function LeadsPage() {
   const handleGoogleAddressSelect = async (place) => {
     if (!place || !place.address_components) return
 
+    // Parse all address components
     let streetNumber = ''
     let route = ''
-    let cityLocality = ''
+    let sublocality = ''
+    let locality = ''
+    let adminArea1 = ''
+    let adminArea2 = ''
     let countryName = ''
+    let countryCode = ''
     let postalCode = ''
 
     place.address_components.forEach((component) => {
       const types = component.types
       if (types.includes('street_number')) streetNumber = component.long_name
       if (types.includes('route')) route = component.long_name
-      if (types.includes('locality')) cityLocality = component.long_name
-      if (types.includes('country')) countryName = component.long_name
+      if (types.includes('sublocality') || types.includes('sublocality_level_1')) sublocality = component.long_name
+      if (types.includes('locality')) locality = component.long_name
+      if (types.includes('administrative_area_level_1')) adminArea1 = component.long_name
+      if (types.includes('administrative_area_level_2')) adminArea2 = component.long_name
+      if (types.includes('country')) {
+        countryName = component.long_name
+        countryCode = component.short_name
+      }
       if (types.includes('postal_code')) postalCode = component.long_name
     })
 
-    const newAddressLine1 = (streetNumber && route) ? `${streetNumber} ${route}` : (route || place.name || '')
-    setAddressLine1(newAddressLine1)
-    setCity(cityLocality)
-    setZipCode(postalCode)
+    // Build clean address line 1
+    const addressParts = [streetNumber, route].filter(Boolean)
+    const newAddressLine1 = addressParts.length > 0 ? addressParts.join(' ') : (place.name || '')
+    setAddressLine1(newAddressLine1.trim())
 
-    // Country logic - sync with our dropdown
+    // Set city with fallback logic
+    const cityValue = locality || sublocality || adminArea2 || ''
+    setCity(cityValue.trim())
+
+    // Set postal code
+    setZipCode(postalCode.trim())
+
+    // Country matching - try to find exact match in our list
     if (countryName) {
-      handleCountrySelectChange({ value: countryName })
+      const matchedCountry = countriesList.find(c =>
+        c.name.toLowerCase() === countryName.toLowerCase() ||
+        c.code === countryCode
+      )
+
+      if (matchedCountry) {
+        handleCountrySelectChange({ value: matchedCountry.name })
+      } else {
+        // If no exact match, still set the country name
+        setCountry(countryName)
+      }
     }
 
     // Auto Timezone based on Latitude/Longitude
