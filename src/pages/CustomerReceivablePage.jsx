@@ -1,6 +1,10 @@
 /* CustomerReceivablePage.jsx */
-import React, { useState, useEffect } from 'react';
-import { FiDollarSign, FiFileText, FiCalendar, FiCheckCircle, FiAlertCircle, FiX } from 'react-icons/fi';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
+    FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
+    FiBriefcase, FiHash, FiClock
+} from 'react-icons/fi';
 import './CustomerReceivablePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -11,11 +15,17 @@ const CustomerReceivablePage = () => {
     const [unbilledList, setUnbilledList] = useState([]);
     const [invoiceList, setInvoiceList] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Modal
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [customerTickets, setCustomerTickets] = useState([]);
+    const [selectedTicketIds, setSelectedTicketIds] = useState([]);
     const [creating, setCreating] = useState(false);
+    const [invoiceForm, setInvoiceForm] = useState({
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notes: ''
+    });
 
     useEffect(() => {
         fetchStats();
@@ -31,6 +41,7 @@ const CustomerReceivablePage = () => {
     };
 
     const fetchUnbilled = async () => {
+        setLoading(true);
         try {
             const res = await fetch(`${API_BASE_URL}/receivables/unbilled`);
             if (res.ok) setUnbilledList(await res.json());
@@ -39,6 +50,7 @@ const CustomerReceivablePage = () => {
     };
 
     const fetchInvoices = async () => {
+        setLoading(true);
         try {
             const res = await fetch(`${API_BASE_URL}/invoices`);
             if (res.ok) setInvoiceList(await res.json());
@@ -50,20 +62,36 @@ const CustomerReceivablePage = () => {
         setSelectedCustomer(customer);
         try {
             const res = await fetch(`${API_BASE_URL}/receivables/customer/${customer.id}/tickets`);
-            if (res.ok) setCustomerTickets(await res.json());
+            if (res.ok) {
+                const tickets = await res.json();
+                setCustomerTickets(tickets);
+                setSelectedTicketIds(tickets.map(t => t.id)); // Select all by default
+            }
         } catch (e) { console.error(e); }
     };
 
+    const toggleTicket = (id) => {
+        setSelectedTicketIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const calculateSelectedTotal = () => {
+        return customerTickets
+            .filter(t => selectedTicketIds.includes(t.id))
+            .reduce((sum, t) => sum + parseFloat(t.total_cost || 0), 0)
+            .toFixed(2);
+    };
+
     const handleCreateInvoice = async () => {
-        if (!selectedCustomer) return;
+        if (!selectedCustomer || selectedTicketIds.length === 0) {
+            alert('Please select at least one ticket.');
+            return;
+        }
+
         setCreating(true);
         try {
-            const ticketIds = customerTickets.map(t => t.id);
-            const amount = customerTickets.reduce((sum, t) => sum + parseFloat(t.total_cost || 0), 0);
-
-            // Set due date to 30 days from now
-            const dueDate = new Date();
-            dueDate.setDate(dueDate.getDate() + 30);
+            const amount = calculateSelectedTotal();
 
             const res = await fetch(`${API_BASE_URL}/invoices/create`, {
                 method: 'POST',
@@ -71,16 +99,19 @@ const CustomerReceivablePage = () => {
                 body: JSON.stringify({
                     customer_id: selectedCustomer.id,
                     amount,
-                    due_date: dueDate.toISOString().split('T')[0],
-                    ticket_ids: ticketIds
+                    due_date: invoiceForm.dueDate,
+                    notes: invoiceForm.notes,
+                    ticket_ids: selectedTicketIds
                 })
             });
 
             if (res.ok) {
-                // Success
                 setSelectedCustomer(null);
                 fetchStats();
-                fetchUnbilled(); // Refresh list
+                fetchUnbilled();
+                setActiveTab('invoices');
+            } else {
+                alert('Failed to generate invoice.');
             }
         } catch (e) { console.error(e); }
         setCreating(false);
@@ -95,136 +126,258 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error(e); }
     };
 
+    const filteredUnbilled = useMemo(() => {
+        return unbilledList.filter(item =>
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.company.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [unbilledList, searchTerm]);
+
+    const filteredInvoices = useMemo(() => {
+        return invoiceList.filter(inv =>
+            inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            inv.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            inv.customer_company.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [invoiceList, searchTerm]);
+
     return (
         <div className="receivable-page">
             <header className="receivable-header">
                 <div className="receivable-title">
                     <h2>Customer Receivables</h2>
-                    <p>Track unbilled work, invoices, and payments.</p>
+                    <p>Manage unbilled work and track client payments professionally.</p>
+                </div>
+                <div className="receivable-actions">
+                    <div className="search-bar-receivable">
+                        <FiSearch />
+                        <input
+                            type="text"
+                            placeholder="Search customers or invoices..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                 </div>
             </header>
 
             <div className="receivable-stats-grid">
                 <div className="receivable-stat-card">
-                    <div className="stat-icon-wrapper stat-icon--blue"><FiFileText /></div>
+                    <div className="stat-icon-wrapper stat-icon--blue"><FiClock /></div>
                     <div className="stat-content">
-                        <h3>${parseFloat(stats.unbilled).toFixed(2)}</h3>
-                        <p>Unbilled Work</p>
+                        <h3>{stats.currency || '$'}{parseFloat(stats.unbilled).toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                        <p>Work To Be Billed</p>
                     </div>
                 </div>
                 <div className="receivable-stat-card">
-                    <div className="stat-icon-wrapper stat-icon--amber"><FiAlertCircle /></div>
+                    <div className="stat-icon-wrapper stat-icon--amber"><FiFileText /></div>
                     <div className="stat-content">
-                        <h3>${parseFloat(stats.unpaid).toFixed(2)}</h3>
+                        <h3>{stats.currency || '$'}{parseFloat(stats.unpaid).toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                         <p>Unpaid Invoices</p>
                     </div>
                 </div>
                 <div className="receivable-stat-card">
                     <div className="stat-icon-wrapper stat-icon--green"><FiCheckCircle /></div>
                     <div className="stat-content">
-                        <h3>${parseFloat(stats.overdue || 0).toFixed(2)}</h3>
-                        <p>Overdue</p>
+                        <h3>{stats.currency || '$'}{parseFloat(stats.overdue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                        <p>Total Overdue</p>
                     </div>
                 </div>
             </div>
 
             <div className="receivable-tabs">
-                <button className={`receivable-tab ${activeTab === 'unbilled' ? 'receivable-tab--active' : ''}`} onClick={() => setActiveTab('unbilled')}>Unbilled Work</button>
-                <button className={`receivable-tab ${activeTab === 'invoices' ? 'receivable-tab--active' : ''}`} onClick={() => setActiveTab('invoices')}>Invoices</button>
+                <button
+                    className={`receivable-tab ${activeTab === 'unbilled' ? 'receivable-tab--active' : ''}`}
+                    onClick={() => setActiveTab('unbilled')}
+                >
+                    Unbilled Work
+                </button>
+                <button
+                    className={`receivable-tab ${activeTab === 'invoices' ? 'receivable-tab--active' : ''}`}
+                    onClick={() => setActiveTab('invoices')}
+                >
+                    Invoice History
+                </button>
             </div>
 
-            {activeTab === 'unbilled' && (
-                <div className="receivable-grid">
-                    {unbilledList.map(item => (
-                        <div className="unbilled-card" key={item.id}>
-                            <div className="unbilled-header">
-                                <div className="unbilled-customer">
-                                    <h3>{item.name}</h3>
-                                    <p>{item.company}</p>
-                                </div>
-                                <div className="unbilled-amount">
-                                    <h4>${parseFloat(item.total_amount).toFixed(2)}</h4>
-                                    <span>{item.ticket_count} Tickets</span>
-                                </div>
-                            </div>
-                            <button className="create-invoice-btn" onClick={() => openInvoiceModal(item)}>Generate Invoice</button>
-                        </div>
-                    ))}
-                    {unbilledList.length === 0 && !loading && <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#718096', padding: '40px' }}>No unbilled work found.</div>}
+            {loading ? (
+                <div className="loading-state-cr">
+                    <div className="spinner-cr"></div>
+                    <p>Loading records...</p>
                 </div>
-            )}
-
-            {activeTab === 'invoices' && (
-                <div className="invoices-table-container">
-                    <table className="invoices-table">
-                        <thead>
-                            <tr>
-                                <th>Invoice #</th>
-                                <th>Issue Date</th>
-                                <th>Customer</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {invoiceList.map(inv => (
-                                <tr key={inv.id}>
-                                    <td style={{ fontWeight: 600 }}>{inv.invoice_number}</td>
-                                    <td>{new Date(inv.issue_date).toLocaleDateString()}</td>
-                                    <td>
-                                        <div>{inv.customer_name}</div>
-                                        <div style={{ fontSize: '12px', color: '#718096' }}>{inv.customer_company}</div>
-                                    </td>
-                                    <td style={{ fontWeight: 700 }}>${inv.amount}</td>
-                                    <td>
-                                        <span className={`invoice-status invoice-status--${inv.status.toLowerCase()}`}>{inv.status}</span>
-                                    </td>
-                                    <td>
-                                        {inv.status !== 'Paid' && (
-                                            <button className="action-btn" onClick={() => handleMarkPaid(inv.id)}>Mark Paid</button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            {invoiceList.length === 0 && !loading && <tr><td colSpan="6" style={{ textAlign: 'center', padding: '30px' }}>No invoices found.</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* Modal */}
-            {selectedCustomer && (
-                <div className="cr-modal-overlay">
-                    <div className="cr-modal">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0 }}>Generate Invoice for {selectedCustomer.name}</h3>
-                            <button onClick={() => setSelectedCustomer(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}><FiX /></button>
-                        </div>
-
-                        <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '20px' }}>
-                            {customerTickets.map(t => (
-                                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: '1px solid #edf2f7' }}>
-                                    <div>
-                                        <div style={{ fontSize: '14px', fontWeight: 600 }}>{t.task_name}</div>
-                                        <div style={{ fontSize: '12px', color: '#718096' }}>{new Date(t.task_start_date).toLocaleDateString()}</div>
+            ) : (
+                <>
+                    {activeTab === 'unbilled' && (
+                        <div className="receivable-grid">
+                            {filteredUnbilled.map(item => (
+                                <div className="unbilled-card-v2" key={item.id}>
+                                    <div className="unbilled-v2-header">
+                                        <div className="customer-avatar-cr">
+                                            <FiUser />
+                                        </div>
+                                        <div className="customer-meta-cr">
+                                            <h3>{item.name}</h3>
+                                            <p>{item.company}</p>
+                                        </div>
                                     </div>
-                                    <div style={{ fontWeight: 600 }}>${t.total_cost}</div>
+                                    <div className="unbilled-v2-body">
+                                        <div className="unbilled-v2-stat">
+                                            <label>Total Tickets</label>
+                                            <span>{item.ticket_count}</span>
+                                        </div>
+                                        <div className="unbilled-v2-stat">
+                                            <label>Pending Amount</label>
+                                            <span className="amount-highlight">${parseFloat(item.total_amount).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    <button className="generate-btn-v2" onClick={() => openInvoiceModal(item)}>
+                                        Review & Invoice <FiArrowRight />
+                                    </button>
                                 </div>
                             ))}
+                            {filteredUnbilled.length === 0 && (
+                                <div className="empty-state-cr">
+                                    <FiCheckCircle size={48} />
+                                    <p>No unbilled work found for your search.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'invoices' && (
+                        <div className="invoices-table-container-v2">
+                            <table className="invoices-table-v2">
+                                <thead>
+                                    <tr>
+                                        <th><FiHash /> Invoice #</th>
+                                        <th><FiCalendar /> Issued</th>
+                                        <th><FiUser /> Customer</th>
+                                        <th><FiDollarSign /> Amount</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredInvoices.map(inv => (
+                                        <tr key={inv.id}>
+                                            <td className="font-mono">{inv.invoice_number}</td>
+                                            <td>{new Date(inv.issue_date).toLocaleDateString()}</td>
+                                            <td>
+                                                <div className="td-customer-info">
+                                                    <strong>{inv.customer_name}</strong>
+                                                    <span>{inv.customer_company}</span>
+                                                </div>
+                                            </td>
+                                            <td className="font-bold text-dark">${parseFloat(inv.amount).toFixed(2)}</td>
+                                            <td>
+                                                <span className={`invoice-pill status-${inv.status.toLowerCase()}`}>
+                                                    {inv.status}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {inv.status !== 'Paid' && (
+                                                    <button className="mark-paid-btn" onClick={() => handleMarkPaid(inv.id)}>
+                                                        Mark Paid
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredInvoices.length === 0 && (
+                                        <tr>
+                                            <td colSpan="6" style={{ textAlign: 'center', padding: '100px 0', color: '#718096' }}>
+                                                <FiFileText size={48} style={{ opacity: 0.2, marginBottom: '10px' }} /><br />
+                                                No invoices found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Professional Modal */}
+            {selectedCustomer && (
+                <div className="crm-overlay" onClick={() => setSelectedCustomer(null)}>
+                    <div className="crm-modal" onClick={e => e.stopPropagation()}>
+                        <div className="crm-modal-header">
+                            <div>
+                                <h3>Generate Invoice</h3>
+                                <p>Reviewing {selectedCustomer.name}</p>
+                            </div>
+                            <button className="crm-close" onClick={() => setSelectedCustomer(null)}><FiX /></button>
                         </div>
 
-                        <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-                            <div style={{ fontSize: '14px', color: '#718096' }}>Total Invoice Amount</div>
-                            <div style={{ fontSize: '24px', fontWeight: 700, color: '#2b6cb0' }}>
-                                ${customerTickets.reduce((s, t) => s + parseFloat(t.total_cost || 0), 0).toFixed(2)}
+                        <div className="crm-modal-content">
+                            <div className="crm-ticket-list">
+                                <div className="crm-list-header">
+                                    <label>Select Work Items</label>
+                                    <span>{selectedTicketIds.length} Selected</span>
+                                </div>
+                                {customerTickets.map(t => (
+                                    <div
+                                        key={t.id}
+                                        className={`crm-ticket-row ${selectedTicketIds.includes(t.id) ? 'crm-row--selected' : ''}`}
+                                        onClick={() => toggleTicket(t.id)}
+                                    >
+                                        <div className="crm-row-check">
+                                            <div className={`custom-checkbox ${selectedTicketIds.includes(t.id) ? 'checked' : ''}`}>
+                                                {selectedTicketIds.includes(t.id) && <FiCheckCircle />}
+                                            </div>
+                                        </div>
+                                        <div className="crm-row-meta">
+                                            <strong>{t.task_name}</strong>
+                                            <p>{new Date(t.task_start_date).toLocaleDateString()} • {t.billing_type || 'Hourly'}</p>
+                                        </div>
+                                        <div className="crm-row-amount">
+                                            ${parseFloat(t.total_cost || 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="crm-billing-details">
+                                <div className="crm-form-group">
+                                    <label>Payment Due Date</label>
+                                    <input
+                                        type="date"
+                                        value={invoiceForm.dueDate}
+                                        onChange={e => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
+                                    />
+                                </div>
+                                <div className="crm-form-group">
+                                    <label>Invoice Notes (Optional)</label>
+                                    <textarea
+                                        placeholder="Add notes for the client..."
+                                        value={invoiceForm.notes}
+                                        onChange={e => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
+                                        rows={2}
+                                    />
+                                </div>
+
+                                <div className="crm-total-block">
+                                    <div className="crm-total-row">
+                                        <span>Subtotal ({selectedTicketIds.length} items)</span>
+                                        <span>${calculateSelectedTotal()}</span>
+                                    </div>
+                                    <div className="crm-total-row crm-total-grand">
+                                        <span>Total Receivable</span>
+                                        <span>${calculateSelectedTotal()}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                            <button onClick={() => setSelectedCustomer(null)} style={{ background: '#edf2f7', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleCreateInvoice} disabled={creating} style={{ background: '#4299e1', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
-                                {creating ? 'Generating...' : 'Confirm Generate'}
+                        <div className="crm-modal-footer">
+                            <button className="crm-btn-cancel" onClick={() => setSelectedCustomer(null)}>Cancel</button>
+                            <button
+                                className="crm-btn-submit"
+                                onClick={handleCreateInvoice}
+                                disabled={creating || selectedTicketIds.length === 0}
+                            >
+                                {creating ? 'Generating Invoice...' : 'Generate & Send Invoice'}
                             </button>
                         </div>
                     </div>
