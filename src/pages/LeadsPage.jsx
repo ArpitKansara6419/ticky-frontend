@@ -581,11 +581,23 @@ function LeadsPage() {
             <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
               <label className="leads-field">
                 <span>Start Date *</span>
-                <input type="date" value={taskStartDate} onChange={e => setTaskStartDate(e.target.value)} required />
+                <input
+                  type="date"
+                  value={taskStartDate}
+                  onChange={e => setTaskStartDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                />
               </label>
               <label className="leads-field">
                 <span>End Date *</span>
-                <input type="date" value={taskEndDate} onChange={e => setTaskEndDate(e.target.value)} required />
+                <input
+                  type="date"
+                  value={taskEndDate}
+                  onChange={e => setTaskEndDate(e.target.value)}
+                  min={taskStartDate || new Date().toISOString().split('T')[0]}
+                  required
+                />
               </label>
               <label className="leads-field">
                 <span>Time *</span>
@@ -1094,34 +1106,68 @@ function LeadsPage() {
                   <label>Status</label>
                   <span className={`status-pill ${selectedLead.status?.toLowerCase()}`}>{selectedLead.status}</span>
                 </div>
+
+                {/* Billing Type Section */}
                 <div className="detail-item--full divider"></div>
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Billing Configuration</label>
+                </div>
+                <div className="detail-item">
+                  <label>Billing Type</label>
+                  <span style={{
+                    fontWeight: '600',
+                    color: 'var(--primary-color, #6366f1)',
+                    background: 'var(--primary-bg, #eef2ff)',
+                    padding: '4px 12px',
+                    borderRadius: '6px',
+                    fontSize: '13px'
+                  }}>
+                    {selectedLead.billingType || 'Hourly'}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <label>Currency</label>
+                  <span style={{ fontWeight: '600' }}>{selectedLead.currency || 'USD'}</span>
+                </div>
+
+                {/* Pricing & Rates Section */}
+                <div className="detail-item--full divider"></div>
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Pricing & Rates</label>
+                </div>
                 <div className="detail-item">
                   <label>Hourly Rate</label>
-                  <span>{selectedLead.currency} {selectedLead.hourlyRate || '0.00'}</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.hourlyRate || '0.00'}</span>
                 </div>
                 <div className="detail-item">
                   <label>Half Day Rate</label>
-                  <span>{selectedLead.currency} {selectedLead.halfDayRate || '0.00'}</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.halfDayRate || '0.00'}</span>
                 </div>
                 <div className="detail-item">
                   <label>Full Day Rate</label>
-                  <span>{selectedLead.currency} {selectedLead.fullDayRate || '0.00'}</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.fullDayRate || '0.00'}</span>
                 </div>
                 <div className="detail-item">
                   <label>Monthly Rate</label>
-                  <span>{selectedLead.currency} {selectedLead.monthlyRate || '0.00'}</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.monthlyRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Agreed / Fixed Rate</label>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.agreedRate || '--'}</span>
+                </div>
+
+                {/* Additional Costs Section */}
+                <div className="detail-item--full divider"></div>
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Additional Costs</label>
                 </div>
                 <div className="detail-item">
                   <label>Tool Cost</label>
-                  <span>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
+                  <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
                 </div>
                 <div className="detail-item">
                   <label>Travel Cost / Day</label>
-                  <span>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Agreed Rate</label>
-                  <span>{selectedLead.agreedRate || '--'}</span>
+                  <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
                 </div>
               </div>
             </div>

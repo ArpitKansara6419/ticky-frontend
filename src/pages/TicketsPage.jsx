@@ -902,14 +902,24 @@ function TicketsPage() {
                 <span>
                   Task Start Date <span className="field-required">*</span>
                 </span>
-                <input type="date" value={taskStartDate} onChange={(e) => setTaskStartDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={taskStartDate}
+                  onChange={(e) => setTaskStartDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
               </label>
 
               <label className="tickets-field">
                 <span>
                   Task End Date <span className="field-required">*</span>
                 </span>
-                <input type="date" value={taskEndDate} onChange={(e) => setTaskEndDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={taskEndDate}
+                  onChange={(e) => setTaskEndDate(e.target.value)}
+                  min={taskStartDate || new Date().toISOString().split('T')[0]}
+                />
               </label>
 
               <label className="tickets-field">
@@ -1499,6 +1509,10 @@ function TicketsPage() {
                   <label>City / Country</label>
                   <span>{selectedTicket.city}, {selectedTicket.country}</span>
                 </div>
+                <div className="detail-item">
+                  <label>Timezone</label>
+                  <span>{selectedTicket.timezone || '--'}</span>
+                </div>
 
                 <div className="detail-item--full divider"></div>
 
@@ -1517,15 +1531,67 @@ function TicketsPage() {
                   <p className="scope-text">{selectedTicket.scopeOfWork}</p>
                 </div>
 
+                {/* Billing Configuration Section */}
                 <div className="detail-item--full divider"></div>
-
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Billing Configuration</label>
+                </div>
                 <div className="detail-item">
-                  <label>Travel Cost / Day</label>
-                  <span>{selectedTicket.currency} {selectedTicket.travelCostPerDay || '0.00'}</span>
+                  <label>Billing Type</label>
+                  <span style={{
+                    fontWeight: '600',
+                    color: 'var(--primary-color, #6366f1)',
+                    background: 'var(--primary-bg, #eef2ff)',
+                    padding: '4px 12px',
+                    borderRadius: '6px',
+                    fontSize: '13px'
+                  }}>
+                    {selectedTicket.billingType || 'Hourly'}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <label>Currency</label>
+                  <span style={{ fontWeight: '600' }}>{selectedTicket.currency || 'USD'}</span>
+                </div>
+
+                {/* Pricing & Rates Section */}
+                <div className="detail-item--full divider"></div>
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Pricing & Rates</label>
                 </div>
                 <div className="detail-item">
                   <label>Hourly Rate</label>
-                  <span>{selectedTicket.currency} {selectedTicket.hourlyRate || '0.00'}</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedTicket.currency} {selectedTicket.hourlyRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Half Day Rate</label>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedTicket.currency} {selectedTicket.halfDayRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Full Day Rate</label>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedTicket.currency} {selectedTicket.fullDayRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Monthly Rate</label>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedTicket.currency} {selectedTicket.monthlyRate || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Agreed / Fixed Rate</label>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedTicket.agreedRate || '--'}</span>
+                </div>
+
+                {/* Additional Costs Section */}
+                <div className="detail-item--full divider"></div>
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Additional Costs</label>
+                </div>
+                <div className="detail-item">
+                  <label>Tool Cost</label>
+                  <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedTicket.currency} {selectedTicket.toolCost || '0.00'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Travel Cost / Day</label>
+                  <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedTicket.currency} {selectedTicket.travelCostPerDay || '0.00'}</span>
                 </div>
 
                 <div className="detail-item--full divider"></div>
