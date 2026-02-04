@@ -684,29 +684,6 @@ function LeadsPage() {
                   placeholder="Select Timezone"
                 />
               </label>
-
-              {/* LIVE MAP PREVIEW */}
-              {latitude && longitude && (
-                <div className="leads-field leads-field--full" style={{ marginTop: '10px' }}>
-                  <span style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '600', color: '#6366f1' }}>Location Preview</span>
-                  <div style={{ width: '100%', height: '250px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-                    <iframe
-                      title="Lead Location Map"
-                      width="100%"
-                      height="100%"
-                      frameBorder="0"
-                      scrolling="no"
-                      marginHeight="0"
-                      marginWidth="0"
-                      src={`https://maps.google.com/maps?q=${latitude},${longitude}&hl=es&z=14&output=embed`}
-                    ></iframe>
-                  </div>
-                  <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '11px', color: '#718096' }}>
-                    <span>Lat: <b>{latitude.toFixed(6)}</b></span>
-                    <span>Lon: <b>{longitude.toFixed(6)}</b></span>
-                  </div>
-                </div>
-              )}
             </div>
           </section>
 
