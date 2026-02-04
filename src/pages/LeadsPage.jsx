@@ -127,6 +127,10 @@ function LeadsPage() {
   const [billingType, setBillingType] = useState('Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
 
+  // Map / LatLng states
+  const [latitude, setLatitude] = useState(null)
+  const [longitude, setLongitude] = useState(null)
+
   const resetForm = () => {
     setTaskName('')
     setCustomerId('')
@@ -156,6 +160,8 @@ function LeadsPage() {
     setFormError('')
     setFormSuccess('')
     setEditingLeadId(null)
+    setLatitude(null)
+    setLongitude(null)
   }
 
   const fetchCountries = () => {
@@ -248,6 +254,9 @@ function LeadsPage() {
     if (place.geometry?.location) {
       const lat = place.geometry.location.lat()
       const lon = place.geometry.location.lng()
+      setLatitude(lat)
+      setLongitude(lon)
+
       try {
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`)
         const data = await res.json()
@@ -436,7 +445,8 @@ function LeadsPage() {
           totalCost: totalCost !== '' ? Number(totalCost) : null,
           billingType,
           status,
-          isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(',')
+          isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(','),
+          latitude, longitude
         })
       })
       if (!res.ok) throw new Error('Save failed')
@@ -459,6 +469,7 @@ function LeadsPage() {
     setRecurringEndDate(l.recurringEndDate?.split('T')[0]); setTotalWeeks(l.totalWeeks || ''); setRecurringDays(l.recurringDays?.split(',') || [])
     const match = countriesList.find(c => c.name === l.country)
     if (match) setAvailableTimezones(match.timezones)
+    setLatitude(l.latitude); setLongitude(l.longitude)
   }
 
   const startEditLead = (id) => {
@@ -673,6 +684,29 @@ function LeadsPage() {
                   placeholder="Select Timezone"
                 />
               </label>
+
+              {/* LIVE MAP PREVIEW */}
+              {latitude && longitude && (
+                <div className="leads-field leads-field--full" style={{ marginTop: '10px' }}>
+                  <span style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '600', color: '#6366f1' }}>Location Preview</span>
+                  <div style={{ width: '100%', height: '250px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                    <iframe
+                      title="Lead Location Map"
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      scrolling="no"
+                      marginHeight="0"
+                      marginWidth="0"
+                      src={`https://maps.google.com/maps?q=${latitude},${longitude}&hl=es&z=14&output=embed`}
+                    ></iframe>
+                  </div>
+                  <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '11px', color: '#718096' }}>
+                    <span>Lat: <b>{latitude.toFixed(6)}</b></span>
+                    <span>Lon: <b>{longitude.toFixed(6)}</b></span>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
