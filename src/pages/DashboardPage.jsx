@@ -7,7 +7,6 @@ import LeadsPage from './LeadsPage'
 import TicketsPage from './TicketsPage'
 import EngineersPage from './EngineersPage'
 import AssetsPage from './AssetsPage'
-import EngineerPayoutPage from './EngineerPayoutPage'
 import CustomerReceivablePage from './CustomerReceivablePage'
 import MeetingPage from './MeetingPage'
 import AttendancePage from './AttendancePage'
@@ -56,7 +55,6 @@ const MAIN_MENU_ITEMS = [
   { id: 'engineers', label: 'Engineers', icon: FiUsers },
   { id: 'customers', label: 'Customers', icon: FiUserCheck },
   { id: 'leads', label: 'Leads', icon: FiTarget },
-  { id: 'engineerPayout', label: 'Engineer Payout', icon: FiCreditCard },
   { id: 'customerReceivable', label: 'Customer Receivable', icon: FiFileText },
   { id: 'tickets', label: 'Tickets', icon: FiTag },
   { id: 'assetManagement', label: 'Asset Management', icon: FiBox },
@@ -524,10 +522,6 @@ const PAGE_COPY = {
   leads: {
     title: 'Leads',
     subtitle: 'Track incoming leads and nurture pipeline.',
-  },
-  engineerPayout: {
-    title: 'Engineer Payout',
-    subtitle: 'Review and approve engineer payouts.',
   },
   customerReceivable: {
     title: 'Customer Receivable',
@@ -1026,9 +1020,6 @@ function DashboardPage() {
       return <AssetsPage />
     }
 
-    if (activePage === 'engineerPayout') {
-      return <EngineerPayoutPage />
-    }
 
     if (activePage === 'customerReceivable') {
       return <CustomerReceivablePage />
