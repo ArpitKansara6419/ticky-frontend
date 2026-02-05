@@ -33,7 +33,7 @@ const CustomerReceivablePage = () => {
 
     // Table Filters
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
-    const [selectedYear, setSelectedYear] = useState('2025');
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
     const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
     const [paymentFilter, setPaymentFilter] = useState('Pending'); // Pending, Processing, Completed
 
@@ -138,12 +138,24 @@ const CustomerReceivablePage = () => {
     const filteredUnbilled = useMemo(() => {
         const t = searchTerm.toLowerCase().trim();
         return unbilledList.filter(item => {
+            // Search filter
             const name = (item.customer_name || '').toLowerCase();
             const company = (item.customer_company || '').toLowerCase();
             const ticketId = (item.id || '').toString();
-            return name.includes(t) || company.includes(t) || ticketId.includes(t);
+            const matchesSearch = name.includes(t) || company.includes(t) || ticketId.includes(t);
+            if (!matchesSearch) return false;
+
+            // Date filter
+            const ticketDate = new Date(item.task_start_date);
+            const matchesYear = ticketDate.getFullYear().toString() === selectedYear;
+            const matchesMonth = MONTHS[ticketDate.getMonth()] === selectedMonth;
+            if (!matchesYear || !matchesMonth) return false;
+
+            // Simple status filter (Mock for now as unbilled implies Pending/Processing)
+            // But we can filter by billing_status if we decide to show "Processing"
+            return true;
         });
-    }, [unbilledList, searchTerm]);
+    }, [unbilledList, searchTerm, selectedYear, selectedMonth]);
 
     return (
         <div className="receivable-page">
@@ -255,9 +267,15 @@ const CustomerReceivablePage = () => {
                                                 <td style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#475569' }}>{item.engineer_name || 'N/A'}</td>
                                                 <td style={{ color: '#2563eb', fontWeight: '700' }}>#{item.id}</td>
                                                 <td style={{ fontWeight: '600' }}>{bd.formattedHours || '00:00:00'}</td>
-                                                <td style={{ color: bd.otHours > 0 ? '#e11d48' : 'inherit', fontWeight: bd.otHours > 0 ? '700' : '400' }}>{bd.formattedOT || '--'}</td>
+                                                <td style={{ color: bd.otHours > 0 ? '#e11d48' : 'inherit', fontWeight: bd.otHours > 0 ? '700' : '400' }}>
+                                                    {bd.formattedOT || '--'}
+                                                    {bd.otHours > 0 && <small style={{ display: 'block', fontSize: '10px' }}>1.5x Applied</small>}
+                                                </td>
                                                 <td>{bd.ooh || 'No'}</td>
-                                                <td>{bd.ww || 'No'}</td>
+                                                <td style={{ color: bd.ww === 'Yes' ? '#059669' : 'inherit', fontWeight: bd.ww === 'Yes' ? '700' : '400' }}>
+                                                    {bd.ww || 'No'}
+                                                    {bd.ww === 'Yes' && <small style={{ display: 'block', fontSize: '10px' }}>2.0x Rate</small>}
+                                                </td>
                                                 <td>{bd.hw || 'No'}</td>
                                                 <td>{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
                                                 <td>{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>

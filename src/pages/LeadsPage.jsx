@@ -717,9 +717,9 @@ function LeadsPage() {
                   <option value="Hourly">Hourly Only (min 2 hrs)</option>
                   <option value="Half Day + Hourly">Half Day + Hourly</option>
                   <option value="Full Day + OT">Full Day + OT</option>
-                  <option value="Monthly + OT">Monthly + OT (OT/Weekend/Holiday)</option>
+                  <option value="Monthly + OT + Weekend/Holiday">Monthly + OT + Weekend or Holidays</option>
                   <option value="Agreed Rate">Agreed Rate</option>
-                  <option value="Cancellation">Cancellation / Reschedule - Hourly Only (min 2 hrs)</option>
+                  <option value="Cancellation / Reschedule">Cancellation / Reschedule charges</option>
                 </select>
               </label>
 
