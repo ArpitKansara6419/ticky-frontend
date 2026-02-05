@@ -633,3 +633,36 @@
     padding: 80px 0;
     color: #9ca3af;
 }
+
+.crm-billing-info-box {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    display: flex;
+    gap: 12px;
+    color: #0369a1;
+    font-size: 13px;
+}
+
+.crm-billing-info-box svg {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.crm-billing-info-box strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #0c4a6e;
+}
+
+.crm-billing-info-box ul {
+    margin: 4px 0 0 0;
+    padding-left: 18px;
+}
+
+.crm-billing-info-box li {
+    margin-bottom: 2px;
+}

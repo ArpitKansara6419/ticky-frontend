@@ -331,7 +331,10 @@ const CustomerReceivablePage = () => {
                                         </div>
                                         <div className="crm-row-meta">
                                             <strong>{t.task_name}</strong>
-                                            <p>{new Date(t.task_start_date).toLocaleDateString()} • {t.billing_type || 'Hourly'}</p>
+                                            <p>
+                                                {new Date(t.task_start_date).toLocaleDateString()} • {t.billing_type || 'Hourly'}
+                                                {t.total_time ? ` • ${(t.total_time / 3600).toFixed(2)}h billable` : ''}
+                                            </p>
                                         </div>
                                         <div className="crm-row-amount">
                                             ${parseFloat(t.total_cost || 0).toFixed(2)}
@@ -367,6 +370,18 @@ const CustomerReceivablePage = () => {
                                     <div className="crm-total-row crm-total-grand">
                                         <span>Total Receivable</span>
                                         <span>${calculateSelectedTotal()}</span>
+                                    </div>
+                                </div>
+
+                                <div className="crm-billing-info-box">
+                                    <FiAlertCircle />
+                                    <div>
+                                        <strong>Billing Rules Applied:</strong>
+                                        <ul>
+                                            <li>Standard OT: 1.5x Hourly Rate</li>
+                                            <li>Weekend/Holiday: 2.0x Standard Rate</li>
+                                            <li>Minimum 2h billing for Hourly tasks</li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>

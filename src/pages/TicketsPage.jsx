@@ -126,6 +126,11 @@ function TicketsPage() {
   const [status, setStatus] = useState('Assigned')
   const [billingType, setBillingType] = useState('Hourly')
 
+  // Time Log Override
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
+  const [breakTime, setBreakTime] = useState('0') // in minutes
+
   const canSubmit = useMemo(
     () =>
       Boolean(
@@ -185,6 +190,9 @@ function TicketsPage() {
     setTotalCost('')
     setStatus('Assigned')
     setBillingType('Hourly')
+    setStartTime('')
+    setEndTime('')
+    setBreakTime('0')
     setError('')
     setSuccess('')
     setEditingTicketId(null)
@@ -463,6 +471,9 @@ function TicketsPage() {
         status,
         taskStartDate: taskStartDate ? String(taskStartDate).split('T')[0] : null,
         taskEndDate: taskEndDate ? String(taskEndDate).split('T')[0] : null,
+        startTime,
+        endTime,
+        breakTime: Number(breakTime) || 0,
       }
 
       const isEditing = Boolean(editingTicketId)
@@ -620,9 +631,22 @@ function TicketsPage() {
     setMonthlyRate(ticket.monthlyRate != null ? String(ticket.monthlyRate) : '')
     setAgreedRate(ticket.agreedRate || '')
     setTravelCostPerDay(ticket.travelCostPerDay != null ? String(ticket.travelCostPerDay) : '')
-    setTotalCost(ticket.totalCost != null ? String(ticket.totalCost) : '')
+    setTotalCost(ticket.toolCost != null ? String(ticket.toolCost) : '')
     setBillingType(ticket.billingType || 'Hourly')
     setStatus(ticket.status || 'Open')
+
+    // Time Log
+    if (ticket.start_time) {
+      setStartTime(new Date(ticket.start_time).toISOString().slice(0, 16))
+    } else {
+      setStartTime('')
+    }
+    if (ticket.end_time) {
+      setEndTime(new Date(ticket.end_time).toISOString().slice(0, 16))
+    } else {
+      setEndTime('')
+    }
+    setBreakTime(ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0')
   }
 
   const handleViewDocument = (fileUrl) => {
@@ -1146,6 +1170,42 @@ function TicketsPage() {
             </div>
           </section>
 
+          {/* Time Log (Manual Override) */}
+          <section className="tickets-card">
+            <h2 className="tickets-section-title">Time Log (Manual Override)</h2>
+            <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
+              Manually adjust the working hours if the engineer forgot to resolve the task.
+            </p>
+            <div className="tickets-grid">
+              <label className="tickets-field">
+                <span>Start Time (Override)</span>
+                <input
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </label>
+              <label className="tickets-field">
+                <span>End Time (Override)</span>
+                <input
+                  type="datetime-local"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </label>
+              <label className="tickets-field">
+                <span>Break Time (Minutes)</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={breakTime}
+                  onChange={(e) => setBreakTime(e.target.value)}
+                  placeholder="0"
+                />
+              </label>
+            </div>
+          </section>
+
           {/* Pricing & Rates */}
           <section className="tickets-card">
             <h2 className="tickets-section-title">Pricing &amp; Rates</h2>
@@ -1593,6 +1653,34 @@ function TicketsPage() {
                 <div className="detail-item">
                   <label>Travel Cost / Day</label>
                   <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedTicket.currency} {selectedTicket.travelCostPerDay || '0.00'}</span>
+                </div>
+
+                <div className="detail-item--full divider"></div>
+
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Time Log (Engineer Activity)</label>
+                </div>
+                <div className="detail-item">
+                  <label>Actual Start Time</label>
+                  <span style={{ fontWeight: '600' }}>{selectedTicket.startTime ? new Date(selectedTicket.startTime).toLocaleString() : '--'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Actual End Time</label>
+                  <span style={{ fontWeight: '600' }}>{selectedTicket.endTime ? new Date(selectedTicket.endTime).toLocaleString() : '--'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Break Time</label>
+                  <span style={{ fontWeight: '600' }}>{selectedTicket.breakTime ? `${Math.floor(selectedTicket.breakTime / 60)} mins` : '0 mins'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Total Bilable Time</label>
+                  <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.totalTime ? `${(selectedTicket.totalTime / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
+                </div>
+
+                <div className="detail-item--full divider"></div>
+                <div className="detail-item--full" style={{ background: 'var(--primary-bg, #f5f3ff)', padding: '15px', borderRadius: '10px', border: '1px solid var(--primary-color, #a78bfa)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
+                  <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>{selectedTicket.currency} {parseFloat(selectedTicket.total_cost || 0).toFixed(2)}</span>
                 </div>
 
                 <div className="detail-item--full divider"></div>
