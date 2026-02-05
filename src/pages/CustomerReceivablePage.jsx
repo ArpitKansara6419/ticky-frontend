@@ -38,8 +38,6 @@ const CustomerReceivablePage = () => {
     const [paymentFilter, setPaymentFilter] = useState('Pending'); // Pending, Processing, Completed
 
     // Modal / Detailed View
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
-    const [customerTickets, setCustomerTickets] = useState([]);
     const [selectedTicketIds, setSelectedTicketIds] = useState([]);
     const [creating, setCreating] = useState(false);
     const [invoiceForm, setInvoiceForm] = useState({
@@ -63,7 +61,7 @@ const CustomerReceivablePage = () => {
     const fetchUnbilled = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/receivables/unbilled`);
+            const res = await fetch(`${API_BASE_URL}/receivables/tickets/unbilled`);
             if (res.ok) setUnbilledList(await res.json());
         } catch (e) { console.error(e); }
         setLoading(false);
@@ -78,18 +76,6 @@ const CustomerReceivablePage = () => {
         setLoading(false);
     };
 
-    const openInvoiceModal = async (customer) => {
-        setSelectedCustomer(customer);
-        try {
-            const res = await fetch(`${API_BASE_URL}/receivables/customer/${customer.id}/tickets`);
-            if (res.ok) {
-                const tickets = await res.json();
-                setCustomerTickets(tickets);
-                setSelectedTicketIds(tickets.map(t => t.id)); // Select all by default
-            }
-        } catch (e) { console.error(e); }
-    };
-
     const toggleTicket = (id) => {
         setSelectedTicketIds(prev =>
             prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
@@ -97,17 +83,20 @@ const CustomerReceivablePage = () => {
     };
 
     const calculateSelectedTotal = () => {
-        return customerTickets
+        return unbilledList
             .filter(t => selectedTicketIds.includes(t.id))
             .reduce((sum, t) => sum + parseFloat(t.total_cost || 0), 0)
             .toFixed(2);
     };
 
     const handleCreateInvoice = async () => {
-        if (!selectedCustomer || selectedTicketIds.length === 0) {
+        if (selectedTicketIds.length === 0) {
             alert('Please select at least one ticket.');
             return;
         }
+
+        const firstTicket = unbilledList.find(t => t.id === selectedTicketIds[0]);
+        if (!firstTicket) return;
 
         setCreating(true);
         try {
@@ -117,7 +106,7 @@ const CustomerReceivablePage = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    customer_id: selectedCustomer.id,
+                    customer_id: firstTicket.customer_id,
                     amount,
                     due_date: invoiceForm.dueDate,
                     notes: invoiceForm.notes,
@@ -126,7 +115,7 @@ const CustomerReceivablePage = () => {
             });
 
             if (res.ok) {
-                setSelectedCustomer(null);
+                setSelectedTicketIds([]);
                 fetchStats();
                 fetchUnbilled();
                 setActiveTab('invoices');
@@ -149,9 +138,10 @@ const CustomerReceivablePage = () => {
     const filteredUnbilled = useMemo(() => {
         const t = searchTerm.toLowerCase().trim();
         return unbilledList.filter(item => {
-            const name = (item.name || '').toLowerCase();
-            const company = (item.company || '').toLowerCase();
-            return name.includes(t) || company.includes(t);
+            const name = (item.customer_name || '').toLowerCase();
+            const company = (item.customer_company || '').toLowerCase();
+            const ticketId = (item.id || '').toString();
+            return name.includes(t) || company.includes(t) || ticketId.includes(t);
         });
     }, [unbilledList, searchTerm]);
 
@@ -233,42 +223,77 @@ const CustomerReceivablePage = () => {
             ) : (
                 <div className="receivable-table-container-v3">
                     {activeTab === 'unbilled' ? (
-                        <table className="receivable-table-v3">
-                            <thead>
-                                <tr>
-                                    <th style={{ width: '40px' }}><input type="checkbox" readOnly /></th>
-                                    <th>Sr.</th>
-                                    <th>Customer / Name</th>
-                                    <th style={{ textAlign: 'center' }}>Tickets</th>
-                                    <th style={{ textAlign: 'center' }}>Total Amount</th>
-                                    <th>Status</th>
-                                    <th style={{ textAlign: 'center' }}>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUnbilled.map((item, idx) => (
-                                    <tr key={item.id}>
-                                        <td><input type="checkbox" readOnly /></td>
-                                        <td>{idx + 1}</td>
-                                        <td>
-                                            <div className="cust-info-v3">
-                                                <strong>{item.name}</strong>
-                                                <span>{item.company}</span>
-                                            </div>
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>{item.ticket_count}</td>
-                                        <td style={{ textAlign: 'center', fontWeight: '800', color: 'var(--primary-color)' }}>{selectedCurrency} {parseFloat(item.total_amount).toFixed(2)}</td>
-                                        <td><span className="pill-pending-v3">Pending</span></td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <button className="eye-btn-v3" onClick={() => openInvoiceModal(item)}><FiEye /></button>
-                                        </td>
+                        <>
+                            <table className="receivable-table-v3">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" checked={selectedTicketIds.length === filteredUnbilled.length && filteredUnbilled.length > 0} onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])} /></th>
+                                        <th>Sr.</th>
+                                        <th>Date</th>
+                                        <th>Engineer</th>
+                                        <th>Ticket</th>
+                                        <th>Hours</th>
+                                        <th>OT</th>
+                                        <th>OOH</th>
+                                        <th>WW</th>
+                                        <th>HW</th>
+                                        <th>Travel</th>
+                                        <th>Tool</th>
+                                        <th>Receivable</th>
+                                        <th>Payment Status</th>
+                                        <th style={{ textAlign: 'center' }}>Action</th>
                                     </tr>
-                                ))}
-                                {filteredUnbilled.length === 0 && (
-                                    <tr><td colSpan="7" className="empty-v3">No unbilled work found for your filters.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredUnbilled.map((item, idx) => {
+                                        const bd = item.breakdown || {};
+                                        return (
+                                            <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
+                                                <td><input type="checkbox" checked={selectedTicketIds.includes(item.id)} onChange={() => toggleTicket(item.id)} /></td>
+                                                <td>{idx + 1}</td>
+                                                <td>{new Date(item.task_start_date).toISOString().split('T')[0]}</td>
+                                                <td style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#475569' }}>{item.engineer_name || 'N/A'}</td>
+                                                <td style={{ color: '#2563eb', fontWeight: '700' }}>#{item.id}</td>
+                                                <td style={{ fontWeight: '600' }}>{bd.formattedHours || '00:00:00'}</td>
+                                                <td style={{ color: bd.otHours > 0 ? '#e11d48' : 'inherit', fontWeight: bd.otHours > 0 ? '700' : '400' }}>{bd.formattedOT || '--'}</td>
+                                                <td>{bd.ooh || 'No'}</td>
+                                                <td>{bd.ww || 'No'}</td>
+                                                <td>{bd.hw || 'No'}</td>
+                                                <td>{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
+                                                <td>{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
+                                                <td style={{ fontWeight: '900', color: 'var(--primary-v3)', fontSize: '14px' }}>
+                                                    {selectedCurrency} {parseFloat(bd.totalReceivable || item.total_cost).toFixed(2)}
+                                                </td>
+                                                <td><span className="pill-pending-v3">Pending</span></td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <button className="eye-btn-v3" title="View Ticket Details"><FiEye /></button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {filteredUnbilled.length === 0 && (
+                                        <tr><td colSpan="15" className="empty-v3">No unbilled work found for your filters.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+
+                            <div className="receivable-footer-action-v3">
+                                <div className="footer-total-info-v3">
+                                    <span>Selected: <strong>{selectedTicketIds.length} items</strong></span>
+                                    <span>Total: <strong>{selectedCurrency} {calculateSelectedTotal()}</strong></span>
+                                </div>
+                                <div className="footer-btns-v3">
+                                    <button className="crm-btn-cancel-v3" onClick={() => setSelectedTicketIds([])}>Cancel</button>
+                                    <button
+                                        className="crm-btn-invoice-v3"
+                                        onClick={handleCreateInvoice}
+                                        disabled={selectedTicketIds.length === 0}
+                                    >
+                                        {creating ? 'Processing...' : `Create Invoice for ${calculateSelectedTotal()}`}
+                                    </button>
+                                </div>
+                            </div>
+                        </>
                     ) : (
                         <table className="receivable-table-v3">
                             <thead>
@@ -294,93 +319,12 @@ const CustomerReceivablePage = () => {
                                         </td>
                                     </tr>
                                 ))}
+                                {invoiceList.length === 0 && (
+                                    <tr><td colSpan="6" className="empty-v3">No invoice history found.</td></tr>
+                                )}
                             </tbody>
                         </table>
                     )}
-                </div>
-            )}
-
-            {/* Detailed Selection Modal (Matches image design) */}
-            {selectedCustomer && (
-                <div className="crm-overlay-v3" onClick={() => setSelectedCustomer(null)}>
-                    <div className="crm-modal-v3" onClick={e => e.stopPropagation()}>
-                        <div className="crm-modal-header-v3">
-                            <div className="modal-title-v3">
-                                <h3>Invoice Breakdown: {selectedCustomer.name}</h3>
-                                <p>Select specific tickets to generate a professional invoice.</p>
-                            </div>
-                            <button className="close-v3" onClick={() => setSelectedCustomer(null)}><FiX /></button>
-                        </div>
-
-                        <div className="crm-modal-body-v3">
-                            <div className="detailed-table-wrapper-v3">
-                                <table className="detailed-table-v3">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" checked={selectedTicketIds.length === customerTickets.length} onChange={(e) => setSelectedTicketIds(e.target.checked ? customerTickets.map(t => t.id) : [])} /></th>
-                                            <th>Sr.</th>
-                                            <th>Date</th>
-                                            <th>Engineer</th>
-                                            <th>Ticket</th>
-                                            <th>Hours</th>
-                                            <th>OT</th>
-                                            <th>OOH</th>
-                                            <th>WW</th>
-                                            <th>HW</th>
-                                            <th>Travel</th>
-                                            <th>Tool</th>
-                                            <th>Receivable</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {customerTickets.map((t, i) => {
-                                            const bd = t.breakdown || {};
-                                            return (
-                                                <tr key={t.id} className={selectedTicketIds.includes(t.id) ? 'selected' : ''}>
-                                                    <td><input type="checkbox" checked={selectedTicketIds.includes(t.id)} onChange={() => toggleTicket(t.id)} /></td>
-                                                    <td>{i + 1}</td>
-                                                    <td>{new Date(t.task_start_date).toISOString().split('T')[0]}</td>
-                                                    <td style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#475569' }}>{t.engineer_name || 'N/A'}</td>
-                                                    <td style={{ color: '#2563eb', fontWeight: '700' }}>#{t.id}</td>
-                                                    <td style={{ fontWeight: '600' }}>{bd.formattedHours || '00:00:00'}</td>
-                                                    <td style={{ color: bd.otHours > 0 ? '#e11d48' : 'inherit', fontWeight: bd.otHours > 0 ? '700' : '400' }}>{bd.formattedOT || '--'}</td>
-                                                    <td>{bd.ooh || 'No'}</td>
-                                                    <td>{bd.ww || 'No'}</td>
-                                                    <td>{bd.hw || 'No'}</td>
-                                                    <td>{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
-                                                    <td>{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
-                                                    <td style={{ fontWeight: '900', color: 'var(--primary-v3)', fontSize: '14px' }}>
-                                                        {selectedCurrency} {parseFloat(bd.totalReceivable || t.total_cost).toFixed(2)}
-                                                    </td>
-                                                    <td>
-                                                        <button className="eye-small-v3" title="View Ticket Details"><FiEye size={14} /></button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="crm-modal-footer-v3">
-                            <div className="total-indicator-v3">
-                                <span>Grand Total:</span>
-                                <strong>{selectedCurrency} {calculateSelectedTotal()}</strong>
-                            </div>
-                            <div className="footer-btns-v3">
-                                <button className="crm-btn-cancel-v3" onClick={() => setSelectedCustomer(null)}>Cancel</button>
-                                <button
-                                    className="crm-btn-invoice-v3"
-                                    onClick={handleCreateInvoice}
-                                    disabled={selectedTicketIds.length === 0}
-                                >
-                                    {creating ? 'Processing...' : `Create Invoice for ${calculateSelectedTotal()}`}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             )}
         </div>
