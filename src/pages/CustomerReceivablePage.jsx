@@ -17,11 +17,11 @@ const CURRENCIES = [
 ];
 
 const MONTHS = [
-    "January", "February", "March", "April", "May", "June",
+    "All Months", "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
 ];
 
-const YEARS = ["2024", "2025", "2026"];
+const YEARS = ["All Years", "2024", "2025", "2026"];
 
 const CustomerReceivablePage = () => {
     const [stats, setStats] = useState({ unbilled: 0, unpaid: 0, overdue: 0 });
@@ -33,11 +33,11 @@ const CustomerReceivablePage = () => {
 
     // Table Filters
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-    const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
-    const [paymentFilter, setPaymentFilter] = useState('Pending'); // Pending, Processing, Completed
+    const [selectedYear, setSelectedYear] = useState('All Years');
+    const [selectedMonth, setSelectedMonth] = useState('All Months');
+    const [paymentFilter, setPaymentFilter] = useState('Pending');
 
-    // Modal / Detailed View
+    // Modal / Selection
     const [selectedTicketIds, setSelectedTicketIds] = useState([]);
     const [creating, setCreating] = useState(false);
     const [invoiceForm, setInvoiceForm] = useState({
@@ -46,7 +46,13 @@ const CustomerReceivablePage = () => {
     });
 
     useEffect(() => {
+        console.log("Receivable Page Loaded. Hub Status: Unbilled Work");
         fetchStats();
+        fetchUnbilled();
+        fetchInvoices();
+    }, []);
+
+    useEffect(() => {
         if (activeTab === 'unbilled') fetchUnbilled();
         else fetchInvoices();
     }, [activeTab]);
@@ -55,25 +61,27 @@ const CustomerReceivablePage = () => {
         try {
             const res = await fetch(`${API_BASE_URL}/receivables/stats`);
             if (res.ok) setStats(await res.json());
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Stats Fetch Error:", e); }
     };
 
     const fetchUnbilled = async () => {
         setLoading(true);
         try {
             const res = await fetch(`${API_BASE_URL}/receivables/tickets/unbilled`);
-            if (res.ok) setUnbilledList(await res.json());
-        } catch (e) { console.error(e); }
+            if (res.ok) {
+                const data = await res.json();
+                console.log("Fetched Unbilled Tickets:", data.length);
+                setUnbilledList(data);
+            }
+        } catch (e) { console.error("Unbilled Fetch Error:", e); }
         setLoading(false);
     };
 
     const fetchInvoices = async () => {
-        setLoading(true);
         try {
             const res = await fetch(`${API_BASE_URL}/invoices`);
             if (res.ok) setInvoiceList(await res.json());
-        } catch (e) { console.error(e); }
-        setLoading(false);
+        } catch (e) { console.error("Invoice Fetch Error:", e); }
     };
 
     const toggleTicket = (id) => {
@@ -90,18 +98,13 @@ const CustomerReceivablePage = () => {
     };
 
     const handleCreateInvoice = async () => {
-        if (selectedTicketIds.length === 0) {
-            alert('Please select at least one ticket.');
-            return;
-        }
-
+        if (selectedTicketIds.length === 0) return;
         const firstTicket = unbilledList.find(t => t.id === selectedTicketIds[0]);
         if (!firstTicket) return;
 
         setCreating(true);
         try {
             const amount = calculateSelectedTotal();
-
             const res = await fetch(`${API_BASE_URL}/invoices/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -119,9 +122,7 @@ const CustomerReceivablePage = () => {
                 fetchStats();
                 fetchUnbilled();
                 setActiveTab('invoices');
-            } else {
-                alert('Failed to generate invoice.');
-            }
+            } else { alert('Failed to generate invoice.'); }
         } catch (e) { console.error(e); }
         setCreating(false);
     };
@@ -136,24 +137,33 @@ const CustomerReceivablePage = () => {
     };
 
     const filteredUnbilled = useMemo(() => {
-        const t = searchTerm.toLowerCase().trim();
+        const search = searchTerm.toLowerCase().trim();
         return unbilledList.filter(item => {
-            // Search filter
-            const name = (item.customer_name || '').toLowerCase();
-            const company = (item.customer_company || '').toLowerCase();
+            // 1. Search filter
+            const custName = (item.customer_name || '').toLowerCase();
+            const compName = (item.customer_company || '').toLowerCase();
+            const engName = (item.engineer_name || '').toLowerCase();
             const ticketId = (item.id || '').toString();
-            const matchesSearch = name.includes(t) || company.includes(t) || ticketId.includes(t);
+
+            const matchesSearch = !search ||
+                custName.includes(search) ||
+                compName.includes(search) ||
+                engName.includes(search) ||
+                ticketId.includes(search);
+
             if (!matchesSearch) return false;
 
-            // Date filter
-            const ticketDate = new Date(item.task_start_date);
-            const matchesYear = ticketDate.getFullYear().toString() === selectedYear;
-            const matchesMonth = MONTHS[ticketDate.getMonth()] === selectedMonth;
-            if (!matchesYear || !matchesMonth) return false;
+            // 2. Date filter (Permissive)
+            if (selectedYear === 'All Years' && selectedMonth === 'All Months') return true;
 
-            // Simple status filter (Mock for now as unbilled implies Pending/Processing)
-            // But we can filter by billing_status if we decide to show "Processing"
-            return true;
+            const tDate = new Date(item.task_start_date);
+            const y = tDate.getFullYear().toString();
+            const m = MONTHS[tDate.getMonth() + 1];
+
+            const matchesYear = (selectedYear === 'All Years' || y === selectedYear);
+            const matchesMonth = (selectedMonth === 'All Months' || m === selectedMonth);
+
+            return matchesYear && matchesMonth;
         });
     }, [unbilledList, searchTerm, selectedYear, selectedMonth]);
 
@@ -194,13 +204,6 @@ const CustomerReceivablePage = () => {
                 </div>
             </header>
 
-            {!selectedCurrency && (
-                <div className="receivable-alert-v3">
-                    <FiAlertCircle /> Please select a currency before proceeding.
-                    <button className="close-alert-v3"><FiX /></button>
-                </div>
-            )}
-
             <div className="receivable-stats-simple">
                 <div className="simple-stat-card">
                     <div className="icon-box-v3 icon--teal"><FiClock /></div>
@@ -226,7 +229,7 @@ const CustomerReceivablePage = () => {
             </div>
 
             <div className="receivable-tabs-v3">
-                <button className={activeTab === 'unbilled' ? 'active' : ''} onClick={() => setActiveTab('unbilled')}>Unbilled Work</button>
+                <button className={activeTab === 'unbilled' ? 'active' : ''} onClick={() => setActiveTab('unbilled')}>Unbilled Work ({unbilledList.length})</button>
                 <button className={activeTab === 'invoices' ? 'active' : ''} onClick={() => setActiveTab('invoices')}>Invoice History</button>
             </div>
 
@@ -240,20 +243,20 @@ const CustomerReceivablePage = () => {
                                 <thead>
                                     <tr>
                                         <th><input type="checkbox" checked={selectedTicketIds.length === filteredUnbilled.length && filteredUnbilled.length > 0} onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])} /></th>
-                                        <th>Sr.</th>
-                                        <th>Date</th>
-                                        <th>Engineer</th>
-                                        <th>Ticket</th>
-                                        <th>Hours</th>
+                                        <th>SR.</th>
+                                        <th>DATE</th>
+                                        <th>ENGINEER</th>
+                                        <th>TICKET</th>
+                                        <th>HOURS</th>
                                         <th>OT</th>
                                         <th>OOH</th>
                                         <th>WW</th>
                                         <th>HW</th>
-                                        <th>Travel</th>
-                                        <th>Tool</th>
-                                        <th>Receivable</th>
-                                        <th>Payment Status</th>
-                                        <th style={{ textAlign: 'center' }}>Action</th>
+                                        <th>TRAVEL</th>
+                                        <th>TOOL</th>
+                                        <th>RECEIVABLE</th>
+                                        <th>PAYMENT STATUS</th>
+                                        <th style={{ textAlign: 'center' }}>ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody>
