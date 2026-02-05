@@ -127,10 +127,12 @@ const CustomerReceivablePage = () => {
     };
 
     const filteredUnbilled = useMemo(() => {
-        return unbilledList.filter(item =>
-            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.company.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        const t = searchTerm.toLowerCase().trim();
+        return unbilledList.filter(item => {
+            const name = (item.name || '').toLowerCase();
+            const company = (item.company || '').toLowerCase();
+            return name.includes(t) || company.includes(t);
+        });
     }, [unbilledList, searchTerm]);
 
     const filteredInvoices = useMemo(() => {
