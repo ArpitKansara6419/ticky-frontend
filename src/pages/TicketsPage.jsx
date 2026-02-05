@@ -768,6 +768,7 @@ function TicketsPage() {
         setAgreedRate(parsedLead.agreedRate || '')
         setTravelCostPerDay(parsedLead.travelCostPerDay != null ? String(parsedLead.travelCostPerDay) : '')
         setTotalCost(parsedLead.totalCost != null ? String(parsedLead.totalCost) : '')
+        setBillingType(parsedLead.billingType || 'Hourly')
 
         setViewMode('form')
       }
