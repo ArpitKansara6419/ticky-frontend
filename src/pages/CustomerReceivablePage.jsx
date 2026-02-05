@@ -143,6 +143,38 @@ const CustomerReceivablePage = () => {
         );
     }, [invoiceList, searchTerm]);
 
+    const [expandedTicketId, setExpandedTicketId] = useState(null);
+
+    const toggleBreakdown = (e, id) => {
+        e.stopPropagation();
+        setExpandedTicketId(prev => (prev === id ? null : id));
+    };
+
+    const getMathBreakdown = (t) => {
+        const hours = (t.total_time / 3600) || 0;
+        const rate = parseFloat(t.hourly_rate || 0);
+        const billingType = t.billing_type || 'Hourly';
+
+        // Basic math mock-up for UI (actual math happened on backend)
+        let parts = [];
+        if (billingType === 'Hourly') {
+            const displayHours = Math.max(2, hours);
+            parts.push({ label: 'Base Billed Hours', value: `${displayHours.toFixed(2)}h @ ${rate.toFixed(2)}/h` });
+            if (hours < 2) parts.push({ label: 'Note', value: 'Min. 2h billing applied' });
+        } else if (billingType === 'Half Day + Hourly') {
+            parts.push({ label: 'Half Day Rate', value: `$${parseFloat(t.half_day_rate || 0).toFixed(2)}` });
+            if (hours > 4) parts.push({ label: 'Extra Hours', value: `${(hours - 4).toFixed(2)}h @ Hourly Rate` });
+        } else if (billingType === 'Full Day + OT') {
+            parts.push({ label: 'Full Day Rate', value: `$${parseFloat(t.full_day_rate || 0).toFixed(2)}` });
+            if (hours > 8) parts.push({ label: 'Overtime', value: `${(hours - 8).toFixed(2)}h @ 1.5x Rate` });
+        }
+
+        if (t.tool_cost > 0) parts.push({ label: 'Tool Cost', value: `$${parseFloat(t.tool_cost).toFixed(2)}` });
+        if (t.travel_cost_per_day > 0) parts.push({ label: 'Travel Cost', value: `$${parseFloat(t.travel_cost_per_day).toFixed(2)}` });
+
+        return parts;
+    };
+
     return (
         <div className="receivable-page">
             <header className="receivable-header">
@@ -319,26 +351,53 @@ const CustomerReceivablePage = () => {
                                     <span>{selectedTicketIds.length} Selected</span>
                                 </div>
                                 {customerTickets.map(t => (
-                                    <div
-                                        key={t.id}
-                                        className={`crm-ticket-row ${selectedTicketIds.includes(t.id) ? 'crm-row--selected' : ''}`}
-                                        onClick={() => toggleTicket(t.id)}
-                                    >
-                                        <div className="crm-row-check">
-                                            <div className={`custom-checkbox ${selectedTicketIds.includes(t.id) ? 'checked' : ''}`}>
-                                                {selectedTicketIds.includes(t.id) && <FiCheckCircle />}
+                                    <div key={t.id} className="crm-ticket-container">
+                                        <div
+                                            className={`crm-ticket-row ${selectedTicketIds.includes(t.id) ? 'crm-row--selected' : ''}`}
+                                            onClick={() => toggleTicket(t.id)}
+                                        >
+                                            <div className="crm-row-check">
+                                                <div className={`custom-checkbox ${selectedTicketIds.includes(t.id) ? 'checked' : ''}`}>
+                                                    {selectedTicketIds.includes(t.id) && <FiCheckCircle />}
+                                                </div>
+                                            </div>
+                                            <div className="crm-row-meta">
+                                                <strong>{t.task_name}</strong>
+                                                <p>
+                                                    {new Date(t.task_start_date).toLocaleDateString()} • {t.billing_type || 'Hourly'}
+                                                    {t.total_time ? ` • ${(t.total_time / 3600).toFixed(2)}h billable` : ''}
+                                                </p>
+                                            </div>
+                                            <div className="crm-row-actions-v2">
+                                                <div className="crm-row-amount">
+                                                    ${parseFloat(t.total_cost || 0).toFixed(2)}
+                                                </div>
+                                                <button
+                                                    className={`crm-breakdown-btn ${expandedTicketId === t.id ? 'active' : ''}`}
+                                                    onClick={(e) => toggleBreakdown(e, t.id)}
+                                                    title="View Calculation Math"
+                                                >
+                                                    <FiClock />
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="crm-row-meta">
-                                            <strong>{t.task_name}</strong>
-                                            <p>
-                                                {new Date(t.task_start_date).toLocaleDateString()} • {t.billing_type || 'Hourly'}
-                                                {t.total_time ? ` • ${(t.total_time / 3600).toFixed(2)}h billable` : ''}
-                                            </p>
-                                        </div>
-                                        <div className="crm-row-amount">
-                                            ${parseFloat(t.total_cost || 0).toFixed(2)}
-                                        </div>
+
+                                        {expandedTicketId === t.id && (
+                                            <div className="crm-math-expanded">
+                                                <div className="math-inner">
+                                                    {getMathBreakdown(t).map((p, i) => (
+                                                        <div key={i} className="math-line">
+                                                            <span className="math-label">{p.label}</span>
+                                                            <span className="math-value">{p.value}</span>
+                                                        </div>
+                                                    ))}
+                                                    <div className="math-line math-total">
+                                                        <span>Calculated Total</span>
+                                                        <span>${parseFloat(t.total_cost || 0).toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
