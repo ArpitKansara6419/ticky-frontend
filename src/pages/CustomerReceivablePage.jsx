@@ -237,27 +237,8 @@ const CustomerReceivablePage = () => {
                 <div className="loading-v3"><div className="spinner-v3"></div><p>Syncing records...</p></div>
             ) : (
                 <div className="receivable-table-container-v3">
-                    {/* Debug View for troubleshooting */}
-                    {searchTerm === 'debug' && (
-                        <div style={{ padding: '10px', background: '#f1f5f9', fontSize: '12px', fontFamily: 'monospace', maxHeight: '200px', overflow: 'auto' }}>
-                            <p><strong>Debug Data (First 3 items):</strong></p>
-                            <pre>{JSON.stringify(unbilledList.slice(0, 3), null, 2)}</pre>
-                            <p><strong>Stats:</strong> {JSON.stringify(stats)}</p>
-                        </div>
-                    )}
-
                     {activeTab === 'unbilled' ? (
                         <>
-
-                            {/* Mismatch Warning */}
-                            {filteredUnbilled.length === 0 && parseFloat(stats.unbilled) > 0 && selectedYear !== 'All Years' && (
-                                <div style={{ padding: '10px 20px', background: '#fffbeb', borderLeft: '4px solid #f59e0b', color: '#92400e', marginBottom: '10px' }}>
-                                    <FiAlertCircle style={{ verticalAlign: 'middle', marginRight: '5px' }} />
-                                    You have <strong>{selectedCurrency} {stats.unbilled}</strong> in unbilled work, but no tickets are shown.
-                                    Try switching the Year filter to <strong>All Years</strong>.
-                                </div>
-                            )}
-
                             <table className="receivable-table-v3">
                                 <thead>
                                     <tr>
