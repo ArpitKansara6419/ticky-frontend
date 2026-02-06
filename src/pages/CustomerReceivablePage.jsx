@@ -45,6 +45,12 @@ const CustomerReceivablePage = () => {
         notes: ''
     });
 
+    const [detailTicket, setDetailTicket] = useState(null);
+
+    const handleOpenDetails = (ticket) => {
+        setDetailTicket(ticket);
+    };
+
     useEffect(() => {
         console.log("Receivable Page Loaded. Hub Status: Unbilled Work");
         fetchStats();
@@ -99,8 +105,15 @@ const CustomerReceivablePage = () => {
 
     const handleCreateInvoice = async () => {
         if (selectedTicketIds.length === 0) return;
-        const firstTicket = unbilledList.find(t => t.id === selectedTicketIds[0]);
-        if (!firstTicket) return;
+
+        const selectedTickets = unbilledList.filter(t => selectedTicketIds.includes(t.id));
+        const firstCustId = selectedTickets[0].customer_id;
+        const isMixed = selectedTickets.some(t => t.customer_id !== firstCustId);
+
+        if (isMixed) {
+            alert('Selection Error: You cannot generate a single invoice for multiple customers. Please select tickets from ONLY one customer.');
+            return;
+        }
 
         setCreating(true);
         try {
@@ -109,7 +122,7 @@ const CustomerReceivablePage = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    customer_id: firstTicket.customer_id,
+                    customer_id: firstCustId,
                     amount,
                     due_date: invoiceForm.dueDate,
                     notes: invoiceForm.notes,
@@ -134,6 +147,70 @@ const CustomerReceivablePage = () => {
             fetchStats();
             fetchInvoices();
         } catch (e) { console.error(e); }
+    };
+
+    const handlePrintInvoice = (invoice) => {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Invoice #${invoice.invoice_number}</title>
+                <style>
+                    body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
+                    .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+                    .logo { font-size: 24px; font-weight: bold; color: #4f46e5; }
+                    .invoice-title { font-size: 32px; font-weight: bold; text-align: right; }
+                    .meta { text-align: right; color: #666; font-size: 14px; margin-top: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+                    th { text-align: left; border-bottom: 2px solid #ddd; padding: 10px; color: #555; }
+                    td { border-bottom: 1px solid #eee; padding: 10px; }
+                    .total-box { margin-top: 30px; text-align: right; font-size: 20px; font-weight: bold; }
+                    .footer { margin-top: 50px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="logo">Awokta.</div>
+                    <div>
+                        <div class="invoice-title">INVOICE</div>
+                        <div class="meta">#${invoice.invoice_number}<br>Date: ${new Date(invoice.issue_date).toLocaleDateString()}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 40px;">
+                    <strong>Bill To:</strong><br>
+                    ${invoice.customer_name}<br>
+                    ${invoice.customer_company || ''}
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Professional Services (Consolidated)</td>
+                            <td>${selectedCurrency} ${parseFloat(invoice.amount).toFixed(2)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="total-box">
+                    Total: ${selectedCurrency} ${parseFloat(invoice.amount).toFixed(2)}
+                </div>
+
+                <div class="footer">
+                    Thank you for your business.<br>
+                    Payment is due within 30 days.
+                </div>
+                <script>window.print();</script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     const filteredUnbilled = useMemo(() => {
@@ -304,7 +381,7 @@ const CustomerReceivablePage = () => {
                                                 </td>
                                                 <td><span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>PENDING</span></td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                    <button className="eye-btn-v3" style={{ background: 'transparent' }} title="View Ticket Details"><FiEye /></button>
+                                                    <button className="eye-btn-v3" style={{ background: 'transparent' }} title="View Ticket Details" onClick={() => handleOpenDetails(item)}><FiEye /></button>
                                                 </td>
                                             </tr>
                                         );
@@ -366,11 +443,21 @@ const CustomerReceivablePage = () => {
                                             </span>
                                         </td>
                                         <td>
-                                            {inv.status !== 'Paid' && (
-                                                <button className="btn-secondary-premium" style={{ padding: '6px 16px', fontSize: '12px' }} onClick={() => handleMarkPaid(inv.id)}>
-                                                    Mark as Paid
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    className="btn-secondary-premium"
+                                                    style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                    onClick={() => handlePrintInvoice(inv)}
+                                                    title="Download Invoice"
+                                                >
+                                                    <FiDownload /> Print
                                                 </button>
-                                            )}
+                                                {inv.status !== 'Paid' && (
+                                                    <button className="btn-secondary-premium" style={{ padding: '6px 16px', fontSize: '12px' }} onClick={() => handleMarkPaid(inv.id)}>
+                                                        Mark Paid
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -380,6 +467,66 @@ const CustomerReceivablePage = () => {
                             </tbody>
                         </table>
                     )}
+                </div>
+            )}
+
+            {/* --- Ticket Detail Modal --- */}
+            {detailTicket && (
+                <div className="modal-overlay-premium" onClick={() => setDetailTicket(null)}>
+                    <div className="modal-content-premium" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header-premium">
+                            <h3>Ticket Cost Breakdown</h3>
+                            <button className="close-btn-premium" onClick={() => setDetailTicket(null)}><FiX /></button>
+                        </div>
+                        <div className="modal-body-premium">
+                            <div className="detail-grid-premium">
+                                <div className="detail-item">
+                                    <label>Ticket ID</label>
+                                    <span>#{detailTicket.id}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <label>Customer</label>
+                                    <span>{detailTicket.customer_name}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <label>Task Name</label>
+                                    <span>{detailTicket.task_name}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <label>Engineer</label>
+                                    <span>{detailTicket.engineer_name}</span>
+                                </div>
+                            </div>
+
+                            <hr className="divider-premium" />
+
+                            <div className="breakdown-list-premium">
+                                <div className="breakdown-row">
+                                    <span>Base Rate Cost ({detailTicket.billing_type})</span>
+                                    <span>{selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="breakdown-row">
+                                    <span>Overtime Hours ({detailTicket.breakdown?.formattedOT || '00:00'})</span>
+                                    <span style={{ color: '#ef4444' }}>+ {selectedCurrency} {(detailTicket.breakdown?.otHours * detailTicket.hourly_rate * 0.5 || 0).toFixed(2)} (Premium)</span>
+                                </div>
+                                <div className="breakdown-row">
+                                    <span>Travel Charges</span>
+                                    <span>+ {selectedCurrency} {parseFloat(detailTicket.breakdown?.travelCost || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="breakdown-row">
+                                    <span>Tool / Hardware Charges</span>
+                                    <span>+ {selectedCurrency} {parseFloat(detailTicket.breakdown?.toolCost || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="breakdown-row total">
+                                    <span>Total Value</span>
+                                    <span>{selectedCurrency} {parseFloat(detailTicket.breakdown?.totalReceivable || detailTicket.total_cost).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="modal-footer-premium">
+                            <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Close Details</button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
