@@ -269,7 +269,14 @@ const CustomerReceivablePage = () => {
                                                 <td>{new Date(item.task_start_date).toISOString().split('T')[0]}</td>
                                                 <td style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#475569' }}>{item.engineer_name || 'N/A'}</td>
                                                 <td style={{ color: '#2563eb', fontWeight: '700' }}>#{item.id}</td>
-                                                <td style={{ fontWeight: '600' }}>{bd.formattedHours || '00:00:00'}</td>
+                                                <td style={{ fontWeight: '600' }}>
+                                                    {bd.formattedHours || '00:00:00'}
+                                                    {parseFloat(bd.billedHours || 0) > parseFloat(bd.totalHours || 0) && (
+                                                        <small style={{ display: 'block', fontSize: '10px', color: 'var(--accent-v3)' }}>
+                                                            Billed: {bd.billedHours}h
+                                                        </small>
+                                                    )}
+                                                </td>
                                                 <td style={{ color: bd.otHours > 0 ? '#e11d48' : 'inherit', fontWeight: bd.otHours > 0 ? '700' : '400' }}>
                                                     {bd.formattedOT || '--'}
                                                     {bd.otHours > 0 && <small style={{ display: 'block', fontSize: '10px' }}>1.5x Applied</small>}

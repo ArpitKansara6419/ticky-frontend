@@ -803,6 +803,39 @@ function TicketsPage() {
   }, [leads, countriesList])
 
   // Handle external edit request (e.g. from Leads Page)
+  // Auto-populate when leadId changes (e.g. from dropdown)
+  useEffect(() => {
+    if (!leadId) return
+    const lead = leads.find(l => String(l.id) === String(leadId))
+    if (lead) {
+      console.log("Populating ticket form from selected lead:", lead.id)
+      setTaskName(lead.taskName || '')
+      const latestDate = lead.followUpDate || lead.taskStartDate;
+      const latestEndDate = lead.taskEndDate || latestDate;
+      setTaskStartDate(latestDate ? String(latestDate).split('T')[0] : '')
+      setTaskEndDate(latestEndDate ? String(latestEndDate).split('T')[0] : '')
+      setTaskTime(lead.taskTime?.slice(0, 5) || '00:00')
+      setScopeOfWork(lead.scopeOfWork || '')
+      setApartment(lead.apartment || '')
+      setAddressLine1(lead.addressLine1 || '')
+      setAddressLine2(lead.addressLine2 || '')
+      setCity(lead.city || '')
+      setCountry(lead.country || '')
+      setZipCode(lead.zipCode || '')
+      setTimezone(lead.timezone || '')
+      setTools(lead.toolsRequired || '')
+      setCurrency(lead.currency || 'USD')
+      setHourlyRate(lead.hourlyRate != null ? String(lead.hourlyRate) : '')
+      setHalfDayRate(lead.halfDayRate != null ? String(lead.halfDayRate) : '')
+      setFullDayRate(lead.fullDayRate != null ? String(lead.fullDayRate) : '')
+      setMonthlyRate(lead.monthlyRate != null ? String(lead.monthlyRate) : '')
+      setAgreedRate(lead.agreedRate || '')
+      setTravelCostPerDay(lead.travelCostPerDay != null ? String(lead.travelCostPerDay) : '')
+      setTotalCost(lead.totalCost != null ? String(lead.totalCost) : '')
+      setBillingType(lead.billingType || 'Hourly')
+    }
+  }, [leadId, leads])
+
   useEffect(() => {
     const ticketIdToEdit = localStorage.getItem('editTicketId')
     const syncLeadToTicket = localStorage.getItem('syncLeadToTicket')
