@@ -35,7 +35,6 @@ const CustomerReceivablePage = () => {
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
     const [selectedYear, setSelectedYear] = useState('All Years');
     const [selectedMonth, setSelectedMonth] = useState('All Months');
-    const [paymentFilter, setPaymentFilter] = useState('Pending');
 
     // Modal / Selection
     const [selectedTicketIds, setSelectedTicketIds] = useState([]);
@@ -99,7 +98,10 @@ const CustomerReceivablePage = () => {
     const calculateSelectedTotal = () => {
         return unbilledList
             .filter(t => selectedTicketIds.includes(t.id))
-            .reduce((sum, t) => sum + parseFloat(t.total_cost || 0), 0)
+            .reduce((sum, t) => {
+                const val = t.breakdown?.totalReceivable || t.total_cost || 0;
+                return sum + parseFloat(val);
+            }, 0)
             .toFixed(2);
     };
 
@@ -248,31 +250,41 @@ const CustomerReceivablePage = () => {
         <div className="receivable-page">
             <header className="receivable-header-premium">
                 <div className="header-top-premium">
-                    <div className="breadcrumb-premium">Home &gt; Customer &gt; Customer Invoices</div>
+                    <div className="breadcrumb-premium">Accounting &gt; Receivables</div>
                     <div className="user-badge-premium">
-                        <FiUser style={{ marginRight: '8px' }} />
-                        <span>Aimbot </span>
-                        <span style={{ margin: '0 4px', color: '#cbd5e1' }}>|</span>
-                        <small style={{ color: '#64748b' }}>#AIM-C-104</small>
+                        <FiUser className="u-icon" />
+                        <span>Admin Portal</span>
+                        <div className="status-dot-active"></div>
                     </div>
                 </div>
 
                 <div className="header-main-premium">
                     <div className="receivable-title-premium">
-                        <h2><FiDollarSign style={{ color: 'var(--crm-primary)' }} /> Customer Receivables</h2>
-                        <p>Manage unbilled tickets, generate invoices, and track payments.</p>
+                        <h2><FiDollarSign className="title-icon-glow" /> Customer Receivables</h2>
+                        <p>Real-time financial tracking for all resolved tickets and generated invoices.</p>
                     </div>
 
-                    <div className="receivable-filters-premium">
-                        <select className="filter-select" value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
-                            {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                        </select>
-                        <select className="filter-select" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
-                            {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                        <select className="filter-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
-                            {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
+                    <div className="header-actions-premium">
+                        <div className="search-box-premium">
+                            <FiSearch className="search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Search Client, Ticket OR Engineer..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="receivable-filters-premium">
+                            <select className="filter-select" value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
+                                {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                            <select className="filter-select" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+                                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                            <select className="filter-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                                {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </header>
