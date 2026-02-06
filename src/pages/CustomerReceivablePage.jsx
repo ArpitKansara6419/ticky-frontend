@@ -248,10 +248,6 @@ const CustomerReceivablePage = () => {
 
                     {activeTab === 'unbilled' ? (
                         <>
-                            <div style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', marginBottom: '8px', fontSize: '13px' }}>
-                                DEBUG: Total Unbilled fetched: <strong>{unbilledList.length}</strong> | Filtered: <strong>{filteredUnbilled.length}</strong> |
-                                Current Filter: Year={selectedYear}, Month={selectedMonth}
-                            </div>
 
                             {/* Mismatch Warning */}
                             {filteredUnbilled.length === 0 && parseFloat(stats.unbilled) > 0 && selectedYear !== 'All Years' && (
