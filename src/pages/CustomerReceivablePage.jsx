@@ -169,94 +169,102 @@ const CustomerReceivablePage = () => {
 
     return (
         <div className="receivable-page">
-            <header className="receivable-header-v3">
-                <div className="header-top-v3">
-                    <div className="breadcrumb-v3">Home &gt; Customer &gt; Customer Invoices</div>
-                    <div className="user-badge-v3">
+            <header className="receivable-header-premium">
+                <div className="header-top-premium">
+                    <div className="breadcrumb-premium">Home &gt; Customer &gt; Customer Invoices</div>
+                    <div className="user-badge-premium">
+                        <FiUser style={{ marginRight: '8px' }} />
                         <span>Aimbot </span>
-                        <small>#AIM-C-104</small>
-                        <div className="avatar-small-v3"><FiUser /></div>
+                        <span style={{ margin: '0 4px', color: '#cbd5e1' }}>|</span>
+                        <small style={{ color: '#64748b' }}>#AIM-C-104</small>
                     </div>
                 </div>
 
-                <div className="header-main-v3">
-                    <div className="receivable-title-v3">
-                        <h2><FiDollarSign /> Customer Receivables</h2>
+                <div className="header-main-premium">
+                    <div className="receivable-title-premium">
+                        <h2><FiDollarSign style={{ color: 'var(--crm-primary)' }} /> Customer Receivables</h2>
+                        <p>Manage unbilled tickets, generate invoices, and track payments.</p>
                     </div>
 
-                    <div className="receivable-filters-v3">
-                        <select value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
+                    <div className="receivable-filters-premium">
+                        <select className="filter-select" value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
                             {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
-                        <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+                        <select className="filter-select" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
                             {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
-                        <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                        <select className="filter-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
                             {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
-
-                        <div className="status-toggle-v3">
-                            <button className={paymentFilter === 'Pending' ? 'active' : ''} onClick={() => setPaymentFilter('Pending')}>Pending</button>
-                            <button className={paymentFilter === 'Processing' ? 'active' : ''} onClick={() => setPaymentFilter('Processing')}>Processing</button>
-                            <button className={paymentFilter === 'Completed' ? 'active' : ''} onClick={() => setPaymentFilter('Completed')}>Completed</button>
-                        </div>
                     </div>
                 </div>
             </header>
 
-            <div className="receivable-stats-simple">
-                <div className="simple-stat-card">
-                    <div className="icon-box-v3 icon--teal"><FiClock /></div>
-                    <div className="stat-info-v3">
+            <div className="stats-grid-premium">
+                <div className="stat-card-premium">
+                    <div className="stat-icon blue"><FiClock /></div>
+                    <div className="stat-content">
                         <h3>{selectedCurrency} {parseFloat(stats.unbilled).toLocaleString()}</h3>
                         <p>Work To Be Billed</p>
                     </div>
                 </div>
-                <div className="simple-stat-card">
-                    <div className="icon-box-v3 icon--gold"><FiFileText /></div>
-                    <div className="stat-info-v3">
+                <div className="stat-card-premium">
+                    <div className="stat-icon amber"><FiFileText /></div>
+                    <div className="stat-content">
                         <h3>{selectedCurrency} {parseFloat(stats.unpaid).toLocaleString()}</h3>
                         <p>Unpaid Invoices</p>
                     </div>
                 </div>
-                <div className="simple-stat-card">
-                    <div className="icon-box-v3 icon--green"><FiCheckCircle /></div>
-                    <div className="stat-info-v3">
+                <div className="stat-card-premium">
+                    <div className="stat-icon emerald"><FiCheckCircle /></div>
+                    <div className="stat-content">
                         <h3>{selectedCurrency} {parseFloat(stats.overdue || 0).toLocaleString()}</h3>
                         <p>Total Overdue</p>
                     </div>
                 </div>
             </div>
 
-            <div className="receivable-tabs-v3">
-                <button className={activeTab === 'unbilled' ? 'active' : ''} onClick={() => setActiveTab('unbilled')}>Unbilled Work ({unbilledList.length})</button>
-                <button className={activeTab === 'invoices' ? 'active' : ''} onClick={() => setActiveTab('invoices')}>Invoice History</button>
+            <div className="tabs-container-premium">
+                <button className={`tab-btn-premium ${activeTab === 'unbilled' ? 'active' : ''}`} onClick={() => setActiveTab('unbilled')}>
+                    Unbilled Work <span className="tab-badge">{unbilledList.length}</span>
+                </button>
+                <button className={`tab-btn-premium ${activeTab === 'invoices' ? 'active' : ''}`} onClick={() => setActiveTab('invoices')}>
+                    Invoice History
+                </button>
             </div>
 
             {loading ? (
-                <div className="loading-v3"><div className="spinner-v3"></div><p>Syncing records...</p></div>
+                <div className="loader-container">
+                    <div className="spinner-premium"></div>
+                    <p>Syncing financial records...</p>
+                </div>
             ) : (
-                <div className="receivable-table-container-v3">
+                <div className="table-card-premium">
                     {activeTab === 'unbilled' ? (
                         <>
-                            <table className="receivable-table-v3">
+                            <table className="table-premium">
                                 <thead>
                                     <tr>
-                                        <th><input type="checkbox" checked={selectedTicketIds.length === filteredUnbilled.length && filteredUnbilled.length > 0} onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])} /></th>
+                                        <th style={{ width: '40px' }}>
+                                            <input type="checkbox"
+                                                checked={selectedTicketIds.length === filteredUnbilled.length && filteredUnbilled.length > 0}
+                                                onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])}
+                                            />
+                                        </th>
                                         <th>SR.</th>
-                                        <th>DATE</th>
-                                        <th>ENGINEER</th>
-                                        <th>TICKET</th>
-                                        <th>HOURS</th>
+                                        <th>Date</th>
+                                        <th>Engineer</th>
+                                        <th>Ticket ID</th>
+                                        <th>Hours</th>
                                         <th>OT</th>
                                         <th>OOH</th>
-                                        <th>WW</th>
-                                        <th>HW</th>
-                                        <th>TRAVEL</th>
-                                        <th>TOOL</th>
-                                        <th>RECEIVABLE</th>
-                                        <th>PAYMENT STATUS</th>
-                                        <th style={{ textAlign: 'center' }}>ACTION</th>
+                                        <th>Weekend</th>
+                                        <th>Holiday</th>
+                                        <th>Travel</th>
+                                        <th>Tool</th>
+                                        <th>Receivable</th>
+                                        <th>Status</th>
+                                        <th style={{ textAlign: 'center' }}>Details</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -265,71 +273,75 @@ const CustomerReceivablePage = () => {
                                         return (
                                             <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
                                                 <td><input type="checkbox" checked={selectedTicketIds.includes(item.id)} onChange={() => toggleTicket(item.id)} /></td>
-                                                <td>{idx + 1}</td>
-                                                <td>{new Date(item.task_start_date).toISOString().split('T')[0]}</td>
-                                                <td style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#475569' }}>{item.engineer_name || 'N/A'}</td>
-                                                <td style={{ color: '#2563eb', fontWeight: '700' }}>#{item.id}</td>
-                                                <td style={{ fontWeight: '600' }}>
-                                                    {bd.formattedHours || '00:00:00'}
+                                                <td style={{ color: '#9ca3af', fontWeight: '500' }}>{String(idx + 1).padStart(2, '0')}</td>
+                                                <td style={{ fontWeight: '500' }}>{new Date(item.task_start_date).toISOString().split('T')[0]}</td>
+                                                <td style={{ fontWeight: '600', color: '#1e293b' }}>{item.engineer_name || 'N/A'}</td>
+                                                <td><span className="ticket-id">#{item.id}</span></td>
+                                                <td className="cost-cell">
+                                                    {bd.formattedHours || '00:00'}
                                                     {parseFloat(bd.billedHours || 0) > parseFloat(bd.totalHours || 0) && (
-                                                        <small style={{ display: 'block', fontSize: '10px', color: 'var(--accent-v3)' }}>
+                                                        <span style={{ display: 'block', fontSize: '10px', color: '#f59e0b', fontWeight: '600' }}>
                                                             Billed: {bd.billedHours}h
-                                                        </small>
+                                                        </span>
                                                     )}
                                                 </td>
-                                                <td style={{ color: bd.otHours > 0 ? '#e11d48' : 'inherit', fontWeight: bd.otHours > 0 ? '700' : '400' }}>
+                                                <td className="cost-cell">
                                                     {bd.formattedOT || '--'}
-                                                    {bd.otHours > 0 && <small style={{ display: 'block', fontSize: '10px' }}>1.5x Applied</small>}
+                                                    {bd.otHours > 0 && <span className="badge-ot">1.5x</span>}
                                                 </td>
-                                                <td>{bd.ooh || 'No'}</td>
-                                                <td style={{ color: bd.ww === 'Yes' ? '#059669' : 'inherit', fontWeight: bd.ww === 'Yes' ? '700' : '400' }}>
-                                                    {bd.ww || 'No'}
-                                                    {bd.ww === 'Yes' && <small style={{ display: 'block', fontSize: '10px' }}>2.0x Rate</small>}
+                                                <td style={{ color: bd.ooh === 'Yes' ? '#ef4444' : '#9ca3af' }}>{bd.ooh || 'No'}</td>
+                                                <td>
+                                                    <span style={{ color: bd.ww === 'Yes' ? '#059669' : '#9ca3af', fontWeight: bd.ww === 'Yes' ? '700' : '400' }}>
+                                                        {bd.ww || 'No'}
+                                                    </span>
+                                                    {bd.ww === 'Yes' && <span className="badge-ww">2.0x</span>}
                                                 </td>
-                                                <td>{bd.hw || 'No'}</td>
-                                                <td>{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
-                                                <td>{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
-                                                <td style={{ fontWeight: '900', color: 'var(--primary-v3)', fontSize: '14px' }}>
+                                                <td style={{ color: bd.hw === 'Yes' ? '#ef4444' : '#9ca3af' }}>{bd.hw || 'No'}</td>
+                                                <td className="cost-cell">{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
+                                                <td className="cost-cell">{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
+                                                <td style={{ fontWeight: '800', color: 'var(--crm-primary)', fontSize: '15px' }}>
                                                     {selectedCurrency} {parseFloat(bd.totalReceivable || item.total_cost).toFixed(2)}
                                                 </td>
-                                                <td><span className="pill-pending-v3">Pending</span></td>
+                                                <td><span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>PENDING</span></td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                    <button className="eye-btn-v3" title="View Ticket Details"><FiEye /></button>
+                                                    <button className="eye-btn-v3" style={{ background: 'transparent' }} title="View Ticket Details"><FiEye /></button>
                                                 </td>
                                             </tr>
                                         );
                                     })}
                                     {filteredUnbilled.length === 0 && (
-                                        <tr><td colSpan="15" className="empty-v3">No unbilled work found for your filters.</td></tr>
+                                        <tr><td colSpan="15" className="empty-state">No unbilled work found for the selected period.</td></tr>
                                     )}
                                 </tbody>
                             </table>
 
-                            <div className="receivable-footer-action-v3">
-                                <div className="footer-total-info-v3">
-                                    <span>Selected: <strong>{selectedTicketIds.length} items</strong></span>
-                                    <span>Total: <strong>{selectedCurrency} {calculateSelectedTotal()}</strong></span>
+                            {selectedTicketIds.length > 0 && (
+                                <div className="action-bar-premium">
+                                    <div className="selection-info">
+                                        Selected <strong>{selectedTicketIds.length}</strong> items for invoice generation
+                                        <span className="total-display">Total: {selectedCurrency} {calculateSelectedTotal()}</span>
+                                    </div>
+                                    <div>
+                                        <button className="btn-secondary-premium" onClick={() => setSelectedTicketIds([])}>Cancel Selection</button>
+                                        <button
+                                            className="btn-primary-premium"
+                                            onClick={handleCreateInvoice}
+                                            disabled={selectedTicketIds.length === 0}
+                                        >
+                                            {creating ? 'Processing...' : 'Generate Invoice'}
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="footer-btns-v3">
-                                    <button className="crm-btn-cancel-v3" onClick={() => setSelectedTicketIds([])}>Cancel</button>
-                                    <button
-                                        className="crm-btn-invoice-v3"
-                                        onClick={handleCreateInvoice}
-                                        disabled={selectedTicketIds.length === 0}
-                                    >
-                                        {creating ? 'Processing...' : `Create Invoice for ${calculateSelectedTotal()}`}
-                                    </button>
-                                </div>
-                            </div>
+                            )}
                         </>
                     ) : (
-                        <table className="receivable-table-v3">
+                        <table className="table-premium">
                             <thead>
                                 <tr>
                                     <th>Invoice #</th>
-                                    <th>Issued</th>
+                                    <th>Issued Date</th>
                                     <th>Customer</th>
-                                    <th>Amount</th>
+                                    <th>Total Amount</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -337,18 +349,33 @@ const CustomerReceivablePage = () => {
                             <tbody>
                                 {invoiceList.map(inv => (
                                     <tr key={inv.id}>
-                                        <td className="font-mono-v3">{inv.invoice_number}</td>
-                                        <td>{new Date(inv.issue_date).toLocaleDateString()}</td>
-                                        <td>{inv.customer_name}</td>
-                                        <td style={{ fontWeight: '800' }}>{selectedCurrency} {parseFloat(inv.amount).toFixed(2)}</td>
-                                        <td><span className={`pill-v3 status-${inv.status.toLowerCase()}`}>{inv.status}</span></td>
+                                        <td><span className="ticket-id" style={{ background: '#e0e7ff', color: '#4338ca' }}>{inv.invoice_number}</span></td>
+                                        <td style={{ fontWeight: '500' }}>{new Date(inv.issue_date).toLocaleDateString()}</td>
+                                        <td style={{ fontWeight: '600' }}>{inv.customer_name}</td>
+                                        <td style={{ fontWeight: '800', color: '#111827' }}>{selectedCurrency} {parseFloat(inv.amount).toFixed(2)}</td>
                                         <td>
-                                            {inv.status !== 'Paid' && <button className="pay-btn-v3" onClick={() => handleMarkPaid(inv.id)}>Mark Paid</button>}
+                                            <span style={{
+                                                background: inv.status === 'Paid' ? '#ecfdf5' : '#fef2f2',
+                                                color: inv.status === 'Paid' ? '#059669' : '#b91c1c',
+                                                padding: '4px 10px',
+                                                borderRadius: '99px',
+                                                fontSize: '11px',
+                                                fontWeight: '700'
+                                            }}>
+                                                {inv.status.toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {inv.status !== 'Paid' && (
+                                                <button className="btn-secondary-premium" style={{ padding: '6px 16px', fontSize: '12px' }} onClick={() => handleMarkPaid(inv.id)}>
+                                                    Mark as Paid
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
                                 {invoiceList.length === 0 && (
-                                    <tr><td colSpan="6" className="empty-v3">No invoice history found.</td></tr>
+                                    <tr><td colSpan="6" className="empty-state">No past invoices found.</td></tr>
                                 )}
                             </tbody>
                         </table>
