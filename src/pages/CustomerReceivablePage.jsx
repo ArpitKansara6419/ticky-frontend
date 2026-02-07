@@ -295,6 +295,7 @@ const CustomerReceivablePage = () => {
                     <div className="stat-content">
                         <h3>{selectedCurrency} {parseFloat(stats.unbilled).toLocaleString()}</h3>
                         <p>Work To Be Billed</p>
+                        <small style={{ color: '#94a3b8', fontSize: '11px' }}>Pending invoice generation</small>
                     </div>
                 </div>
                 <div className="stat-card-premium">
@@ -302,6 +303,7 @@ const CustomerReceivablePage = () => {
                     <div className="stat-content">
                         <h3>{selectedCurrency} {parseFloat(stats.unpaid).toLocaleString()}</h3>
                         <p>Unpaid Invoices</p>
+                        <small style={{ color: '#94a3b8', fontSize: '11px' }}>Awaiting client payment</small>
                     </div>
                 </div>
                 <div className="stat-card-premium">
@@ -309,6 +311,7 @@ const CustomerReceivablePage = () => {
                     <div className="stat-content">
                         <h3>{selectedCurrency} {parseFloat(stats.overdue || 0).toLocaleString()}</h3>
                         <p>Total Overdue</p>
+                        <small style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>Requires immediate action</small>
                     </div>
                 </div>
             </div>
@@ -341,7 +344,7 @@ const CustomerReceivablePage = () => {
                                             />
                                         </th>
                                         <th>SR.</th>
-                                        <th>Date</th>
+                                        <th><FiCalendar style={{ marginRight: '6px' }} /> Date</th>
                                         <th>Engineer</th>
                                         <th>Ticket ID</th>
                                         <th>Hours</th>
@@ -362,15 +365,15 @@ const CustomerReceivablePage = () => {
                                         return (
                                             <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
                                                 <td><input type="checkbox" checked={selectedTicketIds.includes(item.id)} onChange={() => toggleTicket(item.id)} /></td>
-                                                <td style={{ color: '#9ca3af', fontWeight: '500' }}>{String(idx + 1).padStart(2, '0')}</td>
-                                                <td style={{ fontWeight: '500' }}>{new Date(item.task_start_date).toISOString().split('T')[0]}</td>
-                                                <td style={{ fontWeight: '600', color: '#1e293b' }}>{item.engineer_name || 'N/A'}</td>
+                                                <td style={{ color: '#94a3b8', fontWeight: '800', fontSize: '12px' }}>{String(idx + 1).padStart(2, '0')}</td>
+                                                <td style={{ fontWeight: '700' }}>{new Date(item.task_start_date).toLocaleDateString()}</td>
+                                                <td style={{ fontWeight: '800', color: '#0f172a' }}>{item.engineer_name || 'N/A'}</td>
                                                 <td><span className="ticket-id">#{item.id}</span></td>
                                                 <td className="cost-cell">
                                                     {bd.formattedHours || '00:00'}
                                                     {parseFloat(bd.billedHours || 0) > parseFloat(bd.totalHours || 0) && (
-                                                        <span style={{ display: 'block', fontSize: '10px', color: '#f59e0b', fontWeight: '600' }}>
-                                                            Billed: {bd.billedHours}h
+                                                        <span style={{ display: 'block', fontSize: '10px', color: '#f59e0b', fontWeight: '800' }}>
+                                                            MIN {bd.billedHours}h
                                                         </span>
                                                     )}
                                                 </td>
@@ -378,22 +381,22 @@ const CustomerReceivablePage = () => {
                                                     {bd.formattedOT || '--'}
                                                     {bd.otHours > 0 && <span className="badge-ot">1.5x</span>}
                                                 </td>
-                                                <td style={{ color: bd.ooh === 'Yes' ? '#ef4444' : '#9ca3af' }}>{bd.ooh || 'No'}</td>
+                                                <td style={{ color: bd.ooh === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.ooh || 'No'}</td>
                                                 <td>
-                                                    <span style={{ color: bd.ww === 'Yes' ? '#059669' : '#9ca3af', fontWeight: bd.ww === 'Yes' ? '700' : '400' }}>
+                                                    <span style={{ color: bd.ww === 'Yes' ? '#10b981' : '#94a3b8', fontWeight: bd.ww === 'Yes' ? '900' : '500' }}>
                                                         {bd.ww || 'No'}
                                                     </span>
                                                     {bd.ww === 'Yes' && <span className="badge-ww">2.0x</span>}
                                                 </td>
-                                                <td style={{ color: bd.hw === 'Yes' ? '#ef4444' : '#9ca3af' }}>{bd.hw || 'No'}</td>
+                                                <td style={{ color: bd.hw === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.hw || 'No'}</td>
                                                 <td className="cost-cell">{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
                                                 <td className="cost-cell">{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
-                                                <td style={{ fontWeight: '800', color: 'var(--crm-primary)', fontSize: '15px' }}>
+                                                <td style={{ fontWeight: '900', color: 'var(--crm-primary)', fontSize: '16px' }}>
                                                     {selectedCurrency} {parseFloat(bd.totalReceivable || item.total_cost).toFixed(2)}
                                                 </td>
-                                                <td><span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>PENDING</span></td>
+                                                <td><span className="status-pill-pending">PENDING</span></td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                    <button className="eye-btn-v3" style={{ background: 'transparent' }} title="View Ticket Details" onClick={() => handleOpenDetails(item)}><FiEye /></button>
+                                                    <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
                                                 </td>
                                             </tr>
                                         );
