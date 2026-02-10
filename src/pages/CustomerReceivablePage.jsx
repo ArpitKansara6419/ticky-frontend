@@ -363,6 +363,14 @@ const CustomerReceivablePage = () => {
                         <small style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>Requires immediate action</small>
                     </div>
                 </div>
+                <div className="stat-card-premium">
+                    <div className="stat-icon blue" style={{ background: '#f0f9ff', color: '#0369a1' }}><FiDollarSign /></div>
+                    <div className="stat-content">
+                        <h3>{selectedCurrency} {parseFloat(stats.paid || 0).toLocaleString()}</h3>
+                        <p>Collected Revenue</p>
+                        <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>Total for {new Date().getFullYear()}</small>
+                    </div>
+                </div>
             </div>
 
             <div className="tabs-container-premium">
@@ -393,60 +401,56 @@ const CustomerReceivablePage = () => {
                                                     onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])}
                                                 />
                                             </th>
-                                            <th>SR.</th>
-                                            <th><FiCalendar style={{ marginRight: '6px' }} /> Date</th>
+                                            <th>Date</th>
                                             <th>Engineer</th>
-                                            <th>Ticket ID</th>
-                                            <th>Hours</th>
-                                            <th>OT</th>
-                                            <th>OOH</th>
-                                            <th>Weekend</th>
-                                            <th>Holiday</th>
-                                            <th>Travel</th>
-                                            <th>Tool</th>
-                                            <th>Receivable</th>
-                                            <th>Status</th>
-                                            <th style={{ textAlign: 'center' }}>Details</th>
+                                            <th>Ticket</th>
+                                            <th>Work Time</th>
+                                            <th>Premiums</th>
+                                            <th className="text-right">Expenses</th>
+                                            <th className="text-right">Receivable</th>
+                                            <th style={{ textAlign: 'center' }}>Detail</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {displayedUnbilled.map((item, idx) => {
                                             const bd = item.breakdown || {};
-                                            // Calculate actual SR based on page
-                                            const srNumber = ((currentPage - 1) * itemsPerPage) + (idx + 1);
+                                            const firstLetter = (item.engineer_name || 'N').charAt(0);
                                             return (
                                                 <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
                                                     <td><input type="checkbox" checked={selectedTicketIds.includes(item.id)} onChange={() => toggleTicket(item.id)} /></td>
-                                                    <td style={{ color: '#94a3b8', fontWeight: '800', fontSize: '12px' }}>{String(srNumber).padStart(2, '0')}</td>
-                                                    <td style={{ fontWeight: '700' }}>{new Date(item.task_start_date).toLocaleDateString()}</td>
-                                                    <td style={{ fontWeight: '800', color: '#0f172a' }}>{item.engineer_name || 'N/A'}</td>
-                                                    <td><span className="ticket-id">#{item.id}</span></td>
-                                                    <td className="cost-cell">
-                                                        {bd.formattedHours || '00:00'}
+                                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                                        <div style={{ fontWeight: '700', color: '#1e293b' }}>{new Date(item.task_start_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</div>
+                                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(item.task_start_date).getFullYear()}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div className="engineer-cell">
+                                                            <div className="engineer-avatar">{firstLetter}</div>
+                                                            <div style={{ fontWeight: '700' }}>{item.engineer_name || 'N/A'}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td><span className="ticket-id-tag">#{item.id}</span></td>
+                                                    <td>
+                                                        <div style={{ fontWeight: '700' }}>{bd.formattedHours || '00:00'}</div>
                                                         {parseFloat(bd.billedHours || 0) > parseFloat(bd.totalHours || 0) && (
-                                                            <span style={{ display: 'block', fontSize: '10px', color: '#f59e0b', fontWeight: '800' }}>
-                                                                MIN {bd.billedHours}h
-                                                            </span>
+                                                            <div style={{ fontSize: '10px', color: '#d97706', fontWeight: '800' }}>Min {bd.billedHours}h applied</div>
                                                         )}
                                                     </td>
-                                                    <td className="cost-cell">
-                                                        {bd.formattedOT || '--'}
-                                                        {bd.otHours > 0 && <span className="badge-ot">1.5x</span>}
-                                                    </td>
-                                                    <td style={{ color: bd.ooh === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.ooh || 'No'}</td>
                                                     <td>
-                                                        <span style={{ color: bd.ww === 'Yes' ? '#10b981' : '#94a3b8', fontWeight: bd.ww === 'Yes' ? '900' : '500' }}>
-                                                            {bd.ww || 'No'}
-                                                        </span>
-                                                        {bd.ww === 'Yes' && <span className="badge-ww">2.0x</span>}
+                                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                            {bd.otHours > 0 && <span className="multiplier-tag ot">OT 1.5x</span>}
+                                                            {bd.ooh === 'Yes' && <span className="multiplier-tag ooh">OOH 1.5x</span>}
+                                                            {bd.ww === 'Yes' && <span className="multiplier-tag ww">WKND 2.0x</span>}
+                                                            {bd.hw === 'Yes' && <span className="multiplier-tag ww">HOL 2.0x</span>}
+                                                            {!bd.otHours && bd.ooh !== 'Yes' && bd.ww !== 'Yes' && bd.hw !== 'Yes' && <span style={{ color: '#cbd5e1' }}>--</span>}
+                                                        </div>
                                                     </td>
-                                                    <td style={{ color: bd.hw === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.hw || 'No'}</td>
-                                                    <td className="cost-cell">{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
-                                                    <td className="cost-cell">{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
-                                                    <td style={{ fontWeight: '900', color: 'var(--crm-primary)', fontSize: '16px' }}>
+                                                    <td className="text-right">
+                                                        <div style={{ fontSize: '12px', color: '#64748b' }}>Travel: {parseFloat(bd.travelCost || 0).toFixed(0)}</div>
+                                                        <div style={{ fontSize: '12px', color: '#64748b' }}>Tools: {parseFloat(bd.toolCost || 0).toFixed(0)}</div>
+                                                    </td>
+                                                    <td className="receivable-amount">
                                                         {selectedCurrency} {parseFloat(bd.totalReceivable || item.total_cost).toFixed(2)}
                                                     </td>
-                                                    <td><span className="status-pill-pending">PENDING</span></td>
                                                     <td style={{ textAlign: 'center' }}>
                                                         <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
                                                     </td>
@@ -467,19 +471,22 @@ const CustomerReceivablePage = () => {
                             />
 
                             {selectedTicketIds.length > 0 && (
-                                <div className="action-bar-premium">
-                                    <div className="selection-info">
-                                        Selected <strong>{selectedTicketIds.length}</strong> items for invoice generation
-                                        <span className="total-display">Total: {selectedCurrency} {calculateSelectedTotal()}</span>
+                                <div className="selection-action-bar">
+                                    <div className="selection-count">
+                                        <strong>{selectedTicketIds.length}</strong> <span>Tickets ready for invoicing</span>
                                     </div>
-                                    <div>
-                                        <button className="btn-secondary-premium" onClick={() => setSelectedTicketIds([])}>Cancel Selection</button>
+                                    <div className="invoice-summary">
+                                        <span>Consolidated Total</span>
+                                        <strong>{selectedCurrency} {calculateSelectedTotal()}</strong>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <button className="btn-secondary-premium" onClick={() => setSelectedTicketIds([])}>Cancel</button>
                                         <button
                                             className="btn-primary-premium"
                                             onClick={handleCreateInvoice}
                                             disabled={selectedTicketIds.length === 0}
                                         >
-                                            {creating ? 'Processing...' : 'Generate Invoice'}
+                                            {creating ? 'Creating Invoice...' : 'Generate Invoice'}
                                         </button>
                                     </div>
                                 </div>
@@ -502,40 +509,34 @@ const CustomerReceivablePage = () => {
                                     <tbody>
                                         {displayedInvoices.map(inv => (
                                             <tr key={inv.id}>
-                                                <td><span className="ticket-id">{inv.invoice_number}</span></td>
-                                                <td style={{ fontWeight: '500' }}>{new Date(inv.issue_date).toLocaleDateString()}</td>
-                                                <td style={{ fontWeight: '600' }}>{inv.customer_name}</td>
-                                                <td style={{ fontWeight: '800', color: '#111827' }}>{selectedCurrency} {parseFloat(inv.amount).toFixed(2)}</td>
+                                                <td><span className="ticket-id-tag">{inv.invoice_number}</span></td>
                                                 <td>
-                                                    <span style={{
-                                                        background: inv.status === 'Paid' ? '#ecfdf5' : '#fef2f2',
-                                                        color: inv.status === 'Paid' ? '#059669' : '#b91c1c',
-                                                        padding: '4px 10px',
-                                                        borderRadius: '99px',
-                                                        fontSize: '11px',
-                                                        fontWeight: '700'
-                                                    }}>
+                                                    <div style={{ fontWeight: '700' }}>{new Date(inv.issue_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</div>
+                                                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(inv.issue_date).getFullYear()}</div>
+                                                </td>
+                                                <td style={{ fontWeight: '700', color: '#0f172a' }}>{inv.customer_name}</td>
+                                                <td className="receivable-amount" style={{ color: '#1e293b' }}>{selectedCurrency} {parseFloat(inv.amount).toFixed(2)}</td>
+                                                <td>
+                                                    <span className={`status-badge ${inv.status.toLowerCase()}`}>
                                                         {inv.status.toUpperCase()}
                                                     </span>
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
                                                         <button
-                                                            className="btn-secondary-premium"
-                                                            style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                            className="eye-btn-v3"
                                                             onClick={() => handlePrintInvoice(inv)}
-                                                            title="Download Invoice"
+                                                            title="Print Invoice"
                                                         >
-                                                            <FiDownload /> Print
+                                                            <FiDownload />
                                                         </button>
                                                         {inv.status !== 'Paid' && (
                                                             <button
                                                                 className="btn-primary-premium"
-                                                                style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                                style={{ padding: '8px 16px', fontSize: '12px', height: '36px' }}
                                                                 onClick={() => handleMarkPaid(inv.id)}
-                                                                title="Mark as Paid"
                                                             >
-                                                                <FiCheckCircle /> Mark Paid
+                                                                Mark Paid
                                                             </button>
                                                         )}
                                                     </div>
