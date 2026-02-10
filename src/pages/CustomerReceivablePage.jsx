@@ -589,25 +589,51 @@ const CustomerReceivablePage = () => {
                             <hr className="divider-premium" />
 
                             <div className="breakdown-list-premium">
-                                <div className="breakdown-row">
-                                    <span>Base Rate Cost ({detailTicket.billing_type})</span>
-                                    <span>{selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
-                                </div>
-                                <div className="breakdown-row">
-                                    <span>Overtime Hours ({detailTicket.breakdown?.formattedOT || '00:00'})</span>
-                                    <span style={{ color: '#ef4444' }}>+ {selectedCurrency} {(detailTicket.breakdown?.otHours * detailTicket.hourly_rate * 0.5 || 0).toFixed(2)} (Premium)</span>
-                                </div>
-                                <div className="breakdown-row">
-                                    <span>Travel Charges</span>
-                                    <span>+ {selectedCurrency} {parseFloat(detailTicket.breakdown?.travelCost || 0).toFixed(2)}</span>
-                                </div>
-                                <div className="breakdown-row">
-                                    <span>Tool / Hardware Charges</span>
-                                    <span>+ {selectedCurrency} {parseFloat(detailTicket.breakdown?.toolCost || 0).toFixed(2)}</span>
-                                </div>
-                                <div className="breakdown-row total">
-                                    <span>Total Value</span>
-                                    <span>{selectedCurrency} {parseFloat(detailTicket.breakdown?.totalReceivable || detailTicket.total_cost).toFixed(2)}</span>
+                                {detailTicket.billing_type === 'Cancellation' ? (
+                                    <div className="breakdown-row highlight-premium">
+                                        <span>Cancellation Fee</span>
+                                        <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="breakdown-row">
+                                            <span>Base Rate ({detailTicket.billing_type})</span>
+                                            <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
+                                        </div>
+
+                                        {parseFloat(detailTicket.breakdown?.otHours) > 0 && (
+                                            <div className="breakdown-row highlight-premium">
+                                                <span>Overtime (1.5x Multiplier)</span>
+                                                <span>+ {detailTicket.currency || selectedCurrency} {(parseFloat(detailTicket.breakdown?.otHours || 0) * (parseFloat(detailTicket.hourly_rate) || 0) * 0.5).toFixed(2)}</span>
+                                            </div>
+                                        )}
+
+                                        {(detailTicket.breakdown?.ww === 'Yes' || detailTicket.breakdown?.hw === 'Yes') && (
+                                            <div className="breakdown-row highlight-premium-gold">
+                                                <span>Weekend/Holiday (2.0x Multiplier)</span>
+                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {parseFloat(detailTicket.breakdown?.travelCost) > 0 && (
+                                    <div className="breakdown-row">
+                                        <span>Travel / Transport</span>
+                                        <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.travelCost || 0).toFixed(2)}</span>
+                                    </div>
+                                )}
+
+                                {parseFloat(detailTicket.breakdown?.toolCost) > 0 && (
+                                    <div className="breakdown-row">
+                                        <span>Tools / Equipment</span>
+                                        <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.toolCost || 0).toFixed(2)}</span>
+                                    </div>
+                                )}
+
+                                <div className="breakdown-row total-row-premium">
+                                    <span>Net Receivable</span>
+                                    <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.totalReceivable || detailTicket.total_cost || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -622,3 +648,4 @@ const CustomerReceivablePage = () => {
 };
 
 export default CustomerReceivablePage;
+

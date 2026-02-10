@@ -127,6 +127,7 @@ function TicketsPage() {
 
   const [status, setStatus] = useState('Assigned')
   const [billingType, setBillingType] = useState('Hourly')
+  const [cancellationFee, setCancellationFee] = useState('')
 
   // Time Log Override
   const [startTime, setStartTime] = useState('')
@@ -192,6 +193,7 @@ function TicketsPage() {
     setTotalCost('')
     setStatus('Assigned')
     setBillingType('Hourly')
+    setCancellationFee('')
     setStartTime('')
     setEndTime('')
     setBreakTime('0')
@@ -470,6 +472,7 @@ function TicketsPage() {
         travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
         totalCost: totalCost !== '' ? Number(totalCost) : null,
         billingType,
+        cancellationFee: cancellationFee !== '' ? Number(cancellationFee) : null,
         status,
         taskStartDate: taskStartDate ? String(taskStartDate).split('T')[0] : null,
         taskEndDate: taskEndDate ? String(taskEndDate).split('T')[0] : null,
@@ -632,6 +635,7 @@ function TicketsPage() {
     setFullDayRate(ticket.fullDayRate != null ? String(ticket.fullDayRate) : '')
     setMonthlyRate(ticket.monthlyRate != null ? String(ticket.monthlyRate) : '')
     setAgreedRate(ticket.agreedRate || '')
+    setCancellationFee(ticket.cancellation_fee != null ? String(ticket.cancellation_fee) : '')
     setTravelCostPerDay(ticket.travelCostPerDay != null ? String(ticket.travelCostPerDay) : '')
     setTotalCost(ticket.toolCost != null ? String(ticket.toolCost) : '')
     setBillingType(ticket.billingType || 'Hourly')
@@ -1244,6 +1248,9 @@ function TicketsPage() {
           {/* Pricing & Rates */}
           <section className="tickets-card">
             <h2 className="tickets-section-title">Pricing &amp; Rates</h2>
+            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px', fontWeight: '500' }}>
+              📌 <strong>Rate Multipliers:</strong> OT/OOH = 1.5x | Weekend/Holiday = 2.0x
+            </p>
             <div className="tickets-grid">
               <label className="tickets-field">
                 <span>Select Currency</span>
@@ -1259,12 +1266,12 @@ function TicketsPage() {
               <label className="tickets-field">
                 <span>Billing Type</span>
                 <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
-                  <option value="Hourly">Hourly Only (min 2 hrs)</option>
-                  <option value="Half Day + Hourly">Half Day + Hourly</option>
-                  <option value="Full Day + OT">Full Day + OT</option>
-                  <option value="Monthly + OT + Weekend/Holiday">Monthly + OT + Weekend or Holidays</option>
-                  <option value="Agreed Rate">Agreed Rate</option>
-                  <option value="Cancellation / Reschedule">Cancellation / Reschedule charges</option>
+                  <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
+                  <option value="Half Day + Hourly">2) Half Day + Hourly</option>
+                  <option value="Full Day + OT">3) Full Day + OT (OT = 1.5x)</option>
+                  <option value="Monthly + OT + Weekend/Holiday">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
+                  <option value="Agreed Rate">5) Agreed/Fixed Rate</option>
+                  <option value="Cancellation">6) Cancellation/Reschedule Fee</option>
                 </select>
               </label>
 
@@ -1276,6 +1283,7 @@ function TicketsPage() {
                   step="0.01"
                   value={hourlyRate}
                   onChange={(e) => setHourlyRate(e.target.value)}
+                  placeholder="0.00"
                 />
               </label>
               <label className="tickets-field">
@@ -1286,6 +1294,7 @@ function TicketsPage() {
                   step="0.01"
                   value={halfDayRate}
                   onChange={(e) => setHalfDayRate(e.target.value)}
+                  placeholder="0.00"
                 />
               </label>
               <label className="tickets-field">
@@ -1296,6 +1305,18 @@ function TicketsPage() {
                   step="0.01"
                   value={fullDayRate}
                   onChange={(e) => setFullDayRate(e.target.value)}
+                  placeholder="0.00"
+                />
+              </label>
+              <label className="tickets-field">
+                <span>Cancellation Fee ({currency})</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={cancellationFee}
+                  onChange={(e) => setCancellationFee(e.target.value)}
+                  placeholder="0.00"
                 />
               </label>
               <label className="tickets-field">
@@ -1306,9 +1327,10 @@ function TicketsPage() {
                   step="0.01"
                   value={monthlyRate}
                   onChange={(e) => setMonthlyRate(e.target.value)}
+                  placeholder="0.00"
                 />
               </label>
-              <label className="tickets-field">
+              <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
                 <span>Agreed Rate</span>
                 <input
                   type="text"
@@ -1384,8 +1406,8 @@ function TicketsPage() {
               {saving ? 'Creating Ticket...' : 'Create Ticket'}
             </button>
           </div>
-        </form>
-      </section>
+        </form >
+      </section >
     )
   }
 

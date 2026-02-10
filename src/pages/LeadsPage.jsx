@@ -123,11 +123,22 @@ function LeadsPage() {
   const [monthlyRate, setMonthlyRate] = useState('')
   const [toolsRequired, setToolsRequired] = useState('')
   const [agreedRate, setAgreedRate] = useState('')
+  const [cancellationFee, setCancellationFee] = useState('')
 
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
   const [totalCost, setTotalCost] = useState('')
   const [billingType, setBillingType] = useState('Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
+
+  // Billing Type Options
+  const BILLING_TYPES = [
+    'Hourly',
+    'Half Day + Hourly',
+    'Full Day + OT',
+    'Monthly + OT + Weekend',
+    'Agreed Rate',
+    'Cancellation'
+  ]
 
   // Map / LatLng states
   const [latitude, setLatitude] = useState(null)
@@ -155,6 +166,7 @@ function LeadsPage() {
     setMonthlyRate('')
     setToolsRequired('')
     setAgreedRate('')
+    setCancellationFee('')
     setTravelCostPerDay('')
     setTotalCost('')
     setBillingType('Hourly')
@@ -448,6 +460,7 @@ function LeadsPage() {
           billingType,
           status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(','),
+          cancellationFee: cancellationFee !== '' ? Number(cancellationFee) : null,
           latitude, longitude
         })
       })
@@ -465,6 +478,7 @@ function LeadsPage() {
     setCity(l.city); setCountry(l.country); setZipCode(l.zipCode); setTimezone(l.timezone)
     setCurrency(l.currency); setHourlyRate(l.hourlyRate != null ? String(l.hourlyRate) : ''); setHalfDayRate(l.halfDayRate != null ? String(l.halfDayRate) : ''); setFullDayRate(l.fullDayRate != null ? String(l.fullDayRate) : '')
     setMonthlyRate(l.monthlyRate != null ? String(l.monthlyRate) : ''); setToolsRequired(l.toolsRequired || ''); setAgreedRate(l.agreedRate || '')
+    setCancellationFee(l.cancellationFee != null ? String(l.cancellationFee) : '')
     setTravelCostPerDay(l.travelCostPerDay != null ? String(l.travelCostPerDay) : ''); setTotalCost(l.totalCost != null ? String(l.totalCost) : '')
     setBillingType(l.billingType || 'Hourly'); setStatus(l.status)
     setIsRecurring(l.isRecurring || 'No'); setRecurringStartDate(l.recurringStartDate?.split('T')[0])
@@ -703,47 +717,54 @@ function LeadsPage() {
           {/* Pricing */}
           <section className="leads-card">
             <h2 className="leads-section-title">Pricing & Rates</h2>
+            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px', fontWeight: '500' }}>
+              📌 <strong>Rate Multipliers:</strong> OT/OOH = Standard × 1.5 | Weekend/Holiday = Standard × 2.0
+            </p>
             <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
               <label className="leads-field">
-                <span>Currency</span>
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                <span>Currency *</span>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)} required>
                   {CURRENCIES.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
               </label>
 
-              <label className="leads-field">
-                <span>Billing Type</span>
-                <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
-                  <option value="Hourly">Hourly Only (min 2 hrs)</option>
-                  <option value="Half Day + Hourly">Half Day + Hourly</option>
-                  <option value="Full Day + OT">Full Day + OT</option>
-                  <option value="Monthly + OT + Weekend/Holiday">Monthly + OT + Weekend or Holidays</option>
-                  <option value="Agreed Rate">Agreed Rate</option>
-                  <option value="Cancellation / Reschedule">Cancellation / Reschedule charges</option>
+              <label className="leads-field" style={{ gridColumn: 'span 3' }}>
+                <span>Billing Type *</span>
+                <select value={billingType} onChange={(e) => setBillingType(e.target.value)} required>
+                  <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
+                  <option value="Half Day + Hourly">2) Half Day + Hourly</option>
+                  <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
+                  <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = Rate × 2.0)</option>
+                  <option value="Agreed Rate">5) Agreed/Fixed Rate</option>
+                  <option value="Cancellation">6) Cancellation/Reschedule Charges</option>
                 </select>
               </label>
 
               <label className="leads-field">
-                <span>Hourly Rate</span>
+                <span>Hourly Rate ({currency})</span>
                 <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="0.00" />
               </label>
               <label className="leads-field">
-                <span>Half Day Rate</span>
+                <span>Half Day Rate ({currency})</span>
                 <input type="number" step="0.01" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} placeholder="0.00" />
               </label>
               <label className="leads-field">
-                <span>Full Day Rate</span>
+                <span>Full Day Rate ({currency})</span>
                 <input type="number" step="0.01" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} placeholder="0.00" />
               </label>
               <label className="leads-field">
-                <span>Monthly Rate</span>
+                <span>Monthly Rate ({currency})</span>
                 <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="0.00" />
               </label>
               <label className="leads-field" style={{ gridColumn: 'span 2' }}>
-                <span>Agreed / Fixed Rate</span>
-                <input type="text" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} placeholder="Details" />
+                <span>Agreed/Fixed Rate ({currency})</span>
+                <input type="number" step="0.01" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} placeholder="0.00" />
+              </label>
+              <label className="leads-field" style={{ gridColumn: 'span 2' }}>
+                <span>Cancellation Fee ({currency})</span>
+                <input type="number" step="0.01" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} placeholder="0.00" />
               </label>
             </div>
           </section>
