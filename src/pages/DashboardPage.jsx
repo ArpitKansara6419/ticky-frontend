@@ -351,7 +351,7 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   </div>
                   <span className="overview-label">Total Revenue</span>
                 </div>
-                <p className="overview-value">€ {stats.totalRevenue}</p>
+                <p className="overview-value">€ {parseFloat(stats.totalRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <span className={`overview-pill ${parseFloat(stats.currentMonthRevenue) >= parseFloat(stats.prevMonthRevenue) ? 'overview-pill--up' : 'overview-pill--down'}`}>
                   {stats.currentMonthRevenue > 0 ? (((stats.currentMonthRevenue - stats.prevMonthRevenue) / (stats.prevMonthRevenue > 0 ? stats.prevMonthRevenue : 1)) * 100).toFixed(1) : '0.0'}%&nbsp;
                   {parseFloat(stats.currentMonthRevenue) >= parseFloat(stats.prevMonthRevenue) ? '▲' : '▼'}
@@ -365,7 +365,7 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   </div>
                   <span className="overview-label">Pending Approvals</span>
                 </div>
-                <p className="overview-value">{stats.pendingApprovals}</p>
+                <p className="overview-value">{parseInt(stats.pendingApprovals || 0).toLocaleString('en-US')}</p>
                 <span className="overview-pill">Action Required</span>
               </div>
 
@@ -376,7 +376,7 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   </div>
                   <span className="overview-label">Active Leads</span>
                 </div>
-                <p className="overview-value">{stats.activeLeads}</p>
+                <p className="overview-value">{parseInt(stats.activeLeads || 0).toLocaleString('en-US')}</p>
                 <span className="overview-pill overview-pill--up">In Pipeline</span>
               </div>
 
@@ -387,7 +387,7 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   </div>
                   <span className="overview-label">Resolved Tickets</span>
                 </div>
-                <p className="overview-value">{stats.totalResolved}</p>
+                <p className="overview-value">{parseInt(stats.totalResolved || 0).toLocaleString('en-US')}</p>
                 <span className="overview-pill overview-pill--up">Completed</span>
               </div>
             </div>

@@ -383,80 +383,82 @@ const CustomerReceivablePage = () => {
                 <div className="table-card-premium">
                     {activeTab === 'unbilled' ? (
                         <>
-                            <table className="table-premium">
-                                <thead>
-                                    <tr>
-                                        <th style={{ width: '40px' }}>
-                                            <input type="checkbox"
-                                                checked={selectedTicketIds.length === filteredUnbilled.length && filteredUnbilled.length > 0}
-                                                onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])}
-                                            />
-                                        </th>
-                                        <th>SR.</th>
-                                        <th><FiCalendar style={{ marginRight: '6px' }} /> Date</th>
-                                        <th>Engineer</th>
-                                        <th>Ticket ID</th>
-                                        <th>Hours</th>
-                                        <th>OT</th>
-                                        <th>OOH</th>
-                                        <th>Weekend</th>
-                                        <th>Holiday</th>
-                                        <th>Travel</th>
-                                        <th>Tool</th>
-                                        <th>Receivable</th>
-                                        <th>Status</th>
-                                        <th style={{ textAlign: 'center' }}>Details</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayedUnbilled.map((item, idx) => {
-                                        const bd = item.breakdown || {};
-                                        // Calculate actual SR based on page
-                                        const srNumber = ((currentPage - 1) * itemsPerPage) + (idx + 1);
-                                        return (
-                                            <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
-                                                <td><input type="checkbox" checked={selectedTicketIds.includes(item.id)} onChange={() => toggleTicket(item.id)} /></td>
-                                                <td style={{ color: '#94a3b8', fontWeight: '800', fontSize: '12px' }}>{String(srNumber).padStart(2, '0')}</td>
-                                                <td style={{ fontWeight: '700' }}>{new Date(item.task_start_date).toLocaleDateString()}</td>
-                                                <td style={{ fontWeight: '800', color: '#0f172a' }}>{item.engineer_name || 'N/A'}</td>
-                                                <td><span className="ticket-id">#{item.id}</span></td>
-                                                <td className="cost-cell">
-                                                    {bd.formattedHours || '00:00'}
-                                                    {parseFloat(bd.billedHours || 0) > parseFloat(bd.totalHours || 0) && (
-                                                        <span style={{ display: 'block', fontSize: '10px', color: '#f59e0b', fontWeight: '800' }}>
-                                                            MIN {bd.billedHours}h
+                            <div className="table-wrapper-premium">
+                                <table className="table-premium">
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: '40px' }}>
+                                                <input type="checkbox"
+                                                    checked={selectedTicketIds.length === filteredUnbilled.length && filteredUnbilled.length > 0}
+                                                    onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])}
+                                                />
+                                            </th>
+                                            <th>SR.</th>
+                                            <th><FiCalendar style={{ marginRight: '6px' }} /> Date</th>
+                                            <th>Engineer</th>
+                                            <th>Ticket ID</th>
+                                            <th>Hours</th>
+                                            <th>OT</th>
+                                            <th>OOH</th>
+                                            <th>Weekend</th>
+                                            <th>Holiday</th>
+                                            <th>Travel</th>
+                                            <th>Tool</th>
+                                            <th>Receivable</th>
+                                            <th>Status</th>
+                                            <th style={{ textAlign: 'center' }}>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {displayedUnbilled.map((item, idx) => {
+                                            const bd = item.breakdown || {};
+                                            // Calculate actual SR based on page
+                                            const srNumber = ((currentPage - 1) * itemsPerPage) + (idx + 1);
+                                            return (
+                                                <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
+                                                    <td><input type="checkbox" checked={selectedTicketIds.includes(item.id)} onChange={() => toggleTicket(item.id)} /></td>
+                                                    <td style={{ color: '#94a3b8', fontWeight: '800', fontSize: '12px' }}>{String(srNumber).padStart(2, '0')}</td>
+                                                    <td style={{ fontWeight: '700' }}>{new Date(item.task_start_date).toLocaleDateString()}</td>
+                                                    <td style={{ fontWeight: '800', color: '#0f172a' }}>{item.engineer_name || 'N/A'}</td>
+                                                    <td><span className="ticket-id">#{item.id}</span></td>
+                                                    <td className="cost-cell">
+                                                        {bd.formattedHours || '00:00'}
+                                                        {parseFloat(bd.billedHours || 0) > parseFloat(bd.totalHours || 0) && (
+                                                            <span style={{ display: 'block', fontSize: '10px', color: '#f59e0b', fontWeight: '800' }}>
+                                                                MIN {bd.billedHours}h
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="cost-cell">
+                                                        {bd.formattedOT || '--'}
+                                                        {bd.otHours > 0 && <span className="badge-ot">1.5x</span>}
+                                                    </td>
+                                                    <td style={{ color: bd.ooh === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.ooh || 'No'}</td>
+                                                    <td>
+                                                        <span style={{ color: bd.ww === 'Yes' ? '#10b981' : '#94a3b8', fontWeight: bd.ww === 'Yes' ? '900' : '500' }}>
+                                                            {bd.ww || 'No'}
                                                         </span>
-                                                    )}
-                                                </td>
-                                                <td className="cost-cell">
-                                                    {bd.formattedOT || '--'}
-                                                    {bd.otHours > 0 && <span className="badge-ot">1.5x</span>}
-                                                </td>
-                                                <td style={{ color: bd.ooh === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.ooh || 'No'}</td>
-                                                <td>
-                                                    <span style={{ color: bd.ww === 'Yes' ? '#10b981' : '#94a3b8', fontWeight: bd.ww === 'Yes' ? '900' : '500' }}>
-                                                        {bd.ww || 'No'}
-                                                    </span>
-                                                    {bd.ww === 'Yes' && <span className="badge-ww">2.0x</span>}
-                                                </td>
-                                                <td style={{ color: bd.hw === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.hw || 'No'}</td>
-                                                <td className="cost-cell">{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
-                                                <td className="cost-cell">{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
-                                                <td style={{ fontWeight: '900', color: 'var(--crm-primary)', fontSize: '16px' }}>
-                                                    {selectedCurrency} {parseFloat(bd.totalReceivable || item.total_cost).toFixed(2)}
-                                                </td>
-                                                <td><span className="status-pill-pending">PENDING</span></td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {filteredUnbilled.length === 0 && (
-                                        <tr><td colSpan="15" className="empty-state">No unbilled work found to match your criteria.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                                        {bd.ww === 'Yes' && <span className="badge-ww">2.0x</span>}
+                                                    </td>
+                                                    <td style={{ color: bd.hw === 'Yes' ? '#ef4444' : '#94a3b8' }}>{bd.hw || 'No'}</td>
+                                                    <td className="cost-cell">{selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(0)}</td>
+                                                    <td className="cost-cell">{selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(0)}</td>
+                                                    <td style={{ fontWeight: '900', color: 'var(--crm-primary)', fontSize: '16px' }}>
+                                                        {selectedCurrency} {parseFloat(bd.totalReceivable || item.total_cost).toFixed(2)}
+                                                    </td>
+                                                    <td><span className="status-pill-pending">PENDING</span></td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {filteredUnbilled.length === 0 && (
+                                            <tr><td colSpan="15" className="empty-state">No unbilled work found to match your criteria.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
 
                             <Pagination
                                 total={totalUnbilledPages}
@@ -485,60 +487,67 @@ const CustomerReceivablePage = () => {
                         </>
                     ) : (
                         <>
-                            <table className="table-premium">
-                                <thead>
-                                    <tr>
-                                        <th>Invoice #</th>
-                                        <th>Issued Date</th>
-                                        <th>Customer</th>
-                                        <th>Total Amount</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayedInvoices.map(inv => (
-                                        <tr key={inv.id}>
-                                            <td><span className="ticket-id">{inv.invoice_number}</span></td>
-                                            <td style={{ fontWeight: '500' }}>{new Date(inv.issue_date).toLocaleDateString()}</td>
-                                            <td style={{ fontWeight: '600' }}>{inv.customer_name}</td>
-                                            <td style={{ fontWeight: '800', color: '#111827' }}>{selectedCurrency} {parseFloat(inv.amount).toFixed(2)}</td>
-                                            <td>
-                                                <span style={{
-                                                    background: inv.status === 'Paid' ? '#ecfdf5' : '#fef2f2',
-                                                    color: inv.status === 'Paid' ? '#059669' : '#b91c1c',
-                                                    padding: '4px 10px',
-                                                    borderRadius: '99px',
-                                                    fontSize: '11px',
-                                                    fontWeight: '700'
-                                                }}>
-                                                    {inv.status.toUpperCase()}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <button
-                                                        className="btn-secondary-premium"
-                                                        style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                        onClick={() => handlePrintInvoice(inv)}
-                                                        title="Download Invoice"
-                                                    >
-                                                        <FiDownload /> Print
-                                                    </button>
-                                                    {inv.status !== 'Paid' && (
-                                                        <button className="btn-secondary-premium" style={{ padding: '6px 16px', fontSize: '12px' }} onClick={() => handleMarkPaid(inv.id)}>
-                                                            Mark Paid
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
+                            <div className="table-wrapper-premium">
+                                <table className="table-premium">
+                                    <thead>
+                                        <tr>
+                                            <th>Invoice #</th>
+                                            <th>Issued Date</th>
+                                            <th>Customer</th>
+                                            <th>Total Amount</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
                                         </tr>
-                                    ))}
-                                    {invoiceList.length === 0 && (
-                                        <tr><td colSpan="6" className="empty-state">No past invoices found.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {displayedInvoices.map(inv => (
+                                            <tr key={inv.id}>
+                                                <td><span className="ticket-id">{inv.invoice_number}</span></td>
+                                                <td style={{ fontWeight: '500' }}>{new Date(inv.issue_date).toLocaleDateString()}</td>
+                                                <td style={{ fontWeight: '600' }}>{inv.customer_name}</td>
+                                                <td style={{ fontWeight: '800', color: '#111827' }}>{selectedCurrency} {parseFloat(inv.amount).toFixed(2)}</td>
+                                                <td>
+                                                    <span style={{
+                                                        background: inv.status === 'Paid' ? '#ecfdf5' : '#fef2f2',
+                                                        color: inv.status === 'Paid' ? '#059669' : '#b91c1c',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '99px',
+                                                        fontSize: '11px',
+                                                        fontWeight: '700'
+                                                    }}>
+                                                        {inv.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <button
+                                                            className="btn-secondary-premium"
+                                                            style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                            onClick={() => handlePrintInvoice(inv)}
+                                                            title="Download Invoice"
+                                                        >
+                                                            <FiDownload /> Print
+                                                        </button>
+                                                        {inv.status !== 'Paid' && (
+                                                            <button
+                                                                className="btn-primary-premium"
+                                                                style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                                onClick={() => handleMarkPaid(inv.id)}
+                                                                title="Mark as Paid"
+                                                            >
+                                                                <FiCheckCircle /> Mark Paid
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {invoiceList.length === 0 && (
+                                            <tr><td colSpan="6" className="empty-state">No past invoices found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                             <Pagination
                                 total={totalInvoicePages}
                                 current={currentPage}

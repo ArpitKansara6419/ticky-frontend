@@ -346,8 +346,36 @@
     animation: fadeIn 0.8s ease;
 }
 
+/* Table Wrapper for Horizontal Scroll */
+.table-wrapper-premium {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+/* Custom Scrollbar */
+.table-wrapper-premium::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-wrapper-premium::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 4px;
+}
+
+.table-wrapper-premium::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.table-wrapper-premium::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
 .table-premium {
     width: 100%;
+    min-width: 1200px;
+    /* Ensures table doesn't collapse on smaller screens */
     border-collapse: separate;
     border-spacing: 0;
 }
