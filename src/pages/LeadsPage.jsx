@@ -67,6 +67,8 @@ function LeadsPage() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false)
   const [editingLeadId, setEditingLeadId] = useState(null)
   const [menuLeadId, setMenuLeadId] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const [countriesList, setCountriesList] = useState([])
   const [availableTimezones, setAvailableTimezones] = useState([])
@@ -815,181 +817,237 @@ function LeadsPage() {
 
       <section className="leads-card">
         <div className="leads-list-toolbar"><div className="leads-search"><input type="text" placeholder="Search leads..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div></div>
-        <div className="leads-table-wrapper">
-          <table className="leads-table">
-            <thead>
-              <tr>
-                <th>Lead Information</th>
-                <th>Customer</th>
-                <th>Service Date</th>
-                <th>Status</th>
-                <th>Reference</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLeads.map(l => (
-                <tr key={l.id}>
-                  <td>
-                    <div className="leads-name-main">{l.taskName}</div>
-                    <div className="leads-name-sub">#AIM-L-{String(l.id).padStart(3, '0')}</div>
-                  </td>
-                  <td>{l.customerName}</td>
-                  <td>
-                    {(() => {
-                      let history = [];
-                      try {
-                        if (l.followUpHistory) {
-                          history = typeof l.followUpHistory === 'string' ? JSON.parse(l.followUpHistory) : l.followUpHistory;
-                        }
-                      } catch (e) { history = []; }
 
-                      const startDateStr = l.taskStartDate?.split('T')[0];
-                      const endDateStr = l.taskEndDate?.split('T')[0];
-                      const isMultiDay = endDateStr && endDateStr > startDateStr;
+        {/* Pagination Logic */}
+        {(() => {
+          const totalPages = Math.ceil(filteredLeads.length / itemsPerPage)
+          const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-                      // Filter redundant history (e.g. Confirm -> Confirm on same date)
-                      const cleanHistory = history.filter((h, i) => {
-                        if (i === 0) return true;
-                        const prev = history[i - 1];
-                        // Remove duplicates: same status transition to same date
-                        if (h.toStatus === prev.toStatus && h.newDate === prev.newDate) return false;
-                        // Remove Confirm -> Confirm if date didn't change
-                        if (h.fromStatus === 'Confirm' && h.toStatus === 'Confirm' && h.newDate === h.prevDate) return false;
-                        return true;
-                      });
+          const Pagination = ({ total, current, onChange }) => {
+            if (total <= 1) return null
+            let pages = []
+            for (let i = 1; i <= total; i++) pages.push(i)
 
-                      // Check if this is a simple "BID -> Confirm" on the same date
-                      const firstH = cleanHistory[0];
-                      const isSimpleConfirm = cleanHistory.length === 1 &&
-                        firstH.fromStatus === 'BID' &&
-                        firstH.toStatus === 'Confirm' &&
-                        firstH.prevDate === firstH.newDate;
+            return (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '24px', background: '#fafafc', borderTop: '1px solid var(--border-subtle)', borderRadius: '0 0 20px 20px' }}>
+                <button
+                  className="leads-secondary-btn"
+                  disabled={current === 1}
+                  onClick={() => onChange(current - 1)}
+                  style={{ minWidth: '80px', padding: '8px 16px' }}
+                >
+                  Prev
+                </button>
+                {pages.map(p => (
+                  <button
+                    key={p}
+                    className="leads-secondary-btn"
+                    style={{
+                      minWidth: '40px',
+                      padding: '8px 12px',
+                      background: current === p ? 'var(--primary)' : 'var(--card-bg)',
+                      color: current === p ? 'white' : 'var(--text-muted)',
+                      borderColor: current === p ? 'var(--primary)' : 'var(--border-subtle)',
+                      fontWeight: current === p ? '700' : '600'
+                    }}
+                    onClick={() => onChange(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  className="leads-secondary-btn"
+                  disabled={current === totalPages}
+                  onClick={() => onChange(current + 1)}
+                  style={{ minWidth: '80px', padding: '8px 16px' }}
+                >
+                  Next
+                </button>
+              </div>
+            )
+          }
 
-                      // 1. BID Status: Just show date
-                      if (l.status === 'BID') {
-                        return (
-                          <div className="date-value">
-                            {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
-                          </div>
-                        );
-                      }
+          return (
+            <>
+              <div className="leads-table-wrapper">
+                <table className="leads-table">
+                  <thead>
+                    <tr>
+                      <th>Lead Information</th>
+                      <th>Customer</th>
+                      <th>Service Date</th>
+                      <th>Status</th>
+                      <th>Reference</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedLeads.map(l => (
+                      <tr key={l.id}>
+                        <td>
+                          <div className="leads-name-main">{l.taskName}</div>
+                          <div className="leads-name-sub">#AIM-L-{String(l.id).padStart(3, '0')}</div>
+                        </td>
+                        <td>{l.customerName}</td>
+                        <td>
+                          {(() => {
+                            let history = [];
+                            try {
+                              if (l.followUpHistory) {
+                                history = typeof l.followUpHistory === 'string' ? JSON.parse(l.followUpHistory) : l.followUpHistory;
+                              }
+                            } catch (e) { history = []; }
 
-                      // 2. Cancelled Status: Show Cancelled Label
-                      if (l.status === 'Cancelled') {
-                        const latestActiveDate = l.followUpDate ? l.followUpDate.split('T')[0] : startDateStr;
-                        return (
-                          <div style={{ color: '#ef4444', fontWeight: '500', display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '12px' }}>
-                              {latestActiveDate}
-                            </span>
-                            <span style={{ fontSize: '13px', marginTop: '2px' }}>CANCELLED</span>
-                          </div>
-                        );
-                      }
+                            const startDateStr = l.taskStartDate?.split('T')[0];
+                            const endDateStr = l.taskEndDate?.split('T')[0];
+                            const isMultiDay = endDateStr && endDateStr > startDateStr;
 
-                      // 2. Simple Confirm (No date change): Show Green Text, No Strikethrough
-                      if (l.status === 'Confirm' && (cleanHistory.length === 0 || isSimpleConfirm)) {
-                        return (
-                          <div style={{ color: '#15803d', fontWeight: '500' }}>
-                            <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>Confirmed For</div>
-                            {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
-                          </div>
-                        );
-                      }
+                            // Filter redundant history (e.g. Confirm -> Confirm on same date)
+                            const cleanHistory = history.filter((h, i) => {
+                              if (i === 0) return true;
+                              const prev = history[i - 1];
+                              // Remove duplicates: same status transition to same date
+                              if (h.toStatus === prev.toStatus && h.newDate === prev.newDate) return false;
+                              // Remove Confirm -> Confirm if date didn't change
+                              if (h.fromStatus === 'Confirm' && h.toStatus === 'Confirm' && h.newDate === h.prevDate) return false;
+                              return true;
+                            });
 
-                      // 3. Complex History (Date changed or Rescheduled): Show Stack
-                      const originalDate = (cleanHistory.length > 0 && cleanHistory[0].prevDate) ? cleanHistory[0].prevDate : startDateStr;
+                            // Check if this is a simple "BID -> Confirm" on the same date
+                            const firstH = cleanHistory[0];
+                            const isSimpleConfirm = cleanHistory.length === 1 &&
+                              firstH.fromStatus === 'BID' &&
+                              firstH.toStatus === 'Confirm' &&
+                              firstH.prevDate === firstH.newDate;
 
-                      return (
-                        <div className="date-stack">
-                          {/* Original Date struck through */}
-                          <span className="date-value date-value--old" style={{ textDecoration: 'line-through', color: '#9ca3af' }}>
-                            {originalDate}
-                          </span>
+                            // 1. BID Status: Just show date
+                            if (l.status === 'BID') {
+                              return (
+                                <div className="date-value">
+                                  {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
+                                </div>
+                              );
+                            }
 
-                          {cleanHistory.map((h, i) => {
-                            // Skip if date is same as 'original' and it's the first confirm (handled above? no, if we are here, it's complex)
-                            // Actually, map all significant changes
+                            // 2. Cancelled Status: Show Cancelled Label
+                            if (l.status === 'Cancelled') {
+                              const latestActiveDate = l.followUpDate ? l.followUpDate.split('T')[0] : startDateStr;
+                              return (
+                                <div style={{ color: '#ef4444', fontWeight: '500', display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '12px' }}>
+                                    {latestActiveDate}
+                                  </span>
+                                  <span style={{ fontSize: '13px', marginTop: '2px' }}>CANCELLED</span>
+                                </div>
+                              );
+                            }
 
-                            const label = h.toStatus === 'Confirm' ? 'CONFIRMED FOR:' : 'RESCHEDULED TO:';
-                            const color = h.toStatus === 'Confirm' ? '#15803d' : '#f59e0b';
-                            const isLast = i === cleanHistory.length - 1;
+                            // 2. Simple Confirm (No date change): Show Green Text, No Strikethrough
+                            if (l.status === 'Confirm' && (cleanHistory.length === 0 || isSimpleConfirm)) {
+                              return (
+                                <div style={{ color: '#15803d', fontWeight: '500' }}>
+                                  <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>Confirmed For</div>
+                                  {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
+                                </div>
+                              );
+                            }
 
-                            // Use history specific end date if available, else current if last
-                            const hStart = h.newDate;
-                            const hEnd = h.newEndDate || (isLast ? endDateStr : null);
-                            const hMulti = hEnd && hEnd > hStart;
+                            // 3. Complex History (Date changed or Rescheduled): Show Stack
+                            const originalDate = (cleanHistory.length > 0 && cleanHistory[0].prevDate) ? cleanHistory[0].prevDate : startDateStr;
 
                             return (
-                              <div key={i} className="reschedule-item" style={{ color, marginTop: '4px' }}>
-                                <div className="date-label" style={{ fontSize: '10px', opacity: 0.8 }}>{label}</div>
-                                <span className={`date-value ${isLast ? 'date-value--new' : 'date-value--old'}`}>
-                                  {hStart}{hMulti ? ` to ${hEnd}` : ''}
+                              <div className="date-stack">
+                                {/* Original Date struck through */}
+                                <span className="date-value date-value--old" style={{ textDecoration: 'line-through', color: '#9ca3af' }}>
+                                  {originalDate}
                                 </span>
+
+                                {cleanHistory.map((h, i) => {
+                                  // Skip if date is same as 'original' and it's the first confirm (handled above? no, if we are here, it's complex)
+                                  // Actually, map all significant changes
+
+                                  const label = h.toStatus === 'Confirm' ? 'CONFIRMED FOR:' : 'RESCHEDULED TO:';
+                                  const color = h.toStatus === 'Confirm' ? '#15803d' : '#f59e0b';
+                                  const isLast = i === cleanHistory.length - 1;
+
+                                  // Use history specific end date if available, else current if last
+                                  const hStart = h.newDate;
+                                  const hEnd = h.newEndDate || (isLast ? endDateStr : null);
+                                  const hMulti = hEnd && hEnd > hStart;
+
+                                  return (
+                                    <div key={i} className="reschedule-item" style={{ color, marginTop: '4px' }}>
+                                      <div className="date-label" style={{ fontSize: '10px', opacity: 0.8 }}>{label}</div>
+                                      <span className={`date-value ${isLast ? 'date-value--new' : 'date-value--old'}`}>
+                                        {hStart}{hMulti ? ` to ${hEnd}` : ''}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`status-badge status-badge--${l.status.toLowerCase()}`}
-                      onClick={() => openStatusChangeModal(l)}
-                    >
-                      {l.status === 'BID' && <FiAlertCircle />}
-                      {l.status === 'Confirm' && <FiCheckCircle />}
-                      {l.status === 'Reschedule' && <FiCalendar />}
-                      {l.status === 'Cancelled' && <FiXCircle />}
-                      {l.status}
-                    </button>
-                  </td>
-                  <td>
-                    {l.status === 'Confirm' ? (
-                      l.existingTicketId ? (
-                        <button
-                          type="button"
-                          className="leads-create-ticket-btn"
-                          style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', borderColor: 'rgba(59, 130, 246, 0.2)' }}
-                          onClick={() => {
-                            // Automatically sync lead data to ticket when viewing
-                            localStorage.setItem('editTicketId', l.existingTicketId)
-                            localStorage.setItem('syncLeadToTicket', JSON.stringify(l))
-                            navigate('/dashboard', { state: { openTickets: true } })
-                          }}
-                        >
-                          <FiEye /> View Ticket
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="leads-create-ticket-btn"
-                          onClick={() => {
-                            localStorage.setItem('selectedLeadForTicket', JSON.stringify(l))
-                            navigate('/dashboard', { state: { openTickets: true } })
-                          }}
-                        >
-                          <FiFileText /> Ticket
-                        </button>
-                      )
-                    ) : l.clientTicketNumber || '--'}
-                  </td>
-                  <td className="leads-actions-cell">
-                    <div className="action-icons">
-                      <button title="View" onClick={() => openLeadModal(l.id)} className="action-btn view"><FiEye /></button>
-                      <button title="Edit" onClick={() => startEditLead(l.id)} className="action-btn edit"><FiEdit2 /></button>
-                      <button title="Clone" onClick={() => startCloneLead(l.id)} className="action-btn clone"><FiCopy /></button>
-                      <button title="Delete" onClick={() => handleDeleteLead(l.id)} className="action-btn delete"><FiTrash2 /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                          })()}
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`status-badge status-badge--${l.status.toLowerCase()}`}
+                            onClick={() => openStatusChangeModal(l)}
+                          >
+                            {l.status === 'BID' && <FiAlertCircle />}
+                            {l.status === 'Confirm' && <FiCheckCircle />}
+                            {l.status === 'Reschedule' && <FiCalendar />}
+                            {l.status === 'Cancelled' && <FiXCircle />}
+                            {l.status}
+                          </button>
+                        </td>
+                        <td>
+                          {l.status === 'Confirm' ? (
+                            l.existingTicketId ? (
+                              <button
+                                type="button"
+                                className="leads-create-ticket-btn"
+                                style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', borderColor: 'rgba(59, 130, 246, 0.2)' }}
+                                onClick={() => {
+                                  // Automatically sync lead data to ticket when viewing
+                                  localStorage.setItem('editTicketId', l.existingTicketId)
+                                  localStorage.setItem('syncLeadToTicket', JSON.stringify(l))
+                                  navigate('/dashboard', { state: { openTickets: true } })
+                                }}
+                              >
+                                <FiEye /> View Ticket
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="leads-create-ticket-btn"
+                                onClick={() => {
+                                  localStorage.setItem('selectedLeadForTicket', JSON.stringify(l))
+                                  navigate('/dashboard', { state: { openTickets: true } })
+                                }}
+                              >
+                                <FiFileText /> Ticket
+                              </button>
+                            )
+                          ) : l.clientTicketNumber || '--'}
+                        </td>
+                        <td className="leads-actions-cell">
+                          <div className="action-icons">
+                            <button title="View" onClick={() => openLeadModal(l.id)} className="action-btn view"><FiEye /></button>
+                            <button title="Edit" onClick={() => startEditLead(l.id)} className="action-btn edit"><FiEdit2 /></button>
+                            <button title="Clone" onClick={() => startCloneLead(l.id)} className="action-btn clone"><FiCopy /></button>
+                            <button title="Delete" onClick={() => handleDeleteLead(l.id)} className="action-btn delete"><FiTrash2 /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination total={totalPages} current={currentPage} onChange={setCurrentPage} />
+            </>
+          )
+        })()}
       </section>
 
       {isStatusModalOpen && (

@@ -383,12 +383,68 @@
 
 .ticket-id {
     font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    /* Extra bold */
+    color: #312e81;
+    /* Dark Indigo */
+    background: #e0e7ff;
+    /* Deeper Blue */
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid #c7d2fe;
+}
+
+/* --- Pagination Styles --- */
+.pagination-container-premium {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 24px;
+    background: #fafafc;
+    border-top: 1px solid var(--crm-border);
+}
+
+.pagination-btn {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid var(--crm-border);
+    background: white;
+    color: var(--crm-text-muted);
     font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--crm-primary);
     color: var(--crm-primary);
     background: var(--crm-primary-soft);
-    padding: 6px 12px;
-    border-radius: 10px;
-    font-size: 12px;
+}
+
+.pagination-btn.active {
+    background: var(--crm-primary);
+    color: white;
+    border-color: var(--crm-primary);
+    box-shadow: 0 4px 12px var(--crm-primary-soft);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 14px;
+    color: var(--crm-text-muted);
+    margin: 0 16px;
+    font-weight: 500;
 }
 
 /* Custom Status Badge */

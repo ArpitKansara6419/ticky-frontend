@@ -61,6 +61,8 @@ function TicketsPage() {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
   const [editingTicketId, setEditingTicketId] = useState(null)
   const [filterTicketIdHandled, setFilterTicketIdHandled] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Extra data modules
   const [ticketNotes, setTicketNotes] = useState([])
@@ -1471,84 +1473,139 @@ function TicketsPage() {
 
         {error && <div className="tickets-message tickets-message--error tickets-message--inline">{error}</div>}
 
-        <div className="tickets-table-wrapper">
-          <table className="tickets-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Ticket</th>
-                <th>Location</th>
-                <th>Date &amp; Time</th>
-                <th>Customer</th>
-                <th>Engineer Assigned</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="tickets-empty">
-                    Loading tickets...
-                  </td>
-                </tr>
-              ) : tickets.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="tickets-empty">
-                    No tickets found.
-                  </td>
-                </tr>
-              ) : (
-                tickets.map((ticket) => (
-                  <tr key={ticket.id} className={ticket.unreadNotesCount > 0 ? 'ticket-row--unread' : ''}>
-                    <td>#AIM-T-{ticket.id}</td>
-                    <td>{ticket.taskName}</td>
-                    <td>
-                      {ticket.city}, {ticket.country}
-                    </td>
-                    <td>
-                      {ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : ''} - {ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : ''} {ticket.taskTime}
-                    </td>
-                    <td>{ticket.customerName}</td>
-                    <td>
-                      {ticket.engineerName || '-'}
-                      {ticket.unreadNotesCount > 0 && (
-                        <span className="unread-dot-wow" title={`${ticket.unreadNotesCount} unread notes from engineer`}></span>
-                      )}
-                    </td>
-                    <td>{ticket.status}</td>
-                    <td className="tickets-actions-cell">
-                      <button
-                        type="button"
-                        className="tickets-action-btn tickets-action-btn--view"
-                        onClick={() => openTicketModal(ticket.id)}
-                        aria-label="View ticket"
-                      >
-                        <FiEye />
-                      </button>
-                      <button
-                        type="button"
-                        className="tickets-action-btn tickets-action-btn--edit"
-                        onClick={() => startEditTicket(ticket.id)}
-                        aria-label="Edit ticket"
-                      >
-                        <FiEdit2 />
-                      </button>
-                      <button
-                        type="button"
-                        className="tickets-action-btn tickets-action-btn--delete"
-                        onClick={() => handleDeleteTicket(ticket.id)}
-                        aria-label="Delete ticket"
-                      >
-                        <FiTrash2 />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* Pagination Logic */}
+        {(() => {
+          const totalPages = Math.ceil(tickets.length / itemsPerPage)
+          const paginatedTickets = tickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+          const Pagination = ({ total, current, onChange }) => {
+            if (total <= 1) return null
+            let pages = []
+            for (let i = 1; i <= total; i++) pages.push(i)
+
+            return (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '24px', background: '#fafafc', borderTop: '1px solid var(--border-subtle)' }}>
+                <button
+                  className="tickets-secondary-btn"
+                  disabled={current === 1}
+                  onClick={() => onChange(current - 1)}
+                  style={{ minWidth: '80px', padding: '8px 16px' }}
+                >
+                  Prev
+                </button>
+                {pages.map(p => (
+                  <button
+                    key={p}
+                    className="tickets-secondary-btn"
+                    style={{
+                      minWidth: '40px',
+                      padding: '8px 12px',
+                      background: current === p ? 'var(--primary)' : 'var(--card-bg)',
+                      color: current === p ? 'white' : 'var(--text-muted)',
+                      borderColor: current === p ? 'var(--primary)' : 'var(--border-subtle)',
+                      fontWeight: current === p ? '700' : '600'
+                    }}
+                    onClick={() => onChange(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  className="tickets-secondary-btn"
+                  disabled={current === totalPages}
+                  onClick={() => onChange(current + 1)}
+                  style={{ minWidth: '80px', padding: '8px 16px' }}
+                >
+                  Next
+                </button>
+              </div>
+            )
+          }
+
+          return (
+            <>
+              <div className="tickets-table-wrapper">
+                <table className="tickets-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Ticket</th>
+                      <th>Location</th>
+                      <th>Date &amp; Time</th>
+                      <th>Customer</th>
+                      <th>Engineer Assigned</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="tickets-empty">
+                          Loading tickets...
+                        </td>
+                      </tr>
+                    ) : paginatedTickets.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="tickets-empty">
+                          No tickets found.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedTickets.map((ticket) => (
+                        <tr key={ticket.id} className={ticket.unreadNotesCount > 0 ? 'ticket-row--unread' : ''}>
+                          <td>#AIM-T-{ticket.id}</td>
+                          <td>{ticket.taskName}</td>
+                          <td>
+                            {ticket.city}, {ticket.country}
+                          </td>
+                          <td>
+                            {ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : ''} - {ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : ''} {ticket.taskTime}
+                          </td>
+                          <td>{ticket.customerName}</td>
+                          <td>
+                            {ticket.engineerName || '-'}
+                            {ticket.unreadNotesCount > 0 && (
+                              <span className="unread-dot-wow" title={`${ticket.unreadNotesCount} unread notes from engineer`}></span>
+                            )}
+                          </td>
+                          <td>{ticket.status}</td>
+                          <td className="tickets-actions-cell">
+                            <button
+                              type="button"
+                              className="tickets-action-btn tickets-action-btn--view"
+                              onClick={() => openTicketModal(ticket.id)}
+                              aria-label="View ticket"
+                            >
+                              <FiEye />
+                            </button>
+                            <button
+                              type="button"
+                              className="tickets-action-btn tickets-action-btn--edit"
+                              onClick={() => startEditTicket(ticket.id)}
+                              aria-label="Edit ticket"
+                            >
+                              <FiEdit2 />
+                            </button>
+                            <button
+                              type="button"
+                              className="tickets-action-btn tickets-action-btn--delete"
+                              onClick={() => handleDeleteTicket(ticket.id)}
+                              aria-label="Delete ticket"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination total={totalPages} current={currentPage} onChange={setCurrentPage} />
+            </>
+          )
+        })()}
       </section>
 
       {isTicketModalOpen && selectedTicket && (

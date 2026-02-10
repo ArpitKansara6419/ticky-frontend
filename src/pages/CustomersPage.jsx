@@ -171,7 +171,7 @@ function CustomersPage() {
   const [customerDetails, setCustomerDetails] = useState(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [menuCustomerId, setMenuCustomerId] = useState(null)
-  const [customerType, setCustomerType] = useState('company') // company | freelancer
+  const [customerType, setCustomerType] = useState('company') // company | freelancer 
   const [status, setStatus] = useState('active')
   const [name, setName] = useState('')
   const [accountEmail, setAccountEmail] = useState('')
