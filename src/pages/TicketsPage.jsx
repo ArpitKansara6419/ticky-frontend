@@ -218,6 +218,21 @@ function TicketsPage() {
     }
   }, [startTime, endTime, breakTime, billingType, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, travelCostPerDay, totalCost, cancellationFee]);
 
+  // Sync Task Dates with Manual Time Log
+  useEffect(() => {
+    if (startTime) {
+      const datePart = startTime.split('T')[1] ? startTime.split('T')[0] : '';
+      if (datePart) setTaskStartDate(datePart);
+    }
+  }, [startTime]);
+
+  useEffect(() => {
+    if (endTime) {
+      const datePart = endTime.split('T')[1] ? endTime.split('T')[0] : '';
+      if (datePart) setTaskEndDate(datePart);
+    }
+  }, [endTime]);
+
   const canSubmit = useMemo(
     () =>
       Boolean(
@@ -1054,7 +1069,6 @@ function TicketsPage() {
                   type="date"
                   value={taskStartDate}
                   onChange={(e) => setTaskStartDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
                 />
               </label>
 
@@ -1066,7 +1080,6 @@ function TicketsPage() {
                   type="date"
                   value={taskEndDate}
                   onChange={(e) => setTaskEndDate(e.target.value)}
-                  min={taskStartDate || new Date().toISOString().split('T')[0]}
                 />
               </label>
 
