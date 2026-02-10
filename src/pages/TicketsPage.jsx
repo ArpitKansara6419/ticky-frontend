@@ -155,12 +155,37 @@ function TicketsPage() {
       const hd = parseFloat(halfDayRate) || 0;
       const fd = parseFloat(fullDayRate) || 0;
 
-      const dayOfWeek = e.getDay();
-      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+      const targetTZ = timezone || 'UTC';
 
-      // OOH Detection
-      const checkOOH = (d) => { const h = d.getHours(); return h < 8 || h >= 18; };
-      const workOOH = checkOOH(s) || checkOOH(e) || hrs > 10;
+      const getZonedInfo = (date) => {
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: targetTZ,
+            hour12: false,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+          }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+          const localDay = new Date(`${parts.year}-${parts.month}-${parts.day}`).getDay();
+          return { dateStr: `${parts.year}-${parts.month}-${parts.day}`, day: localDay, hour: parseInt(parts.hour) };
+        } catch (err) {
+          return { dateStr: '', day: date.getDay(), hour: date.getHours() };
+        }
+      };
+
+      const startInfo = getZonedInfo(s);
+      const endInfo = getZonedInfo(e);
+
+      const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
+
+      const PUBLIC_HOLIDAYS = [
+        '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
+        '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
+        '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
+      ];
+      const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
+      const isSpecialDay = isWeekend || isHoliday;
+
+      const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour >= 18 || hrs > 10;
 
       let base = 0;
       let ot = 0;
@@ -173,14 +198,14 @@ function TicketsPage() {
         if (isWeekend) special = base;
         else {
           if (billed > 8) ot = (billed - 8) * hr * 0.5;
-          if (workOOH && ot === 0) ooh = billed * hr * 0.5;
+          if (workIsOOH && ot === 0) ooh = billed * hr * 0.5;
         }
       } else if (billingType === 'Half Day + Hourly') {
         base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
         if (isWeekend) special = base;
         else {
           if (hrs > 8) ot = (hrs - 8) * hr * 0.5;
-          if (workOOH && ot === 0) ooh = base * 0.5;
+          if (workIsOOH && ot === 0) ooh = base * 0.5;
         }
       } else if (billingType === 'Full Day + OT') {
         base = fd;
@@ -189,12 +214,12 @@ function TicketsPage() {
           if (hrs > 8) ot = (hrs - 8) * hr * 1.0;
         } else {
           if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-          if (workOOH && ot === 0) ooh = base * 0.5;
+          if (workIsOOH && ot === 0) ooh = base * 0.5;
         }
       } else if (billingType.includes('Monthly')) {
         if (isWeekend) special = hrs * hr * 2.0;
         else if (hrs > 8) ot = (hrs - 8) * hr * 1.5;
-        else if (workOOH) ooh = hrs * hr * 0.5;
+        else if (workIsOOH) ooh = hrs * hr * 0.5;
       } else if (billingType === 'Agreed Rate') {
         base = parseFloat(agreedRate) || 0;
       } else if (billingType === 'Cancellation') {
