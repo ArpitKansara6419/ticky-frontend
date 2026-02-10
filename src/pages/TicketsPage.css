@@ -383,6 +383,7 @@
 .tickets-actions-footer {
   display: flex;
   justify-content: flex-end;
+  flex-direction: column;
   gap: 16px;
   margin-top: 24px;
   padding-top: 24px;
@@ -788,4 +789,75 @@
 .ticket-row--unread {
   background: rgba(30, 64, 175, 0.05) !important;
   border-left: 4px solid #ef4444 !important;
+}
+
+/* Calculation Preview Card */
+.calculation-preview-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.calculation-preview-card h3 {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-item label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.preview-item span {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.preview-item.highlight span {
+  color: #3b82f6;
+}
+
+.preview-item.highlight-gold span {
+  color: #d97706;
+}
+
+.preview-item.total {
+  border-left: 2px solid #e2e8f0;
+  padding-left: 16px;
+}
+
+.preview-item.total span {
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.preview-note {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
 }

@@ -601,17 +601,24 @@ const CustomerReceivablePage = () => {
                                             <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
                                         </div>
 
-                                        {parseFloat(detailTicket.breakdown?.otHours) > 0 && (
+                                        {parseFloat(detailTicket.breakdown?.otPremium) > 0 && (
                                             <div className="breakdown-row highlight-premium">
-                                                <span>Overtime (1.5x Multiplier)</span>
-                                                <span>+ {detailTicket.currency || selectedCurrency} {(parseFloat(detailTicket.breakdown?.otHours || 0) * (parseFloat(detailTicket.hourly_rate) || 0) * 0.5).toFixed(2)}</span>
+                                                <span>Overtime Premium (1.5x)</span>
+                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.otPremium).toFixed(2)}</span>
                                             </div>
                                         )}
 
-                                        {(detailTicket.breakdown?.ww === 'Yes' || detailTicket.breakdown?.hw === 'Yes') && (
+                                        {parseFloat(detailTicket.breakdown?.oohPremium) > 0 && (
+                                            <div className="breakdown-row highlight-premium">
+                                                <span>Out of Hours Premium (1.5x)</span>
+                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.oohPremium).toFixed(2)}</span>
+                                            </div>
+                                        )}
+
+                                        {parseFloat(detailTicket.breakdown?.specialDayPremium) > 0 && (
                                             <div className="breakdown-row highlight-premium-gold">
-                                                <span>Weekend/Holiday (2.0x Multiplier)</span>
-                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
+                                                <span>Weekend/Holiday Premium (2.0x)</span>
+                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.specialDayPremium).toFixed(2)}</span>
                                             </div>
                                         )}
                                     </>

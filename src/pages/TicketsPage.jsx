@@ -129,10 +129,94 @@ function TicketsPage() {
   const [billingType, setBillingType] = useState('Hourly')
   const [cancellationFee, setCancellationFee] = useState('')
 
-  // Time Log Override
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [breakTime, setBreakTime] = useState('0') // in minutes
+
+  const [liveBreakdown, setLiveBreakdown] = useState(null);
+
+  // Live Calculation Logic (Mirrors Backend)
+  useEffect(() => {
+    if (!startTime || !endTime) {
+      setLiveBreakdown(null);
+      return;
+    }
+
+    try {
+      const s = new Date(startTime);
+      const e = new Date(endTime);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return;
+
+      const brkSec = (parseInt(breakTime) || 0) * 60;
+      const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
+      const hrs = totSec / 3600;
+
+      const hr = parseFloat(hourlyRate) || 0;
+      const hd = parseFloat(halfDayRate) || 0;
+      const fd = parseFloat(fullDayRate) || 0;
+
+      const dayOfWeek = e.getDay();
+      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+      // OOH Detection
+      const checkOOH = (d) => { const h = d.getHours(); return h < 8 || h >= 18; };
+      const workOOH = checkOOH(s) || checkOOH(e) || hrs > 10;
+
+      let base = 0;
+      let ot = 0;
+      let ooh = 0;
+      let special = 0;
+
+      if (billingType === 'Hourly') {
+        const billed = Math.max(2, hrs);
+        base = billed * hr;
+        if (isWeekend) special = base;
+        else {
+          if (billed > 8) ot = (billed - 8) * hr * 0.5;
+          if (workOOH && ot === 0) ooh = billed * hr * 0.5;
+        }
+      } else if (billingType === 'Half Day + Hourly') {
+        base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
+        if (isWeekend) special = base;
+        else {
+          if (hrs > 8) ot = (hrs - 8) * hr * 0.5;
+          if (workOOH && ot === 0) ooh = base * 0.5;
+        }
+      } else if (billingType === 'Full Day + OT') {
+        base = fd;
+        if (isWeekend) {
+          special = base;
+          if (hrs > 8) ot = (hrs - 8) * hr * 1.0;
+        } else {
+          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+          if (workOOH && ot === 0) ooh = base * 0.5;
+        }
+      } else if (billingType.includes('Monthly')) {
+        if (isWeekend) special = hrs * hr * 2.0;
+        else if (hrs > 8) ot = (hrs - 8) * hr * 1.5;
+        else if (workOOH) ooh = hrs * hr * 0.5;
+      } else if (billingType === 'Agreed Rate') {
+        base = parseFloat(agreedRate) || 0;
+      } else if (billingType === 'Cancellation') {
+        base = parseFloat(cancellationFee) || 0;
+      }
+
+      const tools = parseFloat(totalCost) || 0;
+      const travel = parseFloat(travelCostPerDay) || 0;
+      const grand = base + ot + ooh + special + tools + travel;
+
+      setLiveBreakdown({
+        hrs: hrs.toFixed(2),
+        base: base.toFixed(2),
+        ot: ot.toFixed(2),
+        ooh: ooh.toFixed(2),
+        special: special.toFixed(2),
+        total: grand.toFixed(2)
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }, [startTime, endTime, breakTime, billingType, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, travelCostPerDay, totalCost, cancellationFee]);
 
   const canSubmit = useMemo(
     () =>
@@ -641,18 +725,18 @@ function TicketsPage() {
     setBillingType(ticket.billingType || 'Hourly')
     setStatus(ticket.status || 'Open')
 
+    const formatForInput = (dateStr) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
     // Time Log
-    if (ticket.start_time) {
-      setStartTime(new Date(ticket.start_time).toISOString().slice(0, 16))
-    } else {
-      setStartTime('')
-    }
-    if (ticket.end_time) {
-      setEndTime(new Date(ticket.end_time).toISOString().slice(0, 16))
-    } else {
-      setEndTime('')
-    }
-    setBreakTime(ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0')
+    setStartTime(formatForInput(ticket.start_time));
+    setEndTime(formatForInput(ticket.end_time));
+    setBreakTime(ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0');
   }
 
   const handleViewDocument = (fileUrl) => {
@@ -1390,6 +1474,45 @@ function TicketsPage() {
           {success && <div className="tickets-message tickets-message--success">{success}</div>}
 
           <div className="tickets-actions-footer">
+            {liveBreakdown && (
+              <div className="calculation-preview-card">
+                <h3>Live Estimated Total</h3>
+                <div className="preview-grid">
+                  <div className="preview-item">
+                    <label>Worked Hours</label>
+                    <span>{liveBreakdown.hrs}h</span>
+                  </div>
+                  <div className="preview-item">
+                    <label>Base Cost</label>
+                    <span>{currency} {liveBreakdown.base}</span>
+                  </div>
+                  {parseFloat(liveBreakdown.ot) > 0 && (
+                    <div className="preview-item highlight">
+                      <label>OT Premium</label>
+                      <span>+ {currency} {liveBreakdown.ot}</span>
+                    </div>
+                  )}
+                  {parseFloat(liveBreakdown.ooh) > 0 && (
+                    <div className="preview-item highlight">
+                      <label>OOH Premium</label>
+                      <span>+ {currency} {liveBreakdown.ooh}</span>
+                    </div>
+                  )}
+                  {parseFloat(liveBreakdown.special) > 0 && (
+                    <div className="preview-item highlight-gold">
+                      <label>Wknd/Hol Premium</label>
+                      <span>+ {currency} {liveBreakdown.special}</span>
+                    </div>
+                  )}
+                  <div className="preview-item total">
+                    <label>Grand Total</label>
+                    <span>{currency} {liveBreakdown.total}</span>
+                  </div>
+                </div>
+                <p className="preview-note">Note: Final calculation is performed by the server upon saving.</p>
+              </div>
+            )}
+
             <button
               type="button"
               className="tickets-secondary-btn"
