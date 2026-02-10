@@ -1403,7 +1403,7 @@ function TicketsPage() {
             </button>
 
             <button type="submit" className="tickets-primary-btn" disabled={saving || !canSubmit}>
-              {saving ? 'Creating Ticket...' : 'Create Ticket'}
+              {saving ? (editingTicketId ? 'Saving Changes...' : 'Creating Ticket...') : (editingTicketId ? 'Save Changes' : 'Create Ticket')}
             </button>
           </div>
         </form >
