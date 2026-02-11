@@ -427,45 +427,118 @@
     transform: scale(1.1);
 }
 
-/* --- Floating Bar (Selection UI) --- */
+/* --- Floating Selection & Action Bar (Enhanced) --- */
 .selection-action-bar {
     position: fixed;
     bottom: 32px;
     left: 50%;
     transform: translateX(-50%);
-    background: #0f172a;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
     color: white;
-    padding: 20px 40px;
-    border-radius: 28px;
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5);
+    padding: 24px 48px;
+    border-radius: 32px;
+    box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
-    gap: 48px;
+    gap: 64px;
     z-index: 2000;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    width: auto;
+    min-width: 800px;
 }
 
-.invoice-summary strong {
-    font-size: 24px;
+.selection-count {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.selection-count strong {
+    background: var(--crm-primary);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.selection-count span {
+    font-size: 14px;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.invoice-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding-left: 32px;
+}
+
+.invoice-summary span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.invoice_amount_wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.amount-currency {
+    font-size: 16px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.amount-value {
+    font-size: 32px;
     font-weight: 900;
     color: #60a5fa;
+    line-height: 1;
+}
+
+.btn-wow-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 24px;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-wow-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .btn-generate-premium {
     background: linear-gradient(135deg, var(--crm-primary), var(--crm-accent));
     color: white;
-    padding: 12px 28px;
-    border-radius: 14px;
+    padding: 14px 36px;
+    border-radius: 16px;
     font-weight: 700;
     border: none;
     cursor: pointer;
     transition: all 0.3s;
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+    font-size: 15px;
 }
 
 .btn-generate-premium:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 12px 25px rgba(99, 102, 241, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.5);
 }
 
 /* Custom Scrollbar */

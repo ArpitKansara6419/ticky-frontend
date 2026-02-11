@@ -473,16 +473,20 @@ const CustomerReceivablePage = () => {
                             {selectedTicketIds.length > 0 && (
                                 <div className="selection-action-bar">
                                     <div className="selection-count">
-                                        <strong>{selectedTicketIds.length}</strong> <span>Tickets ready for invoicing</span>
+                                        <strong>{selectedTicketIds.length}</strong>
+                                        <span>Tickets selected for billing</span>
                                     </div>
                                     <div className="invoice-summary">
                                         <span>Consolidated Total</span>
-                                        <strong>{selectedCurrency} {calculateSelectedTotal()}</strong>
+                                        <div className="invoice_amount_wrap">
+                                            <span className="amount-currency">{selectedCurrency}</span>
+                                            <span className="amount-value">{calculateSelectedTotal()}</span>
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '12px' }}>
-                                        <button className="btn-secondary-premium" onClick={() => setSelectedTicketIds([])}>Cancel</button>
+                                    <div style={{ display: 'flex', gap: '12px', marginLeft: 'auto' }}>
+                                        <button className="btn-wow-secondary" onClick={() => setSelectedTicketIds([])}>Cancel</button>
                                         <button
-                                            className="btn-primary-premium"
+                                            className="btn-generate-premium"
                                             onClick={handleCreateInvoice}
                                             disabled={selectedTicketIds.length === 0}
                                         >
