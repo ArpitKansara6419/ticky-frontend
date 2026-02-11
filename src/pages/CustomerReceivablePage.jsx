@@ -375,10 +375,10 @@ const CustomerReceivablePage = () => {
 
             <div className="tabs-container-premium">
                 <button className={`tab-btn-premium ${activeTab === 'unbilled' ? 'active' : ''}`} onClick={() => setActiveTab('unbilled')}>
-                    Unbilled Work <span className="tab-badge">{unbilledList.length}</span>
+                    <FiClock /> Unbilled Work <span className="tab-badge">{unbilledList.length}</span>
                 </button>
                 <button className={`tab-btn-premium ${activeTab === 'invoices' ? 'active' : ''}`} onClick={() => setActiveTab('invoices')}>
-                    Invoice History
+                    <FiFileText /> Invoice History
                 </button>
             </div>
 

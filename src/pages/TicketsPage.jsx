@@ -1991,17 +1991,25 @@ function TicketsPage() {
 
                 {isInlineEditing ? (
                   <div className="detail-item--full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                    <div style={{ marginBottom: '16px', padding: '10px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px' }}>
+                      <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase' }}>Current Recorded Values:</p>
+                      <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: '#b45309' }}>
+                        <span><strong>Start:</strong> {selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
+                        <span><strong>End:</strong> {selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
+                        <span><strong>Break:</strong> {selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)}m` : '0m'}</span>
+                      </div>
+                    </div>
                     <div className="tickets-grid" style={{ marginBottom: '16px' }}>
                       <label className="tickets-field">
-                        <span>Start Time</span>
+                        <span>New Start Time</span>
                         <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} />
                       </label>
                       <label className="tickets-field">
-                        <span>End Time</span>
+                        <span>New End Time</span>
                         <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} />
                       </label>
                       <label className="tickets-field">
-                        <span>Break Time (Mins)</span>
+                        <span>New Break Time (Mins)</span>
                         <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} />
                       </label>
                     </div>
