@@ -596,7 +596,7 @@ const CustomerReceivablePage = () => {
                                 </div>
                             </div>
 
-                            <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
                                 <div className="breakdown-list-premium">
                                     {detailTicket.billing_type === 'Cancellation' ? (
                                         <div className="breakdown-row highlight-premium">
