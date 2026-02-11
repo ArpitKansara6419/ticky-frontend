@@ -564,89 +564,98 @@ const CustomerReceivablePage = () => {
                 <div className="modal-overlay-premium" onClick={() => setDetailTicket(null)}>
                     <div className="modal-content-premium" onClick={e => e.stopPropagation()}>
                         <div className="modal-header-premium">
-                            <h3>Ticket Cost Breakdown</h3>
-                            <button className="close-btn-premium" onClick={() => setDetailTicket(null)}><FiX /></button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div className="title-icon-glow" style={{ padding: '8px' }}><FiFileText size={20} /></div>
+                                <h3>Cost Breakdown Detail</h3>
+                            </div>
+                            <button className="close-btn-premium" onClick={() => setDetailTicket(null)}><FiX size={18} /></button>
                         </div>
                         <div className="modal-body-premium">
                             <div className="detail-grid-premium">
                                 <div className="detail-item">
-                                    <label>Ticket ID</label>
-                                    <span>#{detailTicket.id}</span>
+                                    <label>Reference</label>
+                                    <span className="ticket-id-tag">#{detailTicket.id}</span>
                                 </div>
                                 <div className="detail-item">
                                     <label>Customer</label>
-                                    <span>{detailTicket.customer_name}</span>
+                                    <span>{detailTicket.customer_name || 'N/A'}</span>
                                 </div>
                                 <div className="detail-item">
-                                    <label>Task Name</label>
-                                    <span>{detailTicket.task_name}</span>
+                                    <label>Technician</label>
+                                    <span>{detailTicket.engineer_name || 'N/A'}</span>
                                 </div>
                                 <div className="detail-item">
-                                    <label>Engineer</label>
-                                    <span>{detailTicket.engineer_name}</span>
+                                    <label>Billing Model</label>
+                                    <span style={{ color: 'var(--crm-primary)' }}>{detailTicket.billing_type || 'Standard'}</span>
+                                </div>
+                                <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                                    <label>Task Description</label>
+                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: '#475569', fontWeight: '500' }}>
+                                        {detailTicket.task_name || 'No description provided.'}
+                                    </p>
                                 </div>
                             </div>
 
-                            <hr className="divider-premium" />
-
-                            <div className="breakdown-list-premium">
-                                {detailTicket.billing_type === 'Cancellation' ? (
-                                    <div className="breakdown-row highlight-premium">
-                                        <span>Cancellation Fee</span>
-                                        <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="breakdown-row">
-                                            <span>Base Rate ({detailTicket.billing_type})</span>
-                                            <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
+                            <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                <div className="breakdown-list-premium">
+                                    {detailTicket.billing_type === 'Cancellation' ? (
+                                        <div className="breakdown-row highlight-premium">
+                                            <span>Cancellation Penalty</span>
+                                            <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
                                         </div>
-
-                                        {parseFloat(detailTicket.breakdown?.otPremium) > 0 && (
-                                            <div className="breakdown-row highlight-premium">
-                                                <span>Overtime Premium (1.5x)</span>
-                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.otPremium).toFixed(2)}</span>
+                                    ) : (
+                                        <>
+                                            <div className="breakdown-row">
+                                                <span>Labor Base Cost</span>
+                                                <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
                                             </div>
-                                        )}
 
-                                        {parseFloat(detailTicket.breakdown?.oohPremium) > 0 && (
-                                            <div className="breakdown-row highlight-premium">
-                                                <span>Out of Hours Premium (1.5x)</span>
-                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.oohPremium).toFixed(2)}</span>
-                                            </div>
-                                        )}
+                                            {parseFloat(detailTicket.breakdown?.otPremium) > 0 && (
+                                                <div className="breakdown-row highlight-premium">
+                                                    <span>Overtime (OT) 1.5x</span>
+                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.otPremium).toFixed(2)}</span>
+                                                </div>
+                                            )}
 
-                                        {parseFloat(detailTicket.breakdown?.specialDayPremium) > 0 && (
-                                            <div className="breakdown-row highlight-premium-gold">
-                                                <span>Weekend/Holiday Premium (2.0x)</span>
-                                                <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.specialDayPremium).toFixed(2)}</span>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
+                                            {parseFloat(detailTicket.breakdown?.oohPremium) > 0 && (
+                                                <div className="breakdown-row highlight-premium">
+                                                    <span>Out of Hours (OOH) 1.5x</span>
+                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.oohPremium).toFixed(2)}</span>
+                                                </div>
+                                            )}
 
-                                {parseFloat(detailTicket.breakdown?.travelCost) > 0 && (
-                                    <div className="breakdown-row">
-                                        <span>Travel / Transport</span>
-                                        <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.travelCost || 0).toFixed(2)}</span>
+                                            {parseFloat(detailTicket.breakdown?.specialDayPremium) > 0 && (
+                                                <div className="breakdown-row highlight-premium-gold">
+                                                    <span>Weekend/Holiday Premium 2.0x</span>
+                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.specialDayPremium).toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {parseFloat(detailTicket.breakdown?.travelCost) > 0 && (
+                                        <div className="breakdown-row">
+                                            <span>Travel & Logistics</span>
+                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.travelCost || 0).toFixed(2)}</span>
+                                        </div>
+                                    )}
+
+                                    {parseFloat(detailTicket.breakdown?.toolCost) > 0 && (
+                                        <div className="breakdown-row">
+                                            <span>Tools & Material</span>
+                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.toolCost || 0).toFixed(2)}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="breakdown-row total-row-premium">
+                                        <span>Net Receivable</span>
+                                        <span>{detailTicket.currency || selectedCurrency} {(parseFloat(detailTicket.breakdown?.totalReceivable) || parseFloat(detailTicket.total_cost) || 0).toFixed(2)}</span>
                                     </div>
-                                )}
-
-                                {parseFloat(detailTicket.breakdown?.toolCost) > 0 && (
-                                    <div className="breakdown-row">
-                                        <span>Tools / Equipment</span>
-                                        <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.toolCost || 0).toFixed(2)}</span>
-                                    </div>
-                                )}
-
-                                <div className="breakdown-row total-row-premium">
-                                    <span>Net Receivable</span>
-                                    <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.totalReceivable || detailTicket.total_cost || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
                         <div className="modal-footer-premium">
-                            <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Close Details</button>
+                            <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
                         </div>
                     </div>
                 </div>
@@ -656,4 +665,3 @@ const CustomerReceivablePage = () => {
 };
 
 export default CustomerReceivablePage;
-
