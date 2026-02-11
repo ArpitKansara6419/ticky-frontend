@@ -2112,13 +2112,6 @@ function TicketsPage() {
                   <>
                     <div className="detail-item--full" style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Time Log (Engineer Activity)</label>
-                      <button
-                        className="btn-wow-secondary"
-                        style={{ padding: '4px 12px', fontSize: '12px' }}
-                        onClick={() => setIsInlineEditing(!isInlineEditing)}
-                      >
-                        {isInlineEditing ? 'Cancel Edit' : 'Edit Time Log'}
-                      </button>
                     </div>
 
                     {isInlineEditing ? (
@@ -2295,11 +2288,15 @@ function TicketsPage() {
               <button
                 className="btn-wow-primary"
                 onClick={() => {
-                  handleCloseTicketModal();
-                  startEditTicket(selectedTicket.id);
+                  if (selectedTicket.leadType === 'Dispatch') {
+                    const el = document.querySelector('.dispatch-logs-table-wrapper');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    setIsInlineEditing(!isInlineEditing);
+                  }
                 }}
               >
-                Edit Ticket
+                {selectedTicket.leadType === 'Dispatch' ? 'Edit Time' : (isInlineEditing ? 'Cancel Edit' : 'Edit Time')}
               </button>
             </div>
           </div>
