@@ -14,6 +14,14 @@ const TIMEZONES = [
   'US Eastern (UTC-05:00)',
 ]
 
+const formatForInput = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const STATIC_COUNTRIES = [
   { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
   { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
@@ -139,6 +147,12 @@ function TicketsPage() {
   const [inlineEndTime, setInlineEndTime] = useState('');
   const [inlineBreakTime, setInlineBreakTime] = useState('0');
   const [isUpdatingTime, setIsUpdatingTime] = useState(false);
+  const [leadType, setLeadType] = useState('Full time') // 'Full time' | 'Dispatch'
+  const [timeLogs, setTimeLogs] = useState([]);
+  const [isUpdatingLog, setIsUpdatingLog] = useState(null); // stores log ID being updated
+  const [isResolvingEarly, setIsResolvingEarly] = useState(false);
+  const [newExtendEndDate, setNewExtendEndDate] = useState('');
+  const [isExtending, setIsExtending] = useState(false);
 
   // Live Calculation Logic (Mirrors Backend)
   useEffect(() => {
@@ -322,6 +336,7 @@ function TicketsPage() {
     setTotalCost('')
     setStatus('Assigned')
     setBillingType('Hourly')
+    setLeadType('Full time')
     setCancellationFee('')
     setStartTime('')
     setEndTime('')
@@ -601,6 +616,7 @@ function TicketsPage() {
         travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
         totalCost: totalCost !== '' ? Number(totalCost) : null,
         billingType,
+        leadType,
         cancellationFee: cancellationFee !== '' ? Number(cancellationFee) : null,
         status,
         taskStartDate: taskStartDate ? String(taskStartDate).split('T')[0] : null,
@@ -638,39 +654,16 @@ function TicketsPage() {
     }
   }
 
-  const openTicketModal = async (ticketId) => {
-    try {
-      setError('')
-      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.message || 'Unable to load ticket details')
-      }
-      setSelectedTicket(data.ticket)
+  const openTicketModal = (ticketId) => {
+    const t = tickets.find((x) => x.id === ticketId)
+    if (t) {
+      setSelectedTicket(t)
       setIsTicketModalOpen(true)
-      setIsInlineEditing(false)
-
-      // Pre-fill inline edit fields
-      const formatForInput = (dateStr) => {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return '';
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      };
-      setInlineStartTime(formatForInput(data.ticket.start_time));
-      setInlineEndTime(formatForInput(data.ticket.end_time));
-      setInlineBreakTime(data.ticket.break_time ? String(Math.floor(data.ticket.break_time / 60)) : '0');
-
-      // Fetch extra info
       fetchTicketExtras(ticketId)
-
-      // Mark notes as read
-      fetch(`${API_BASE_URL}/tickets/${ticketId}/notes/read`, { method: 'POST', credentials: 'include' })
-        .catch(err => console.error('Failed to mark notes as read', err))
-    } catch (err) {
-      console.error('View ticket error', err)
-      setError(err.message || 'Unable to load ticket details')
+      setInlineStartTime(t.start_time ? formatForInput(t.start_time) : '')
+      setInlineEndTime(t.end_time ? formatForInput(t.end_time) : '')
+      setInlineBreakTime(t.breakTime || '0')
+      setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
     }
   }
 
@@ -706,10 +699,11 @@ function TicketsPage() {
 
   const fetchTicketExtras = async (ticketId) => {
     try {
-      const [notesRes, attachRes, expRes] = await Promise.all([
+      const [notesRes, attachRes, expRes, logsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/tickets/${ticketId}/notes`, { credentials: 'include' }),
         fetch(`${API_BASE_URL}/tickets/${ticketId}/attachments`, { credentials: 'include' }),
         fetch(`${API_BASE_URL}/tickets/${ticketId}/expenses`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs`, { credentials: 'include' }),
       ])
 
       if (notesRes.ok) {
@@ -724,28 +718,84 @@ function TicketsPage() {
         let d = await expRes.json();
         setTicketExpenses(d.expenses || []);
       }
+      if (logsRes.ok) {
+        let d = await logsRes.json();
+        setTimeLogs(d.logs || []);
+      }
     } catch (e) {
       console.error('Error fetching ticket extras', e)
     }
   }
 
-  const handleAddAdminNote = async () => {
-    if (!newAdminNote.trim()) return
+  const handleUpdateLog = async (logId, data) => {
+    setIsUpdatingLog(logId);
     try {
-      setAddingNote(true)
+      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/time-logs/${logId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Update failed');
+      fetchTicketExtras(selectedTicket.id);
+      loadTickets();
+    } catch (e) { alert(e.message); }
+    setIsUpdatingLog(null);
+  }
+
+  const handleResolveEarly = async (date) => {
+    if (!window.confirm(`Are you sure you want to resolve this ticket early on ${date}? Future logs will be deleted.`)) return;
+    setIsResolvingEarly(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/resolve-early`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ resolveDate: date })
+      });
+      if (!res.ok) throw new Error('Action failed');
+      handleCloseTicketModal();
+      loadTickets();
+    } catch (e) { alert(e.message); }
+    setIsResolvingEarly(false);
+  }
+
+  const handleExtendJob = async () => {
+    if (!newExtendEndDate) return;
+    setIsExtending(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/extend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ newEndDate: newExtendEndDate })
+      });
+      if (!res.ok) throw new Error('Extension failed');
+      fetchTicketExtras(selectedTicket.id);
+      loadTickets();
+    } catch (e) { alert(e.message); }
+    setIsExtending(false);
+  }
+
+  const handleAddAdminNote = async () => {
+    if (!newAdminNote.trim()) return;
+    setAddingNote(true);
+    try {
       const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ content: newAdminNote, authorType: 'admin' }),
-        credentials: 'include'
-      })
+      });
+
       if (res.ok) {
-        setNewAdminNote('')
-        fetchTicketExtras(selectedTicket.id)
+        setNewAdminNote('');
+        fetchTicketExtras(selectedTicket.id);
       }
-    } finally {
-      setAddingNote(false)
+    } catch (e) {
+      console.error('Error adding note', e);
     }
+    setAddingNote(false);
   }
 
   const fillFormFromTicket = (ticket) => {
@@ -811,6 +861,7 @@ function TicketsPage() {
     setTravelCostPerDay(ticket.travelCostPerDay != null ? String(ticket.travelCostPerDay) : '')
     setTotalCost(ticket.toolCost != null ? String(ticket.toolCost) : '')
     setBillingType(ticket.billingType || 'Hourly')
+    setLeadType(ticket.leadType || 'Full time')
     setStatus(ticket.status || 'Open')
 
     const formatForInput = (dateStr) => {
@@ -971,6 +1022,7 @@ function TicketsPage() {
         setTravelCostPerDay(parsedLead.travelCostPerDay != null ? String(parsedLead.travelCostPerDay) : '')
         setTotalCost(parsedLead.totalCost != null ? String(parsedLead.totalCost) : '')
         setBillingType(parsedLead.billingType || 'Hourly')
+        setLeadType(parsedLead.leadType || 'Full time')
 
         setViewMode('form')
       }
@@ -1011,6 +1063,7 @@ function TicketsPage() {
       setTravelCostPerDay(lead.travelCostPerDay != null ? String(lead.travelCostPerDay) : '')
       setTotalCost(lead.totalCost != null ? String(lead.totalCost) : '')
       setBillingType(lead.billingType || 'Hourly')
+      setLeadType(lead.leadType || 'Full time')
     }
   }, [leadId, leads])
 
@@ -1442,6 +1495,13 @@ function TicketsPage() {
                   <option value="Monthly + OT + Weekend/Holiday">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
                   <option value="Agreed Rate">5) Agreed/Fixed Rate</option>
                   <option value="Cancellation">6) Cancellation/Reschedule Fee</option>
+                </select>
+              </label>
+              <label className="tickets-field">
+                <span>Support Type</span>
+                <select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
+                  <option value="Full time">Full time</option>
+                  <option value="Dispatch">Dispatch (Multi-day)</option>
                 </select>
               </label>
 
@@ -1978,68 +2038,142 @@ function TicketsPage() {
 
                 <div className="detail-item--full divider"></div>
 
-                <div className="detail-item--full" style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Time Log (Engineer Activity)</label>
-                  <button
-                    className="btn-wow-secondary"
-                    style={{ padding: '4px 12px', fontSize: '12px' }}
-                    onClick={() => setIsInlineEditing(!isInlineEditing)}
-                  >
-                    {isInlineEditing ? 'Cancel Edit' : 'Edit Time Log'}
-                  </button>
-                </div>
-
-                {isInlineEditing ? (
-                  <div className="detail-item--full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-                    <div style={{ marginBottom: '16px', padding: '10px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px' }}>
-                      <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase' }}>Current Recorded Values:</p>
-                      <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: '#b45309' }}>
-                        <span><strong>Start:</strong> {selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
-                        <span><strong>End:</strong> {selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
-                        <span><strong>Break:</strong> {selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)}m` : '0m'}</span>
+                {selectedTicket.leadType === 'Dispatch' && (
+                  <div className="detail-item--full" style={{ marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Multi-day Time Logs</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="date"
+                          value={newExtendEndDate}
+                          onChange={e => setNewExtendEndDate(e.target.value)}
+                          style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                        />
+                        <button className="btn-wow-secondary" onClick={handleExtendJob} disabled={isExtending} style={{ padding: '4px 12px', fontSize: '11px' }}>
+                          {isExtending ? 'Extending...' : 'Extend Job'}
+                        </button>
                       </div>
                     </div>
-                    <div className="tickets-grid" style={{ marginBottom: '16px' }}>
-                      <label className="tickets-field">
-                        <span>New Start Time</span>
-                        <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} />
-                      </label>
-                      <label className="tickets-field">
-                        <span>New End Time</span>
-                        <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} />
-                      </label>
-                      <label className="tickets-field">
-                        <span>New Break Time (Mins)</span>
-                        <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} />
-                      </label>
+
+                    <div className="dispatch-logs-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                          <tr>
+                            <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
+                            <th style={{ padding: '10px', textAlign: 'left' }}>In / Out / Break</th>
+                            <th style={{ padding: '10px', textAlign: 'center' }}>Total</th>
+                            <th style={{ padding: '10px', textAlign: 'right' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {timeLogs.map(log => {
+                            const dur = (log.start_time && log.end_time)
+                              ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
+                              : 0;
+                            return (
+                              <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '10px' }}>
+                                  <div style={{ fontWeight: '600' }}>{new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
+                                  <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
+                                </td>
+                                <td style={{ padding: '10px' }}>
+                                  <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                      <input type="time" defaultValue={log.start_time ? new Date(log.start_time).toTimeString().slice(0, 5) : ''} onBlur={e => handleUpdateLog(log.id, { startTime: log.task_date.split('T')[0] + ' ' + e.target.value })} />
+                                      <input type="time" defaultValue={log.end_time ? new Date(log.end_time).toTimeString().slice(0, 5) : ''} onBlur={e => handleUpdateLog(log.id, { endTime: log.task_date.split('T')[0] + ' ' + e.target.value })} />
+                                    </div>
+                                    <input type="number" placeholder="Break mins" style={{ width: '80px' }} defaultValue={log.break_time_mins} onBlur={e => handleUpdateLog(log.id, { breakTimeMins: parseInt(e.target.value) })} />
+                                  </div>
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: 'var(--primary-color)' }}>
+                                  {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'right' }}>
+                                  <button
+                                    className="btn-wow-secondary"
+                                    style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #ef4444', color: '#ef4444' }}
+                                    onClick={() => handleResolveEarly(log.task_date.split('T')[0])}
+                                  >
+                                    Resolve Here
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                    <button
-                      className="btn-wow-primary"
-                      style={{ width: '100%' }}
-                      onClick={handleUpdateInlineTime}
-                      disabled={isUpdatingTime}
-                    >
-                      {isUpdatingTime ? 'Updating...' : 'Save Time Changes'}
-                    </button>
                   </div>
-                ) : (
+                )}
+
+                <div className="detail-item--full divider"></div>
+
+                {selectedTicket.leadType !== 'Dispatch' && (
                   <>
-                    <div className="detail-item">
-                      <label>Actual Start Time</label>
-                      <span style={{ fontWeight: '600' }}>{selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString() : '--'}</span>
+                    <div className="detail-item--full" style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Time Log (Engineer Activity)</label>
+                      <button
+                        className="btn-wow-secondary"
+                        style={{ padding: '4px 12px', fontSize: '12px' }}
+                        onClick={() => setIsInlineEditing(!isInlineEditing)}
+                      >
+                        {isInlineEditing ? 'Cancel Edit' : 'Edit Time Log'}
+                      </button>
                     </div>
-                    <div className="detail-item">
-                      <label>Actual End Time</label>
-                      <span style={{ fontWeight: '600' }}>{selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString() : '--'}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Break Time</label>
-                      <span style={{ fontWeight: '600' }}>{selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)} mins` : '0 mins'}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Total Bilable Time</label>
-                      <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.total_time ? `${(selectedTicket.total_time / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
-                    </div>
+
+                    {isInlineEditing ? (
+                      <div className="detail-item--full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                        <div style={{ marginBottom: '16px', padding: '10px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px' }}>
+                          <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase' }}>Current Recorded Values:</p>
+                          <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: '#b45309' }}>
+                            <span><strong>Start:</strong> {selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
+                            <span><strong>End:</strong> {selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
+                            <span><strong>Break:</strong> {selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)}m` : '0m'}</span>
+                          </div>
+                        </div>
+                        <div className="tickets-grid" style={{ marginBottom: '16px' }}>
+                          <label className="tickets-field">
+                            <span>New Start Time</span>
+                            <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} />
+                          </label>
+                          <label className="tickets-field">
+                            <span>New End Time</span>
+                            <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} />
+                          </label>
+                          <label className="tickets-field">
+                            <span>New Break Time (Mins)</span>
+                            <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} />
+                          </label>
+                        </div>
+                        <button
+                          className="btn-wow-primary"
+                          style={{ width: '100%' }}
+                          onClick={handleUpdateInlineTime}
+                          disabled={isUpdatingTime}
+                        >
+                          {isUpdatingTime ? 'Updating...' : 'Save Time Changes'}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="detail-item">
+                          <label>Actual Start Time</label>
+                          <span style={{ fontWeight: '600' }}>{selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString() : '--'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Actual End Time</label>
+                          <span style={{ fontWeight: '600' }}>{selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString() : '--'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Break Time</label>
+                          <span style={{ fontWeight: '600' }}>{selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)} mins` : '0 mins'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <label>Total Bilable Time</label>
+                          <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.total_time ? `${(selectedTicket.total_time / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
 
