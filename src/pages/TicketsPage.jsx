@@ -682,9 +682,9 @@ function TicketsPage() {
         }),
         credentials: 'include'
       });
-      if (!res.ok) throw new Error('Failed to update time');
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update time');
       // Reload ticket details to show updated calculation
       await openTicketModal(selectedTicket.id);
       setIsInlineEditing(false);
@@ -2151,15 +2151,15 @@ function TicketsPage() {
                       <>
                         <div className="detail-item">
                           <label>Actual Start Time</label>
-                          <span style={{ fontWeight: '600' }}>{selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString() : '--'}</span>
+                          <span style={{ fontWeight: '600' }}>{selectedTicket.startTime ? new Date(selectedTicket.startTime).toLocaleString() : '--'}</span>
                         </div>
                         <div className="detail-item">
                           <label>Actual End Time</label>
-                          <span style={{ fontWeight: '600' }}>{selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString() : '--'}</span>
+                          <span style={{ fontWeight: '600' }}>{selectedTicket.endTime ? new Date(selectedTicket.endTime).toLocaleString() : '--'}</span>
                         </div>
                         <div className="detail-item">
                           <label>Break Time</label>
-                          <span style={{ fontWeight: '600' }}>{selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)} mins` : '0 mins'}</span>
+                          <span style={{ fontWeight: '600' }}>{selectedTicket.breakTime ? `${Math.floor(selectedTicket.breakTime / 60)} mins` : '0 mins'}</span>
                         </div>
                         <div className="detail-item">
                           <label>Total Bilable Time</label>
