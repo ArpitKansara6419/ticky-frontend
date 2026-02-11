@@ -134,6 +134,11 @@ function TicketsPage() {
   const [breakTime, setBreakTime] = useState('0') // in minutes
 
   const [liveBreakdown, setLiveBreakdown] = useState(null);
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const [inlineStartTime, setInlineStartTime] = useState('');
+  const [inlineEndTime, setInlineEndTime] = useState('');
+  const [inlineBreakTime, setInlineBreakTime] = useState('0');
+  const [isUpdatingTime, setIsUpdatingTime] = useState(false);
 
   // Live Calculation Logic (Mirrors Backend)
   useEffect(() => {
@@ -643,6 +648,19 @@ function TicketsPage() {
       }
       setSelectedTicket(data.ticket)
       setIsTicketModalOpen(true)
+      setIsInlineEditing(false)
+
+      // Pre-fill inline edit fields
+      const formatForInput = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+      setInlineStartTime(formatForInput(data.ticket.start_time));
+      setInlineEndTime(formatForInput(data.ticket.end_time));
+      setInlineBreakTime(data.ticket.break_time ? String(Math.floor(data.ticket.break_time / 60)) : '0');
 
       // Fetch extra info
       fetchTicketExtras(ticketId)
@@ -655,6 +673,36 @@ function TicketsPage() {
       setError(err.message || 'Unable to load ticket details')
     }
   }
+
+  const handleUpdateInlineTime = async () => {
+    try {
+      setIsUpdatingTime(true);
+      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...selectedTicket, // Keep existing ticket data
+          startTime: inlineStartTime,
+          endTime: inlineEndTime,
+          breakTime: Number(inlineBreakTime),
+          status: selectedTicket.status // Ensure status is preserved
+        }),
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to update time');
+
+      const data = await res.json();
+      // Reload ticket details to show updated calculation
+      await openTicketModal(selectedTicket.id);
+      setIsInlineEditing(false);
+      await loadTickets(); // Refresh list view
+    } catch (err) {
+      console.error(err);
+      alert('Error updating time log: ' + err.message);
+    } finally {
+      setIsUpdatingTime(false);
+    }
+  };
 
   const fetchTicketExtras = async (ticketId) => {
     try {
@@ -1930,25 +1978,62 @@ function TicketsPage() {
 
                 <div className="detail-item--full divider"></div>
 
-                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                <div className="detail-item--full" style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Time Log (Engineer Activity)</label>
+                  <button
+                    className="btn-wow-secondary"
+                    style={{ padding: '4px 12px', fontSize: '12px' }}
+                    onClick={() => setIsInlineEditing(!isInlineEditing)}
+                  >
+                    {isInlineEditing ? 'Cancel Edit' : 'Edit Time Log'}
+                  </button>
                 </div>
-                <div className="detail-item">
-                  <label>Actual Start Time</label>
-                  <span style={{ fontWeight: '600' }}>{selectedTicket.startTime ? new Date(selectedTicket.startTime).toLocaleString() : '--'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Actual End Time</label>
-                  <span style={{ fontWeight: '600' }}>{selectedTicket.endTime ? new Date(selectedTicket.endTime).toLocaleString() : '--'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Break Time</label>
-                  <span style={{ fontWeight: '600' }}>{selectedTicket.breakTime ? `${Math.floor(selectedTicket.breakTime / 60)} mins` : '0 mins'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Total Bilable Time</label>
-                  <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.totalTime ? `${(selectedTicket.totalTime / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
-                </div>
+
+                {isInlineEditing ? (
+                  <div className="detail-item--full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                    <div className="tickets-grid" style={{ marginBottom: '16px' }}>
+                      <label className="tickets-field">
+                        <span>Start Time</span>
+                        <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} />
+                      </label>
+                      <label className="tickets-field">
+                        <span>End Time</span>
+                        <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} />
+                      </label>
+                      <label className="tickets-field">
+                        <span>Break Time (Mins)</span>
+                        <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} />
+                      </label>
+                    </div>
+                    <button
+                      className="btn-wow-primary"
+                      style={{ width: '100%' }}
+                      onClick={handleUpdateInlineTime}
+                      disabled={isUpdatingTime}
+                    >
+                      {isUpdatingTime ? 'Updating...' : 'Save Time Changes'}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="detail-item">
+                      <label>Actual Start Time</label>
+                      <span style={{ fontWeight: '600' }}>{selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString() : '--'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Actual End Time</label>
+                      <span style={{ fontWeight: '600' }}>{selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString() : '--'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Break Time</label>
+                      <span style={{ fontWeight: '600' }}>{selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)} mins` : '0 mins'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Total Bilable Time</label>
+                      <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.total_time ? `${(selectedTicket.total_time / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
+                    </div>
+                  </>
+                )}
 
                 <div className="detail-item--full divider"></div>
                 <div className="detail-item--full" style={{ background: 'var(--primary-bg, #f5f3ff)', padding: '15px', borderRadius: '10px', border: '1px solid var(--primary-color, #a78bfa)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
