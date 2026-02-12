@@ -639,7 +639,8 @@ function TicketsPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.message || (isEditing ? 'Unable to update ticket' : 'Unable to create ticket'))
+        const errMsg = data.details ? `${data.message}: ${data.details}` : (data.message || 'Error occurred');
+        throw new Error(errMsg);
       }
 
       setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
