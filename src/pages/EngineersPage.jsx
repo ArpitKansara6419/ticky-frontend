@@ -6,18 +6,21 @@ import './EngineersPage.css'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const TAB_STYLE = {
-    padding: '10px 20px',
+    padding: '12px 24px',
     cursor: 'pointer',
     borderBottom: '2px solid transparent',
     fontWeight: '500',
-    color: '#64748b'
+    color: '#64748b',
+    fontSize: '14px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
 };
 
 const TAB_ACTIVE_STYLE = {
     ...TAB_STYLE,
     borderBottom: '2px solid #2563eb',
     color: '#2563eb',
-    fontWeight: '600'
+    fontWeight: '700'
 };
 
 function EngineersPage() {
@@ -214,7 +217,8 @@ function EngineersPage() {
                     </div>
                 </header>
 
-                <div className="tabs-header" style={{ display: 'flex', gap: '10px', borderBottom: '1px solid #e2e8f0', marginBottom: '25px' }}>
+                {/* Tabs */}
+                <div className="tabs-header" style={{ display: 'flex', gap: '20px', borderBottom: '1px solid #e2e8f0', marginBottom: '30px' }}>
                     <div style={activeTab === 'profile' ? TAB_ACTIVE_STYLE : TAB_STYLE} onClick={() => setActiveTab('profile')}>PROFILE</div>
                     <div style={activeTab === 'tickets' ? TAB_ACTIVE_STYLE : TAB_STYLE} onClick={() => setActiveTab('tickets')}>TICKETS</div>
                     <div style={activeTab === 'charges' ? TAB_ACTIVE_STYLE : TAB_STYLE} onClick={() => setActiveTab('charges')}>CHARGES</div>
@@ -224,8 +228,8 @@ function EngineersPage() {
                     {/* PROFILE TAB */}
                     {activeTab === 'profile' && (
                         <div className="profile-tab-content card-box">
-                            <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Personal Information</h3>
-                            <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                            <h3 className="section-head" style={{ border: 'none' }}>Personal Information</h3>
+                            <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px' }}>
                                 <div className="detail-item">
                                     <label>Name</label>
                                     <div className="detail-value">{selectedEngineer.name}</div>
@@ -239,18 +243,18 @@ function EngineersPage() {
                                     <div className="detail-value">{selectedEngineer.phone}</div>
                                 </div>
                                 <div className="detail-item">
-                                    <label>Location</label>
+                                    <label>Address / Location</label>
                                     <div className="detail-value">{selectedEngineer.address || '-'}</div>
+                                </div>
+                                <div className="detail-item">
+                                    <label>Joined Date</label>
+                                    <div className="detail-value">{selectedEngineer.created_at ? new Date(selectedEngineer.created_at).toLocaleDateString() : '-'}</div>
                                 </div>
                                 <div className="detail-item">
                                     <label>Status</label>
                                     <div className="detail-value">
                                         <span className={`status-pill status-pill--${selectedEngineer.status}`}>{selectedEngineer.status}</span>
                                     </div>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Joined</label>
-                                    <div className="detail-value">{selectedEngineer.created_at ? new Date(selectedEngineer.created_at).toLocaleDateString() : '-'}</div>
                                 </div>
                             </div>
                         </div>
@@ -259,132 +263,165 @@ function EngineersPage() {
                     {/* TICKETS TAB */}
                     {activeTab === 'tickets' && (
                         <div className="tickets-tab-content">
-                            {loadingTickets ? <p>Loading tickets...</p> : (
+                            {/* We reuse the engineers-table class but with structure matching Tickets Table */}
+                            <div className="engineers-content-card">
                                 <div className="engineers-table-wrapper">
                                     <table className="engineers-table">
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
+                                                <th>Ticket ID</th>
                                                 <th>Task Name</th>
                                                 <th>Customer</th>
                                                 <th>Date</th>
                                                 <th>Status</th>
                                                 <th>Location</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {engTickets.map(t => (
-                                                <tr key={t.id}>
-                                                    <td>#AIM-T-{t.id}</td>
-                                                    <td>{t.taskName}</td>
-                                                    <td>{t.customerName}</td>
-                                                    <td>{t.taskStartDate ? new Date(t.taskStartDate).toLocaleDateString() : '-'}</td>
-                                                    <td><span className={`status-pill status-pill--${t.status?.toLowerCase().replace(' ', '')}`}>{t.status}</span></td>
-                                                    <td>{t.city}, {t.country}</td>
-                                                </tr>
-                                            ))}
-                                            {engTickets.length === 0 && <tr><td colSpan="6">No tickets found.</td></tr>}
+                                            {loadingTickets ? (
+                                                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Loading tickets...</td></tr>
+                                            ) : engTickets.length === 0 ? (
+                                                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No tickets found for this engineer.</td></tr>
+                                            ) : (
+                                                engTickets.map(t => (
+                                                    <tr key={t.id}>
+                                                        <td style={{ fontWeight: '500', color: '#6366f1' }}>#AIM-T-{t.id}</td>
+                                                        <td style={{ fontWeight: '600' }}>{t.taskName}</td>
+                                                        <td>{t.customerName}</td>
+                                                        <td>{t.taskStartDate ? new Date(t.taskStartDate).toLocaleDateString() : '-'}</td>
+                                                        <td><span className={`status-pill status-pill--${t.status?.toLowerCase().replace(' ', '')}`}>{t.status}</span></td>
+                                                        <td>{t.city}, {t.country}</td>
+                                                        <td>
+                                                            <div className="engineer-actions">
+                                                                <button className="action-icon-btn view-btn" title="View Ticket" onClick={() => alert('Navigate to Ticket #' + t.id)}>
+                                                                    <FiEye />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     )}
 
                     {/* CHARGES TAB */}
                     {activeTab === 'charges' && (
                         <div className="charges-tab-content card-box">
-                            <div className="form-section">
-                                <h4 className="section-head"><FiBriefcase /> Job Details</h4>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Job Type *</label>
-                                        <div className="radio-group" style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
-                                            {['Full Time', 'Part Time', 'Dispatch'].map(type => (
-                                                <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                                                    <input
-                                                        type="radio"
-                                                        name="jobType"
-                                                        checked={chargesForm.jobType === type}
-                                                        onChange={() => setChargesForm({ ...chargesForm, jobType: type })}
-                                                    />
-                                                    {type}
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Job Title *</label>
-                                        <input type="text" className="form-input" value={chargesForm.jobTitle} onChange={e => setChargesForm({ ...chargesForm, jobTitle: e.target.value })} placeholder="e.g. Senior Technician" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Start Date *</label>
-                                        <input type="date" className="form-input" value={chargesForm.startDate} onChange={e => setChargesForm({ ...chargesForm, startDate: e.target.value })} />
-                                    </div>
-                                </div>
-                                <div className="form-row two-col">
-                                    <div className="form-group">
-                                        <label>Check-In Time *</label>
-                                        <input type="time" className="form-input" value={chargesForm.checkInTime} onChange={e => setChargesForm({ ...chargesForm, checkInTime: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Check-Out Time *</label>
-                                        <input type="time" className="form-input" value={chargesForm.checkOutTime} onChange={e => setChargesForm({ ...chargesForm, checkOutTime: e.target.value })} />
-                                    </div>
+                            {/* Title: Job Details */}
+                            <h4 className="section-head" style={{ color: '#2563eb', marginBottom: '20px' }}>Job Details</h4>
+
+                            {/* Row 1: Job Type */}
+                            <div className="form-group" style={{ marginBottom: '20px' }}>
+                                <label>Job Type <span className="req">*</span></label>
+                                <div className="radio-group" style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
+                                    {['Full Time', 'Part Time', 'Dispatch'].map(type => (
+                                        <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                                            <input
+                                                type="radio"
+                                                name="jobType"
+                                                checked={chargesForm.jobType === type}
+                                                onChange={() => setChargesForm({ ...chargesForm, jobType: type })}
+                                            />
+                                            {type}
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="form-section">
-                                <h4 className="section-head"><FiDollarSign /> Costing & Rates</h4>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Select Currency *</label>
-                                        <select className="form-input" value={chargesForm.currency} onChange={e => setChargesForm({ ...chargesForm, currency: e.target.value })}>
-                                            <option value="USD">USD ($)</option>
-                                            <option value="EUR">EUR (€)</option>
-                                            <option value="GBP">GBP (£)</option>
-                                            <option value="INR">INR (₹)</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Hourly Charge</label>
-                                        <input type="number" className="form-input" value={chargesForm.hourlyRate} onChange={e => setChargesForm({ ...chargesForm, hourlyRate: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Half Day Charge</label>
-                                        <input type="number" className="form-input" value={chargesForm.halfDayRate} onChange={e => setChargesForm({ ...chargesForm, halfDayRate: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Full Day Charge</label>
-                                        <input type="number" className="form-input" value={chargesForm.fullDayRate} onChange={e => setChargesForm({ ...chargesForm, fullDayRate: e.target.value })} />
-                                    </div>
+                            {/* Row 2: Job Title | Start Date */}
+                            <div className="form-row two-col">
+                                <div className="form-group">
+                                    <label>Job Title <span className="req">*</span></label>
+                                    <input type="text" className="form-input" value={chargesForm.jobTitle} onChange={e => setChargesForm({ ...chargesForm, jobTitle: e.target.value })} placeholder="e.g. Senior Engineer" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Start Date <span className="req">*</span></label>
+                                    <input type="date" className="form-input" value={chargesForm.startDate} onChange={e => setChargesForm({ ...chargesForm, startDate: e.target.value })} />
                                 </div>
                             </div>
 
-                            <div className="form-section">
-                                <h4 className="section-head"><FiClock /> Extra Work Pay</h4>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Over Time (Hourly rate) *</label>
-                                        <input type="number" className="form-input" value={chargesForm.overtimeRate} onChange={e => setChargesForm({ ...chargesForm, overtimeRate: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Out of Office Hour (Hourly rate) *</label>
-                                        <input type="number" className="form-input" value={chargesForm.oohRate} onChange={e => setChargesForm({ ...chargesForm, oohRate: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Weekend (Hourly rate) *</label>
-                                        <input type="number" className="form-input" value={chargesForm.weekendRate} onChange={e => setChargesForm({ ...chargesForm, weekendRate: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Public Holiday (Hourly rate) *</label>
-                                        <input type="number" className="form-input" value={chargesForm.holidayRate} onChange={e => setChargesForm({ ...chargesForm, holidayRate: e.target.value })} />
-                                    </div>
+                            {/* Row 3: Check-In | Check-Out */}
+                            <div className="form-row two-col">
+                                <div className="form-group">
+                                    <label>Check-In Time <span className="req">*</span></label>
+                                    <input type="time" className="form-input" value={chargesForm.checkInTime} onChange={e => setChargesForm({ ...chargesForm, checkInTime: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Check-Out Time <span className="req">*</span></label>
+                                    <input type="time" className="form-input" value={chargesForm.checkOutTime} onChange={e => setChargesForm({ ...chargesForm, checkOutTime: e.target.value })} />
                                 </div>
                             </div>
 
-                            <div className="form-actions" style={{ marginTop: '20px', textAlign: 'right' }}>
-                                {saveMessage && <span style={{ marginRight: '10px', color: saveMessage.includes('Failed') ? 'red' : 'green' }}>{saveMessage}</span>}
+                            <div className="divider-line"></div>
+
+                            {/* Costing & Rates */}
+                            <h4 className="section-head" style={{ color: '#2563eb', marginBottom: '20px' }}>Costing & Rates</h4>
+
+                            {/* Row 4: Currency | Hourly | Half Day */}
+                            <div className="form-row three-col">
+                                <div className="form-group">
+                                    <label>Select Currency <span className="req">*</span></label>
+                                    <select className="form-input" value={chargesForm.currency} onChange={e => setChargesForm({ ...chargesForm, currency: e.target.value })}>
+                                        <option value="USD">USD - Dollar ($)</option>
+                                        <option value="EUR">EUR - Euro (€)</option>
+                                        <option value="GBP">GBP - Pound (£)</option>
+                                        <option value="INR">INR - Rupee (₹)</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Hourly Charge</label>
+                                    <input type="number" className="form-input" value={chargesForm.hourlyRate} onChange={e => setChargesForm({ ...chargesForm, hourlyRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Half Day Charge</label>
+                                    <input type="number" className="form-input" value={chargesForm.halfDayRate} onChange={e => setChargesForm({ ...chargesForm, halfDayRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                            </div>
+
+                            {/* Row 5: Full Day */}
+                            <div className="form-row three-col">
+                                <div className="form-group">
+                                    <label>Full Day Charge</label>
+                                    <input type="number" className="form-input" value={chargesForm.fullDayRate} onChange={e => setChargesForm({ ...chargesForm, fullDayRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                            </div>
+
+                            <div className="divider-line"></div>
+
+                            {/* Extra Work Pay */}
+                            <h4 className="section-head" style={{ color: '#2563eb', marginBottom: '20px' }}>Extra Work Pay</h4>
+
+                            {/* Row 6: Overtime | OOH | Weekend */}
+                            <div className="form-row three-col">
+                                <div className="form-group">
+                                    <label>Over Time (Hourly rate) <span className="req">*</span></label>
+                                    <input type="number" className="form-input" value={chargesForm.overtimeRate} onChange={e => setChargesForm({ ...chargesForm, overtimeRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Out of Office Hour (Hourly rate) <span className="req">*</span></label>
+                                    <input type="number" className="form-input" value={chargesForm.oohRate} onChange={e => setChargesForm({ ...chargesForm, oohRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Weekend (Hourly rate) <span className="req">*</span></label>
+                                    <input type="number" className="form-input" value={chargesForm.weekendRate} onChange={e => setChargesForm({ ...chargesForm, weekendRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                            </div>
+
+                            {/* Row 7: Public Holiday */}
+                            <div className="form-row three-col">
+                                <div className="form-group">
+                                    <label>Public Holiday (Hourly rate) <span className="req">*</span></label>
+                                    <input type="number" className="form-input" value={chargesForm.holidayRate} onChange={e => setChargesForm({ ...chargesForm, holidayRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                            </div>
+
+                            <div className="form-actions" style={{ marginTop: '30px', textAlign: 'right' }}>
+                                {saveMessage && <span style={{ marginRight: '15px', color: saveMessage.includes('Failed') ? 'red' : 'green', fontWeight: '500' }}>{saveMessage}</span>}
                                 <button className="save-btn" onClick={handleSaveCharges} disabled={savingCharges}>
                                     {savingCharges ? 'Saving...' : 'Save Changes'}
                                 </button>
@@ -394,19 +431,30 @@ function EngineersPage() {
                 </div>
 
                 <style jsx>{`
-                    .card-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-                    .detail-item label { color: #64748b; font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+                    .card-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                    .detail-item label { color: #64748b; font-size: 13px; font-weight: 500; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
                     .detail-value { color: #1e293b; font-weight: 600; font-size: 15px; }
-                    .form-section { margin-bottom: 30px; }
-                    .section-head { color: #2563eb; display: flex; alignItems: center; gap: 8px; margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-                    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+                    .section-head { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+                    .form-row { display: grid; gap: 24px; margin-bottom: 20px; }
                     .form-row.two-col { grid-template-columns: 1fr 1fr; }
-                    .form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: #475569; }
-                    .form-input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; transition: all 0.2s; }
+                    .form-row.three-col { grid-template-columns: 1fr 1fr 1fr; }
+                    .form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: #475569; }
+                    .req { color: #ef4444; margin-left: 2px; }
+                    .form-input { 
+                        width: 100%; 
+                        padding: 10px 12px; 
+                        border: 1px solid #e2e8f0; 
+                        border-radius: 6px; 
+                        font-size: 14px; 
+                        color: #1e293b;
+                        transition: all 0.2s; 
+                    }
                     .form-input:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
-                    .save-btn { background: #2563eb; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+                    .divider-line { height: 1px; background: #f1f5f9; margin: 30px 0; }
+                    .save-btn { background: #2563eb; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 14px; }
                     .save-btn:hover { background: #1d4ed8; }
                     .save-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+                    .engineers-content-card { padding: 0 !important; box-shadow: none !important; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
                 `}</style>
             </div>
         );
