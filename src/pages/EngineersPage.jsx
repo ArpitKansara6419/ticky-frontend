@@ -73,6 +73,20 @@ function EngineersPage() {
 
             const sorted = (data.engineers || []).sort((a, b) => a.id - b.id)
             setEngineers(sorted)
+
+            // Auto-select first engineer to show Tabs immediately (User Request)
+            if (sorted.length > 0) {
+                // We use a timeout to let the state update loop finish or simply call logic directly
+                const firstEng = sorted[0];
+                setSelectedEngineer(firstEng);
+                setViewMode('details');
+                setActiveTab('profile');
+
+                // Trigger background fetches
+                fetchEngineerDetails(firstEng.id);
+                fetchEngineerTickets(firstEng.id);
+            }
+
         } catch (err) {
             console.error('Load engineers error', err)
             setError(err.message || 'Unable to load engineers')
