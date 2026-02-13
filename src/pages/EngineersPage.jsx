@@ -123,10 +123,14 @@ function EngineersPage() {
     };
 
     const handleView = (engineer) => {
+        // Immediate navigation state
+        setSelectedEngineer(engineer);
+        setViewMode('details');
+        setActiveTab('profile');
+
+        // Async data fetch
         fetchEngineerDetails(engineer.id);
         fetchEngineerTickets(engineer.id);
-        setViewMode('details');
-        setActiveTab('profile'); // Default tab
     }
 
     const handleBackToList = () => {
