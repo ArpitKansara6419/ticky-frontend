@@ -52,6 +52,7 @@ const CustomerReceivablePage = () => {
         setDetailTicket(ticket);
     };
 
+
     useEffect(() => {
         console.log("Receivable Page Loaded. Hub Status: Unbilled Work");
         fetchStats();

@@ -661,8 +661,8 @@ function TicketsPage() {
       setSelectedTicket(t)
       setIsTicketModalOpen(true)
       fetchTicketExtras(ticketId)
-      setInlineStartTime(t.start_time ? formatForInput(t.start_time) : '')
-      setInlineEndTime(t.end_time ? formatForInput(t.end_time) : '')
+      setInlineStartTime(t.startTime ? formatForInput(t.startTime) : (t.start_time ? formatForInput(t.start_time) : ''))
+      setInlineEndTime(t.endTime ? formatForInput(t.endTime) : (t.end_time ? formatForInput(t.end_time) : ''))
       setInlineBreakTime(t.breakTime || '0')
       setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
     }
@@ -686,10 +686,21 @@ function TicketsPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update time');
-      // Reload ticket details to show updated calculation
-      await openTicketModal(selectedTicket.id);
+
+      // Fetch fresh ticket details immediately
+      const freshRes = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, { credentials: 'include' });
+      const freshData = await freshRes.json();
+      const freshTicket = freshData.ticket || freshData; // Handle potential response wrapper
+
+      if (freshTicket) {
+        setSelectedTicket(freshTicket);
+        setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : ''));
+        setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : ''));
+        setInlineBreakTime(freshTicket.breakTime || '0');
+      }
+
       setIsInlineEditing(false);
-      await loadTickets(); // Refresh list view
+      await loadTickets(); // Refresh list view in background
     } catch (err) {
       console.error(err);
       alert('Error updating time log: ' + err.message);
