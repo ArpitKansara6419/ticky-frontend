@@ -663,7 +663,7 @@ function TicketsPage() {
       fetchTicketExtras(ticketId)
       setInlineStartTime(t.startTime ? formatForInput(t.startTime) : (t.start_time ? formatForInput(t.start_time) : ''))
       setInlineEndTime(t.endTime ? formatForInput(t.endTime) : (t.end_time ? formatForInput(t.end_time) : ''))
-      setInlineBreakTime(t.breakTime || '0')
+      setInlineBreakTime(t.breakTime ? Math.floor(Number(t.breakTime) / 60) : (t.break_time ? Math.floor(Number(t.break_time) / 60) : '0'))
       setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
     }
   }
@@ -696,7 +696,9 @@ function TicketsPage() {
         setSelectedTicket(freshTicket);
         setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : ''));
         setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : ''));
-        setInlineBreakTime(freshTicket.breakTime || '0');
+        // Convert seconds to minutes for UI
+        const bt = freshTicket.breakTime !== undefined ? freshTicket.breakTime : freshTicket.break_time;
+        setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
       }
 
       setIsInlineEditing(false);
@@ -2304,6 +2306,13 @@ function TicketsPage() {
                     const el = document.querySelector('.dispatch-logs-table-wrapper');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   } else {
+                    if (!isInlineEditing) {
+                      // Reset state when ENTERING edit mode
+                      setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
+                      setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
+                      const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
+                      setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
+                    }
                     setIsInlineEditing(!isInlineEditing);
                   }
                 }}
