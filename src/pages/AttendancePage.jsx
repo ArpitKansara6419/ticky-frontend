@@ -415,7 +415,8 @@ const AttendancePage = ({ user }) => {
                         <button className="icon-btn" onClick={() => {
                             const d = new Date(date); d.setDate(d.getDate() - 1);
                             setDate(d.toISOString().split('T')[0]);
-                        }}><FiChevronLeft /></button>
+                        }}> <FiChevronLeft /> 
+                        </button>
 
                         <div className="date-display">
                             <FiCalendar />
