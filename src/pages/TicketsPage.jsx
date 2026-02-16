@@ -2175,7 +2175,7 @@ function TicketsPage() {
                         </div>
                         <div className="detail-item">
                           <label>Total Bilable Time</label>
-                          <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.total_time ? `${(selectedTicket.total_time / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
+                          <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.totalTime ? `${(selectedTicket.totalTime / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
                         </div>
                       </>
                     )}
@@ -2185,7 +2185,7 @@ function TicketsPage() {
                 <div className="detail-item--full divider"></div>
                 <div className="detail-item--full" style={{ background: 'var(--primary-bg, #f5f3ff)', padding: '15px', borderRadius: '10px', border: '1px solid var(--primary-color, #a78bfa)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
-                  <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>{selectedTicket.currency} {parseFloat(selectedTicket.total_cost || 0).toFixed(2)}</span>
+                  <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>{selectedTicket.currency} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</span>
                 </div>
 
                 <div className="detail-item--full divider"></div>
