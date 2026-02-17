@@ -671,16 +671,54 @@ function TicketsPage() {
   const handleUpdateInlineTime = async () => {
     try {
       setIsUpdatingTime(true);
+
+      // Send only the required fields for updating
+      const payload = {
+        customerId: selectedTicket.customerId,
+        leadId: selectedTicket.leadId,
+        clientName: selectedTicket.clientName,
+        taskName: selectedTicket.taskName,
+        taskStartDate: selectedTicket.taskStartDate,
+        taskEndDate: selectedTicket.taskEndDate,
+        taskTime: selectedTicket.taskTime,
+        scopeOfWork: selectedTicket.scopeOfWork,
+        tools: selectedTicket.tools,
+        engineerName: selectedTicket.engineerName,
+        engineerId: selectedTicket.engineerId,
+        apartment: selectedTicket.apartment,
+        addressLine1: selectedTicket.addressLine1,
+        addressLine2: selectedTicket.addressLine2,
+        city: selectedTicket.city,
+        country: selectedTicket.country,
+        zipCode: selectedTicket.zipCode,
+        timezone: selectedTicket.timezone,
+        pocDetails: selectedTicket.pocDetails,
+        reDetails: selectedTicket.reDetails,
+        callInvites: selectedTicket.callInvites,
+        documentsLabel: selectedTicket.documentsLabel,
+        signoffLabel: selectedTicket.signoffLabel,
+        currency: selectedTicket.currency,
+        hourlyRate: selectedTicket.hourlyRate,
+        halfDayRate: selectedTicket.halfDayRate,
+        fullDayRate: selectedTicket.fullDayRate,
+        monthlyRate: selectedTicket.monthlyRate,
+        agreedRate: selectedTicket.agreedRate,
+        cancellationFee: selectedTicket.cancellationFee,
+        travelCostPerDay: selectedTicket.travelCostPerDay,
+        totalCost: selectedTicket.toolCost, // Map toolCost to totalCost for backend
+        status: selectedTicket.status,
+        leadType: selectedTicket.leadType,
+        billingType: selectedTicket.billingType,
+        // Time fields being updated
+        startTime: inlineStartTime,
+        endTime: inlineEndTime,
+        breakTime: Number(inlineBreakTime) || 0
+      };
+
       const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...selectedTicket, // Keep existing ticket data
-          startTime: inlineStartTime,
-          endTime: inlineEndTime,
-          breakTime: Number(inlineBreakTime),
-          status: selectedTicket.status // Ensure status is preserved
-        }),
+        body: JSON.stringify(payload),
         credentials: 'include'
       });
 
