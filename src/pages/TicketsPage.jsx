@@ -672,14 +672,29 @@ function TicketsPage() {
     try {
       setIsUpdatingTime(true);
 
+      // Helper function to safely format dates to YYYY-MM-DD
+      const formatDateOnly = (dateValue) => {
+        if (!dateValue) return null;
+        try {
+          const dateStr = String(dateValue).split('T')[0];
+          // Validate it's a proper date format
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            return dateStr;
+          }
+          return null;
+        } catch (e) {
+          return null;
+        }
+      };
+
       // Send only the required fields for updating
       const payload = {
         customerId: selectedTicket.customerId,
         leadId: selectedTicket.leadId,
         clientName: selectedTicket.clientName,
         taskName: selectedTicket.taskName,
-        taskStartDate: selectedTicket.taskStartDate,
-        taskEndDate: selectedTicket.taskEndDate,
+        taskStartDate: formatDateOnly(selectedTicket.taskStartDate),
+        taskEndDate: formatDateOnly(selectedTicket.taskEndDate),
         taskTime: selectedTicket.taskTime,
         scopeOfWork: selectedTicket.scopeOfWork,
         tools: selectedTicket.tools,
