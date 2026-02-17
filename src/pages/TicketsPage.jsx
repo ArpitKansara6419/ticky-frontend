@@ -655,16 +655,47 @@ function TicketsPage() {
     }
   }
 
-  const openTicketModal = (ticketId) => {
-    const t = tickets.find((x) => x.id === ticketId)
-    if (t) {
-      setSelectedTicket(t)
-      setIsTicketModalOpen(true)
-      fetchTicketExtras(ticketId)
-      setInlineStartTime(t.startTime ? formatForInput(t.startTime) : (t.start_time ? formatForInput(t.start_time) : ''))
-      setInlineEndTime(t.endTime ? formatForInput(t.endTime) : (t.end_time ? formatForInput(t.end_time) : ''))
-      setInlineBreakTime(t.breakTime ? Math.floor(Number(t.breakTime) / 60) : (t.break_time ? Math.floor(Number(t.break_time) / 60) : '0'))
-      setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
+  const openTicketModal = async (ticketId) => {
+    try {
+      // Fetch fresh ticket data from server to ensure we have latest values
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        const freshTicket = data.ticket || data;
+
+        setSelectedTicket(freshTicket)
+        setIsTicketModalOpen(true)
+        fetchTicketExtras(ticketId)
+        setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : ''))
+        setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : ''))
+        setInlineBreakTime(freshTicket.breakTime ? Math.floor(Number(freshTicket.breakTime) / 60) : (freshTicket.break_time ? Math.floor(Number(freshTicket.break_time) / 60) : '0'))
+        setNewExtendEndDate(freshTicket.taskEndDate ? freshTicket.taskEndDate.split('T')[0] : '')
+      } else {
+        // Fallback to cached data if API fails
+        const t = tickets.find((x) => x.id === ticketId)
+        if (t) {
+          setSelectedTicket(t)
+          setIsTicketModalOpen(true)
+          fetchTicketExtras(ticketId)
+          setInlineStartTime(t.startTime ? formatForInput(t.startTime) : (t.start_time ? formatForInput(t.start_time) : ''))
+          setInlineEndTime(t.endTime ? formatForInput(t.endTime) : (t.end_time ? formatForInput(t.end_time) : ''))
+          setInlineBreakTime(t.breakTime ? Math.floor(Number(t.breakTime) / 60) : (t.break_time ? Math.floor(Number(t.break_time) / 60) : '0'))
+          setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching ticket:', err);
+      // Fallback to cached data
+      const t = tickets.find((x) => x.id === ticketId)
+      if (t) {
+        setSelectedTicket(t)
+        setIsTicketModalOpen(true)
+        fetchTicketExtras(ticketId)
+        setInlineStartTime(t.startTime ? formatForInput(t.startTime) : (t.start_time ? formatForInput(t.start_time) : ''))
+        setInlineEndTime(t.endTime ? formatForInput(t.endTime) : (t.end_time ? formatForInput(t.end_time) : ''))
+        setInlineBreakTime(t.breakTime ? Math.floor(Number(t.breakTime) / 60) : (t.break_time ? Math.floor(Number(t.break_time) / 60) : '0'))
+        setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
+      }
     }
   }
 

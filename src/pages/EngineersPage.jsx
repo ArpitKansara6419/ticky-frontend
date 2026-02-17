@@ -50,6 +50,7 @@ function EngineersPage() {
         hourlyRate: '',
         halfDayRate: '',
         fullDayRate: '',
+        agreedRate: '',
         overtimeRate: '',
         oohRate: '',
         weekendRate: '',
@@ -115,6 +116,7 @@ function EngineersPage() {
                     hourlyRate: eng.hourlyRate || '',
                     halfDayRate: eng.halfDayRate || '',
                     fullDayRate: eng.fullDayRate || '',
+                    agreedRate: eng.agreedRate || '',
                     overtimeRate: eng.overtimeRate || '',
                     oohRate: eng.oohRate || '',
                     weekendRate: eng.weekendRate || '',
@@ -183,6 +185,7 @@ function EngineersPage() {
                 hourlyRate: chargesForm.hourlyRate,
                 halfDayRate: chargesForm.halfDayRate,
                 fullDayRate: chargesForm.fullDayRate,
+                agreedRate: chargesForm.agreedRate,
                 overtimeRate: chargesForm.overtimeRate,
                 oohRate: chargesForm.oohRate,
                 weekendRate: chargesForm.weekendRate,
@@ -198,6 +201,8 @@ function EngineersPage() {
 
             if (res.ok) {
                 setSaveMessage('Saved successfully');
+                // Refresh engineer details to show updated values in real-time
+                await fetchEngineerDetails(selectedEngineer.id);
                 setTimeout(() => setSaveMessage(''), 3000);
             } else {
                 setSaveMessage('Failed to save');
@@ -401,11 +406,15 @@ function EngineersPage() {
                                 </div>
                             </div>
 
-                            {/* Row 5: Full Day */}
+                            {/* Row 5: Full Day | Agreed Rate */}
                             <div className="form-row three-col">
                                 <div className="form-group">
                                     <label>Full Day Charge</label>
                                     <input type="number" className="form-input" value={chargesForm.fullDayRate} onChange={e => setChargesForm({ ...chargesForm, fullDayRate: e.target.value })} placeholder="0.00" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Agreed Rate</label>
+                                    <input type="text" className="form-input" value={chargesForm.agreedRate || ''} onChange={e => setChargesForm({ ...chargesForm, agreedRate: e.target.value })} placeholder="e.g. Fixed $500" />
                                 </div>
                             </div>
 
