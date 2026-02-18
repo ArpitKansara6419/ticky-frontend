@@ -2261,7 +2261,11 @@ function TicketsPage() {
                         </div>
                         <div className="detail-item">
                           <label>Total Bilable Time</label>
-                          <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{selectedTicket.totalTime ? `${(selectedTicket.totalTime / 3600).toFixed(2)} hours` : '0.00 hours'}</span>
+                          <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>
+                            {selectedTicket.totalTime
+                              ? `${Math.ceil(selectedTicket.totalTime / 3600)} hours`
+                              : '0 hours'}
+                          </span>
                         </div>
                       </>
                     )}
