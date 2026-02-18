@@ -54,7 +54,8 @@ function EngineersPage() {
         overtimeRate: '',
         oohRate: '',
         weekendRate: '',
-        holidayRate: ''
+        holidayRate: '',
+        city: ''
     });
     const [savingCharges, setSavingCharges] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
@@ -120,7 +121,8 @@ function EngineersPage() {
                     overtimeRate: eng.overtimeRate || '',
                     oohRate: eng.oohRate || '',
                     weekendRate: eng.weekendRate || '',
-                    holidayRate: eng.holidayRate || ''
+                    holidayRate: eng.holidayRate || '',
+                    city: eng.city || ''
                 });
             }
         } catch (e) { console.error(e); }
@@ -189,7 +191,8 @@ function EngineersPage() {
                 overtimeRate: chargesForm.overtimeRate,
                 oohRate: chargesForm.oohRate,
                 weekendRate: chargesForm.weekendRate,
-                holidayRate: chargesForm.holidayRate
+                holidayRate: chargesForm.holidayRate,
+                city: chargesForm.city
             };
 
             const res = await fetch(`${API_BASE_URL}/engineers/${selectedEngineer.id}`, {
@@ -365,6 +368,10 @@ function EngineersPage() {
                                 <div className="form-group">
                                     <label>Start Date <span className="req">*</span></label>
                                     <input type="date" className="form-input" value={chargesForm.startDate} onChange={e => setChargesForm({ ...chargesForm, startDate: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>City / Location</label>
+                                    <input type="text" className="form-input" value={chargesForm.city} onChange={e => setChargesForm({ ...chargesForm, city: e.target.value })} placeholder="e.g. New York" />
                                 </div>
                             </div>
 
