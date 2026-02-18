@@ -510,11 +510,11 @@ function EngineersPage() {
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
+                                <th>Type</th>
+                                <th>Hourly Rate</th>
                                 <th>Location</th>
                                 <th>Email</th>
-                                <th>Phone</th>
                                 <th>Status</th>
-                                <th>Created</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -538,13 +538,18 @@ function EngineersPage() {
                                         <td>
                                             <div className="engineer-name" onClick={() => handleView(eng)} style={{ cursor: 'pointer', color: '#2563eb', fontWeight: 'bold' }}>{eng.name}</div>
                                         </td>
+                                        <td><span style={{ fontSize: '13px', color: '#64748b' }}>{eng.employmentType || '-'}</span></td>
+                                        <td>
+                                            <span style={{ fontWeight: 'bold', color: '#059669' }}>
+                                                {eng.currency === 'EUR' ? '€' : eng.currency === 'GBP' ? '£' : eng.currency === 'INR' ? '₹' : '$'}
+                                                {parseFloat(eng.hourlyRate || 0).toFixed(2)}
+                                            </span>
+                                        </td>
                                         <td>{eng.city || eng.address || '-'}</td>
                                         <td>{eng.email}</td>
-                                        <td>{eng.phone}</td>
                                         <td>
                                             <span className={`status-pill status-pill--${eng.status}`}>{eng.status}</span>
                                         </td>
-                                        <td>{new Date(eng.createdAt).toISOString().split('T')[0]}</td>
                                         <td>
                                             <div className="engineer-actions">
                                                 <button
