@@ -204,7 +204,7 @@ function TicketsPage() {
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
 
-      const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour >= 18 || hrs > 10;
+      const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10;
 
       let base = 0;
       let ot = 0;
@@ -214,31 +214,34 @@ function TicketsPage() {
       if (billingType === 'Hourly') {
         const billed = Math.max(2, hrs);
         base = billed * hr;
-        if (isWeekend) special = base;
+        if (isSpecialDay) special = base;
         else {
-          if (billed > 8) ot = (billed - 8) * hr * 0.5;
-          if (workIsOOH && ot === 0) ooh = billed * hr * 0.5;
+          if (billed > 8) ot = (billed - 8) * (hr * 0.5);
+          if (workIsOOH && ot === 0) ooh = billed * (hr * 0.5);
         }
       } else if (billingType === 'Half Day + Hourly') {
         base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
-        if (isWeekend) special = base;
+        if (isSpecialDay) special = base;
         else {
-          if (hrs > 8) ot = (hrs - 8) * hr * 0.5;
+          if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
           if (workIsOOH && ot === 0) ooh = base * 0.5;
         }
       } else if (billingType === 'Full Day + OT') {
         base = fd;
-        if (isWeekend) {
+        if (isSpecialDay) {
           special = base;
-          if (hrs > 8) ot = (hrs - 8) * hr * 1.0;
+          if (hrs > 8) ot = (hrs - 8) * (hr * 1.0);
         } else {
           if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
           if (workIsOOH && ot === 0) ooh = base * 0.5;
         }
       } else if (billingType.includes('Monthly')) {
-        if (isWeekend) special = hrs * hr * 2.0;
-        else if (hrs > 8) ot = (hrs - 8) * hr * 1.5;
-        else if (workIsOOH) ooh = hrs * hr * 0.5;
+        base = parseFloat(monthlyRate) || 0;
+        if (isSpecialDay) special = hrs * (hr * 2.0);
+        else {
+          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+          if (workIsOOH && ot === 0) ooh = hrs * (hr * 0.5);
+        }
       } else if (billingType === 'Agreed Rate') {
         base = parseFloat(agreedRate) || 0;
       } else if (billingType === 'Cancellation') {
