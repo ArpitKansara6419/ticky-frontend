@@ -252,13 +252,30 @@ function TicketsPage() {
       const travel = parseFloat(travelCostPerDay) || 0;
       const grand = base + ot + ooh + special + tools + travel;
 
+      // Build OOH reason string for user clarity
+      let oohReason = '';
+      if (workIsOOH) {
+        const reasons = [];
+        if (startInfo.hour < 8) reasons.push(`Start time ${startInfo.hour}:00 is before 08:00`);
+        if (startInfo.hour >= 18) reasons.push(`Start time ${startInfo.hour}:00 is after 18:00`);
+        if (endInfo.hour > 18) reasons.push(`End time ${endInfo.hour}:00 is after 18:00`);
+        if (hrs > 10) reasons.push(`Worked hours (${hrs.toFixed(1)}h) exceed 10h`);
+        oohReason = reasons.join('; ');
+      }
+
       setLiveBreakdown({
         hrs: hrs.toFixed(2),
         base: base.toFixed(2),
         ot: ot.toFixed(2),
         ooh: ooh.toFixed(2),
         special: special.toFixed(2),
-        total: grand.toFixed(2)
+        total: grand.toFixed(2),
+        isOOH: workIsOOH,
+        isSpecialDay,
+        isWeekend,
+        isHoliday,
+        otHours: (ot > 0 ? (hrs > 8 ? hrs - 8 : 0) : 0).toFixed(2),
+        oohReason,
       });
     } catch (err) {
       console.error(err);
@@ -1724,6 +1741,30 @@ function TicketsPage() {
             {liveBreakdown && (
               <div className="calculation-preview-card">
                 <h3>Live Estimated Total</h3>
+
+                {/* OOH / Special Day Warning */}
+                {liveBreakdown.isSpecialDay && (
+                  <div className="preview-alert preview-alert--gold">
+                    <span>📅</span>
+                    <span>{liveBreakdown.isHoliday ? '🎉 Public Holiday' : '🌐 Weekend'} — Special day rate (2x) applied.</span>
+                  </div>
+                )}
+                {!liveBreakdown.isSpecialDay && liveBreakdown.isOOH && parseFloat(liveBreakdown.ooh) > 0 && (
+                  <div className="preview-alert preview-alert--ooh">
+                    <span>🌙</span>
+                    <span>
+                      <strong>OOH Premium applied</strong> — Work is outside normal hours (08:00–18:00).<br />
+                      <small>{liveBreakdown.oohReason}</small>
+                    </span>
+                  </div>
+                )}
+                {!liveBreakdown.isSpecialDay && parseFloat(liveBreakdown.ot) > 0 && (
+                  <div className="preview-alert preview-alert--ot">
+                    <span>⏱️</span>
+                    <span><strong>Overtime applied</strong> — {parseFloat(liveBreakdown.otHours).toFixed(1)}h worked beyond 8h standard day.</span>
+                  </div>
+                )}
+
                 <div className="preview-grid">
                   <div className="preview-item">
                     <label>Worked Hours</label>
@@ -1735,19 +1776,19 @@ function TicketsPage() {
                   </div>
                   {parseFloat(liveBreakdown.ot) > 0 && (
                     <div className="preview-item highlight">
-                      <label>OT Premium</label>
+                      <label>OT Premium ({parseFloat(liveBreakdown.otHours).toFixed(1)}h × 1.5x)</label>
                       <span>+ {currency} {liveBreakdown.ot}</span>
                     </div>
                   )}
                   {parseFloat(liveBreakdown.ooh) > 0 && (
                     <div className="preview-item highlight">
-                      <label>OOH Premium</label>
+                      <label>OOH Premium (outside 08:00–18:00)</label>
                       <span>+ {currency} {liveBreakdown.ooh}</span>
                     </div>
                   )}
                   {parseFloat(liveBreakdown.special) > 0 && (
                     <div className="preview-item highlight-gold">
-                      <label>Wknd/Hol Premium</label>
+                      <label>Weekend/Holiday Premium (2x)</label>
                       <span>+ {currency} {liveBreakdown.special}</span>
                     </div>
                   )}

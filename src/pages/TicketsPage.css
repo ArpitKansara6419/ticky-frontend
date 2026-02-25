@@ -861,3 +861,59 @@
   color: #94a3b8;
   font-style: italic;
 }
+
+/* Preview Alert Banners */
+.preview-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+  border: 1px solid transparent;
+}
+
+.preview-alert span:first-child {
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.preview-alert--ooh {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.preview-alert--ooh strong {
+  color: #1d4ed8;
+}
+
+.preview-alert--ooh small {
+  display: block;
+  font-size: 11px;
+  color: #3b82f6;
+  margin-top: 2px;
+}
+
+.preview-alert--ot {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.preview-alert--ot strong {
+  color: #b45309;
+}
+
+.preview-alert--gold {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.preview-alert--gold strong {
+  color: #c2410c;
+}
