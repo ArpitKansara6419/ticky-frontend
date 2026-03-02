@@ -86,6 +86,8 @@ function EngineersPage() {
     });
     const [skillsData, setSkillsData] = useState([]);
     const [experienceData, setExperienceData] = useState([]);
+    const [certificationsData, setCertificationsData] = useState([]);
+    const [languagesData, setLanguagesData] = useState([]);
 
     const [savingRTW, setSavingRTW] = useState(false);
     const [savingTravel, setSavingTravel] = useState(false);
@@ -175,11 +177,13 @@ function EngineersPage() {
 
     const fetchAdditionalDetails = async (id) => {
         try {
-            const [rtwRes, travelRes, skillsRes, expRes] = await Promise.all([
+            const [rtwRes, travelRes, skillsRes, expRes, certRes, langRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/engineers/${id}/right-to-work`, { credentials: 'include' }),
                 fetch(`${API_BASE_URL}/engineers/${id}/travel-details`, { credentials: 'include' }),
                 fetch(`${API_BASE_URL}/engineers/${id}/skills`, { credentials: 'include' }),
-                fetch(`${API_BASE_URL}/engineers/${id}/experience`, { credentials: 'include' })
+                fetch(`${API_BASE_URL}/engineers/${id}/experience`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/engineers/${id}/certifications`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/engineers/${id}/languages`, { credentials: 'include' })
             ]);
 
             if (rtwRes.ok) {
@@ -242,6 +246,28 @@ function EngineersPage() {
                     endDate: e.end_date ? e.end_date.split('T')[0] : '',
                     isCurrent: !!e.is_current,
                     description: e.description
+                })));
+            }
+
+            if (certRes.ok) {
+                const data = await certRes.json();
+                setCertificationsData(data.certifications.map(c => ({
+                    certificationName: c.certification_name,
+                    certificationId: c.certification_id,
+                    issueDate: c.issue_date ? c.issue_date.split('T')[0] : '',
+                    expiryDate: c.expiry_date ? c.expiry_date.split('T')[0] : '',
+                    documentUrl: c.document_url
+                })));
+            }
+
+            if (langRes.ok) {
+                const data = await langRes.json();
+                setLanguagesData(data.languages.map(l => ({
+                    languageName: l.language_name,
+                    proficiencyLevel: l.proficiency_level,
+                    canRead: !!l.can_read,
+                    canWrite: !!l.can_write,
+                    canSpeak: !!l.can_speak
                 })));
             }
         } catch (e) {
@@ -555,6 +581,45 @@ function EngineersPage() {
                                             ))}
                                         </div>
                                     ) : <div style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No experience history.</div>}
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '25px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+                                <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px' }}>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="fas fa-certificate" style={{ color: '#6366f1' }}></i> Professional Certifications
+                                    </h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {certificationsData.length > 0 ? certificationsData.map((cert, i) => (
+                                            <div key={i} style={{ background: '#ffffff', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                                <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{cert.certificationName}</div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px' }}>
+                                                    ID: {cert.certificationId || 'N/A'} • Valid Until: {cert.expiryDate || 'N/A'}
+                                                </div>
+                                            </div>
+                                        )) : <div style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No certifications listed.</div>}
+                                    </div>
+                                </div>
+
+                                <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px' }}>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="fas fa-language" style={{ color: '#6366f1' }}></i> Language Proficiency
+                                    </h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {languagesData.length > 0 ? languagesData.map((lang, i) => (
+                                            <div key={i} style={{ background: '#ffffff', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{lang.languageName}</div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b' }}>{lang.proficiencyLevel}</div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '5px' }}>
+                                                    {lang.canSpeak && <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '700' }}>SPEAK</span>}
+                                                    {lang.canRead && <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '700' }}>READ</span>}
+                                                    {lang.canWrite && <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '700' }}>WRITE</span>}
+                                                </div>
+                                            </div>
+                                        )) : <div style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No languages reported.</div>}
+                                    </div>
                                 </div>
                             </div>
                         </div>
