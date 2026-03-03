@@ -5,6 +5,135 @@ import './EngineersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
+// --- REUSE CALCULATION LOGIC FROM TICKET SYSTEM ---
+const calculateEngineerPayoutForTicket = (t, eng) => {
+    if (!t || !eng) return { total: 0 };
+
+    // 1. Prepare Rates (use engineer rates)
+    const hr = parseFloat(eng.hourlyRate || 0);
+    const hd = parseFloat(eng.halfDayRate || 0);
+    const fd = parseFloat(eng.fullDayRate || 0);
+    const otRate = parseFloat(eng.overtimeRate || 0);
+    const oohRate = parseFloat(eng.oohRate || 0);
+    const weekendRate = parseFloat(eng.weekendRate || 0);
+    const holidayRate = parseFloat(eng.holidayRate || 0);
+    const agreedRate = parseFloat(eng.agreedRate || 0);
+
+    const billingType = t.billingType || 'Hourly';
+
+    // 2. Handle Multi-Day vs Single Day
+    let logs = [];
+    if (t.time_logs) {
+        try {
+            logs = typeof t.time_logs === 'string' ? JSON.parse(t.time_logs) : t.time_logs;
+        } catch (e) { logs = []; }
+    }
+
+    if (logs && logs.length > 0) {
+        let total = 0;
+        let totalHrs = 0;
+        logs.forEach(log => {
+            if (!log.start_time || !log.end_time) return;
+            const res = calculateEngineerPayoutForTicket({
+                ...t,
+                startTime: log.start_time,
+                endTime: log.end_time,
+                breakTime: (log.break_time_mins || 0) * 60,
+                time_logs: null // prevent recursion
+            }, eng);
+            total += res.total;
+            totalHrs += parseFloat(res.hrs);
+        });
+        return { total: total, hrs: totalHrs.toFixed(2) };
+    }
+
+    // Single Day logic
+    let s = t.startTime ? new Date(t.startTime) : (t.taskStartDate ? new Date(t.taskStartDate + 'T' + (t.taskTime || '00:00')) : null);
+    let e = t.endTime ? new Date(t.endTime) : (t.status === 'In Progress' ? new Date() : s); // Current time if in progress
+
+    if (!s || isNaN(s.getTime())) return { total: 0, hrs: 0 };
+    if (!e || isNaN(e.getTime())) e = s;
+
+    // Correct for single day start_time if only taskStartDate is available
+    if (t.startTime && !t.taskStartDate) {
+        // use startTime
+    }
+
+    const breakSec = parseInt(t.breakTime || 0);
+    const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - breakSec);
+    const hrs = totSec / 3600;
+
+    const targetTZ = t.timezone || 'UTC';
+    const getZonedInfo = (date) => {
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: targetTZ,
+                hour12: false,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+            return {
+                dateStr: `${parts.year}-${parts.month}-${parts.day}`,
+                day: new Date(`${parts.year}-${parts.month}-${parts.day}`).getDay(),
+                hour: parseInt(parts.hour)
+            };
+        } catch (err) {
+            return { dateStr: '', day: date.getDay(), hour: date.getHours() };
+        }
+    };
+
+    const startInfo = getZonedInfo(s);
+    const endInfo = getZonedInfo(e);
+
+    const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
+    const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-12-25'];
+    const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
+
+    const isSpecialDay = isWeekend || isHoliday;
+    const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10;
+
+    let base = 0;
+    let ot = 0;
+    let ooh = 0;
+    let special = 0;
+
+    if (billingType === 'Hourly') {
+        const billed = Math.max(2, hrs);
+        base = billed * hr;
+        if (isSpecialDay) {
+            special = billed * (isHoliday ? holidayRate : weekendRate);
+            if (special === 0) special = base; // Fallback
+        } else {
+            if (billed > 8) ot = (billed - 8) * (otRate || hr * 1.5);
+            if (workIsOOH && ot === 0) ooh = billed * (oohRate || hr * 0.5);
+        }
+    } else if (billingType === 'Half Day + Hourly') {
+        base = hd;
+        if (hrs > 4) base += (hrs - 4) * hr;
+        if (isSpecialDay) special = base;
+        else {
+            if (hrs > 8) ot = (hrs - 8) * (otRate || hr * 1.5);
+            if (workIsOOH && ot === 0) ooh = base * 0.5;
+        }
+    } else if (billingType === 'Full Day + OT') {
+        base = fd;
+        if (isSpecialDay) {
+            special = base;
+            if (hrs > 8) ot = (hrs - 8) * (otRate || hr * 1.5);
+        } else {
+            if (hrs > 8) ot = (hrs - 8) * (otRate || hr * 1.5);
+            if (workIsOOH && ot === 0) ooh = base * 0.5;
+        }
+    } else if (billingType === 'Agreed Rate') {
+        base = agreedRate || parseFloat(t.agreedRate) || 0;
+    } else if (billingType === 'Cancellation') {
+        base = parseFloat(t.cancellationFee || 0);
+    }
+
+    const grand = base + ot + ooh + special;
+    return { total: grand, hrs: hrs.toFixed(2), isResolved: t.status === 'Resolved' };
+};
+
 const TAB_STYLE = {
     padding: '12px 24px',
     cursor: 'pointer',
@@ -110,20 +239,7 @@ function EngineersPage() {
             const sorted = (data.engineers || []).sort((a, b) => a.id - b.id)
             setEngineers(sorted)
 
-            // Auto-select first engineer to show Tabs immediately (User Request)
-            if (sorted.length > 0) {
-                // We use a timeout to let the state update loop finish or simply call logic directly
-                const firstEng = sorted[0];
-                setSelectedEngineer(firstEng);
-                setViewMode('details');
-                setActiveTab('profile');
-
-                // Trigger background fetches
-                fetchEngineerDetails(firstEng.id);
-                fetchEngineerTickets(firstEng.id);
-                fetchAdditionalDetails(firstEng.id);
-            }
-
+            // Removed auto-selection logic to allow list view as default (User Request)
         } catch (err) {
             console.error('Load engineers error', err)
             setError(err.message || 'Unable to load engineers')
@@ -630,7 +746,27 @@ function EngineersPage() {
                     {
                         activeTab === 'tickets' && (
                             <div className="tickets-tab-content">
-                                {/* We reuse the engineers-table class but with structure matching Tickets Table */}
+                                {/* Payout Summary Cards */}
+                                <div className="payout-summary-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '20px' }}>
+                                    <div style={{ background: '#eff6ff', padding: '15px', borderRadius: '12px', border: '1px solid #dbeafe' }}>
+                                        <div style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600', marginBottom: '5px' }}>TOTAL EARNINGS</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
+                                            {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
+                                            {engTickets.reduce((acc, t) => acc + calculateEngineerPayoutForTicket(t, selectedEngineer).total, 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '12px', border: '1px solid #dcfce7' }}>
+                                        <div style={{ fontSize: '12px', color: '#166534', fontWeight: '600', marginBottom: '5px' }}>TOTAL HOURS</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#14532d' }}>
+                                            {engTickets.reduce((acc, t) => acc + parseFloat(calculateEngineerPayoutForTicket(t, selectedEngineer).hrs || 0), 0).toFixed(1)}h
+                                        </div>
+                                    </div>
+                                    <div style={{ background: '#fdf2f2', padding: '15px', borderRadius: '12px', border: '1px solid #fee2e2' }}>
+                                        <div style={{ fontSize: '12px', color: '#991b1b', fontWeight: '600', marginBottom: '5px' }}>TOTAL TICKETS</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#7f1d1d' }}>{engTickets.length}</div>
+                                    </div>
+                                </div>
+
                                 <div className="engineers-content-card">
                                     <div className="engineers-table-wrapper">
                                         <table className="engineers-table">
@@ -638,10 +774,10 @@ function EngineersPage() {
                                                 <tr>
                                                     <th>Ticket ID</th>
                                                     <th>Task Name</th>
-                                                    <th>Customer</th>
                                                     <th>Date</th>
                                                     <th>Status</th>
-                                                    <th>Location</th>
+                                                    <th>Worked Time</th>
+                                                    <th>Earnings</th>
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
@@ -651,23 +787,37 @@ function EngineersPage() {
                                                 ) : engTickets.length === 0 ? (
                                                     <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No tickets found for this engineer.</td></tr>
                                                 ) : (
-                                                    engTickets.map(t => (
-                                                        <tr key={t.id}>
-                                                            <td style={{ fontWeight: '500', color: '#6366f1' }}>#AIM-T-{t.id}</td>
-                                                            <td style={{ fontWeight: '600' }}>{t.taskName}</td>
-                                                            <td>{t.customerName}</td>
-                                                            <td>{t.taskStartDate ? new Date(t.taskStartDate).toLocaleDateString() : '-'}</td>
-                                                            <td><span className={`status-pill status-pill--${t.status?.toLowerCase().replace(' ', '')}`}>{t.status}</span></td>
-                                                            <td>{t.city}, {t.country}</td>
-                                                            <td>
-                                                                <div className="engineer-actions">
-                                                                    <button className="action-icon-btn view-btn" title="View Ticket" onClick={() => alert('Navigate to Ticket #' + t.id)}>
-                                                                        <FiEye />
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    ))
+                                                    engTickets.map(t => {
+                                                        const p = calculateEngineerPayoutForTicket(t, selectedEngineer);
+                                                        return (
+                                                            <tr key={t.id}>
+                                                                <td style={{ fontWeight: '500', color: '#6366f1' }}>#AIM-T-{t.id}</td>
+                                                                <td>
+                                                                    <div style={{ fontWeight: '600' }}>{t.taskName}</div>
+                                                                    <div style={{ fontSize: '11px', color: '#64748b' }}>{t.customerName}</div>
+                                                                </td>
+                                                                <td>{t.taskStartDate ? new Date(t.taskStartDate).toLocaleDateString() : '-'}</td>
+                                                                <td><span className={`status-pill status-pill--${t.status?.toLowerCase().replace(' ', '')}`}>{t.status}</span></td>
+                                                                <td>
+                                                                    <div style={{ fontWeight: '600' }}>{p.hrs}h</div>
+                                                                    <div style={{ fontSize: '11px', color: '#64748b' }}>{t.billingType}</div>
+                                                                </td>
+                                                                <td>
+                                                                    <div style={{ fontWeight: 'bold', color: '#059669', fontSize: '15px' }}>
+                                                                        {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
+                                                                        {p.total.toFixed(2)}
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <div className="engineer-actions">
+                                                                        <button className="action-icon-btn view-btn" title="View Ticket" onClick={() => alert('Navigate to Ticket #' + t.id)}>
+                                                                            <FiEye />
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
                                                 )}
                                             </tbody>
                                         </table>
