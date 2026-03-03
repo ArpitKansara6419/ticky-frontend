@@ -30,6 +30,121 @@ const CustomerReceivablePage = () => {
     const [invoiceList, setInvoiceList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
+
+    // --- FRONTEND CALCULATION ENGINE (Consistent with Tickets/Engineers Page) ---
+    const calculateTicketCostFrontend = (ticket, forcedTZ) => {
+        if (!ticket) return {};
+        const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || 'UTC');
+
+        const hr = parseFloat(ticket.hourly_rate || 0);
+        const hd = parseFloat(ticket.half_day_rate || 0);
+        const fd = parseFloat(ticket.full_day_rate || 0);
+        const billingType = ticket.billing_type || 'Hourly';
+
+        // Helper for zoned time
+        const getZonedInfo = (date) => {
+            try {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: tz,
+                    hour12: false,
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+                const dateStr = `${parts.year}-${parts.month}-${parts.day}`;
+                return { dateStr, day: new Date(dateStr).getDay(), hour: parseInt(parts.hour) };
+            } catch (e) {
+                return { dateStr: '', day: date.getDay(), hour: date.getHours() };
+            }
+        };
+
+        let logs = [];
+        try {
+            logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []);
+        } catch (e) { logs = []; }
+
+        if (logs.length > 0) {
+            let totalRec = 0; let totalHrs = 0;
+            let hasOT = false; let hasOOH = false; let hasWKND = false; let hasHOL = false;
+
+            logs.forEach(log => {
+                const res = calculateTicketCostFrontend({
+                    ...ticket,
+                    task_start_date: log.start_time,
+                    task_end_date: log.end_time,
+                    break_time_mins: log.break_time_mins || 0,
+                    time_logs: [] // stop recursion
+                }, tz);
+                totalRec += parseFloat(res.totalReceivable || 0);
+                totalHrs += parseFloat(res.totalHours || 0);
+                if (res.otHours > 0) hasOT = true;
+                if (res.ooh === 'Yes') hasOOH = true;
+                if (res.ww === 'Yes') hasWKND = true;
+                if (res.hw === 'Yes') hasHOL = true;
+            });
+            return {
+                totalReceivable: totalRec.toFixed(2),
+                formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
+                totalHours: totalHrs,
+                otHours: hasOT ? 1 : 0, ooh: hasOOH ? 'Yes' : 'No', ww: hasWKND ? 'Yes' : 'No', hw: hasHOL ? 'Yes' : 'No',
+                travelCost: parseFloat(ticket.travel_cost_per_day || 0) * logs.length,
+                toolCost: parseFloat(ticket.total_cost || 0)
+            };
+        }
+
+        // Single log logic
+        const s = new Date(ticket.task_start_date);
+        const e = new Date(ticket.task_end_date || ticket.task_start_date);
+        const brk = (parseInt(ticket.break_time_mins) || 0) * 60;
+        const dur = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk);
+        const hrs = dur / 3600;
+
+        const info = getZonedInfo(s);
+        const endInfo = getZonedInfo(e);
+        const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
+        const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-12-25'];
+        const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
+        const isO = info.hour < 8 || info.hour >= 18 || endInfo.hour > 18 || hrs > 10;
+
+        let base = 0; let ot = 0; let ooh = 0; let sp = 0;
+        if (billingType === 'Hourly') {
+            const billed = Math.max(2, hrs);
+            base = billed * hr;
+            if (isWK || isH) sp = base;
+            else {
+                if (billed > 8) ot = (billed - 8) * (hr * 0.5);
+                if (isO && ot === 0) ooh = billed * (hr * 0.5);
+            }
+        } else if (billingType === 'Half Day + Hourly') {
+            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
+            if (isWK || isH) sp = base;
+            else {
+                if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
+                if (isO && ot === 0) ooh = base * 0.5;
+            }
+        } else if (billingType === 'Full Day + OT') {
+            base = fd;
+            if (isWK || isH) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
+            else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = base * 0.5; }
+        } else if (billingType === 'Agreed Rate') {
+            base = parseFloat(ticket.agreed_rate) || 0;
+        } else if (billingType === 'Cancellation') {
+            base = parseFloat(ticket.cancellation_fee) || 0;
+        }
+
+        const trav = parseFloat(ticket.travel_cost_per_day || 0);
+        const tool = parseFloat(ticket.total_cost || 0);
+        const total = base + ot + ooh + sp + trav + tool;
+
+        return {
+            totalReceivable: total.toFixed(2),
+            baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
+            totalHours: hrs,
+            formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
+            otHours: ot > 0 ? 1 : 0, ooh: ooh > 0 ? 'Yes' : 'No', ww: isWK ? 'Yes' : 'No', hw: isH ? 'Yes' : 'No',
+            travelCost: trav, toolCost: tool
+        };
+    };
 
     // Table Filters & Pagination
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
@@ -92,6 +207,14 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error("Invoice Fetch Error:", e); }
     };
 
+    // Calculate Dynamic Unbilled Total based on Context
+    const dynamicUnbilledTotal = useMemo(() => {
+        return unbilledList.reduce((sum, item) => {
+            const bd = calculateTicketCostFrontend(item, calcTimezone);
+            return sum + parseFloat(bd.totalReceivable);
+        }, 0);
+    }, [unbilledList, calcTimezone]);
+
     const toggleTicket = (id) => {
         setSelectedTicketIds(prev =>
             prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
@@ -102,8 +225,8 @@ const CustomerReceivablePage = () => {
         return unbilledList
             .filter(t => selectedTicketIds.includes(t.id))
             .reduce((sum, t) => {
-                const val = t.breakdown?.totalReceivable || t.total_cost || 0;
-                return sum + parseFloat(val);
+                const bd = calculateTicketCostFrontend(t, calcTimezone);
+                return sum + parseFloat(bd.totalReceivable);
             }, 0)
             .toFixed(2);
     };
@@ -339,11 +462,41 @@ const CustomerReceivablePage = () => {
                 </div>
             </header>
 
+            {/* Timezone Context Selector */}
+            <div style={{ marginBottom: '20px', padding: '12px 20px', background: '#f0f9ff', borderRadius: '15px', border: '1px solid #bae6fd', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h5 style={{ margin: 0, fontSize: '14px', color: '#0369a1', fontWeight: '700' }}>Billing Calculation Context</h5>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#0ea5e9' }}>Override timezone for Out of Hours & Weekend logic across all unbilled work.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ fontSize: '12px', color: '#0369a1', fontWeight: '600' }}>Context:</div>
+                    <select
+                        value={calcTimezone}
+                        onChange={(e) => setCalcTimezone(e.target.value)}
+                        style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid #7dd3fc',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: '#0369a1',
+                            background: '#ffffff',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <option value="Ticket Local">Ticket Local (Auto)</option>
+                        <option value="Asia/Kolkata">India (IST)</option>
+                        <option value="Europe/Warsaw">Poland (CET)</option>
+                        <option value="UTC">UTC (Universal)</option>
+                    </select>
+                </div>
+            </div>
+
             <div className="stats-grid-premium">
                 <div className="stat-card-premium">
                     <div className="stat-icon blue"><FiClock /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {parseFloat(stats.unbilled).toLocaleString()}</h3>
+                        <h3>{selectedCurrency} {dynamicUnbilledTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Work To Be Billed</p>
                         <small style={{ color: '#94a3b8', fontSize: '11px' }}>Pending invoice generation</small>
                     </div>
@@ -414,7 +567,7 @@ const CustomerReceivablePage = () => {
                                     </thead>
                                     <tbody>
                                         {displayedUnbilled.map((item, idx) => {
-                                            const bd = item.breakdown || {};
+                                            const bd = calculateTicketCostFrontend(item, calcTimezone);
                                             const firstLetter = (item.engineer_name || 'N').charAt(0);
                                             return (
                                                 <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
@@ -432,9 +585,6 @@ const CustomerReceivablePage = () => {
                                                     <td><span className="ticket-id-tag">#{item.id}</span></td>
                                                     <td>
                                                         <div style={{ fontWeight: '700' }}>{bd.formattedHours || '00:00'}</div>
-                                                        {parseFloat(bd.billedHours || 0) > parseFloat(bd.totalHours || 0) && (
-                                                            <div style={{ fontSize: '10px', color: '#d97706', fontWeight: '800' }}>Min {bd.billedHours}h applied</div>
-                                                        )}
                                                     </td>
                                                     <td>
                                                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -450,7 +600,7 @@ const CustomerReceivablePage = () => {
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Tools: {parseFloat(bd.toolCost || 0).toFixed(0)}</div>
                                                     </td>
                                                     <td className="receivable-amount">
-                                                        {selectedCurrency} {parseFloat(bd.totalReceivable || item.total_cost).toFixed(2)}
+                                                        {selectedCurrency} {bd.totalReceivable}
                                                     </td>
                                                     <td style={{ textAlign: 'center' }}>
                                                         <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
@@ -601,63 +751,68 @@ const CustomerReceivablePage = () => {
                                 </div>
                             </div>
 
-                            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                                <div className="breakdown-list-premium">
-                                    {detailTicket.billing_type === 'Cancellation' ? (
-                                        <div className="breakdown-row highlight-premium">
-                                            <span>Cancellation Penalty</span>
-                                            <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="breakdown-row">
-                                                <span>Labor Base Cost</span>
-                                                <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.baseCost || 0).toFixed(2)}</span>
+                            {(() => {
+                                const bd = calculateTicketCostFrontend(detailTicket, calcTimezone);
+                                return (
+                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                        <div className="breakdown-list-premium">
+                                            {detailTicket.billing_type === 'Cancellation' ? (
+                                                <div className="breakdown-row highlight-premium">
+                                                    <span>Cancellation Penalty</span>
+                                                    <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="breakdown-row">
+                                                        <span>Labor Base Cost</span>
+                                                        <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
+                                                    </div>
+
+                                                    {parseFloat(bd.otPremium) > 0 && (
+                                                        <div className="breakdown-row highlight-premium">
+                                                            <span>Overtime (OT) 1.5x</span>
+                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.otPremium).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {parseFloat(bd.oohPremium) > 0 && (
+                                                        <div className="breakdown-row highlight-premium">
+                                                            <span>Out of Hours (OOH) 1.5x</span>
+                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.oohPremium).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {parseFloat(bd.specialDayPremium) > 0 && (
+                                                        <div className="breakdown-row highlight-premium-gold">
+                                                            <span>Weekend/Holiday Premium 2.0x</span>
+                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {parseFloat(bd.travelCost) > 0 && (
+                                                <div className="breakdown-row">
+                                                    <span>Travel & Logistics</span>
+                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(2)}</span>
+                                                </div>
+                                            )}
+
+                                            {parseFloat(bd.toolCost) > 0 && (
+                                                <div className="breakdown-row">
+                                                    <span>Tools & Material</span>
+                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(2)}</span>
+                                                </div>
+                                            )}
+
+                                            <div className="breakdown-row total-row-premium">
+                                                <span>Net Receivable</span>
+                                                <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
                                             </div>
-
-                                            {parseFloat(detailTicket.breakdown?.otPremium) > 0 && (
-                                                <div className="breakdown-row highlight-premium">
-                                                    <span>Overtime (OT) 1.5x</span>
-                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.otPremium).toFixed(2)}</span>
-                                                </div>
-                                            )}
-
-                                            {parseFloat(detailTicket.breakdown?.oohPremium) > 0 && (
-                                                <div className="breakdown-row highlight-premium">
-                                                    <span>Out of Hours (OOH) 1.5x</span>
-                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.oohPremium).toFixed(2)}</span>
-                                                </div>
-                                            )}
-
-                                            {parseFloat(detailTicket.breakdown?.specialDayPremium) > 0 && (
-                                                <div className="breakdown-row highlight-premium-gold">
-                                                    <span>Weekend/Holiday Premium 2.0x</span>
-                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.specialDayPremium).toFixed(2)}</span>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {parseFloat(detailTicket.breakdown?.travelCost) > 0 && (
-                                        <div className="breakdown-row">
-                                            <span>Travel & Logistics</span>
-                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.travelCost || 0).toFixed(2)}</span>
                                         </div>
-                                    )}
-
-                                    {parseFloat(detailTicket.breakdown?.toolCost) > 0 && (
-                                        <div className="breakdown-row">
-                                            <span>Tools & Material</span>
-                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.breakdown?.toolCost || 0).toFixed(2)}</span>
-                                        </div>
-                                    )}
-
-                                    <div className="breakdown-row total-row-premium">
-                                        <span>Net Receivable</span>
-                                        <span>{detailTicket.currency || selectedCurrency} {(parseFloat(detailTicket.breakdown?.totalReceivable) || parseFloat(detailTicket.total_cost) || 0).toFixed(2)}</span>
                                     </div>
-                                </div>
-                            </div>
+                                );
+                            })()}
                         </div>
                         <div className="modal-footer-premium">
                             <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>

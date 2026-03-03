@@ -153,6 +153,7 @@ function TicketsPage() {
   const [isResolvingEarly, setIsResolvingEarly] = useState(false);
   const [newExtendEndDate, setNewExtendEndDate] = useState('');
   const [isExtending, setIsExtending] = useState(false);
+  const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
   // Live Calculation Logic (Mirrors Backend)
   useEffect(() => {
@@ -174,7 +175,7 @@ function TicketsPage() {
       const hd = parseFloat(halfDayRate) || 0;
       const fd = parseFloat(fullDayRate) || 0;
 
-      const targetTZ = timezone || 'UTC';
+      const targetTZ = (calcTimezone && calcTimezone !== 'Ticket Local') ? calcTimezone : (timezone || 'UTC');
 
       const getZonedInfo = (date) => {
         try {
@@ -280,7 +281,7 @@ function TicketsPage() {
     } catch (err) {
       console.error(err);
     }
-  }, [startTime, endTime, breakTime, billingType, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, travelCostPerDay, totalCost, cancellationFee]);
+  }, [startTime, endTime, breakTime, billingType, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, travelCostPerDay, totalCost, cancellationFee, calcTimezone]);
 
   // Sync Task Dates with Manual Time Log
   useEffect(() => {
@@ -1853,6 +1854,38 @@ function TicketsPage() {
         </div>
         <div />
       </header>
+
+      {/* Timezone Context Selector */}
+      <div style={{ marginBottom: '20px', padding: '12px 20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h5 style={{ margin: 0, fontSize: '14px', color: '#475569', fontWeight: '600' }}>Global Calculation Context</h5>
+          <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Switch perspective for premium logic (OOH, Weekend, Holidays)</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <i className="fas fa-globe-americas" style={{ color: '#6366f1' }}></i>
+          <select
+            value={calcTimezone}
+            onChange={(e) => setCalcTimezone(e.target.value)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
+              fontSize: '13px',
+              fontWeight: '600',
+              color: '#334155',
+              background: '#ffffff',
+              outline: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          >
+            <option value="Ticket Local">Ticket Local (Auto)</option>
+            <option value="Asia/Kolkata">India (IST)</option>
+            <option value="Europe/Warsaw">Poland (CET)</option>
+            <option value="UTC">UTC (Universal)</option>
+          </select>
+        </div>
+      </div>
 
       <section className="tickets-summary-row">
         <div className="tickets-summary-card">

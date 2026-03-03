@@ -167,6 +167,7 @@ function EngineersPage() {
     const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'tickets', 'charges'
     const [engTickets, setEngTickets] = useState([]);
     const [loadingTickets, setLoadingTickets] = useState(false);
+    const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
     // Charges Form State
     const [chargesForm, setChargesForm] = useState({
@@ -746,19 +747,50 @@ function EngineersPage() {
                     {
                         activeTab === 'tickets' && (
                             <div className="tickets-tab-content">
+                                {/* Timezone Context Selector */}
+                                <div style={{ marginBottom: '20px', padding: '12px 15px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h5 style={{ margin: 0, fontSize: '13px', color: '#475569', fontWeight: '600' }}>Calculation Context</h5>
+                                        <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>View payout logic from different regional perspectives</p>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <i className="fas fa-globe-americas" style={{ color: '#6366f1' }}></i>
+                                        <select
+                                            value={calcTimezone}
+                                            onChange={(e) => setCalcTimezone(e.target.value)}
+                                            style={{
+                                                padding: '6px 12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #cbd5e1',
+                                                fontSize: '13px',
+                                                fontWeight: '500',
+                                                color: '#334155',
+                                                background: '#ffffff',
+                                                outline: 'none',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <option value="Ticket Local">Ticket Local (Auto)</option>
+                                            <option value="Asia/Kolkata">India (IST)</option>
+                                            <option value="Europe/Warsaw">Poland (CET)</option>
+                                            <option value="UTC">UTC (Universal)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 {/* Payout Summary Cards */}
                                 <div className="payout-summary-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '20px' }}>
                                     <div style={{ background: '#eff6ff', padding: '15px', borderRadius: '12px', border: '1px solid #dbeafe' }}>
                                         <div style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600', marginBottom: '5px' }}>TOTAL EARNINGS</div>
                                         <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
                                             {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
-                                            {engTickets.reduce((acc, t) => acc + calculateEngineerPayoutForTicket(t, selectedEngineer).total, 0).toFixed(2)}
+                                            {engTickets.reduce((acc, t) => acc + calculateEngineerPayoutForTicket(t, selectedEngineer, calcTimezone).total, 0).toFixed(2)}
                                         </div>
                                     </div>
                                     <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '12px', border: '1px solid #dcfce7' }}>
                                         <div style={{ fontSize: '12px', color: '#166534', fontWeight: '600', marginBottom: '5px' }}>TOTAL HOURS</div>
                                         <div style={{ fontSize: '24px', fontWeight: '700', color: '#14532d' }}>
-                                            {engTickets.reduce((acc, t) => acc + parseFloat(calculateEngineerPayoutForTicket(t, selectedEngineer).hrs || 0), 0).toFixed(1)}h
+                                            {engTickets.reduce((acc, t) => acc + parseFloat(calculateEngineerPayoutForTicket(t, selectedEngineer, calcTimezone).hrs || 0), 0).toFixed(1)}h
                                         </div>
                                     </div>
                                     <div style={{ background: '#fdf2f2', padding: '15px', borderRadius: '12px', border: '1px solid #fee2e2' }}>
@@ -788,7 +820,7 @@ function EngineersPage() {
                                                     <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No tickets found for this engineer.</td></tr>
                                                 ) : (
                                                     engTickets.map(t => {
-                                                        const p = calculateEngineerPayoutForTicket(t, selectedEngineer);
+                                                        const p = calculateEngineerPayoutForTicket(t, selectedEngineer, calcTimezone);
                                                         return (
                                                             <tr key={t.id}>
                                                                 <td style={{ fontWeight: '500', color: '#6366f1' }}>#AIM-T-{t.id}</td>

@@ -129,6 +129,7 @@ function LeadsPage() {
   const [totalCost, setTotalCost] = useState('')
   const [billingType, setBillingType] = useState('Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
+  const [calcTimezone, setCalcTimezone] = useState('Ticket Local')
 
   // Billing Type Options
   const BILLING_TYPES = [
@@ -816,6 +817,35 @@ function LeadsPage() {
           + Add New Lead
         </button>
       </header>
+
+      {/* Timezone Context Selector (Consistency) */}
+      <div style={{ marginBottom: '20px', padding: '12px 20px', background: '#f8fafc', borderRadius: '15px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h5 style={{ margin: 0, fontSize: '14px', color: '#475569', fontWeight: '700' }}>Operational Timezone Context</h5>
+          <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>Global context for time-sensitive lead processing and scheduling.</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <select
+            value={calcTimezone}
+            onChange={(e) => setCalcTimezone(e.target.value)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
+              fontSize: '13px',
+              fontWeight: '600',
+              color: '#334155',
+              background: '#ffffff',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="Ticket Local">Ticket Local (Auto)</option>
+            <option value="Asia/Kolkata">India (IST)</option>
+            <option value="Europe/Warsaw">Poland (CET)</option>
+            <option value="UTC">UTC (Universal)</option>
+          </select>
+        </div>
+      </div>
 
       <section className="leads-summary-row">
         <div className="leads-summary-card">
