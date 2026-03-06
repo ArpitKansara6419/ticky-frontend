@@ -622,7 +622,7 @@ function EngineersPage() {
                                             {rtwData.verificationStatus || 'UNVERIFIED'}
                                         </span>
                                     </h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                                         <div>
                                             <label style={{ fontSize: '11px', color: '#94a3b8' }}>NATIONALITY</label>
                                             <div style={{ fontWeight: '500', color: '#334155' }}>{rtwData.nationality || 'Not specified'}</div>
@@ -632,12 +632,16 @@ function EngineersPage() {
                                             <div style={{ fontWeight: '500', color: '#334155' }}>{rtwData.visaType || 'N/A'}</div>
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: '11px', color: '#94a3b8' }}>SHARE CODE</label>
-                                            <div style={{ fontWeight: '500', color: '#1e293b', letterSpacing: '1px' }}>{rtwData.shareCode || '-'}</div>
+                                            <label style={{ fontSize: '11px', color: '#94a3b8' }}>ISSUE DATE</label>
+                                            <div style={{ fontWeight: '500', color: '#334155' }}>{rtwData.issueDate || 'N/A'}</div>
                                         </div>
                                         <div>
                                             <label style={{ fontSize: '11px', color: '#94a3b8' }}>EXPIRY DATE</label>
                                             <div style={{ fontWeight: '500', color: '#ef4444' }}>{rtwData.expiryDate || 'N/A'}</div>
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2' }}>
+                                            <label style={{ fontSize: '11px', color: '#94a3b8' }}>SHARE CODE</label>
+                                            <div style={{ fontWeight: '500', color: '#1e293b', letterSpacing: '1px' }}>{rtwData.shareCode || '-'}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -711,7 +715,7 @@ function EngineersPage() {
                                             <div key={i} style={{ background: '#ffffff', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                                                 <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{cert.certificationName}</div>
                                                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px' }}>
-                                                    ID: {cert.certificationId || 'N/A'} • Valid Until: {cert.expiryDate || 'N/A'}
+                                                    ID: {cert.certificationId || 'N/A'} • Issued: {cert.issueDate || 'N/A'} • Expires: {cert.expiryDate || 'N/A'}
                                                 </div>
                                             </div>
                                         )) : <div style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No certifications listed.</div>}
