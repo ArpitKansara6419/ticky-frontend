@@ -701,49 +701,6 @@ function LeadsPage() {
                   placeholder="Select Timezone"
                 />
               </label>
-
-              {/* Live Google Maps Preview */}
-              {(latitude && longitude) && (
-                <div className="leads-field leads-field--full">
-                  <span style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
-                    📍 Map Preview
-                  </span>
-                  <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #bae6fd', boxShadow: '0 4px 16px rgba(14,165,233,0.12)' }}>
-                    <iframe
-                      key={`${latitude}-${longitude}`}
-                      title="Selected Location Map"
-                      src={`https://www.google.com/maps?q=${latitude},${longitude}&z=16&output=embed`}
-                      width="100%"
-                      height="260"
-                      style={{ border: 'none', display: 'block' }}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '10px 14px', background: '#f0f9ff', borderTop: '1px solid #bae6fd'
-                    }}>
-                      <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: '600' }}>
-                        📌 {parseFloat(latitude).toFixed(5)}, {parseFloat(longitude).toFixed(5)}
-                      </span>
-                      <a
-                        href={`https://www.google.com/maps?q=${latitude},${longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: '12px', fontWeight: '700', color: '#0369a1',
-                          textDecoration: 'none', padding: '6px 14px',
-                          background: '#e0f2fe', borderRadius: '8px',
-                          border: '1px solid #7dd3fc', display: 'inline-flex', alignItems: 'center', gap: '5px'
-                        }}
-                      >
-                        🗺 Open in Google Maps
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </section>
 
@@ -1259,60 +1216,46 @@ function LeadsPage() {
                   <span>{[selectedLead.addressLine1, selectedLead.addressLine2, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')}</span>
                 </div>
 
-                {/* --- Google Maps Section --- */}
-                <div className="detail-item--full" style={{ marginTop: '8px' }}>
-                  <label style={{ marginBottom: '8px', display: 'block' }}>📍 Map Location</label>
-                  {(() => {
-                    const lat = selectedLead.latitude;
-                    const lng = selectedLead.longitude;
-                    const addressQuery = encodeURIComponent(
-                      [selectedLead.addressLine1, selectedLead.city, selectedLead.country].filter(Boolean).join(', ')
-                    );
-                    const hasCoords = lat && lng;
-                    const embedSrc = hasCoords
-                      ? `https://www.google.com/maps?q=${lat},${lng}&z=16&output=embed`
-                      : `https://www.google.com/maps?q=${addressQuery}&output=embed`;
-                    const mapsLink = hasCoords
-                      ? `https://www.google.com/maps?q=${lat},${lng}`
-                      : `https://www.google.com/maps/search/?q=${addressQuery}`;
+                {/* --- Google Maps Location Button --- */}
+                {(() => {
+                  const lat = selectedLead.latitude;
+                  const lng = selectedLead.longitude;
+                  const addressQuery = encodeURIComponent(
+                    [selectedLead.addressLine1, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')
+                  );
+                  const hasCoords = lat && lng;
+                  const mapsLink = hasCoords
+                    ? `https://www.google.com/maps?q=${lat},${lng}&z=16`
+                    : `https://www.google.com/maps/search/?q=${addressQuery}`;
 
-                    return (
-                      <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                        <iframe
-                          title="Lead Location Map"
-                          src={embedSrc}
-                          width="100%"
-                          height="280"
-                          style={{ border: 'none', display: 'block' }}
-                          allowFullScreen
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                        />
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '10px 14px', background: '#f8fafc', borderTop: '1px solid #e2e8f0'
-                        }}>
-                          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
-                            {hasCoords ? `📌 ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}` : '📌 Address-based location'}
-                          </span>
-                          <a
-                            href={mapsLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              fontSize: '12px', fontWeight: '700', color: '#4f46e5',
-                              textDecoration: 'none', padding: '6px 14px',
-                              background: '#eef2ff', borderRadius: '8px',
-                              border: '1px solid #c7d2fe', display: 'inline-flex', alignItems: 'center', gap: '5px'
-                            }}
-                          >
-                            🗺 Open in Google Maps
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
+                  return (
+                    <div className="detail-item--full" style={{ marginTop: '4px' }}>
+                      <label>📍 Location on Map</label>
+                      <a
+                        href={mapsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '8px',
+                          padding: '10px 20px', borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #4285F4, #34A853)',
+                          color: 'white', fontWeight: '700', fontSize: '13px',
+                          textDecoration: 'none', border: 'none',
+                          boxShadow: '0 4px 12px rgba(66,133,244,0.35)',
+                          transition: 'opacity 0.2s',
+                          marginTop: '6px'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                        </svg>
+                        View on Google Maps
+                      </a>
+                    </div>
+                  );
+                })()}
                 <div className="detail-item--full">
                   <label>Scope of Work</label>
                   <p className="scope-text">{selectedLead.scopeOfWork}</p>
