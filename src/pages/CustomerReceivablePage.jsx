@@ -801,39 +801,60 @@ const CustomerReceivablePage = () => {
 
                             {(() => {
                                 const bd = calculateTicketCostFrontend(detailTicket, calcTimezone);
+                                const ticketOrigCurrency = detailTicket.currency || 'USD';
+                                const isConverted = selectedCurrency !== ticketOrigCurrency;
+
+                                // Helper: convert a USD amount and format it
+                                const fmt = (usdAmt) =>
+                                    convertAmount(parseFloat(usdAmt || 0), selectedCurrency)
+                                        .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
                                 return (
                                     <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+
+                                        {/* Currency conversion note */}
+                                        {isConverted && (
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                background: '#fffbeb', border: '1px solid #fde68a',
+                                                borderRadius: '10px', padding: '8px 12px', marginBottom: '14px',
+                                                fontSize: '12px', color: '#92400e', fontWeight: '600'
+                                            }}>
+                                                💱 Converted from {ticketOrigCurrency} → {selectedCurrency} (rate: 1 {ticketOrigCurrency} = {(EXCHANGE_RATES[selectedCurrency] / EXCHANGE_RATES[ticketOrigCurrency]).toFixed(4)} {selectedCurrency})
+                                            </div>
+                                        )}
+
                                         <div className="breakdown-list-premium">
                                             {detailTicket.billing_type === 'Cancellation' ? (
                                                 <div className="breakdown-row highlight-premium">
                                                     <span>Cancellation Penalty</span>
-                                                    <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
+                                                    <span>{selectedCurrency} {fmt(detailTicket.cancellation_fee || 0)}</span>
                                                 </div>
                                             ) : (
                                                 <>
                                                     <div className="breakdown-row">
                                                         <span>Labor Base Cost</span>
-                                                        <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
+                                                        <span>{selectedCurrency} {fmt(bd.baseCost)}</span>
                                                     </div>
 
                                                     {parseFloat(bd.otPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium">
                                                             <span>Overtime (OT) 1.5x</span>
-                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.otPremium).toFixed(2)}</span>
+                                                            <span>+ {selectedCurrency} {fmt(bd.otPremium)}</span>
                                                         </div>
                                                     )}
 
                                                     {parseFloat(bd.oohPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium">
                                                             <span>Out of Hours (OOH) 1.5x</span>
-                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.oohPremium).toFixed(2)}</span>
+                                                            <span>+ {selectedCurrency} {fmt(bd.oohPremium)}</span>
                                                         </div>
                                                     )}
 
                                                     {parseFloat(bd.specialDayPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium-gold">
                                                             <span>Weekend/Holiday Premium 2.0x</span>
-                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
+                                                            <span>+ {selectedCurrency} {fmt(bd.specialDayPremium)}</span>
                                                         </div>
                                                     )}
                                                 </>
@@ -841,21 +862,21 @@ const CustomerReceivablePage = () => {
 
                                             {parseFloat(bd.travelCost) > 0 && (
                                                 <div className="breakdown-row">
-                                                    <span>Travel & Logistics</span>
-                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(2)}</span>
+                                                    <span>Travel &amp; Logistics</span>
+                                                    <span>+ {selectedCurrency} {fmt(bd.travelCost)}</span>
                                                 </div>
                                             )}
 
                                             {parseFloat(bd.toolCost) > 0 && (
                                                 <div className="breakdown-row">
-                                                    <span>Tools & Material</span>
-                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(2)}</span>
+                                                    <span>Tools &amp; Material</span>
+                                                    <span>+ {selectedCurrency} {fmt(bd.toolCost)}</span>
                                                 </div>
                                             )}
 
                                             <div className="breakdown-row total-row-premium">
                                                 <span>Net Receivable</span>
-                                                <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
+                                                <span>{selectedCurrency} {fmt(bd.totalReceivable)}</span>
                                             </div>
                                         </div>
                                     </div>
