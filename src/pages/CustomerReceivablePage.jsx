@@ -10,11 +10,24 @@ import './CustomerReceivablePage.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const CURRENCIES = [
-    { value: 'USD', label: 'USD ($)' },
-    { value: 'EUR', label: 'EUR (€)' },
-    { value: 'GBP', label: 'GBP (£)' },
-    { value: 'INR', label: 'INR (₹)' }
+    { value: 'USD', label: 'USD ($)', symbol: '$' },
+    { value: 'EUR', label: 'EUR (€)', symbol: '€' },
+    { value: 'GBP', label: 'GBP (£)', symbol: '£' },
+    { value: 'INR', label: 'INR (₹)', symbol: '₹' }
 ];
+
+// Exchange rates relative to USD (1 USD = X currency)
+const EXCHANGE_RATES = {
+    USD: 1,
+    EUR: 0.92,
+    GBP: 0.79,
+    INR: 83.5
+};
+
+const convertAmount = (amountUSD, toCurrency) => {
+    const rate = EXCHANGE_RATES[toCurrency] || 1;
+    return parseFloat(amountUSD) * rate;
+};
 
 const MONTHS = [
     "All Months", "January", "February", "March", "April", "May", "June",
@@ -207,13 +220,46 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error("Invoice Fetch Error:", e); }
     };
 
-    // Calculate Dynamic Unbilled Total based on Context
+    // --- Currency Symbol Helper ---
+    const currencySymbol = useMemo(() => {
+        return CURRENCIES.find(c => c.value === selectedCurrency)?.symbol || selectedCurrency;
+    }, [selectedCurrency]);
+
+    // Calculate Dynamic Unbilled Total based on Context + Convert to selected currency
     const dynamicUnbilledTotal = useMemo(() => {
-        return unbilledList.reduce((sum, item) => {
+        const totalUSD = unbilledList.reduce((sum, item) => {
             const bd = calculateTicketCostFrontend(item, calcTimezone);
-            return sum + parseFloat(bd.totalReceivable);
+            return sum + parseFloat(bd.totalReceivable || 0);
         }, 0);
-    }, [unbilledList, calcTimezone]);
+        return convertAmount(totalUSD, selectedCurrency);
+    }, [unbilledList, calcTimezone, selectedCurrency]);
+
+    // --- Dynamic Stats from Invoice List (currency + date filtered) ---
+    const dynamicInvoiceStats = useMemo(() => {
+        const now = new Date();
+        let unpaid = 0; let overdue = 0; let paid = 0;
+
+        invoiceList.forEach(inv => {
+            const issueDate = new Date(inv.issue_date);
+            const invYear = issueDate.getFullYear().toString();
+            const invMonth = MONTHS[issueDate.getMonth() + 1];
+
+            const matchesYear = selectedYear === 'All Years' || invYear === selectedYear;
+            const matchesMonth = selectedMonth === 'All Months' || invMonth === selectedMonth;
+            if (!matchesYear || !matchesMonth) return;
+
+            const amtConverted = convertAmount(parseFloat(inv.amount || 0), selectedCurrency);
+
+            if (inv.status === 'Paid') {
+                paid += amtConverted;
+            } else {
+                unpaid += amtConverted;
+                const dueDate = new Date(inv.due_date || inv.issue_date);
+                if (dueDate < now) overdue += amtConverted;
+            }
+        });
+        return { unpaid, overdue, paid };
+    }, [invoiceList, selectedCurrency, selectedYear, selectedMonth]);
 
     const toggleTicket = (id) => {
         setSelectedTicketIds(prev =>
@@ -504,7 +550,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon amber"><FiFileText /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {parseFloat(stats.unpaid).toLocaleString()}</h3>
+                        <h3>{selectedCurrency} {dynamicInvoiceStats.unpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Unpaid Invoices</p>
                         <small style={{ color: '#94a3b8', fontSize: '11px' }}>Awaiting client payment</small>
                     </div>
@@ -512,7 +558,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon emerald"><FiCheckCircle /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {parseFloat(stats.overdue || 0).toLocaleString()}</h3>
+                        <h3>{selectedCurrency} {dynamicInvoiceStats.overdue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Total Overdue</p>
                         <small style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>Requires immediate action</small>
                     </div>
@@ -520,9 +566,11 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon blue" style={{ background: '#f0f9ff', color: '#0369a1' }}><FiDollarSign /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {parseFloat(stats.paid || 0).toLocaleString()}</h3>
+                        <h3>{selectedCurrency} {dynamicInvoiceStats.paid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Collected Revenue</p>
-                        <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>Total for {new Date().getFullYear()}</small>
+                        <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>
+                            {selectedYear === 'All Years' ? `Total for ${new Date().getFullYear()}` : `Total for ${selectedYear}${selectedMonth !== 'All Months' ? ` · ${selectedMonth}` : ''}`}
+                        </small>
                     </div>
                 </div>
             </div>
