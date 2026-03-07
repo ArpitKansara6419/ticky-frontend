@@ -10,24 +10,11 @@ import './CustomerReceivablePage.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const CURRENCIES = [
-    { value: 'USD', label: 'USD ($)', symbol: '$' },
-    { value: 'EUR', label: 'EUR (€)', symbol: '€' },
-    { value: 'GBP', label: 'GBP (£)', symbol: '£' },
-    { value: 'INR', label: 'INR (₹)', symbol: '₹' }
+    { value: 'USD', label: 'USD ($)' },
+    { value: 'EUR', label: 'EUR (€)' },
+    { value: 'GBP', label: 'GBP (£)' },
+    { value: 'INR', label: 'INR (₹)' }
 ];
-
-// Exchange rates relative to USD (1 USD = X currency)
-const EXCHANGE_RATES = {
-    USD: 1,
-    EUR: 0.92,
-    GBP: 0.79,
-    INR: 83.5
-};
-
-const convertAmount = (amountUSD, toCurrency) => {
-    const rate = EXCHANGE_RATES[toCurrency] || 1;
-    return parseFloat(amountUSD) * rate;
-};
 
 const MONTHS = [
     "All Months", "January", "February", "March", "April", "May", "June",
@@ -220,46 +207,13 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error("Invoice Fetch Error:", e); }
     };
 
-    // --- Currency Symbol Helper ---
-    const currencySymbol = useMemo(() => {
-        return CURRENCIES.find(c => c.value === selectedCurrency)?.symbol || selectedCurrency;
-    }, [selectedCurrency]);
-
-    // Calculate Dynamic Unbilled Total based on Context + Convert to selected currency
+    // Calculate Dynamic Unbilled Total based on Context
     const dynamicUnbilledTotal = useMemo(() => {
-        const totalUSD = unbilledList.reduce((sum, item) => {
+        return unbilledList.reduce((sum, item) => {
             const bd = calculateTicketCostFrontend(item, calcTimezone);
-            return sum + parseFloat(bd.totalReceivable || 0);
+            return sum + parseFloat(bd.totalReceivable);
         }, 0);
-        return convertAmount(totalUSD, selectedCurrency);
-    }, [unbilledList, calcTimezone, selectedCurrency]);
-
-    // --- Dynamic Stats from Invoice List (currency + date filtered) ---
-    const dynamicInvoiceStats = useMemo(() => {
-        const now = new Date();
-        let unpaid = 0; let overdue = 0; let paid = 0;
-
-        invoiceList.forEach(inv => {
-            const issueDate = new Date(inv.issue_date);
-            const invYear = issueDate.getFullYear().toString();
-            const invMonth = MONTHS[issueDate.getMonth() + 1];
-
-            const matchesYear = selectedYear === 'All Years' || invYear === selectedYear;
-            const matchesMonth = selectedMonth === 'All Months' || invMonth === selectedMonth;
-            if (!matchesYear || !matchesMonth) return;
-
-            const amtConverted = convertAmount(parseFloat(inv.amount || 0), selectedCurrency);
-
-            if (inv.status === 'Paid') {
-                paid += amtConverted;
-            } else {
-                unpaid += amtConverted;
-                const dueDate = new Date(inv.due_date || inv.issue_date);
-                if (dueDate < now) overdue += amtConverted;
-            }
-        });
-        return { unpaid, overdue, paid };
-    }, [invoiceList, selectedCurrency, selectedYear, selectedMonth]);
+    }, [unbilledList, calcTimezone]);
 
     const toggleTicket = (id) => {
         setSelectedTicketIds(prev =>
@@ -550,7 +504,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon amber"><FiFileText /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {dynamicInvoiceStats.unpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency} {parseFloat(stats.unpaid).toLocaleString()}</h3>
                         <p>Unpaid Invoices</p>
                         <small style={{ color: '#94a3b8', fontSize: '11px' }}>Awaiting client payment</small>
                     </div>
@@ -558,7 +512,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon emerald"><FiCheckCircle /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {dynamicInvoiceStats.overdue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency} {parseFloat(stats.overdue || 0).toLocaleString()}</h3>
                         <p>Total Overdue</p>
                         <small style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>Requires immediate action</small>
                     </div>
@@ -566,11 +520,9 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon blue" style={{ background: '#f0f9ff', color: '#0369a1' }}><FiDollarSign /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {dynamicInvoiceStats.paid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency} {parseFloat(stats.paid || 0).toLocaleString()}</h3>
                         <p>Collected Revenue</p>
-                        <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>
-                            {selectedYear === 'All Years' ? `Total for ${new Date().getFullYear()}` : `Total for ${selectedYear}${selectedMonth !== 'All Months' ? ` · ${selectedMonth}` : ''}`}
-                        </small>
+                        <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>Total for {new Date().getFullYear()}</small>
                     </div>
                 </div>
             </div>
@@ -801,60 +753,39 @@ const CustomerReceivablePage = () => {
 
                             {(() => {
                                 const bd = calculateTicketCostFrontend(detailTicket, calcTimezone);
-                                const ticketOrigCurrency = detailTicket.currency || 'USD';
-                                const isConverted = selectedCurrency !== ticketOrigCurrency;
-
-                                // Helper: convert a USD amount and format it
-                                const fmt = (usdAmt) =>
-                                    convertAmount(parseFloat(usdAmt || 0), selectedCurrency)
-                                        .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
                                 return (
                                     <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-
-                                        {/* Currency conversion note */}
-                                        {isConverted && (
-                                            <div style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                background: '#fffbeb', border: '1px solid #fde68a',
-                                                borderRadius: '10px', padding: '8px 12px', marginBottom: '14px',
-                                                fontSize: '12px', color: '#92400e', fontWeight: '600'
-                                            }}>
-                                                💱 Converted from {ticketOrigCurrency} → {selectedCurrency} (rate: 1 {ticketOrigCurrency} = {(EXCHANGE_RATES[selectedCurrency] / EXCHANGE_RATES[ticketOrigCurrency]).toFixed(4)} {selectedCurrency})
-                                            </div>
-                                        )}
-
                                         <div className="breakdown-list-premium">
                                             {detailTicket.billing_type === 'Cancellation' ? (
                                                 <div className="breakdown-row highlight-premium">
                                                     <span>Cancellation Penalty</span>
-                                                    <span>{selectedCurrency} {fmt(detailTicket.cancellation_fee || 0)}</span>
+                                                    <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
                                                 </div>
                                             ) : (
                                                 <>
                                                     <div className="breakdown-row">
                                                         <span>Labor Base Cost</span>
-                                                        <span>{selectedCurrency} {fmt(bd.baseCost)}</span>
+                                                        <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
                                                     </div>
 
                                                     {parseFloat(bd.otPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium">
                                                             <span>Overtime (OT) 1.5x</span>
-                                                            <span>+ {selectedCurrency} {fmt(bd.otPremium)}</span>
+                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.otPremium).toFixed(2)}</span>
                                                         </div>
                                                     )}
 
                                                     {parseFloat(bd.oohPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium">
                                                             <span>Out of Hours (OOH) 1.5x</span>
-                                                            <span>+ {selectedCurrency} {fmt(bd.oohPremium)}</span>
+                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.oohPremium).toFixed(2)}</span>
                                                         </div>
                                                     )}
 
                                                     {parseFloat(bd.specialDayPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium-gold">
                                                             <span>Weekend/Holiday Premium 2.0x</span>
-                                                            <span>+ {selectedCurrency} {fmt(bd.specialDayPremium)}</span>
+                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
                                                         </div>
                                                     )}
                                                 </>
@@ -862,27 +793,27 @@ const CustomerReceivablePage = () => {
 
                                             {parseFloat(bd.travelCost) > 0 && (
                                                 <div className="breakdown-row">
-                                                    <span>Travel &amp; Logistics</span>
-                                                    <span>+ {selectedCurrency} {fmt(bd.travelCost)}</span>
+                                                    <span>Travel & Logistics</span>
+                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(2)}</span>
                                                 </div>
                                             )}
 
                                             {parseFloat(bd.toolCost) > 0 && (
                                                 <div className="breakdown-row">
-                                                    <span>Tools &amp; Material</span>
-                                                    <span>+ {selectedCurrency} {fmt(bd.toolCost)}</span>
+                                                    <span>Tools & Material</span>
+                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(2)}</span>
                                                 </div>
                                             )}
 
                                             <div className="breakdown-row total-row-premium">
                                                 <span>Net Receivable</span>
-                                                <span>{selectedCurrency} {fmt(bd.totalReceivable)}</span>
+                                                <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
                                             </div>
                                         </div>
                                     </div>
                                 );
                             })()}
-                        </div>
+                            </div>
                         <div className="modal-footer-premium">
                             <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
                         </div>
