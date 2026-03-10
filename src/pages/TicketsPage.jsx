@@ -1630,7 +1630,7 @@ function TicketsPage() {
                   <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
                   <option value="Half Day + Hourly">2) Half Day + Hourly</option>
                   <option value="Full Day + OT">3) Full Day + OT (OT = 1.5x)</option>
-                  <option value="Monthly + OT + Weekend/Holiday">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
+                  <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
                   <option value="Agreed Rate">5) Agreed/Fixed Rate</option>
                   <option value="Cancellation">6) Cancellation/Reschedule Fee</option>
                 </select>
