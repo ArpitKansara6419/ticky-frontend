@@ -152,6 +152,8 @@ function TicketsPage() {
   const [leadType, setLeadType] = useState('Full time') // 'Full time' | 'Dispatch'
   const [timeLogs, setTimeLogs] = useState([]);
   const [isUpdatingLog, setIsUpdatingLog] = useState(null); // stores log ID being updated
+  const [isEditingLogId, setIsEditingLogId] = useState(null); // ID of row being edited manually
+  const [logEditData, setLogEditData] = useState({}); // data for row being edited
   const [isResolvingEarly, setIsResolvingEarly] = useState(false);
   const [newExtendEndDate, setNewExtendEndDate] = useState('');
   const [isExtending, setIsExtending] = useState(false);
@@ -896,6 +898,11 @@ function TicketsPage() {
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Update failed');
+
+      // Reset editing state after successful update
+      setIsEditingLogId(null);
+      setLogEditData({});
+
       fetchTicketExtras(selectedTicket.id);
       loadTickets();
     } catch (e) { alert(e.message); }
@@ -2292,9 +2299,11 @@ function TicketsPage() {
                         </thead>
                         <tbody>
                           {timeLogs.map(log => {
+                            const isEditing = isEditingLogId === log.id;
                             const dur = (log.start_time && log.end_time)
                               ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
                               : 0;
+
                             return (
                               <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                 <td style={{ padding: '10px' }}>
@@ -2302,25 +2311,74 @@ function TicketsPage() {
                                   <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
                                 </td>
                                 <td style={{ padding: '10px' }}>
-                                  <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                      <input type="time" defaultValue={log.start_time ? new Date(log.start_time).toTimeString().slice(0, 5) : ''} onBlur={e => handleUpdateLog(log.id, { startTime: log.task_date.split('T')[0] + ' ' + e.target.value })} />
-                                      <input type="time" defaultValue={log.end_time ? new Date(log.end_time).toTimeString().slice(0, 5) : ''} onBlur={e => handleUpdateLog(log.id, { endTime: log.task_date.split('T')[0] + ' ' + e.target.value })} />
+                                  {isEditing ? (
+                                    <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
+                                      <div style={{ display: 'flex', gap: '10px' }}>
+                                        <input
+                                          type="time"
+                                          defaultValue={log.start_time ? new Date(log.start_time).toTimeString().slice(0, 5) : ''}
+                                          onChange={e => setLogEditData(prev => ({ ...prev, startTime: log.task_date.split('T')[0] + ' ' + e.target.value }))}
+                                        />
+                                        <input
+                                          type="time"
+                                          defaultValue={log.end_time ? new Date(log.end_time).toTimeString().slice(0, 5) : ''}
+                                          onChange={e => setLogEditData(prev => ({ ...prev, endTime: log.task_date.split('T')[0] + ' ' + e.target.value }))}
+                                        />
+                                      </div>
+                                      <input
+                                        type="number"
+                                        placeholder="Break mins"
+                                        style={{ width: '80px' }}
+                                        defaultValue={log.break_time_mins || 0}
+                                        onChange={e => setLogEditData(prev => ({ ...prev, breakTimeMins: parseInt(e.target.value) }))}
+                                      />
                                     </div>
-                                    <input type="number" placeholder="Break mins" style={{ width: '80px' }} defaultValue={log.break_time_mins} onBlur={e => handleUpdateLog(log.id, { breakTimeMins: parseInt(e.target.value) })} />
-                                  </div>
+                                  ) : (
+                                    <div style={{ fontSize: '12px' }}>
+                                      <div>In: {log.start_time ? new Date(log.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</div>
+                                      <div>Out: {log.end_time ? new Date(log.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</div>
+                                      <div>Break: {log.break_time_mins || 0}m</div>
+                                    </div>
+                                  )}
                                 </td>
                                 <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: 'var(--primary-color)' }}>
                                   {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
                                 </td>
                                 <td style={{ padding: '10px', textAlign: 'right' }}>
-                                  <button
-                                    className="btn-wow-secondary"
-                                    style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #ef4444', color: '#ef4444' }}
-                                    onClick={() => handleResolveEarly(log.task_date.split('T')[0])}
-                                  >
-                                    Resolve Here
-                                  </button>
+                                  <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                    {isEditing ? (
+                                      <button
+                                        className="btn-wow-primary"
+                                        style={{ padding: '4px 8px', fontSize: '10px' }}
+                                        onClick={() => handleUpdateLog(log.id, logEditData)}
+                                        disabled={isUpdatingLog === log.id}
+                                      >
+                                        Save
+                                      </button>
+                                    ) : (
+                                      <button
+                                        className="btn-wow-secondary"
+                                        style={{ padding: '4px 8px', fontSize: '10px' }}
+                                        onClick={() => {
+                                          setIsEditingLogId(log.id);
+                                          setLogEditData({
+                                            startTime: log.start_time,
+                                            endTime: log.end_time,
+                                            breakTimeMins: log.break_time_mins
+                                          });
+                                        }}
+                                      >
+                                        Edit
+                                      </button>
+                                    )}
+                                    <button
+                                      className="btn-wow-secondary"
+                                      style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #ef4444', color: '#ef4444' }}
+                                      onClick={() => handleResolveEarly(log.task_date.split('T')[0])}
+                                    >
+                                      Resolve Here
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -2340,12 +2398,22 @@ function TicketsPage() {
                     </div>
 
                     {isInlineEditing ? (
-                      <div className="detail-item--full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                      <div className="detail-item--full" style={{
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                        padding: '20px',
+                        borderRadius: '16px',
+                        border: '1px solid #cbd5e1',
+                        marginBottom: '20px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            🛠️ Time Adjustment Tool
+                          </span>
                           <button
                             type="button"
                             className="btn-wow-secondary"
-                            style={{ fontSize: '10px', padding: '4px 10px' }}
+                            style={{ fontSize: '10px', padding: '6px 12px', background: 'white' }}
                             onClick={() => {
                               if (selectedTicket.taskStartDate && selectedTicket.taskTime) {
                                 const startStr = `${String(selectedTicket.taskStartDate).split('T')[0]}T${selectedTicket.taskTime.padStart(5, '0')}`;
@@ -2361,21 +2429,22 @@ function TicketsPage() {
                               }
                             }}
                           >
-                            ⚡ Sync with Scheduled Time
+                            ⚡ Fast Sync
                           </button>
                         </div>
-                        <div className="tickets-grid" style={{ marginBottom: '16px' }}>
-                          <label className="tickets-field">
-                            <span>New Start Time</span>
-                            <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} />
+
+                        <div className="tickets-grid" style={{ marginBottom: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                          <label className="tickets-field" style={{ background: 'white', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>Check-In</span>
+                            <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} style={{ border: 'none', padding: '4px 0', fontSize: '13px', width: '100%' }} />
                           </label>
-                          <label className="tickets-field">
-                            <span>New End Time</span>
-                            <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} />
+                          <label className="tickets-field" style={{ background: 'white', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>Check-Out</span>
+                            <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} style={{ border: 'none', padding: '4px 0', fontSize: '13px', width: '100%' }} />
                           </label>
-                          <label className="tickets-field">
-                            <span>New Break Time (Mins)</span>
-                            <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} />
+                          <label className="tickets-field" style={{ background: 'white', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>Break (Mins)</span>
+                            <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} style={{ border: 'none', padding: '4px 0', fontSize: '13px', width: '100%' }} />
                           </label>
                         </div>
 
@@ -2399,26 +2468,44 @@ function TicketsPage() {
                           });
                           if (!res) return null;
                           return (
-                            <div style={{ marginBottom: '16px', padding: '12px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '10px' }}>
+                            <div style={{
+                              marginBottom: '16px',
+                              padding: '14px',
+                              background: '#ecfdf5',
+                              border: '1px solid #10b981',
+                              borderRadius: '12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px'
+                            }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#065f46' }}>SMART PREVIEW (ESTIMATED):</span>
-                                <span style={{ fontSize: '16px', fontWeight: '800', color: '#047857' }}>{selectedTicket.currency} {res.grandTotal}</span>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase' }}>New Estimated Total:</span>
+                                <span style={{ fontSize: '18px', fontWeight: '900', color: '#047857' }}>{selectedTicket.currency} {res.grandTotal}</span>
                               </div>
-                              <div style={{ fontSize: '11px', color: '#065f46', marginTop: '4px' }}>
+                              <div style={{ fontSize: '11px', color: '#059669', borderTop: '1px solid #a7f3d0', paddingTop: '6px', marginTop: '2px' }}>
                                 {res.hrs}h billed • Base: {selectedTicket.currency} {res.base} • OT: {selectedTicket.currency} {res.ot} • Premium: {selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}
                               </div>
                             </div>
                           );
                         })()}
 
-                        <button
-                          className="btn-wow-primary"
-                          style={{ width: '100%' }}
-                          onClick={handleUpdateInlineTime}
-                          disabled={isUpdatingTime}
-                        >
-                          {isUpdatingTime ? 'Updating...' : 'Save Time Changes'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button
+                            className="btn-wow-secondary"
+                            style={{ flex: 1, background: 'white' }}
+                            onClick={() => setIsInlineEditing(false)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="btn-wow-primary"
+                            style={{ flex: 2 }}
+                            onClick={handleUpdateInlineTime}
+                            disabled={isUpdatingTime}
+                          >
+                            {isUpdatingTime ? 'Updating...' : 'Apply Correction'}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <>
