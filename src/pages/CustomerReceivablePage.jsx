@@ -738,33 +738,33 @@ const CustomerReceivablePage = () => {
                                             {detailTicket.billing_type === 'Cancellation' ? (
                                                 <div className="breakdown-row highlight-premium">
                                                     <span>Cancellation Penalty</span>
-                                                    <span>{detailTicket.currency || selectedCurrency} {parseFloat(detailTicket.cancellation_fee || 0).toFixed(2)}</span>
+                                                    <span>{selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
                                                 </div>
                                             ) : (
                                                 <>
                                                     <div className="breakdown-row">
                                                         <span>Labor Base Cost</span>
-                                                        <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
+                                                        <span>{selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
                                                     </div>
 
                                                     {parseFloat(bd.otPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium">
                                                             <span>Overtime (OT) 1.5x</span>
-                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.otPremium).toFixed(2)}</span>
+                                                            <span>+ {selectedCurrency} {parseFloat(bd.otPremium).toFixed(2)}</span>
                                                         </div>
                                                     )}
 
                                                     {parseFloat(bd.oohPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium">
                                                             <span>Out of Hours (OOH) 1.5x</span>
-                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.oohPremium).toFixed(2)}</span>
+                                                            <span>+ {selectedCurrency} {parseFloat(bd.oohPremium).toFixed(2)}</span>
                                                         </div>
                                                     )}
 
                                                     {parseFloat(bd.specialDayPremium) > 0 && (
                                                         <div className="breakdown-row highlight-premium-gold">
                                                             <span>Weekend/Holiday Premium 2.0x</span>
-                                                            <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
+                                                            <span>+ {selectedCurrency} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
                                                         </div>
                                                     )}
                                                 </>
@@ -773,20 +773,20 @@ const CustomerReceivablePage = () => {
                                             {parseFloat(bd.travelCost) > 0 && (
                                                 <div className="breakdown-row">
                                                     <span>Travel & Logistics</span>
-                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(2)}</span>
+                                                    <span>+ {selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(2)}</span>
                                                 </div>
                                             )}
 
                                             {parseFloat(bd.toolCost) > 0 && (
                                                 <div className="breakdown-row">
                                                     <span>Tools & Material</span>
-                                                    <span>+ {detailTicket.currency || selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(2)}</span>
+                                                    <span>+ {selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(2)}</span>
                                                 </div>
                                             )}
 
                                             <div className="breakdown-row total-row-premium">
                                                 <span>Net Receivable</span>
-                                                <span>{detailTicket.currency || selectedCurrency} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
+                                                <span>{selectedCurrency} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
                                             </div>
                                         </div>
                                     </div>
