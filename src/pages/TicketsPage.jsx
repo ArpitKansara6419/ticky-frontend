@@ -71,6 +71,8 @@ function TicketsPage() {
   const [filterTicketIdHandled, setFilterTicketIdHandled] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('All Status')
 
   // Extra data modules
   const [ticketNotes, setTicketNotes] = useState([])
@@ -545,6 +547,23 @@ function TicketsPage() {
     fetchCountries()
   }, [])
 
+  const filteredTickets = useMemo(() => {
+    let result = tickets;
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase().trim()
+      result = result.filter(t =>
+        String(t.id).includes(lower) ||
+        (t.clientName || '').toLowerCase().includes(lower) ||
+        (t.engineerName || '').toLowerCase().includes(lower) ||
+        (t.taskName || '').toLowerCase().includes(lower)
+      )
+    }
+    if (statusFilter !== 'All Status') {
+      result = result.filter(t => t.status === statusFilter)
+    }
+    return result;
+  }, [tickets, searchTerm, statusFilter])
+
   const filteredLeads = useMemo(
     () =>
       leads.filter((lead) =>
@@ -792,22 +811,23 @@ function TicketsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update time');
 
-      // Fetch fresh ticket details immediately
+      // Update the selectedTicket seamlessly
       const freshRes = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, { credentials: 'include' });
       const freshData = await freshRes.json();
-      const freshTicket = freshData.ticket || freshData; // Handle potential response wrapper
+      const freshTicket = freshData.ticket || freshData;
 
       if (freshTicket) {
         setSelectedTicket(freshTicket);
         setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : ''));
         setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : ''));
-        // Convert seconds to minutes for UI
         const bt = freshTicket.breakTime !== undefined ? freshTicket.breakTime : freshTicket.break_time;
         setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
+
+        // Also update it in the tickets array without a full list reload to avoid UI jumps
+        setTickets(prev => prev.map(t => t.id === freshTicket.id ? freshTicket : t));
       }
 
       setIsInlineEditing(false);
-      await loadTickets(); // Refresh list view in background
     } catch (err) {
       console.error(err);
       alert('Error updating time log: ' + err.message);
@@ -1398,7 +1418,6 @@ function TicketsPage() {
                   apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}
                   options={{
-                    types: ['address'],
                   }}
                   placeholder="Type to search global address..."
                   style={{
@@ -1925,14 +1944,12 @@ function TicketsPage() {
         </div>
         <div className="tickets-list-toolbar">
           <div className="tickets-search">
-            <input type="text" placeholder="Search tickets..." disabled />
+            <input type="text" placeholder="Search tickets..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
           </div>
           <div className="tickets-filter-row">
-            <select disabled>
-              <option>All Status</option>
-            </select>
-            <select disabled>
-              <option>All Priority</option>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
+              <option value="All Status">All Status</option>
+              {TICKET_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
@@ -1941,8 +1958,8 @@ function TicketsPage() {
 
         {/* Pagination Logic */}
         {(() => {
-          const totalPages = Math.ceil(tickets.length / itemsPerPage)
-          const paginatedTickets = tickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+          const totalPages = Math.ceil(filteredTickets.length / itemsPerPage)
+          const paginatedTickets = filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
           const Pagination = ({ total, current, onChange }) => {
             if (total <= 1) return null

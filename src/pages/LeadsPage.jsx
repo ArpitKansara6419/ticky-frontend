@@ -127,7 +127,7 @@ function LeadsPage() {
 
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
   const [totalCost, setTotalCost] = useState('')
-  const [billingType, setBillingType] = useState('Hourly')
+  const [billingType, setBillingType] = useState(() => localStorage.getItem('defaultBillingType') || 'Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local')
 
@@ -170,7 +170,7 @@ function LeadsPage() {
     setCancellationFee('')
     setTravelCostPerDay('')
     setTotalCost('')
-    setBillingType('Hourly')
+    setBillingType(localStorage.getItem('defaultBillingType') || 'Hourly')
     setStatus(LEAD_STATUSES[0])
     setFormError('')
     setFormSuccess('')
@@ -734,7 +734,10 @@ function LeadsPage() {
 
               <label className="leads-field" style={{ gridColumn: 'span 3' }}>
                 <span>Billing Type *</span>
-                <select value={billingType} onChange={(e) => setBillingType(e.target.value)} required>
+                <select value={billingType} onChange={(e) => {
+                  setBillingType(e.target.value);
+                  localStorage.setItem('defaultBillingType', e.target.value);
+                }} required>
                   <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
                   <option value="Half Day + Hourly">2) Half Day + Hourly</option>
                   <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>

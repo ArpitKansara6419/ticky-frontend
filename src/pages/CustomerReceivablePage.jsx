@@ -16,6 +16,13 @@ const CURRENCIES = [
     { value: 'INR', label: 'INR (₹)' }
 ];
 
+const EXCHANGE_RATES = {
+    USD: 1.0,
+    EUR: 0.92,
+    GBP: 0.79,
+    INR: 83.0
+};
+
 const MONTHS = [
     "All Months", "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -33,13 +40,15 @@ const CustomerReceivablePage = () => {
     const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
     // --- FRONTEND CALCULATION ENGINE (Consistent with Tickets/Engineers Page) ---
-    const calculateTicketCostFrontend = (ticket, forcedTZ) => {
+    const calculateTicketCostFrontend = (ticket, forcedTZ, targetCurrency = 'USD') => {
         if (!ticket) return {};
         const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || 'UTC');
 
-        const hr = parseFloat(ticket.hourly_rate || 0);
-        const hd = parseFloat(ticket.half_day_rate || 0);
-        const fd = parseFloat(ticket.full_day_rate || 0);
+        const rateMultiplier = (EXCHANGE_RATES[targetCurrency] || 1) / (EXCHANGE_RATES[ticket.currency || 'USD'] || 1);
+
+        const hr = parseFloat(ticket.hourly_rate || 0) * rateMultiplier;
+        const hd = parseFloat(ticket.half_day_rate || 0) * rateMultiplier;
+        const fd = parseFloat(ticket.full_day_rate || 0) * rateMultiplier;
         const billingType = ticket.billing_type || 'Hourly';
 
         // Helper for zoned time
@@ -74,7 +83,7 @@ const CustomerReceivablePage = () => {
                     task_end_date: log.end_time,
                     break_time_mins: log.break_time_mins || 0,
                     time_logs: [] // stop recursion
-                }, tz);
+                }, tz, targetCurrency);
                 totalRec += parseFloat(res.totalReceivable || 0);
                 totalHrs += parseFloat(res.totalHours || 0);
                 if (res.otHours > 0) hasOT = true;
@@ -87,8 +96,8 @@ const CustomerReceivablePage = () => {
                 formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
                 totalHours: totalHrs,
                 otHours: hasOT ? 1 : 0, ooh: hasOOH ? 'Yes' : 'No', ww: hasWKND ? 'Yes' : 'No', hw: hasHOL ? 'Yes' : 'No',
-                travelCost: parseFloat(ticket.travel_cost_per_day || 0) * logs.length,
-                toolCost: parseFloat(ticket.total_cost || 0)
+                travelCost: parseFloat(ticket.travel_cost_per_day || 0) * rateMultiplier * logs.length,
+                toolCost: parseFloat(ticket.total_cost || 0) * rateMultiplier
             };
         }
 
@@ -127,13 +136,13 @@ const CustomerReceivablePage = () => {
             if (isWK || isH) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
             else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = base * 0.5; }
         } else if (billingType === 'Agreed Rate') {
-            base = parseFloat(ticket.agreed_rate) || 0;
+            base = (parseFloat(ticket.agreed_rate) || 0) * rateMultiplier;
         } else if (billingType === 'Cancellation') {
-            base = parseFloat(ticket.cancellation_fee) || 0;
+            base = (parseFloat(ticket.cancellation_fee) || 0) * rateMultiplier;
         }
 
-        const trav = parseFloat(ticket.travel_cost_per_day || 0);
-        const tool = parseFloat(ticket.total_cost || 0);
+        const trav = (parseFloat(ticket.travel_cost_per_day || 0) * rateMultiplier);
+        const tool = (parseFloat(ticket.total_cost || 0) * rateMultiplier);
         const total = base + ot + ooh + sp + trav + tool;
 
         return {
@@ -210,10 +219,10 @@ const CustomerReceivablePage = () => {
     // Calculate Dynamic Unbilled Total based on Context
     const dynamicUnbilledTotal = useMemo(() => {
         return unbilledList.reduce((sum, item) => {
-            const bd = calculateTicketCostFrontend(item, calcTimezone);
+            const bd = calculateTicketCostFrontend(item, calcTimezone, selectedCurrency);
             return sum + parseFloat(bd.totalReceivable);
         }, 0);
-    }, [unbilledList, calcTimezone]);
+    }, [unbilledList, calcTimezone, selectedCurrency]);
 
     const toggleTicket = (id) => {
         setSelectedTicketIds(prev =>
@@ -225,7 +234,7 @@ const CustomerReceivablePage = () => {
         return unbilledList
             .filter(t => selectedTicketIds.includes(t.id))
             .reduce((sum, t) => {
-                const bd = calculateTicketCostFrontend(t, calcTimezone);
+                const bd = calculateTicketCostFrontend(t, calcTimezone, selectedCurrency);
                 return sum + parseFloat(bd.totalReceivable);
             }, 0)
             .toFixed(2);
@@ -462,36 +471,6 @@ const CustomerReceivablePage = () => {
                 </div>
             </header>
 
-            {/* Timezone Context Selector */}
-            <div style={{ marginBottom: '20px', padding: '12px 20px', background: '#f0f9ff', borderRadius: '15px', border: '1px solid #bae6fd', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <h5 style={{ margin: 0, fontSize: '14px', color: '#0369a1', fontWeight: '700' }}>Billing Calculation Context</h5>
-                    <p style={{ margin: 0, fontSize: '11px', color: '#0ea5e9' }}>Override timezone for Out of Hours & Weekend logic across all unbilled work.</p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ fontSize: '12px', color: '#0369a1', fontWeight: '600' }}>Context:</div>
-                    <select
-                        value={calcTimezone}
-                        onChange={(e) => setCalcTimezone(e.target.value)}
-                        style={{
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            border: '1px solid #7dd3fc',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            color: '#0369a1',
-                            background: '#ffffff',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value="Ticket Local">Ticket Local (Auto)</option>
-                        <option value="Asia/Kolkata">India (IST)</option>
-                        <option value="Europe/Warsaw">Poland (CET)</option>
-                        <option value="UTC">UTC (Universal)</option>
-                    </select>
-                </div>
-            </div>
-
             <div className="stats-grid-premium">
                 <div className="stat-card-premium">
                     <div className="stat-icon blue"><FiClock /></div>
@@ -504,7 +483,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon amber"><FiFileText /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {parseFloat(stats.unpaid).toLocaleString()}</h3>
+                        <h3>{selectedCurrency} {((parseFloat(stats.unpaid) || 0) * (EXCHANGE_RATES[selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Unpaid Invoices</p>
                         <small style={{ color: '#94a3b8', fontSize: '11px' }}>Awaiting client payment</small>
                     </div>
@@ -512,7 +491,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon emerald"><FiCheckCircle /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {parseFloat(stats.overdue || 0).toLocaleString()}</h3>
+                        <h3>{selectedCurrency} {((parseFloat(stats.overdue) || 0) * (EXCHANGE_RATES[selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Total Overdue</p>
                         <small style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>Requires immediate action</small>
                     </div>
@@ -520,7 +499,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon blue" style={{ background: '#f0f9ff', color: '#0369a1' }}><FiDollarSign /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {parseFloat(stats.paid || 0).toLocaleString()}</h3>
+                        <h3>{selectedCurrency} {((parseFloat(stats.paid) || 0) * (EXCHANGE_RATES[selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Collected Revenue</p>
                         <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>Total for {new Date().getFullYear()}</small>
                     </div>
@@ -567,7 +546,7 @@ const CustomerReceivablePage = () => {
                                     </thead>
                                     <tbody>
                                         {displayedUnbilled.map((item, idx) => {
-                                            const bd = calculateTicketCostFrontend(item, calcTimezone);
+                                            const bd = calculateTicketCostFrontend(item, calcTimezone, selectedCurrency);
                                             const firstLetter = (item.engineer_name || 'N').charAt(0);
                                             return (
                                                 <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
@@ -752,7 +731,7 @@ const CustomerReceivablePage = () => {
                             </div>
 
                             {(() => {
-                                const bd = calculateTicketCostFrontend(detailTicket, calcTimezone);
+                                const bd = calculateTicketCostFrontend(detailTicket, calcTimezone, selectedCurrency);
                                 return (
                                     <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
                                         <div className="breakdown-list-premium">
@@ -813,7 +792,7 @@ const CustomerReceivablePage = () => {
                                     </div>
                                 );
                             })()}
-                            </div>
+                        </div>
                         <div className="modal-footer-premium">
                             <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
                         </div>
