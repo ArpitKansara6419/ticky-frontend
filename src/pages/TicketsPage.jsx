@@ -157,17 +157,47 @@ function TicketsPage() {
   const [isExtending, setIsExtending] = useState(false);
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
-  // Live Calculation Logic (Mirrors Backend)
-  useEffect(() => {
-    if (!startTime || !endTime) {
-      setLiveBreakdown(null);
-      return;
+  // Smart Auto-Sync for Start & End Time based on Task Details
+  const autoSyncTime = (startDate, endDate, timeStr) => {
+    if (viewMode === 'form' && startDate && timeStr) {
+      const startStr = `${startDate}T${timeStr.padStart(5, '0')}`;
+      const d = new Date(startStr);
+
+      if (!isNaN(d.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0');
+        const formattedStart = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+        setStartTime(formattedStart);
+
+        if (endDate) {
+          const endStr = `${endDate}T${timeStr.padStart(5, '0')}`;
+          const endD = new Date(endStr);
+          if (!isNaN(endD.getTime())) {
+            // Add 8 hours as a default standard working block for automatic resolution
+            endD.setHours(endD.getHours() + 8);
+            const formattedEnd = `${endD.getFullYear()}-${pad(endD.getMonth() + 1)}-${pad(endD.getDate())}T${pad(endD.getHours())}:${pad(endD.getMinutes())}`;
+
+            setEndTime(formattedEnd);
+          }
+        }
+      }
     }
+  }
+
+  // Pure calculation function for reuse
+  const calculateTicketTotal = (data) => {
+    const {
+      startTime, endTime, breakTime,
+      hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+      travelCostPerDay, toolCost, billingType, timezone, calcTimezone
+    } = data;
+
+    if (!startTime || !endTime) return null;
 
     try {
       const s = new Date(startTime);
       const e = new Date(endTime);
-      if (isNaN(s.getTime()) || isNaN(e.getTime())) return;
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
 
       const brkSec = (parseInt(breakTime) || 0) * 60;
       const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
@@ -196,7 +226,6 @@ function TicketsPage() {
 
       const startInfo = getZonedInfo(s);
       const endInfo = getZonedInfo(e);
-
       const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
 
       const PUBLIC_HOLIDAYS = [
@@ -206,13 +235,9 @@ function TicketsPage() {
       ];
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
-
       const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10;
 
-      let base = 0;
-      let ot = 0;
-      let ooh = 0;
-      let special = 0;
+      let base = 0, ot = 0, ooh = 0, special = 0;
 
       if (billingType === 'Hourly') {
         const billed = Math.max(2, hrs);
@@ -251,39 +276,34 @@ function TicketsPage() {
         base = parseFloat(cancellationFee) || 0;
       }
 
-      const tools = parseFloat(totalCost) || 0;
-      const travel = parseFloat(travelCostPerDay) || 0;
-      const grand = base + ot + ooh + special + tools + travel;
+      const toolsVal = parseFloat(toolCost) || 0;
+      const travelVal = parseFloat(travelCostPerDay) || 0;
+      const grand = base + ot + ooh + special + toolsVal + travelVal;
 
-      // Build OOH reason string for user clarity
-      let oohReason = '';
-      if (workIsOOH) {
-        const reasons = [];
-        if (startInfo.hour < 8) reasons.push(`Start time ${startInfo.hour}:00 is before 08:00`);
-        if (startInfo.hour >= 18) reasons.push(`Start time ${startInfo.hour}:00 is after 18:00`);
-        if (endInfo.hour > 18) reasons.push(`End time ${endInfo.hour}:00 is after 18:00`);
-        if (hrs > 10) reasons.push(`Worked hours (${hrs.toFixed(1)}h) exceed 10h`);
-        oohReason = reasons.join('; ');
-      }
-
-      setLiveBreakdown({
+      return {
         hrs: hrs.toFixed(2),
         base: base.toFixed(2),
         ot: ot.toFixed(2),
         ooh: ooh.toFixed(2),
-        special: special.toFixed(2),
-        total: grand.toFixed(2),
+        specialDay: special.toFixed(2),
+        tools: toolsVal.toFixed(2),
+        travel: travelVal.toFixed(2),
+        grandTotal: grand.toFixed(2),
         isOOH: workIsOOH,
-        isSpecialDay,
-        isWeekend,
-        isHoliday,
-        otHours: (ot > 0 ? (hrs > 8 ? hrs - 8 : 0) : 0).toFixed(2),
-        oohReason,
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  }, [startTime, endTime, breakTime, billingType, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, travelCostPerDay, totalCost, cancellationFee, calcTimezone]);
+        isSpecialDay
+      };
+    } catch (err) { return null; }
+  };
+
+  // Live Calculation Logic (Mirrors Backend)
+  useEffect(() => {
+    const res = calculateTicketTotal({
+      startTime, endTime, breakTime,
+      hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+      travelCostPerDay, toolCost: totalCost, billingType, timezone, calcTimezone
+    });
+    setLiveBreakdown(res);
+  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, totalCost, billingType, timezone, calcTimezone]);
 
   // Sync Task Dates with Manual Time Log
   useEffect(() => {
@@ -1011,9 +1031,13 @@ function TicketsPage() {
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
-    // Time Log
-    setStartTime(formatForInput(ticket.start_time));
-    setEndTime(formatForInput(ticket.end_time));
+    // Time Log Sync ONLY if it doesn't already exist or if ticket implies we should keep existing
+    if (ticket.start_time) {
+      setStartTime(formatForInput(ticket.start_time));
+    }
+    if (ticket.end_time) {
+      setEndTime(formatForInput(ticket.end_time));
+    }
     setBreakTime(ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0');
   }
 
@@ -1333,7 +1357,10 @@ function TicketsPage() {
                 <input
                   type="date"
                   value={taskStartDate}
-                  onChange={(e) => setTaskStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setTaskStartDate(e.target.value);
+                    autoSyncTime(e.target.value, taskEndDate, taskTime);
+                  }}
                 />
               </label>
 
@@ -1344,7 +1371,10 @@ function TicketsPage() {
                 <input
                   type="date"
                   value={taskEndDate}
-                  onChange={(e) => setTaskEndDate(e.target.value)}
+                  onChange={(e) => {
+                    setTaskEndDate(e.target.value);
+                    autoSyncTime(taskStartDate, e.target.value, taskTime);
+                  }}
                 />
               </label>
 
@@ -1352,7 +1382,10 @@ function TicketsPage() {
                 <span>
                   Task Time <span className="field-required">*</span>
                 </span>
-                <input type="time" value={taskTime} onChange={(e) => setTaskTime(e.target.value)} />
+                <input type="time" value={taskTime} onChange={(e) => {
+                  setTaskTime(e.target.value);
+                  autoSyncTime(taskStartDate, taskEndDate, e.target.value);
+                }} />
               </label>
 
               <label className="tickets-field tickets-field--full">
@@ -2308,13 +2341,28 @@ function TicketsPage() {
 
                     {isInlineEditing ? (
                       <div className="detail-item--full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-                        <div style={{ marginBottom: '16px', padding: '10px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px' }}>
-                          <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase' }}>Current Recorded Values:</p>
-                          <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: '#b45309' }}>
-                            <span><strong>Start:</strong> {selectedTicket.start_time ? new Date(selectedTicket.start_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
-                            <span><strong>End:</strong> {selectedTicket.end_time ? new Date(selectedTicket.end_time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</span>
-                            <span><strong>Break:</strong> {selectedTicket.break_time ? `${Math.floor(selectedTicket.break_time / 60)}m` : '0m'}</span>
-                          </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn-wow-secondary"
+                            style={{ fontSize: '10px', padding: '4px 10px' }}
+                            onClick={() => {
+                              if (selectedTicket.taskStartDate && selectedTicket.taskTime) {
+                                const startStr = `${String(selectedTicket.taskStartDate).split('T')[0]}T${selectedTicket.taskTime.padStart(5, '0')}`;
+                                const d = new Date(startStr);
+                                if (!isNaN(d.getTime())) {
+                                  const pad = (n) => String(n).padStart(2, '0');
+                                  setInlineStartTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+
+                                  // Default to 8 hour work day for end time
+                                  d.setHours(d.getHours() + 8);
+                                  setInlineEndTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                                }
+                              }
+                            }}
+                          >
+                            ⚡ Sync with Scheduled Time
+                          </button>
                         </div>
                         <div className="tickets-grid" style={{ marginBottom: '16px' }}>
                           <label className="tickets-field">
@@ -2330,6 +2378,39 @@ function TicketsPage() {
                             <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} />
                           </label>
                         </div>
+
+                        {/* Smart Live Cost Preview in Modal */}
+                        {(() => {
+                          const res = calculateTicketTotal({
+                            startTime: inlineStartTime,
+                            endTime: inlineEndTime,
+                            breakTime: inlineBreakTime,
+                            hourlyRate: selectedTicket.hourlyRate,
+                            halfDayRate: selectedTicket.halfDayRate,
+                            fullDayRate: selectedTicket.fullDayRate,
+                            monthlyRate: selectedTicket.monthlyRate,
+                            agreedRate: selectedTicket.agreedRate,
+                            cancellationFee: selectedTicket.cancellationFee,
+                            travelCostPerDay: selectedTicket.travelCostPerDay,
+                            toolCost: selectedTicket.toolCost,
+                            billingType: selectedTicket.billingType,
+                            timezone: selectedTicket.timezone,
+                            calcTimezone: 'Ticket Local'
+                          });
+                          if (!res) return null;
+                          return (
+                            <div style={{ marginBottom: '16px', padding: '12px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '10px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#065f46' }}>SMART PREVIEW (ESTIMATED):</span>
+                                <span style={{ fontSize: '16px', fontWeight: '800', color: '#047857' }}>{selectedTicket.currency} {res.grandTotal}</span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#065f46', marginTop: '4px' }}>
+                                {res.hrs}h billed • Base: {selectedTicket.currency} {res.base} • OT: {selectedTicket.currency} {res.ot} • Premium: {selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         <button
                           className="btn-wow-primary"
                           style={{ width: '100%' }}
@@ -2503,9 +2584,10 @@ function TicketsPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-    </section>
+        </div >
+      )
+      }
+    </section >
   )
 }
 
