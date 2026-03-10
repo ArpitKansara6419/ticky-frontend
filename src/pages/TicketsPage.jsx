@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiArrowLeft } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -1272,614 +1272,225 @@ function TicketsPage() {
 
   if (viewMode === 'form') {
     return (
-      <section className="tickets-page">
-        <header className="tickets-header">
+      <section className="tickets-page" style={{ padding: '24px', background: '#f8fafc', minHeight: '100vh' }}>
+        <header className="tickets-header" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
           <button
             type="button"
-            className="tickets-back"
-            onClick={() => {
-              resetForm()
-              setViewMode('list')
-            }}
+            className="btn-wow-secondary"
+            onClick={() => { resetForm(); setViewMode('list'); }}
+            style={{ padding: '10px 16px', borderRadius: '12px', background: 'white' }}
           >
-            ← Back
+            <FiArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="tickets-title">{editingTicketId ? 'Edit Ticket' : 'Create Ticket'}</h1>
-            <p className="tickets-subtitle">{editingTicketId ? 'Update the details of the ticket.' : 'Generate a support ticket from a lead.'}</p>
+            <h1 className="tickets-title" style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', marginBottom: '4px' }}>
+              {editingTicketId ? 'Update Support Ticket' : 'Draft New Ticket'}
+            </h1>
+            <p className="tickets-subtitle" style={{ fontSize: '13px', color: '#64748b' }}>
+              {editingTicketId ? `Modifying technical & billing parameters for #AIM-T-${editingTicketId}` : 'Onboarding a new support mission from lead data.'}
+            </p>
           </div>
         </header>
 
-        <form className="tickets-form" onSubmit={handleSubmitTicket}>
-          {/* Customer & Lead */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Customer &amp; Lead</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>
-                  Select Customer <span className="field-required">*</span>
-                </span>
-                <select
-                  value={customerId}
-                  onChange={(e) => setCustomerId(e.target.value)}
-                  disabled={loadingDropdowns}
-                >
-                  <option value="">Choose a customer...</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.accountEmail})
-                    </option>
-                  ))}
-                </select>
-              </label>
+        <form className="tickets-form" onSubmit={handleSubmitTicket} style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-              <label className="tickets-field">
-                <span>Select Lead</span>
-                <select
-                  value={leadId}
-                  onChange={(e) => setLeadId(e.target.value)}
-                  disabled={loadingDropdowns || filteredLeads.length === 0}
-                >
-                  <option value="">Choose a lead...</option>
-                  {filteredLeads.map((lead) => (
-                    <option key={lead.id} value={lead.id}>
-                      {lead.taskName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="tickets-field tickets-field--full">
-                <span>Client Name</span>
-                <input
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Enter client name"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Task Details */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Task Details</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Task Name <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={taskName}
-                  onChange={(e) => setTaskName(e.target.value)}
-                  placeholder="Enter task name"
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Task Start Date <span className="field-required">*</span>
-                </span>
-                <input
-                  type="date"
-                  value={taskStartDate}
-                  onChange={(e) => {
-                    setTaskStartDate(e.target.value);
-                    autoSyncTime(e.target.value, taskEndDate, taskTime);
-                  }}
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Task End Date <span className="field-required">*</span>
-                </span>
-                <input
-                  type="date"
-                  value={taskEndDate}
-                  onChange={(e) => {
-                    setTaskEndDate(e.target.value);
-                    autoSyncTime(taskStartDate, e.target.value, taskTime);
-                  }}
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Task Time <span className="field-required">*</span>
-                </span>
-                <input type="time" value={taskTime} onChange={(e) => {
-                  setTaskTime(e.target.value);
-                  autoSyncTime(taskStartDate, taskEndDate, e.target.value);
-                }} />
-              </label>
-
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Scope of Work <span className="field-required">*</span>
-                </span>
-                <textarea
-                  rows={3}
-                  value={scopeOfWork}
-                  onChange={(e) => setScopeOfWork(e.target.value)}
-                  placeholder="Describe the scope of work"
-                />
-              </label>
-
-              <label className="tickets-field tickets-field--full">
-                <span>Tools</span>
-                <input
-                  type="text"
-                  value={tools}
-                  onChange={(e) => setTools(e.target.value)}
-                  placeholder="Enter tools if any"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Engineer Assignment */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Engineer Assignment</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Select Engineer <span className="field-required">*</span>
-                </span>
-                <select
-                  value={engineerId}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    setEngineerId(id)
-                    const eng = engineers.find(en => String(en.id) === String(id))
-                    if (eng) setEngineerName(eng.name)
-                  }}
-                  disabled={loadingDropdowns}
-                >
-                  <option value="">Choose an engineer...</option>
-                  {engineers.map((eng) => (
-                    <option key={eng.id} value={eng.id}>
-                      {eng.name} ({eng.email})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </section>
-
-          {/* Location */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Location</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field tickets-field--full">
-                <span>Address Search</span>
-                <Autocomplete
-                  apiKey={GOOGLE_MAPS_API_KEY}
-                  onPlaceSelected={handleGoogleAddressSelect}
-                  options={{
-                  }}
-                  placeholder="Type to search global address..."
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    padding: '0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-subtle, #e5e7eb)',
-                    fontSize: '13px',
-                    outline: 'none',
-                    background: 'var(--input-bg)',
-                    color: 'var(--text-main)'
-                  }}
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Address Line 1 <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
-                  placeholder="Street / Building"
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  City <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Enter city"
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Country <span className="field-required">*</span>
-                </span>
-                <select
-                  value={country}
-                  onChange={(e) => handleCountryChange(e.target.value)}
-                  disabled={loadingCountries}
-                >
-                  <option value="">Select a country...</option>
-                  {countriesList.map((c) => (
-                    <option key={c.code} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Zip/Postal Code <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  placeholder="Enter zip/postal code"
-                />
-              </label>
-
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Timezone <span className="field-required">*</span>
-                </span>
-                <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country}>
-                  <option value="">Select timezone...</option>
-                  {availableTimezones.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </select>
-                {country && availableTimezones.length === 0 && (
-                  <small style={{ color: '#999', marginTop: '4px' }}>No timezone data available for this country</small>
-                )}
-              </label>
-            </div>
-          </section>
-
-          {/* POC & Documents */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">POC &amp; Documents</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>POC details</span>
-                <textarea
-                  rows={2}
-                  value={pocDetails}
-                  onChange={(e) => setPocDetails(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>RE details</span>
-                <textarea
-                  rows={2}
-                  value={reDetails}
-                  onChange={(e) => setReDetails(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Call invites</span>
-                <textarea
-                  rows={2}
-                  value={callInvites}
-                  onChange={(e) => setCallInvites(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Documents (any file)</span>
-                <div className="tickets-file-row">
-                  <input type="file" multiple onChange={handleDocumentsChange} />
-                </div>
-                {documents.length > 0 && (
-                  <ul className="tickets-file-list">
-                    {documents.map((file, idx) => (
-                      <li key={idx}>
-                        <span>{file.name}</span>
-                        <button type="button" onClick={() => removeDocument(idx)}><FiX /></button>
-                      </li>
+            {/* Mission Identification */}
+            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
+                <i className="fas fa-id-card" style={{ color: '#3b82f6' }}></i> Mission Identification
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Customer Account <span className="field-required">*</span></span>
+                  <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={loadingDropdowns} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                    <option value="">Choose a customer...</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.accountEmail})</option>
                     ))}
-                  </ul>
-                )}
-              </label>
-              <label className="tickets-field">
-                <span>Sign-off Sheet (any file)</span>
-                <div className="tickets-file-row">
-                  <input type="file" multiple onChange={handleSignoffChange} />
-                </div>
-                {signoffSheets.length > 0 && (
-                  <ul className="tickets-file-list">
-                    {signoffSheets.map((file, idx) => (
-                      <li key={idx}>
-                        <span>{file.name}</span>
-                        <button type="button" onClick={() => removeSignoff(idx)}><FiX /></button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </label>
-            </div>
-          </section>
+                  </select>
+                </label>
 
-          {/* Time Log (Manual Override) */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Time Log (Manual Override)</h2>
-            <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
-              Manually adjust the working hours if the engineer forgot to resolve the task.
-            </p>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>Start Time (Override)</span>
-                <input
-                  type="datetime-local"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>End Time (Override)</span>
-                <input
-                  type="datetime-local"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Break Time (Minutes)</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={breakTime}
-                  onChange={(e) => setBreakTime(e.target.value)}
-                  placeholder="0"
-                />
-              </label>
-            </div>
-          </section>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Client Name</span>
+                  <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="End user client..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
 
-          {/* Pricing & Rates */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Pricing &amp; Rates</h2>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px', fontWeight: '500' }}>
-              📌 <strong>Rate Multipliers:</strong> OT/OOH = 1.5x | Weekend/Holiday = 2.0x
-            </p>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>Select Currency</span>
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                  {CURRENCIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="tickets-field">
-                <span>Billing Type</span>
-                <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
-                  <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
-                  <option value="Half Day + Hourly">2) Half Day + Hourly</option>
-                  <option value="Full Day + OT">3) Full Day + OT (OT = 1.5x)</option>
-                  <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
-                  <option value="Agreed Rate">5) Agreed/Fixed Rate</option>
-                  <option value="Cancellation">6) Cancellation/Reschedule Fee</option>
-                </select>
-              </label>
-              <label className="tickets-field">
-                <span>Support Type</span>
-                <select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
-                  <option value="Full time">Full time</option>
-                  <option value="Dispatch">Dispatch (Multi-day)</option>
-                </select>
-              </label>
-
-              <label className="tickets-field">
-                <span>Hourly Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Half Day Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={halfDayRate}
-                  onChange={(e) => setHalfDayRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Full Day Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fullDayRate}
-                  onChange={(e) => setFullDayRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Cancellation Fee ({currency})</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={cancellationFee}
-                  onChange={(e) => setCancellationFee(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Monthly Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={monthlyRate}
-                  onChange={(e) => setMonthlyRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
-                <span>Agreed Rate</span>
-                <input
-                  type="text"
-                  value={agreedRate}
-                  onChange={(e) => setAgreedRate(e.target.value)}
-                  placeholder="Details"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Additional Costs */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Additional Costs</h2>
-            <div className="tickets-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-              <label className="tickets-field">
-                <span>Travel Cost / Day</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={travelCostPerDay}
-                  onChange={(e) => setTravelCostPerDay(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Tool Cost</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={totalCost}
-                  onChange={(e) => setTotalCost(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Ticket Status */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Ticket Status</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>Status</span>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  {TICKET_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </section>
-
-          {error && <div className="tickets-message tickets-message--error">{error}</div>}
-          {success && <div className="tickets-message tickets-message--success">{success}</div>}
-
-          <div className="tickets-actions-footer">
-            {liveBreakdown && (
-              <div className="calculation-preview-card">
-                <h3>Live Estimated Total</h3>
-
-                {/* OOH / Special Day Warning */}
-                {liveBreakdown.isSpecialDay && (
-                  <div className="preview-alert preview-alert--gold">
-                    <span>📅</span>
-                    <span>{liveBreakdown.isHoliday ? '🎉 Public Holiday' : '🌐 Weekend'} — Special day rate (2x) applied.</span>
-                  </div>
-                )}
-                {!liveBreakdown.isSpecialDay && liveBreakdown.isOOH && parseFloat(liveBreakdown.ooh) > 0 && (
-                  <div className="preview-alert preview-alert--ooh">
-                    <span>🌙</span>
-                    <span>
-                      <strong>OOH Premium applied</strong> — Work is outside normal hours (08:00–18:00).<br />
-                      <small>{liveBreakdown.oohReason}</small>
-                    </span>
-                  </div>
-                )}
-                {!liveBreakdown.isSpecialDay && parseFloat(liveBreakdown.ot) > 0 && (
-                  <div className="preview-alert preview-alert--ot">
-                    <span>⏱️</span>
-                    <span><strong>Overtime applied</strong> — {parseFloat(liveBreakdown.otHours).toFixed(1)}h worked beyond 8h standard day.</span>
-                  </div>
-                )}
-
-                <div className="preview-grid">
-                  <div className="preview-item">
-                    <label>Worked Hours</label>
-                    <span>{liveBreakdown.hrs}h</span>
-                  </div>
-                  <div className="preview-item">
-                    <label>Base Cost</label>
-                    <span>{currency} {liveBreakdown.base}</span>
-                  </div>
-                  {parseFloat(liveBreakdown.ot) > 0 && (
-                    <div className="preview-item highlight">
-                      <label>OT Premium ({parseFloat(liveBreakdown.otHours).toFixed(1)}h × 1.5x)</label>
-                      <span>+ {currency} {liveBreakdown.ot}</span>
-                    </div>
-                  )}
-                  {parseFloat(liveBreakdown.ooh) > 0 && (
-                    <div className="preview-item highlight">
-                      <label>OOH Premium (outside 08:00–18:00)</label>
-                      <span>+ {currency} {liveBreakdown.ooh}</span>
-                    </div>
-                  )}
-                  {parseFloat(liveBreakdown.special) > 0 && (
-                    <div className="preview-item highlight-gold">
-                      <label>Weekend/Holiday Premium (2x)</label>
-                      <span>+ {currency} {liveBreakdown.special}</span>
-                    </div>
-                  )}
-                  <div className="preview-item total">
-                    <label>Grand Total</label>
-                    <span>{currency} {liveBreakdown.total}</span>
-                  </div>
-                </div>
-                <p className="preview-note">Note: Final calculation is performed by the server upon saving.</p>
+                <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Task Title <span className="field-required">*</span></span>
+                  <input type="text" value={taskName} onChange={(e) => setTaskName(e.target.value)} placeholder="e.g. Server Migration" style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
               </div>
-            )}
+            </section>
 
-            <button
-              type="button"
-              className="tickets-secondary-btn"
-              onClick={() => {
-                resetForm()
-                setViewMode('list')
-              }}
-              disabled={saving}
-            >
-              Cancel
-            </button>
+            {/* Schedule & Scope */}
+            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
+                <i className="fas fa-calendar-alt" style={{ color: '#8b5cf6' }}></i> Schedule &amp; Scope
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Start Date <span className="field-required">*</span></span>
+                  <input type="date" value={taskStartDate} onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>End Date <span className="field-required">*</span></span>
+                  <input type="date" value={taskEndDate} onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>On-Site Time <span className="field-required">*</span></span>
+                  <input type="time" value={taskTime} onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+                <label className="tickets-field" style={{ gridColumn: 'span 3' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Scope of Work <span className="field-required">*</span></span>
+                  <textarea rows={3} value={scopeOfWork} onChange={(e) => setScopeOfWork(e.target.value)} placeholder="Define the requirements..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+              </div>
+            </section>
 
-            <button type="submit" className="tickets-primary-btn" disabled={saving || !canSubmit}>
-              {saving ? (editingTicketId ? 'Saving Changes...' : 'Creating Ticket...') : (editingTicketId ? 'Save Changes' : 'Create Ticket')}
-            </button>
+            {/* Logistics & Geo */}
+            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
+                <i className="fas fa-map-marked-alt" style={{ color: '#10b981' }}></i> Site Logistics
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Smart Address Search</span>
+                  <Autocomplete apiKey={GOOGLE_MAPS_API_KEY} onPlaceSelected={handleGoogleAddressSelect} placeholder="Search site..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Engineer Assigned <span className="field-required">*</span></span>
+                  <select value={engineerId} onChange={(e) => { const id = e.target.value; setEngineerId(id); const eng = engineers.find(en => String(en.id) === String(id)); if (eng) setEngineerName(eng.name); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                    <option value="">Choose engineer...</option>
+                    {engineers.map((eng) => (
+                      <option key={eng.id} value={eng.id}>{eng.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Timezone <span className="field-required">*</span></span>
+                  <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                    <option value="">Select...</option>
+                    {availableTimezones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            {/* Financial Parameters */}
+            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
+                <i className="fas fa-money-bill-wave" style={{ color: '#f59e0b' }}></i> Rates &amp; Commercials
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Billing Logic</span>
+                  <select value={billingType} onChange={(e) => setBillingType(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: '600' }}>
+                    <option value="Hourly">Hourly Only</option>
+                    <option value="Half Day + Hourly">Half Day + Hourly</option>
+                    <option value="Full Day + OT">Full Day + OT</option>
+                    <option value="Monthly + OT + Weekend">Monthly Billing</option>
+                    <option value="Agreed Rate">Fixed Price</option>
+                    <option value="Cancellation">Cancellation Fee</option>
+                  </select>
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Base Currency</span>
+                  <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                    {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Service Type</span>
+                  <select value={leadType} onChange={(e) => setLeadType(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                    <option value="Full time">Continuous</option>
+                    <option value="Dispatch">Dispatch-based</option>
+                  </select>
+                </label>
+
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Hourly ({currency})</span>
+                  <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Half Day ({currency})</span>
+                  <input type="number" step="0.01" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+                <label className="tickets-field">
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Full Day ({currency})</span>
+                  <input type="number" step="0.01" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                </label>
+              </div>
+            </section>
           </div>
-        </form >
-      </section >
-    )
+
+          {/* Right Sidebar: Breakdown & Actions */}
+          <aside style={{ position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', padding: '24px', borderRadius: '24px', color: 'white', border: '1px solid #475569', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.05em' }}>
+                <i className="fas fa-calculator" style={{ color: '#60a5fa' }}></i> Financial Smart Preview
+              </div>
+
+              {(() => {
+                const res = calculateTicketTotal({
+                  startTime, endTime, breakTime,
+                  hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate,
+                  cancellationFee, travelCostPerDay, toolCost: totalCost,
+                  billingType, timezone, calcTimezone: 'Ticket Local'
+                });
+                return (
+                  <div>
+                    <div style={{ fontSize: '36px', fontWeight: '900', marginBottom: '2px', fontFamily: 'Inter, sans-serif' }}>{currency} {res?.grandTotal || '0.00'}</div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '24px', opacity: '0.8' }}>ESTIMATED TOTAL REVENUE</div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                        <span style={{ color: '#94a3b8' }}>Base Fee</span>
+                        <span style={{ fontWeight: '600' }}>{currency} {res?.base || '0.00'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                        <span style={{ color: '#94a3b8' }}>OT / Premiums</span>
+                        <span style={{ fontWeight: '600', color: '#60a5fa' }}>+{currency} {(parseFloat(res?.ot || 0) + parseFloat(res?.ooh || 0) + parseFloat(res?.specialDay || 0)).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                        <span style={{ color: '#94a3b8' }}>Incidental Costs</span>
+                        <span style={{ fontWeight: '600' }}>+{currency} {(parseFloat(res?.travel || 0) + parseFloat(res?.tools || 0)).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '24px', padding: '14px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', fontSize: '11px', color: '#cbd5e1', lineHeight: '1.5', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <i className="fas fa-info-circle" style={{ marginRight: '8px', color: '#60a5fa' }}></i>
+                      Real-time calculation based on selected rates and site local timezone.
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div style={{ background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <label style={{ display: 'block', marginBottom: '24px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '10px', display: 'block' }}>TICKET LIFECYCLE STATUS</span>
+                <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontWeight: '800', background: '#f8fafc', color: '#1e293b' }}>
+                  {TICKET_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button type="submit" className="btn-wow-primary" disabled={saving} style={{ width: '100%', padding: '16px', borderRadius: '14px', fontSize: '16px', fontWeight: '700' }}>
+                  {saving ? <i className="fas fa-sync fa-spin"></i> : (editingTicketId ? '⚡ Sync All Changes' : '🚀 Launch Support Ticket')}
+                </button>
+                <button type="button" className="btn-wow-secondary" onClick={() => { resetForm(); setViewMode('list'); }} style={{ width: '100%', padding: '14px', borderRadius: '14px', fontSize: '14px' }}>
+                  Cancel & Exit
+                </button>
+              </div>
+            </div>
+
+            {error && <div style={{ padding: '14px', borderRadius: '12px', background: '#fef2f2', color: '#b91c1c', fontSize: '13px', fontWeight: '600', border: '1px solid #fee2e2' }}>{error}</div>}
+            {success && <div style={{ padding: '14px', borderRadius: '12px', background: '#f0fdf4', color: '#15803d', fontSize: '13px', fontWeight: '600', border: '1px solid #dcfce7' }}>{success}</div>}
+          </aside>
+        </form>
+      </section>
+    );
   }
 
   const handleDeleteAllTickets = async () => {
@@ -1905,98 +1516,120 @@ function TicketsPage() {
 
   // LIST VIEW
   return (
-    <section className="tickets-page">
-      <header className="tickets-header">
+    <section className="tickets-page" style={{ padding: '24px', background: '#f8fafc', minHeight: '100vh' }}>
+      <header className="tickets-header" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="tickets-title">Support Tickets</h1>
-          <p className="tickets-subtitle">Manage customer support requests.</p>
+          <h1 className="tickets-title" style={{ fontSize: '26px', fontWeight: '800', color: '#1e293b', marginBottom: '4px' }}>Support Tickets</h1>
+          <p className="tickets-subtitle" style={{ fontSize: '14px', color: '#64748b' }}>Mission control for your service engineering operations.</p>
         </div>
-        <div />
-      </header>
-
-      {/* Timezone Context Selector */}
-      <div style={{ marginBottom: '20px', padding: '12px 20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h5 style={{ margin: 0, fontSize: '14px', color: '#475569', fontWeight: '600' }}>Global Calculation Context</h5>
-          <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Switch perspective for premium logic (OOH, Weekend, Holidays)</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <i className="fas fa-globe-americas" style={{ color: '#6366f1' }}></i>
-          <select
-            value={calcTimezone}
-            onChange={(e) => setCalcTimezone(e.target.value)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#334155',
-              background: '#ffffff',
-              outline: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-            }}
-          >
-            <option value="Ticket Local">Ticket Local (Auto)</option>
-            <option value="Asia/Kolkata">India (IST)</option>
-            <option value="Europe/Warsaw">Poland (CET)</option>
-            <option value="UTC">UTC (Universal)</option>
-          </select>
-        </div>
-      </div>
-
-      <section className="tickets-summary-row">
-        <div className="tickets-summary-card">
-          <p className="summary-label">Total Tickets</p>
-          <p className="summary-value">{summary.total}</p>
-        </div>
-        <div className="tickets-summary-card">
-          <p className="summary-label">Open</p>
-          <p className="summary-value">{summary.open}</p>
-        </div>
-        <div className="tickets-summary-card">
-          <p className="summary-label">In Progress</p>
-          <p className="summary-value">{summary.inProgress}</p>
-        </div>
-        <div className="tickets-summary-card">
-          <p className="summary-label">Resolved</p>
-          <p className="summary-value">{summary.resolved}</p>
-        </div>
-      </section>
-
-      <section className="tickets-card">
-        <div style={{ padding: '0 20px 10px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <button
             className="tickets-primary-btn"
-            style={{ backgroundColor: '#10B981', borderColor: '#10B981', marginRight: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            style={{ backgroundColor: '#10B981', borderColor: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px' }}
             onClick={() => window.location.href = `${API_BASE_URL}/reports/tickets/export`}
           >
             <FiDownload /> EXPORT REPORT
           </button>
           <button
             className="tickets-primary-btn"
-            style={{ backgroundColor: '#EF4444', borderColor: '#EF4444' }}
+            style={{ backgroundColor: '#EF4444', borderColor: '#EF4444', padding: '10px 20px', borderRadius: '12px' }}
             onClick={handleDeleteAllTickets}
           >
-            DELETE ALL TICKETS
+            <FiTrash2 style={{ marginRight: '6px' }} /> PURGE ALL
           </button>
         </div>
-        <div className="tickets-list-toolbar">
-          <div className="tickets-search">
-            <input type="text" placeholder="Search tickets..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
+      </header>
+
+      {/* Global Calculation Context Card */}
+      <div style={{
+        marginBottom: '24px',
+        padding: '16px 24px',
+        background: 'linear-gradient(90deg, #eff6ff 0%, #ffffff 100%)',
+        borderRadius: '16px',
+        border: '1px solid #dbeafe',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '40px', height: '40px', background: '#3b82f6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+            <i className="fas fa-globe-americas" style={{ fontSize: '18px' }}></i>
           </div>
-          <div className="tickets-filter-row">
-            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
+          <div>
+            <h5 style={{ margin: 0, fontSize: '14px', color: '#1e293b', fontWeight: '700' }}>Calculation Timezone Context</h5>
+            <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Applying localized policy for Multi-day, OOH, and Holiday premiums.</p>
+          </div>
+        </div>
+        <select
+          value={calcTimezone}
+          onChange={(e) => setCalcTimezone(e.target.value)}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '10px',
+            border: '1px solid #cbd5e1',
+            fontSize: '13px',
+            fontWeight: '600',
+            color: '#334155',
+            background: '#ffffff',
+            cursor: 'pointer'
+          }}
+        >
+          <option value="Ticket Local">📍 Ticket Local (Dynamic)</option>
+          <option value="Asia/Kolkata">🇮🇳 India (IST)</option>
+          <option value="Europe/Warsaw">🇵🇱 Poland (CET)</option>
+          <option value="UTC">🌐 UTC (Universal)</option>
+        </select>
+      </div>
+
+      <section className="tickets-summary-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        {[
+          { label: 'Total Tickets', value: summary.total, icon: 'fas fa-list', color: '#3b82f6' },
+          { label: 'Open', value: summary.open, icon: 'fas fa-door-open', color: '#f59e0b' },
+          { label: 'In Progress', value: summary.inProgress, icon: 'fas fa-play-circle', color: '#8b5cf6' },
+          { label: 'Resolved', value: summary.resolved, icon: 'fas fa-check-circle', color: '#10b981' }
+        ].map((s, i) => (
+          <div key={i} className="tickets-summary-card" style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px'
+          }}>
+            <div style={{ height: '48px', width: '48px', background: `${s.color}15`, color: s.color, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+              <i className={s.icon}></i>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>{s.label}</p>
+              <p style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#1e293b' }}>{s.value}</p>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="tickets-card" style={{ background: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+        <div className="tickets-list-toolbar" style={{ padding: '20px', borderBottom: '1px solid #f1f5f9', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="tickets-search" style={{ flex: 1, maxWidth: '350px' }}>
+            <input
+              type="text"
+              placeholder="Search by name, ID or customer..."
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', fontWeight: '600' }}>
               <option value="All Status">All Status</option>
               {TICKET_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
 
-        {error && <div className="tickets-message tickets-message--error tickets-message--inline">{error}</div>}
+        {error && <div className="tickets-message tickets-message--error" style={{ margin: '20px', borderRadius: '12px' }}>{error}</div>}
 
-        {/* Pagination Logic */}
         {(() => {
           const totalPages = Math.ceil(filteredTickets.length / itemsPerPage)
           const paginatedTickets = filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
@@ -2004,123 +1637,145 @@ function TicketsPage() {
           const Pagination = ({ total, current, onChange }) => {
             if (total <= 1) return null
             let pages = []
-            for (let i = 1; i <= total; i++) pages.push(i)
+            for (let i = 1; i <= total; i++) {
+              if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
+                pages.push(i)
+              } else if (pages[pages.length - 1] !== '...') {
+                pages.push('...')
+              }
+            }
 
             return (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '24px', background: '#fafafc', borderTop: '1px solid var(--border-subtle)' }}>
-                <button
-                  className="tickets-secondary-btn"
-                  disabled={current === 1}
-                  onClick={() => onChange(current - 1)}
-                  style={{ minWidth: '80px', padding: '8px 16px' }}
-                >
-                  Prev
-                </button>
-                {pages.map(p => (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 32px', background: '#fafafc', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '14px', color: '#64748b' }}>Showing <b>{(current - 1) * itemsPerPage + 1}</b> to <b>{Math.min(current * itemsPerPage, filteredTickets.length)}</b> of <b>{filteredTickets.length}</b> tickets</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
-                    key={p}
                     className="tickets-secondary-btn"
-                    style={{
-                      minWidth: '40px',
-                      padding: '8px 12px',
-                      background: current === p ? 'var(--primary)' : 'var(--card-bg)',
-                      color: current === p ? 'white' : 'var(--text-muted)',
-                      borderColor: current === p ? 'var(--primary)' : 'var(--border-subtle)',
-                      fontWeight: current === p ? '700' : '600'
-                    }}
-                    onClick={() => onChange(p)}
+                    disabled={current === 1}
+                    onClick={() => onChange(current - 1)}
+                    style={{ padding: '8px 14px', borderRadius: '10px', fontSize: '13px' }}
                   >
-                    {p}
+                    Previous
                   </button>
-                ))}
-                <button
-                  className="tickets-secondary-btn"
-                  disabled={current === totalPages}
-                  onClick={() => onChange(current + 1)}
-                  style={{ minWidth: '80px', padding: '8px 16px' }}
-                >
-                  Next
-                </button>
+                  {pages.map((p, i) => (
+                    p === '...' ? <span key={i} style={{ padding: '0 8px', color: '#94a3b8' }}>...</span> :
+                      <button
+                        key={i}
+                        style={{
+                          minWidth: '38px',
+                          height: '38px',
+                          borderRadius: '10px',
+                          border: '1px solid',
+                          background: current === p ? '#3b82f6' : 'white',
+                          color: current === p ? 'white' : '#475569',
+                          borderColor: current === p ? '#3b82f6' : '#e2e8f0',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => onChange(p)}
+                      >
+                        {p}
+                      </button>
+                  ))}
+                  <button
+                    className="tickets-secondary-btn"
+                    disabled={current === totalPages}
+                    onClick={() => onChange(current + 1)}
+                    style={{ padding: '8px 14px', borderRadius: '10px', fontSize: '13px' }}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )
           }
 
           return (
             <>
-              <div className="tickets-table-wrapper">
-                <table className="tickets-table">
+              <div className="tickets-table-wrapper" style={{ overflowX: 'auto' }}>
+                <table className="tickets-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
                   <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Ticket</th>
-                      <th>Location</th>
-                      <th>Date &amp; Time</th>
-                      <th>Customer</th>
-                      <th>Engineer Assigned</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Ticket Info</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Customer</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Service Details</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Engineer</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr>
-                        <td colSpan={7} className="tickets-empty">
-                          Loading tickets...
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>Syncing ticket database...</td></tr>
                     ) : paginatedTickets.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="tickets-empty">
-                          No tickets found.
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>No tickets found matching your search.</td></tr>
                     ) : (
-                      paginatedTickets.map((ticket) => (
-                        <tr key={ticket.id} className={ticket.unreadNotesCount > 0 ? 'ticket-row--unread' : ''}>
-                          <td>#AIM-T-{ticket.id}</td>
-                          <td>{ticket.taskName}</td>
-                          <td>
-                            {ticket.city}, {ticket.country}
-                          </td>
-                          <td>
-                            {ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : ''} - {ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : ''} {ticket.taskTime}
-                          </td>
-                          <td>{ticket.customerName}</td>
-                          <td>
-                            {ticket.engineerName || '-'}
-                            {ticket.unreadNotesCount > 0 && (
-                              <span className="unread-dot-wow" title={`${ticket.unreadNotesCount} unread notes from engineer`}></span>
-                            )}
-                          </td>
-                          <td>{ticket.status}</td>
-                          <td className="tickets-actions-cell">
-                            <button
-                              type="button"
-                              className="tickets-action-btn tickets-action-btn--view"
-                              onClick={() => openTicketModal(ticket.id)}
-                              aria-label="View ticket"
-                            >
-                              <FiEye />
-                            </button>
-                            <button
-                              type="button"
-                              className="tickets-action-btn tickets-action-btn--edit"
-                              onClick={() => startEditTicket(ticket.id)}
-                              aria-label="Edit ticket"
-                            >
-                              <FiEdit2 />
-                            </button>
-                            <button
-                              type="button"
-                              className="tickets-action-btn tickets-action-btn--delete"
-                              onClick={() => handleDeleteTicket(ticket.id)}
-                              aria-label="Delete ticket"
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      paginatedTickets.map((ticket) => {
+                        let statusColor = '#64748b';
+                        let statusBg = '#f1f5f9';
+                        if (ticket.status === 'Resolved') { statusColor = '#059669'; statusBg = '#ecfdf5'; }
+                        else if (ticket.status === 'In Progress') { statusColor = '#7c3aed'; statusBg = '#f5f3ff'; }
+                        else if (ticket.status === 'Assigned') { statusColor = '#d97706'; statusBg = '#fffbeb'; }
+                        else if (ticket.status === 'Open') { statusColor = '#2563eb'; statusBg = '#eff6ff'; }
+
+                        return (
+                          <tr key={ticket.id} style={{ borderBottom: '1px solid #f1f5f9' }} className="ticket-row-premium">
+                            <td style={{ padding: '16px 24px' }}>
+                              <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{ticket.taskName}</div>
+                              <div style={{ fontSize: '12px', color: '#94a3b8' }}>#AIM-T-{ticket.id}</div>
+                            </td>
+                            <td style={{ padding: '16px 24px' }}>
+                              <div style={{ fontWeight: '600', color: '#475569', fontSize: '13px' }}>{ticket.customerName}</div>
+                              <div style={{ fontSize: '12px', color: '#94a3b8' }}>{ticket.clientName}</div>
+                            </td>
+                            <td style={{ padding: '16px 24px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <i className="far fa-calendar-check" style={{ color: '#94a3b8', fontSize: '12px' }}></i>
+                                <span style={{ fontSize: '13px', color: '#475569' }}>
+                                  {ticket.taskStartDate ? new Date(ticket.taskStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '--'}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fas fa-map-marker-alt" style={{ color: '#94a3b8', fontSize: '12px' }}></i>
+                                <span style={{ fontSize: '12px', color: '#94a3b8' }}>{ticket.city}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '16px 24px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '32px', height: '32px', background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
+                                  {(ticket.engineerName || '?')[0].toUpperCase()}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '600', fontSize: '13px', color: '#1e293b' }}>{ticket.engineerName || 'Unassigned'}</div>
+                                  {ticket.unreadNotesCount > 0 && <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '800' }}>{ticket.unreadNotesCount} New</span>}
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '16px 24px' }}>
+                              <span style={{
+                                padding: '4px 12px',
+                                borderRadius: '100px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                background: statusBg,
+                                color: statusColor,
+                                border: `1px solid ${statusColor}20`,
+                                textTransform: 'uppercase'
+                              }}>
+                                {ticket.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                <button className="tickets-action-btn-wow" onClick={() => openTicketModal(ticket.id)} title="View Detail"><FiEye /></button>
+                                <button className="tickets-action-btn-wow" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
+                                <button className="tickets-action-btn-wow tickets-action-btn-wow--delete" onClick={() => handleDeleteTicket(ticket.id)} title="Delete"><FiTrash2 /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
                     )}
                   </tbody>
                 </table>
