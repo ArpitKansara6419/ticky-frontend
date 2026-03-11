@@ -13,9 +13,10 @@ const LEAD_TYPES = ['Full time', 'Part time', 'Dispatch']
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const CURRENCIES = [
-  { value: 'EUR', label: 'Euro (EUR)' },
   { value: 'USD', label: 'Dollar (USD)' },
+  { value: 'EUR', label: 'Euro (EUR)' },
   { value: 'GBP', label: 'Pound (GBP)' },
+  { value: 'INR', label: 'Rupee (INR)' },
 ]
 
 const LEAD_STATUSES = ['BID', 'Confirm', 'Reschedule', 'Cancelled']
@@ -116,7 +117,7 @@ function LeadsPage() {
   const [zipCode, setZipCode] = useState('')
   const [timezone, setTimezone] = useState('')
 
-  const [currency, setCurrency] = useState('EUR')
+  const [currency, setCurrency] = useState('USD')
   const [hourlyRate, setHourlyRate] = useState('')
   const [halfDayRate, setHalfDayRate] = useState('')
   const [fullDayRate, setFullDayRate] = useState('')
@@ -160,7 +161,7 @@ function LeadsPage() {
     setZipCode('')
     setTimezone('')
     setAvailableTimezones([])
-    setCurrency('EUR')
+    setCurrency('USD')
     setHourlyRate('')
     setHalfDayRate('')
     setFullDayRate('')

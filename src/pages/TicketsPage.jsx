@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiArrowLeft } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -53,6 +53,7 @@ const CURRENCIES = [
   { value: 'USD', label: 'Dollar (USD)' },
   { value: 'EUR', label: 'Euro (EUR)' },
   { value: 'GBP', label: 'Pound (GBP)' },
+  { value: 'INR', label: 'Rupee (INR)' },
 ]
 
 const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break']
@@ -388,6 +389,7 @@ function TicketsPage() {
     setBreakTime('0')
     setError('')
     setSuccess('')
+    setCurrency('USD')
     setEditingTicketId(null)
   }
 
@@ -1026,7 +1028,7 @@ function TicketsPage() {
     setCancellationFee(ticket.cancellation_fee != null ? String(ticket.cancellation_fee) : '')
     setTravelCostPerDay(ticket.travelCostPerDay != null ? String(ticket.travelCostPerDay) : '')
     setTotalCost(ticket.toolCost != null ? String(ticket.toolCost) : '')
-    setBillingType(ticket.billingType || 'Hourly')
+    setBillingType(ticket.billingType ? ticket.billingType.trim() : 'Hourly')
     setLeadType(ticket.leadType || 'Full time')
     setStatus(ticket.status || 'Open')
 
@@ -1278,216 +1280,191 @@ function TicketsPage() {
             type="button"
             className="btn-wow-secondary"
             onClick={() => { resetForm(); setViewMode('list'); }}
-            style={{ padding: '10px 16px', borderRadius: '12px', background: 'white' }}
+            style={{ padding: '10px 16px', borderRadius: '12px', background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer' }}
           >
             <FiArrowLeft size={18} />
           </button>
           <div>
             <h1 className="tickets-title" style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', marginBottom: '4px' }}>
-              {editingTicketId ? 'Update Support Ticket' : 'Draft New Ticket'}
+              {editingTicketId ? 'Edit Support Ticket' : 'Create New Ticket'}
             </h1>
             <p className="tickets-subtitle" style={{ fontSize: '13px', color: '#64748b' }}>
-              {editingTicketId ? `Modifying technical & billing parameters for #AIM-T-${editingTicketId}` : 'Onboarding a new support mission from lead data.'}
+              {editingTicketId ? `Editing details for ticket #AIM-T-${editingTicketId}` : 'Fill in the mission details to launch a new ticket.'}
             </p>
           </div>
         </header>
 
-        <form className="tickets-form" onSubmit={handleSubmitTicket} style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-            {/* Mission Identification */}
-            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
-                <i className="fas fa-id-card" style={{ color: '#3b82f6' }}></i> Mission Identification
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Customer Account <span className="field-required">*</span></span>
-                  <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={loadingDropdowns} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-                    <option value="">Choose a customer...</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name} ({c.accountEmail})</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Client Name</span>
-                  <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="End user client..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-
-                <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Task Title <span className="field-required">*</span></span>
-                  <input type="text" value={taskName} onChange={(e) => setTaskName(e.target.value)} placeholder="e.g. Server Migration" style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-              </div>
-            </section>
-
-            {/* Schedule & Scope */}
-            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
-                <i className="fas fa-calendar-alt" style={{ color: '#8b5cf6' }}></i> Schedule &amp; Scope
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Start Date <span className="field-required">*</span></span>
-                  <input type="date" value={taskStartDate} onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>End Date <span className="field-required">*</span></span>
-                  <input type="date" value={taskEndDate} onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>On-Site Time <span className="field-required">*</span></span>
-                  <input type="time" value={taskTime} onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-                <label className="tickets-field" style={{ gridColumn: 'span 3' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Scope of Work <span className="field-required">*</span></span>
-                  <textarea rows={3} value={scopeOfWork} onChange={(e) => setScopeOfWork(e.target.value)} placeholder="Define the requirements..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-              </div>
-            </section>
-
-            {/* Logistics & Geo */}
-            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
-                <i className="fas fa-map-marked-alt" style={{ color: '#10b981' }}></i> Site Logistics
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Smart Address Search</span>
-                  <Autocomplete apiKey={GOOGLE_MAPS_API_KEY} onPlaceSelected={handleGoogleAddressSelect} placeholder="Search site..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Engineer Assigned <span className="field-required">*</span></span>
-                  <select value={engineerId} onChange={(e) => { const id = e.target.value; setEngineerId(id); const eng = engineers.find(en => String(en.id) === String(id)); if (eng) setEngineerName(eng.name); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-                    <option value="">Choose engineer...</option>
-                    {engineers.map((eng) => (
-                      <option key={eng.id} value={eng.id}>{eng.name}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Timezone <span className="field-required">*</span></span>
-                  <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-                    <option value="">Select...</option>
-                    {availableTimezones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            {/* Financial Parameters */}
-            <section className="tickets-card" style={{ padding: '24px', borderRadius: '20px', background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-              <h2 className="tickets-section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155' }}>
-                <i className="fas fa-money-bill-wave" style={{ color: '#f59e0b' }}></i> Rates &amp; Commercials
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Billing Logic</span>
-                  <select value={billingType} onChange={(e) => setBillingType(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: '600' }}>
-                    <option value="Hourly">Hourly Only</option>
-                    <option value="Half Day + Hourly">Half Day + Hourly</option>
-                    <option value="Full Day + OT">Full Day + OT</option>
-                    <option value="Monthly + OT + Weekend">Monthly Billing</option>
-                    <option value="Agreed Rate">Fixed Price</option>
-                    <option value="Cancellation">Cancellation Fee</option>
-                  </select>
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Base Currency</span>
-                  <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-                    {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Service Type</span>
-                  <select value={leadType} onChange={(e) => setLeadType(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-                    <option value="Full time">Continuous</option>
-                    <option value="Dispatch">Dispatch-based</option>
-                  </select>
-                </label>
-
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Hourly ({currency})</span>
-                  <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Half Day ({currency})</span>
-                  <input type="number" step="0.01" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-                <label className="tickets-field">
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Full Day ({currency})</span>
-                  <input type="number" step="0.01" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-                </label>
-              </div>
-            </section>
-          </div>
-
-          {/* Right Sidebar: Breakdown & Actions */}
-          <aside style={{ position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', padding: '24px', borderRadius: '24px', color: 'white', border: '1px solid #475569', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.05em' }}>
-                <i className="fas fa-calculator" style={{ color: '#60a5fa' }}></i> Financial Smart Preview
-              </div>
-
-              {(() => {
-                const res = calculateTicketTotal({
-                  startTime, endTime, breakTime,
-                  hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate,
-                  cancellationFee, travelCostPerDay, toolCost: totalCost,
-                  billingType, timezone, calcTimezone: 'Ticket Local'
-                });
-                return (
-                  <div>
-                    <div style={{ fontSize: '36px', fontWeight: '900', marginBottom: '2px', fontFamily: 'Inter, sans-serif' }}>{currency} {res?.grandTotal || '0.00'}</div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '24px', opacity: '0.8' }}>ESTIMATED TOTAL REVENUE</div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                        <span style={{ color: '#94a3b8' }}>Base Fee</span>
-                        <span style={{ fontWeight: '600' }}>{currency} {res?.base || '0.00'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                        <span style={{ color: '#94a3b8' }}>OT / Premiums</span>
-                        <span style={{ fontWeight: '600', color: '#60a5fa' }}>+{currency} {(parseFloat(res?.ot || 0) + parseFloat(res?.ooh || 0) + parseFloat(res?.specialDay || 0)).toFixed(2)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                        <span style={{ color: '#94a3b8' }}>Incidental Costs</span>
-                        <span style={{ fontWeight: '600' }}>+{currency} {(parseFloat(res?.travel || 0) + parseFloat(res?.tools || 0)).toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: '24px', padding: '14px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px', fontSize: '11px', color: '#cbd5e1', lineHeight: '1.5', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <i className="fas fa-info-circle" style={{ marginRight: '8px', color: '#60a5fa' }}></i>
-                      Real-time calculation based on selected rates and site local timezone.
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div style={{ background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <label style={{ display: 'block', marginBottom: '24px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '10px', display: 'block' }}>TICKET LIFECYCLE STATUS</span>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontWeight: '800', background: '#f8fafc', color: '#1e293b' }}>
-                  {TICKET_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+        <form className="tickets-form" onSubmit={handleSubmitTicket} style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Card 1: Mission Identification */}
+          <section className="tickets-card" style={{ padding: '24px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0' }}>
+            <h2 className="tickets-section-title" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fas fa-id-card" style={{ color: '#3b82f6' }}></i> Mission Identification
+            </h2>
+            <div className="tickets-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Customer Account <span className="field-required">*</span></span>
+                <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={loadingDropdowns} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                  <option value="">Choose a customer...</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.accountEmail})</option>
+                  ))}
                 </select>
               </label>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button type="submit" className="btn-wow-primary" disabled={saving} style={{ width: '100%', padding: '16px', borderRadius: '14px', fontSize: '16px', fontWeight: '700' }}>
-                  {saving ? <i className="fas fa-sync fa-spin"></i> : (editingTicketId ? '⚡ Sync All Changes' : '🚀 Launch Support Ticket')}
-                </button>
-                <button type="button" className="btn-wow-secondary" onClick={() => { resetForm(); setViewMode('list'); }} style={{ width: '100%', padding: '14px', borderRadius: '14px', fontSize: '14px' }}>
-                  Cancel & Exit
-                </button>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Client Name</span>
+                <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="End user client..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+
+              <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Task Title <span className="field-required">*</span></span>
+                <input type="text" value={taskName} onChange={(e) => setTaskName(e.target.value)} placeholder="e.g. Server Migration" style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+            </div>
+          </section>
+
+          {/* Card 2: Schedule & Scope */}
+          <section className="tickets-card" style={{ padding: '24px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0' }}>
+            <h2 className="tickets-section-title" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fas fa-calendar-alt" style={{ color: '#8b5cf6' }}></i> Schedule & Scope
+            </h2>
+            <div className="tickets-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Start Date <span className="field-required">*</span></span>
+                <input type="date" value={taskStartDate} onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>End Date <span className="field-required">*</span></span>
+                <input type="date" value={taskEndDate} onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>On-Site Time <span className="field-required">*</span></span>
+                <input type="time" value={taskTime} onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+              <label className="tickets-field" style={{ gridColumn: 'span 3' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Scope of Work <span className="field-required">*</span></span>
+                <textarea rows={3} value={scopeOfWork} onChange={(e) => setScopeOfWork(e.target.value)} placeholder="Define the requirements..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+            </div>
+          </section>
+
+          {/* Card 3: Site Logistics */}
+          <section className="tickets-card" style={{ padding: '24px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0' }}>
+            <h2 className="tickets-section-title" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fas fa-map-marked-alt" style={{ color: '#10b981' }}></i> Site Logistics
+            </h2>
+            <div className="tickets-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Smart Address Search</span>
+                <Autocomplete apiKey={GOOGLE_MAPS_API_KEY} onPlaceSelected={handleGoogleAddressSelect} placeholder="Search site..." style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Engineer Assigned <span className="field-required">*</span></span>
+                <select value={engineerId} onChange={(e) => { const id = e.target.value; setEngineerId(id); const eng = engineers.find(en => String(en.id) === String(id)); if (eng) setEngineerName(eng.name); }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                  <option value="">Choose engineer...</option>
+                  {engineers.map((eng) => (
+                    <option key={eng.id} value={eng.id}>{eng.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Timezone <span className="field-required">*</span></span>
+                <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                  <option value="">Select...</option>
+                  {availableTimezones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          {/* Card 4: Rates & Commercials */}
+          <section className="tickets-card" style={{ padding: '24px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0' }}>
+            <h2 className="tickets-section-title" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fas fa-money-bill-wave" style={{ color: '#f59e0b' }}></i> Rates & Commercials
+            </h2>
+            <div className="tickets-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Billing Logic</span>
+                <select value={billingType} onChange={(e) => setBillingType(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: '600' }}>
+                  <option value="Hourly">Hourly Only</option>
+                  <option value="Half Day + Hourly">Half Day + Hourly</option>
+                  <option value="Full Day + OT">Full Day + OT</option>
+                  <option value="Monthly + OT + Weekend">Monthly Billing</option>
+                  <option value="Agreed Rate">Fixed Price</option>
+                  <option value="Cancellation">Cancellation Fee</option>
+                </select>
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Base Currency</span>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                  {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Service Type</span>
+                <select value={leadType} onChange={(e) => setLeadType(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                  <option value="Full time">Continuous</option>
+                  <option value="Dispatch">Dispatch-based</option>
+                </select>
+              </label>
+
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Hourly ({currency})</span>
+                <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Half Day ({currency})</span>
+                <input type="number" step="0.01" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+              <label className="tickets-field">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', display: 'block' }}>Full Day ({currency})</span>
+                <input type="number" step="0.01" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+              </label>
+            </div>
+          </section>
+
+          {/* Financial Smart Preview and Actions */}
+          <section className="tickets-card" style={{ padding: '24px', borderRadius: '16px', background: '#1e293b', color: 'white', border: 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '4px' }}>Financial Smart Preview</div>
+                {(() => {
+                  const res = calculateTicketTotal({
+                    startTime, endTime, breakTime,
+                    hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate,
+                    cancellationFee, travelCostPerDay, toolCost: totalCost,
+                    billingType, timezone, calcTimezone: 'Ticket Local'
+                  });
+                  return (
+                    <div>
+                      <div style={{ fontSize: '32px', fontWeight: '900' }}>{currency} {res?.grandTotal || '0.00'}</div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>ESTIMATED TOTAL REVENUE</div>
+                    </div>
+                  );
+                })()}
+              </div>
+              <div style={{ minWidth: '240px' }}>
+                <label style={{ display: 'block', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', marginBottom: '8px', display: 'block' }}>TICKET STATUS</span>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #475569', background: '#334155', color: 'white' }}>
+                    {TICKET_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </label>
               </div>
             </div>
 
-            {error && <div style={{ padding: '14px', borderRadius: '12px', background: '#fef2f2', color: '#b91c1c', fontSize: '13px', fontWeight: '600', border: '1px solid #fee2e2' }}>{error}</div>}
-            {success && <div style={{ padding: '14px', borderRadius: '12px', background: '#f0fdf4', color: '#15803d', fontSize: '13px', fontWeight: '600', border: '1px solid #dcfce7' }}>{success}</div>}
-          </aside>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button type="submit" className="btn-wow-primary" disabled={saving} style={{ flex: 2, padding: '14px', borderRadius: '12px', fontSize: '16px', fontWeight: '700' }}>
+                {saving ? 'Syncing...' : (editingTicketId ? 'Save All Changes' : 'Launch Ticket')}
+              </button>
+              <button type="button" className="btn-wow-secondary" onClick={() => { resetForm(); setViewMode('list'); }} style={{ flex: 1, padding: '14px', borderRadius: '12px', background: 'transparent', color: '#94a3b8', border: '1px solid #475569' }}>
+                Cancel
+              </button>
+            </div>
+          </section>
+
+          {error && <div style={{ padding: '14px', borderRadius: '12px', background: '#fef2f2', color: '#b91c1c', fontSize: '13px' }}>{error}</div>}
+          {success && <div style={{ padding: '14px', borderRadius: '12px', background: '#f0fdf4', color: '#15803d', fontSize: '13px' }}>{success}</div>}
         </form>
       </section>
     );
