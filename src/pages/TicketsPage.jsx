@@ -1,5 +1,5 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
@@ -57,6 +57,10 @@ const CURRENCIES = [
 ]
 
 const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break']
+
+const GOOGLE_AUTOCOMPLETE_OPTIONS = {
+  types: ['address'],
+}
 
 function TicketsPage() {
   const location = useLocation()
@@ -139,6 +143,10 @@ function TicketsPage() {
   const [status, setStatus] = useState('Assigned')
   const [billingType, setBillingType] = useState('Hourly')
   const [cancellationFee, setCancellationFee] = useState('')
+
+  // Map / LatLng states
+  const [latitude, setLatitude] = useState(null)
+  const [longitude, setLongitude] = useState(null)
 
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -474,7 +482,7 @@ function TicketsPage() {
   }
 
   // Handle Google Address Selection
-  const handleGoogleAddressSelect = useMemo(() => async (place) => {
+  const handleGoogleAddressSelect = useCallback(async (place) => {
     if (!place || !place.address_components) return
 
     // Parse all address components
@@ -1459,9 +1467,7 @@ function TicketsPage() {
                 <span>Address Search</span>
                 <Autocomplete
                   onPlaceSelected={handleGoogleAddressSelect}
-                  options={useMemo(() => ({
-                    types: ['address'],
-                  }), [])}
+                  options={GOOGLE_AUTOCOMPLETE_OPTIONS}
                   placeholder="Type to search global address..."
                   style={{
                     width: '100%',
@@ -1974,50 +1980,6 @@ function TicketsPage() {
           const totalPages = Math.ceil(filteredTickets.length / itemsPerPage)
           const paginatedTickets = filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-          const Pagination = ({ total, current, onChange }) => {
-            if (total <= 1) return null
-            let pages = []
-            for (let i = 1; i <= total; i++) pages.push(i)
-
-            return (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '24px', background: '#fafafc', borderTop: '1px solid var(--border-subtle)' }}>
-                <button
-                  className="tickets-secondary-btn"
-                  disabled={current === 1}
-                  onClick={() => onChange(current - 1)}
-                  style={{ minWidth: '80px', padding: '8px 16px' }}
-                >
-                  Prev
-                </button>
-                {pages.map(p => (
-                  <button
-                    key={p}
-                    className="tickets-secondary-btn"
-                    style={{
-                      minWidth: '40px',
-                      padding: '8px 12px',
-                      background: current === p ? 'var(--primary)' : 'var(--card-bg)',
-                      color: current === p ? 'white' : 'var(--text-muted)',
-                      borderColor: current === p ? 'var(--primary)' : 'var(--border-subtle)',
-                      fontWeight: current === p ? '700' : '600'
-                    }}
-                    onClick={() => onChange(p)}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  className="tickets-secondary-btn"
-                  disabled={current === totalPages}
-                  onClick={() => onChange(current + 1)}
-                  style={{ minWidth: '80px', padding: '8px 16px' }}
-                >
-                  Next
-                </button>
-              </div>
-            )
-          }
-
           return (
             <>
               <div className="tickets-table-wrapper">
@@ -2090,7 +2052,7 @@ function TicketsPage() {
             </>
           )
         })()}
-      </section>
+      </section >
 
       {isTicketModalOpen && selectedTicket && (
         <div className="ticket-modal-backdrop" onClick={handleCloseTicketModal} role="dialog" aria-modal="true">
@@ -2556,6 +2518,50 @@ function TicketsPage() {
       )
       }
     </section >
+  )
+}
+
+const Pagination = ({ total, current, onChange }) => {
+  if (total <= 1) return null
+  let pages = []
+  for (let i = 1; i <= total; i++) pages.push(i)
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '24px', background: '#fafafc', borderTop: '1px solid var(--border-subtle)' }}>
+      <button
+        className="tickets-secondary-btn"
+        disabled={current === 1}
+        onClick={() => onChange(current - 1)}
+        style={{ minWidth: '80px', padding: '8px 16px' }}
+      >
+        Prev
+      </button>
+      {pages.map(p => (
+        <button
+          key={p}
+          className="tickets-secondary-btn"
+          style={{
+            minWidth: '40px',
+            padding: '8px 12px',
+            background: current === p ? 'var(--primary)' : 'var(--card-bg)',
+            color: current === p ? 'white' : 'var(--text-muted)',
+            borderColor: current === p ? 'var(--primary)' : 'var(--border-subtle)',
+            fontWeight: current === p ? '700' : '600'
+          }}
+          onClick={() => onChange(p)}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        className="tickets-secondary-btn"
+        disabled={total === current}
+        onClick={() => onChange(current + 1)}
+        style={{ minWidth: '80px', padding: '8px 16px' }}
+      >
+        Next
+      </button>
+    </div>
   )
 }
 

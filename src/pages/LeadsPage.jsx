@@ -1,5 +1,5 @@
 // LeadsPage.jsx - Leads list + Create / Edit Lead page
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft, FiEye, FiEdit2, FiCopy, FiTrash2, FiRefreshCw } from 'react-icons/fi'
 import Select from 'react-select'
@@ -20,6 +20,10 @@ const CURRENCIES = [
 ]
 
 const LEAD_STATUSES = ['BID', 'Confirm', 'Reschedule', 'Cancelled']
+
+const GOOGLE_AUTOCOMPLETE_OPTIONS = {
+  types: ['address'],
+}
 
 const customSelectStyles = {
   control: (provided) => ({
@@ -210,7 +214,7 @@ function LeadsPage() {
     setCountriesList(staticCountries)
   }
 
-  const handleGoogleAddressSelect = useMemo(() => async (place) => {
+  const handleGoogleAddressSelect = useCallback(async (place) => {
     if (!place || !place.address_components) return
 
     // Parse all address components
@@ -656,9 +660,7 @@ function LeadsPage() {
                 <span>Details Address Search</span>
                 <Autocomplete
                   onPlaceSelected={handleGoogleAddressSelect}
-                  options={useMemo(() => ({
-                    types: ['address'],
-                  }), [])}
+                  options={GOOGLE_AUTOCOMPLETE_OPTIONS}
                   placeholder="Type to search global address..."
                   style={{
                     width: '100%',
@@ -887,50 +889,6 @@ function LeadsPage() {
           const totalPages = Math.ceil(filteredLeads.length / itemsPerPage)
           const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-          const Pagination = ({ total, current, onChange }) => {
-            if (total <= 1) return null
-            let pages = []
-            for (let i = 1; i <= total; i++) pages.push(i)
-
-            return (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '24px', background: '#fafafc', borderTop: '1px solid var(--border-subtle)', borderRadius: '0 0 20px 20px' }}>
-                <button
-                  className="leads-secondary-btn"
-                  disabled={current === 1}
-                  onClick={() => onChange(current - 1)}
-                  style={{ minWidth: '80px', padding: '8px 16px' }}
-                >
-                  Prev
-                </button>
-                {pages.map(p => (
-                  <button
-                    key={p}
-                    className="leads-secondary-btn"
-                    style={{
-                      minWidth: '40px',
-                      padding: '8px 12px',
-                      background: current === p ? 'var(--primary)' : 'var(--card-bg)',
-                      color: current === p ? 'white' : 'var(--text-muted)',
-                      borderColor: current === p ? 'var(--primary)' : 'var(--border-subtle)',
-                      fontWeight: current === p ? '700' : '600'
-                    }}
-                    onClick={() => onChange(p)}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  className="leads-secondary-btn"
-                  disabled={current === totalPages}
-                  onClick={() => onChange(current + 1)}
-                  style={{ minWidth: '80px', padding: '8px 16px' }}
-                >
-                  Next
-                </button>
-              </div>
-            )
-          }
-
           return (
             <>
               <div className="leads-table-wrapper">
@@ -1112,7 +1070,7 @@ function LeadsPage() {
             </>
           )
         })()}
-      </section>
+      </section >
 
       {isStatusModalOpen && (
         <div className="lead-modal-backdrop" onClick={() => setIsStatusModalOpen(false)}>
@@ -1183,175 +1141,221 @@ function LeadsPage() {
         </div>
       )}
 
-      {isLeadModalOpen && selectedLead && (
-        <div className="lead-modal-backdrop" onClick={() => setIsLeadModalOpen(false)}>
-          <div className="lead-modal lead-modal--details" onClick={e => e.stopPropagation()}>
-            <header className="lead-modal-header">
-              <div className="lead-modal-header-info">
-                <h2>Lead Details</h2>
-                <div className="lead-badge-id">#{String(selectedLead.id).padStart(3, '0')}</div>
+      {
+        isLeadModalOpen && selectedLead && (
+          <div className="lead-modal-backdrop" onClick={() => setIsLeadModalOpen(false)}>
+            <div className="lead-modal lead-modal--details" onClick={e => e.stopPropagation()}>
+              <header className="lead-modal-header">
+                <div className="lead-modal-header-info">
+                  <h2>Lead Details</h2>
+                  <div className="lead-badge-id">#{String(selectedLead.id).padStart(3, '0')}</div>
+                </div>
+                <p className="lead-modal-subtitle">{selectedLead.taskName}</p>
+              </header>
+              <div className="lead-modal-content">
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <label>Customer</label>
+                    <span>{selectedLead.customerName}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Type / Category</label>
+                    <span>{selectedLead.leadType || '--'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Start Date</label>
+                    <span>{((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) ? selectedLead.followUpDate.split('T')[0] : selectedLead.taskStartDate?.split('T')[0]}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>End Date</label>
+                    <span>{selectedLead.taskEndDate ? selectedLead.taskEndDate.split('T')[0] : '--'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Task Time</label>
+                    <span>{selectedLead.taskTime}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Location</label>
+                    <span>{selectedLead.city}, {selectedLead.country}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Timezone</label>
+                    <span>{selectedLead.timezone || '--'}</span>
+                  </div>
+                  <div className="detail-item--full">
+                    <label>Address</label>
+                    <span>{[selectedLead.addressLine1, selectedLead.addressLine2, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')}</span>
+                  </div>
+
+                  {/* --- Google Maps Location Button --- */}
+                  {(() => {
+                    const lat = selectedLead.latitude;
+                    const lng = selectedLead.longitude;
+                    const addressQuery = encodeURIComponent(
+                      [selectedLead.addressLine1, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')
+                    );
+                    const hasCoords = lat && lng;
+                    const mapsLink = hasCoords
+                      ? `https://www.google.com/maps?q=${lat},${lng}&z=16`
+                      : `https://www.google.com/maps/search/?q=${addressQuery}`;
+
+                    return (
+                      <div className="detail-item--full" style={{ marginTop: '4px' }}>
+                        <label>📍 Location on Map</label>
+                        <a
+                          href={mapsLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            padding: '10px 20px', borderRadius: '10px',
+                            background: 'linear-gradient(135deg, #4285F4, #34A853)',
+                            color: 'white', fontWeight: '700', fontSize: '13px',
+                            textDecoration: 'none', border: 'none',
+                            boxShadow: '0 4px 12px rgba(66,133,244,0.35)',
+                            transition: 'opacity 0.2s',
+                            marginTop: '6px'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                          </svg>
+                          View on Google Maps
+                        </a>
+                      </div>
+                    );
+                  })()}
+                  <div className="detail-item--full">
+                    <label>Scope of Work</label>
+                    <p className="scope-text">{selectedLead.scopeOfWork}</p>
+                  </div>
+                  <div className="detail-item">
+                    <label>Tools Required</label>
+                    <span>{selectedLead.toolsRequired || '--'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Status</label>
+                    <span className={`status-pill ${selectedLead.status?.toLowerCase()}`}>{selectedLead.status}</span>
+                  </div>
+
+                  {/* Billing Type Section */}
+                  <div className="detail-item--full divider"></div>
+                  <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Billing Configuration</label>
+                  </div>
+                  <div className="detail-item">
+                    <label>Billing Type</label>
+                    <span style={{
+                      fontWeight: '600',
+                      color: 'var(--primary-color, #6366f1)',
+                      background: 'var(--primary-bg, #eef2ff)',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '13px'
+                    }}>
+                      {selectedLead.billingType || 'Hourly'}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Currency</label>
+                    <span style={{ fontWeight: '600' }}>{selectedLead.currency || 'USD'}</span>
+                  </div>
+
+                  {/* Pricing & Rates Section */}
+                  <div className="detail-item--full divider"></div>
+                  <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Pricing & Rates</label>
+                  </div>
+                  <div className="detail-item">
+                    <label>Hourly Rate</label>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.hourlyRate || '0.00'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Half Day Rate</label>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.halfDayRate || '0.00'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Full Day Rate</label>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.fullDayRate || '0.00'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Monthly Rate</label>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.monthlyRate || '0.00'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Agreed / Fixed Rate</label>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.agreedRate || '--'}</span>
+                  </div>
+
+                  {/* Additional Costs Section */}
+                  <div className="detail-item--full divider"></div>
+                  <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Additional Costs</label>
+                  </div>
+                  <div className="detail-item">
+                    <label>Tool Cost</label>
+                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Travel Cost / Day</label>
+                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
+                  </div>
+                </div>
               </div>
-              <p className="lead-modal-subtitle">{selectedLead.taskName}</p>
-            </header>
-            <div className="lead-modal-content">
-              <div className="details-grid">
-                <div className="detail-item">
-                  <label>Customer</label>
-                  <span>{selectedLead.customerName}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Type / Category</label>
-                  <span>{selectedLead.leadType || '--'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Start Date</label>
-                  <span>{((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) ? selectedLead.followUpDate.split('T')[0] : selectedLead.taskStartDate?.split('T')[0]}</span>
-                </div>
-                <div className="detail-item">
-                  <label>End Date</label>
-                  <span>{selectedLead.taskEndDate ? selectedLead.taskEndDate.split('T')[0] : '--'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Task Time</label>
-                  <span>{selectedLead.taskTime}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Location</label>
-                  <span>{selectedLead.city}, {selectedLead.country}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Timezone</label>
-                  <span>{selectedLead.timezone || '--'}</span>
-                </div>
-                <div className="detail-item--full">
-                  <label>Address</label>
-                  <span>{[selectedLead.addressLine1, selectedLead.addressLine2, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')}</span>
-                </div>
-
-                {/* --- Google Maps Location Button --- */}
-                {(() => {
-                  const lat = selectedLead.latitude;
-                  const lng = selectedLead.longitude;
-                  const addressQuery = encodeURIComponent(
-                    [selectedLead.addressLine1, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')
-                  );
-                  const hasCoords = lat && lng;
-                  const mapsLink = hasCoords
-                    ? `https://www.google.com/maps?q=${lat},${lng}&z=16`
-                    : `https://www.google.com/maps/search/?q=${addressQuery}`;
-
-                  return (
-                    <div className="detail-item--full" style={{ marginTop: '4px' }}>
-                      <label>📍 Location on Map</label>
-                      <a
-                        href={mapsLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '8px',
-                          padding: '10px 20px', borderRadius: '10px',
-                          background: 'linear-gradient(135deg, #4285F4, #34A853)',
-                          color: 'white', fontWeight: '700', fontSize: '13px',
-                          textDecoration: 'none', border: 'none',
-                          boxShadow: '0 4px 12px rgba(66,133,244,0.35)',
-                          transition: 'opacity 0.2s',
-                          marginTop: '6px'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        View on Google Maps
-                      </a>
-                    </div>
-                  );
-                })()}
-                <div className="detail-item--full">
-                  <label>Scope of Work</label>
-                  <p className="scope-text">{selectedLead.scopeOfWork}</p>
-                </div>
-                <div className="detail-item">
-                  <label>Tools Required</label>
-                  <span>{selectedLead.toolsRequired || '--'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Status</label>
-                  <span className={`status-pill ${selectedLead.status?.toLowerCase()}`}>{selectedLead.status}</span>
-                </div>
-
-                {/* Billing Type Section */}
-                <div className="detail-item--full divider"></div>
-                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Billing Configuration</label>
-                </div>
-                <div className="detail-item">
-                  <label>Billing Type</label>
-                  <span style={{
-                    fontWeight: '600',
-                    color: 'var(--primary-color, #6366f1)',
-                    background: 'var(--primary-bg, #eef2ff)',
-                    padding: '4px 12px',
-                    borderRadius: '6px',
-                    fontSize: '13px'
-                  }}>
-                    {selectedLead.billingType || 'Hourly'}
-                  </span>
-                </div>
-                <div className="detail-item">
-                  <label>Currency</label>
-                  <span style={{ fontWeight: '600' }}>{selectedLead.currency || 'USD'}</span>
-                </div>
-
-                {/* Pricing & Rates Section */}
-                <div className="detail-item--full divider"></div>
-                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Pricing & Rates</label>
-                </div>
-                <div className="detail-item">
-                  <label>Hourly Rate</label>
-                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.hourlyRate || '0.00'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Half Day Rate</label>
-                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.halfDayRate || '0.00'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Full Day Rate</label>
-                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.fullDayRate || '0.00'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Monthly Rate</label>
-                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.monthlyRate || '0.00'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Agreed / Fixed Rate</label>
-                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.agreedRate || '--'}</span>
-                </div>
-
-                {/* Additional Costs Section */}
-                <div className="detail-item--full divider"></div>
-                <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Additional Costs</label>
-                </div>
-                <div className="detail-item">
-                  <label>Tool Cost</label>
-                  <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Travel Cost / Day</label>
-                  <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
-                </div>
+              <div className="lead-modal-footer">
+                <button className="btn-wow-secondary" onClick={() => setIsLeadModalOpen(false)}>Close Window</button>
               </div>
-            </div>
-            <div className="lead-modal-footer">
-              <button className="btn-wow-secondary" onClick={() => setIsLeadModalOpen(false)}>Close Window</button>
             </div>
           </div>
-        </div>
-      )}
-    </section>
+        )
+      }
+    </section >
+  )
+}
+
+const Pagination = ({ total, current, onChange }) => {
+  if (total <= 1) return null
+  let pages = []
+  for (let i = 1; i <= total; i++) pages.push(i)
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '24px', background: '#fafafc', borderTop: '1px solid var(--border-subtle)', borderRadius: '0 0 20px 20px' }}>
+      <button
+        className="leads-secondary-btn"
+        disabled={current === 1}
+        onClick={() => onChange(current - 1)}
+        style={{ minWidth: '80px', padding: '8px 16px' }}
+      >
+        Prev
+      </button>
+      {pages.map(p => (
+        <button
+          key={p}
+          className="leads-secondary-btn"
+          style={{
+            minWidth: '40px',
+            padding: '8px 12px',
+            background: current === p ? 'var(--primary)' : 'var(--card-bg)',
+            color: current === p ? 'white' : 'var(--text-muted)',
+            borderColor: current === p ? 'var(--primary)' : 'var(--border-subtle)',
+            fontWeight: current === p ? '700' : '600'
+          }}
+          onClick={() => onChange(p)}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        className="leads-secondary-btn"
+        disabled={total === current}
+        onClick={() => onChange(current + 1)}
+        style={{ minWidth: '80px', padding: '8px 16px' }}
+      >
+        Next
+      </button>
+    </div>
   )
 }
 
