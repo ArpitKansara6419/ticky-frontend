@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -2061,7 +2061,7 @@ function TicketsPage() {
                 <div className="ticket-badge-id">#AIM-T-{String(selectedTicket.id).padStart(3, '0')}</div>
               </div>
               <p className="ticket-modal-subtitle">{selectedTicket.taskName}</p>
-              <button type="button" className="ticket-modal-close-btn" onClick={handleCloseTicketModal}>├ù</button>
+              <button type="button" className="ticket-modal-close-btn" onClick={handleCloseTicketModal} title="Close"><FiX /></button>
             </header>
 
             <div className="ticket-modal-content">
@@ -2259,55 +2259,48 @@ function TicketsPage() {
                   </div>
                 )}
 
-                <div className="detail-item--full divider"></div>
-
-                {selectedTicket.leadType !== 'Dispatch' && (
+                {(isInlineEditing || (selectedTicket.leadType !== 'Dispatch' && (!selectedTicket.startTime || selectedTicket.status === 'Open'))) && (
                   <>
-                    <div className="detail-item--full" style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Time Log (Engineer Activity)</label>
+                    <div className="detail-item--full divider"></div>
+                    <div className="detail-item--full" style={{ marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--primary)', marginBottom: '12px' }}>
+                        <div style={{ background: 'var(--primary-soft)', padding: '8px', borderRadius: '8px', display: 'flex' }}><FiClock size={18} /></div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', letterSpacing: '-0.01em' }}>Time Adjustment & Logs</h3>
+                      </div>
                     </div>
 
                     {isInlineEditing ? (
-                      <div className="detail-item--full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                      <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
                           <button
                             type="button"
-                            className="btn-wow-secondary"
-                            style={{ fontSize: '10px', padding: '4px 10px' }}
+                            className="tickets-secondary-btn"
+                            style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px' }}
                             onClick={() => {
-                              if (selectedTicket.taskStartDate && selectedTicket.taskTime) {
-                                const startStr = `${String(selectedTicket.taskStartDate).split('T')[0]}T${selectedTicket.taskTime.padStart(5, '0')}`;
-                                const d = new Date(startStr);
-                                if (!isNaN(d.getTime())) {
-                                  const pad = (n) => String(n).padStart(2, '0');
-                                  setInlineStartTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
-
-                                  // Default to 8 hour work day for end time
-                                  d.setHours(d.getHours() + 8);
-                                  setInlineEndTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
-                                }
-                              }
+                              setInlineStartTime(selectedTicket.taskStartDate ? formatForInput(selectedTicket.taskStartDate) : '');
+                              setInlineEndTime(selectedTicket.taskEndDate ? formatForInput(selectedTicket.taskEndDate) : '');
+                              setInlineBreakTime('0');
                             }}
                           >
-                            ΓÜí Sync with Scheduled Time
+                            Sync with Scheduled
                           </button>
                         </div>
                         <div className="tickets-grid" style={{ marginBottom: '16px' }}>
                           <label className="tickets-field">
-                            <span>New Start Time</span>
-                            <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} />
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>ACTUAL START</span>
+                            <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} style={{ border: '2px solid #e2e8f0', padding: '10px' }} />
                           </label>
                           <label className="tickets-field">
-                            <span>New End Time</span>
-                            <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} />
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>ACTUAL END</span>
+                            <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} style={{ border: '2px solid #e2e8f0', padding: '10px' }} />
                           </label>
                           <label className="tickets-field">
-                            <span>New Break Time (Mins)</span>
-                            <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} />
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>TOTAL BREAK (MINS)</span>
+                            <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} style={{ border: '2px solid #e2e8f0', padding: '10px' }} />
                           </label>
                         </div>
 
-                        {/* Smart Live Cost Preview in Modal */}
+                        {/* Premium smart preview */}
                         {(() => {
                           const res = calculateTicketTotal({
                             startTime: inlineStartTime,
@@ -2327,194 +2320,200 @@ function TicketsPage() {
                           });
                           if (!res) return null;
                           return (
-                            <div style={{ marginBottom: '16px', padding: '12px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '10px' }}>
+                            <div style={{
+                              marginBottom: '16px',
+                              padding: '16px',
+                              background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+                              border: '1px solid #10b981',
+                              borderRadius: '12px',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                            }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#065f46' }}>SMART PREVIEW (ESTIMATED):</span>
-                                <span style={{ fontSize: '16px', fontWeight: '800', color: '#047857' }}>{selectedTicket.currency} {res.grandTotal}</span>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real-time Preview</span>
+                                <span style={{ fontSize: '18px', fontWeight: '900', color: '#047857' }}>{selectedTicket.currency} {res.grandTotal}</span>
                               </div>
-                              <div style={{ fontSize: '11px', color: '#065f46', marginTop: '4px' }}>
-                                {res.hrs}h billed ΓÇó Base: {selectedTicket.currency} {res.base} ΓÇó OT: {selectedTicket.currency} {res.ot} ΓÇó Premium: {selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}
+                              <div style={{ fontSize: '12px', color: '#065f46', marginTop: '6px', fontWeight: '500', opacity: 0.9 }}>
+                                {res.hrs} hrs billable • {selectedTicket.currency} {res.base} base • {selectedTicket.currency} {res.ot} OT • {selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)} premium
                               </div>
                             </div>
                           );
                         })()}
 
                         <button
-                          className="btn-wow-primary"
-                          style={{ width: '100%' }}
+                          className="tickets-primary-btn"
+                          style={{ width: '100%', padding: '12px', fontSize: '14px', borderRadius: '10px' }}
                           onClick={handleUpdateInlineTime}
                           disabled={isUpdatingTime}
                         >
-                          {isUpdatingTime ? 'Updating...' : 'Save Time Changes'}
+                          {isUpdatingTime ? 'Syncing...' : 'Confirm & Save Activity'}
                         </button>
                       </div>
                     ) : (
-                      <>
-                        <div className="detail-item">
-                          <label>Actual Start Time</label>
-                          <span style={{ fontWeight: '600' }}>{selectedTicket.startTime ? new Date(selectedTicket.startTime).toLocaleString() : '--'}</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                        <div className="detail-item" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Start Activity</label>
+                          <span style={{ fontWeight: '700', fontSize: '14px' }}>{selectedTicket.startTime ? new Date(selectedTicket.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not started'}</span>
                         </div>
-                        <div className="detail-item">
-                          <label>Actual End Time</label>
-                          <span style={{ fontWeight: '600' }}>{selectedTicket.endTime ? new Date(selectedTicket.endTime).toLocaleString() : '--'}</span>
+                        <div className="detail-item" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>End Activity</label>
+                          <span style={{ fontWeight: '700', fontSize: '14px' }}>{selectedTicket.endTime ? new Date(selectedTicket.endTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not finished'}</span>
                         </div>
-                        <div className="detail-item">
-                          <label>Break Time</label>
-                          <span style={{ fontWeight: '600' }}>{selectedTicket.breakTime ? `${Math.floor(selectedTicket.breakTime / 60)} mins` : '0 mins'}</span>
+                        <div className="detail-item" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Break Time</label>
+                          <span style={{ fontWeight: '700', fontSize: '14px' }}>{selectedTicket.breakTime ? `${Math.floor(selectedTicket.breakTime / 60)} mins` : '0 mins'}</span>
                         </div>
-                        <div className="detail-item">
-                          <label>Total Bilable Time</label>
-                          <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>
+                        <div className="detail-item" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Billable Hours</label>
+                          <span style={{ fontWeight: '800', fontSize: '14px', color: 'var(--primary)' }}>
                             {selectedTicket.totalTime
-                              ? `${Math.ceil(selectedTicket.totalTime / 3600)} hours`
-                              : '0 hours'}
+                              ? `${(selectedTicket.totalTime / 3600).toFixed(2)} hrs`
+                              : '0 hrs'}
                           </span>
                         </div>
-                      </>
+                      </div>
                     )}
                   </>
                 )}
 
                 <div className="detail-item--full divider"></div>
-                <div className="detail-item--full" style={{ background: 'var(--primary-bg, #f5f3ff)', padding: '15px', borderRadius: '10px', border: '1px solid var(--primary-color, #a78bfa)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
-                  <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>{selectedTicket.currency} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</span>
+                <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
+                <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>{selectedTicket.currency} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</span>
+              </div>
+
+              <div className="detail-item--full divider"></div>
+
+              <div className="detail-item--full">
+                <label>Customer Documents</label>
+                <div className="ticket-docs-list" style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedTicket.documentsLabel ? (
+                    selectedTicket.documentsLabel.split(', ').map((docName, idx) => (
+                      <div key={idx} style={{ background: 'var(--bg-lighter)', padding: '6px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
+                        <span style={{ fontSize: '0.9rem' }}>{docName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleViewDocument(docName)}
+                          style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                          title="View"
+                        >
+                          <FiEye size={16} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No documents linked.</span>
+                  )}
                 </div>
+              </div>
 
-                <div className="detail-item--full divider"></div>
+              <div className="detail-item--full divider"></div>
 
-                <div className="detail-item--full">
-                  <label>Customer Documents</label>
-                  <div className="ticket-docs-list" style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {selectedTicket.documentsLabel ? (
-                      selectedTicket.documentsLabel.split(', ').map((docName, idx) => (
-                        <div key={idx} style={{ background: 'var(--bg-lighter)', padding: '6px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
-                          <span style={{ fontSize: '0.9rem' }}>{docName}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleViewDocument(docName)}
-                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                            title="View"
-                          >
-                            <FiEye size={16} />
-                          </button>
+              {/* Notes Section */}
+              <div className="detail-item--full">
+                <label>Service Notes / Timeline</label>
+                <div className="admin-notes-list" style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                  {ticketNotes.length === 0 ? (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>No notes yet.</p>
+                  ) : (
+                    ticketNotes.map((n, idx) => (
+                      <div key={n.id || idx} style={{ marginBottom: '10px', padding: '10px', background: n.author_type === 'admin' ? '#f0f9ff' : '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '800', color: n.author_type === 'admin' ? '#0369a1' : '#334155' }}>
+                            {n.author_type === 'admin' ? 'ADMIN (YOU)' : 'ENGINEER'}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(n.created_at).toLocaleString()}</span>
                         </div>
-                      ))
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No documents linked.</span>
-                    )}
-                  </div>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e293b', whiteSpace: 'pre-wrap' }}>{n.content}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                  <input
+                    type="text"
+                    placeholder="Add a reply..."
+                    value={newAdminNote}
+                    onChange={e => setNewAdminNote(e.target.value)}
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '8px 12px', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}
+                  />
+                  <button
+                    onClick={handleAddAdminNote}
+                    disabled={addingNote || !newAdminNote}
+                    style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+                  >
+                    {addingNote ? '...' : 'Reply'}
+                  </button>
+                </div>
+              </div>
 
-                <div className="detail-item--full divider"></div>
+              <div className="detail-item--full divider"></div>
 
-                {/* Notes Section */}
-                <div className="detail-item--full">
-                  <label>Service Notes / Timeline</label>
-                  <div className="admin-notes-list" style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto' }}>
-                    {ticketNotes.length === 0 ? (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>No notes yet.</p>
-                    ) : (
-                      ticketNotes.map((n, idx) => (
-                        <div key={n.id || idx} style={{ marginBottom: '10px', padding: '10px', background: n.author_type === 'admin' ? '#f0f9ff' : '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: n.author_type === 'admin' ? '#0369a1' : '#334155' }}>
-                              {n.author_type === 'admin' ? 'ADMIN (YOU)' : 'ENGINEER'}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(n.created_at).toLocaleString()}</span>
-                          </div>
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e293b', whiteSpace: 'pre-wrap' }}>{n.content}</p>
+              {/* Attachments Section */}
+              <div className="detail-item--full">
+                <label>Engineer Uploads</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {ticketAttachments.length === 0 ? (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No attachments uploaded yet.</span>
+                  ) : (
+                    ticketAttachments.map((a, idx) => (
+                      <a key={a.id || idx} href={`https://awokta.com/${a.file_url}`} target="_blank" rel="noreferrer" style={{ width: '80px', height: '80px', borderRadius: '8px', border: '1px solid var(--border-subtle)', overflow: 'hidden', display: 'block' }}>
+                        <img src={`https://awokta.com/${a.file_url}`} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </a>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="detail-item--full divider"></div>
+
+              {/* Expenses Section */}
+              <div className="detail-item--full">
+                <label>Reported Expenses</label>
+                <div style={{ marginTop: '8px' }}>
+                  {ticketExpenses.length === 0 ? (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No expenses reported.</span>
+                  ) : (
+                    ticketExpenses.map((ex, idx) => (
+                      <div key={ex.id || idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px', marginBottom: '4px', border: '1px solid var(--border-subtle)' }}>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>{ex.description}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(ex.created_at).toLocaleDateString()}</div>
                         </div>
-                      ))
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <input
-                      type="text"
-                      placeholder="Add a reply..."
-                      value={newAdminNote}
-                      onChange={e => setNewAdminNote(e.target.value)}
-                      style={{ flex: 1, fontSize: '0.85rem', padding: '8px 12px', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}
-                    />
-                    <button
-                      onClick={handleAddAdminNote}
-                      disabled={addingNote || !newAdminNote}
-                      style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
-                    >
-                      {addingNote ? '...' : 'Reply'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="detail-item--full divider"></div>
-
-                {/* Attachments Section */}
-                <div className="detail-item--full">
-                  <label>Engineer Uploads</label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    {ticketAttachments.length === 0 ? (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No attachments uploaded yet.</span>
-                    ) : (
-                      ticketAttachments.map((a, idx) => (
-                        <a key={a.id || idx} href={`https://awokta.com/${a.file_url}`} target="_blank" rel="noreferrer" style={{ width: '80px', height: '80px', borderRadius: '8px', border: '1px solid var(--border-subtle)', overflow: 'hidden', display: 'block' }}>
-                          <img src={`https://awokta.com/${a.file_url}`} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </a>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="detail-item--full divider"></div>
-
-                {/* Expenses Section */}
-                <div className="detail-item--full">
-                  <label>Reported Expenses</label>
-                  <div style={{ marginTop: '8px' }}>
-                    {ticketExpenses.length === 0 ? (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No expenses reported.</span>
-                    ) : (
-                      ticketExpenses.map((ex, idx) => (
-                        <div key={ex.id || idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px', marginBottom: '4px', border: '1px solid var(--border-subtle)' }}>
-                          <div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>{ex.description}</div>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(ex.created_at).toLocaleDateString()}</div>
-                          </div>
-                          <div style={{ fontWeight: '800', color: '#166534', fontSize: '0.9rem' }}>{selectedTicket.currency} {parseFloat(ex.amount).toFixed(2)}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                        <div style={{ fontWeight: '800', color: '#166534', fontSize: '0.9rem' }}>{selectedTicket.currency} {parseFloat(ex.amount).toFixed(2)}</div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
-
-            <div className="ticket-modal-footer">
-              <button className="btn-wow-secondary" onClick={handleCloseTicketModal}>Close</button>
-              <button
-                className="btn-wow-primary"
-                onClick={() => {
-                  if (selectedTicket.leadType === 'Dispatch') {
-                    const el = document.querySelector('.dispatch-logs-table-wrapper');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  } else {
-                    if (!isInlineEditing) {
-                      // Reset state when ENTERING edit mode
-                      setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
-                      setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
-                      const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
-                      setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
-                    }
-                    setIsInlineEditing(!isInlineEditing);
-                  }
-                }}
-              >
-                {selectedTicket.leadType === 'Dispatch' ? 'Edit Time' : (isInlineEditing ? 'Cancel Edit' : 'Edit Time')}
-              </button>
-            </div>
           </div>
+
+          <div className="ticket-modal-footer">
+            <button className="btn-wow-secondary" onClick={handleCloseTicketModal}>Close</button>
+            <button
+              className="btn-wow-primary"
+              onClick={() => {
+                if (selectedTicket.leadType === 'Dispatch') {
+                  const el = document.querySelector('.dispatch-logs-table-wrapper');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  if (!isInlineEditing) {
+                    // Reset state when ENTERING edit mode
+                    setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
+                    setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
+                    const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
+                    setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
+                  }
+                  setIsInlineEditing(!isInlineEditing);
+                }
+              }}
+            >
+              {selectedTicket.leadType === 'Dispatch' ? 'Edit Time' : (isInlineEditing ? 'Cancel Edit' : 'Edit Time')}
+            </button>
+          </div>
+        </div>
         </div >
-      )
-      }
+  )
+}
     </section >
   )
 }
