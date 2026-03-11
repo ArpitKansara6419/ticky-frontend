@@ -494,6 +494,7 @@ function TicketsPage() {
       if (types.includes('street_number')) streetNumber = component.long_name
       if (types.includes('route')) route = component.long_name
       if (types.includes('sublocality') || types.includes('sublocality_level_1')) sublocality = component.long_name
+      if (types.includes('neighborhood')) sublocality = sublocality || component.long_name
       if (types.includes('locality')) locality = component.long_name
       if (types.includes('administrative_area_level_1')) adminArea1 = component.long_name
       if (types.includes('administrative_area_level_2')) adminArea2 = component.long_name
@@ -506,8 +507,14 @@ function TicketsPage() {
     })
 
     // Build clean address line 1
-    const addressParts = [streetNumber, route].filter(Boolean)
-    const newAddressLine1 = addressParts.length > 0 ? addressParts.join(' ') : (place.name || '')
+    let newAddressLine1 = ''
+    if (streetNumber && route) {
+      newAddressLine1 = `${streetNumber} ${route}`
+    } else if (route) {
+      newAddressLine1 = route
+    } else {
+      newAddressLine1 = place.name || place.formatted_address || ''
+    }
     setAddressLine1(newAddressLine1.trim())
 
     // Set apartment if available
@@ -516,7 +523,7 @@ function TicketsPage() {
     }
 
     // Set city with fallback logic
-    const cityValue = locality || sublocality || adminArea2 || ''
+    const cityValue = locality || sublocality || adminArea2 || adminArea1 || ''
     setCity(cityValue.trim())
 
     // Set postal code
@@ -532,7 +539,7 @@ function TicketsPage() {
 
       if (matchedCountry) {
         setCountry(matchedCountry.name)
-        if (matchedCountry.timezones.length > 0) {
+        if (matchedCountry.timezones && matchedCountry.timezones.length > 0) {
           setAvailableTimezones(matchedCountry.timezones)
           setTimezone(matchedCountry.timezones[0])
           countryTimezones = matchedCountry.timezones
@@ -1452,8 +1459,11 @@ function TicketsPage() {
                   apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}
                   options={{
+                    types: ['geocode'],
+                    fields: ['address_components', 'geometry', 'formatted_address']
                   }}
                   placeholder="Type to search global address..."
+                  className="tickets-autocomplete-input"
                   style={{
                     width: '100%',
                     height: '42px',
@@ -1463,7 +1473,8 @@ function TicketsPage() {
                     fontSize: '13px',
                     outline: 'none',
                     background: 'var(--input-bg)',
-                    color: 'var(--text-main)'
+                    color: 'var(--text-main)',
+                    marginTop: '8px'
                   }}
                 />
               </label>

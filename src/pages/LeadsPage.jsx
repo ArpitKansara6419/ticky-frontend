@@ -229,6 +229,7 @@ function LeadsPage() {
       if (types.includes('street_number')) streetNumber = component.long_name
       if (types.includes('route')) route = component.long_name
       if (types.includes('sublocality') || types.includes('sublocality_level_1')) sublocality = component.long_name
+      if (types.includes('neighborhood')) sublocality = sublocality || component.long_name
       if (types.includes('locality')) locality = component.long_name
       if (types.includes('administrative_area_level_1')) adminArea1 = component.long_name
       if (types.includes('administrative_area_level_2')) adminArea2 = component.long_name
@@ -240,12 +241,18 @@ function LeadsPage() {
     })
 
     // Build clean address line 1
-    const addressParts = [streetNumber, route].filter(Boolean)
-    const newAddressLine1 = addressParts.length > 0 ? addressParts.join(' ') : (place.name || '')
+    let newAddressLine1 = ''
+    if (streetNumber && route) {
+      newAddressLine1 = `${streetNumber} ${route}`
+    } else if (route) {
+      newAddressLine1 = route
+    } else {
+      newAddressLine1 = place.name || place.formatted_address || ''
+    }
     setAddressLine1(newAddressLine1.trim())
 
-    // Set city with fallback logic
-    const cityValue = locality || sublocality || adminArea2 || ''
+    // Set city with robust fallback logic
+    const cityValue = locality || sublocality || adminArea2 || adminArea1 || ''
     setCity(cityValue.trim())
 
     // Set postal code
@@ -261,8 +268,10 @@ function LeadsPage() {
       if (matchedCountry) {
         handleCountrySelectChange({ value: matchedCountry.name })
       } else {
-        // If no exact match, still set the country name
+        // If no exact match from our static list, still update the state
         setCountry(countryName)
+        setAvailableTimezones([])
+        setTimezone('')
       }
     }
 
@@ -649,9 +658,11 @@ function LeadsPage() {
                   apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}
                   options={{
-                    types: ['address'],
+                    types: ['geocode'],
+                    fields: ['address_components', 'geometry', 'formatted_address']
                   }}
                   placeholder="Type to search global address..."
+                  className="leads-autocomplete-input"
                   style={{
                     width: '100%',
                     height: '42px',
@@ -661,7 +672,8 @@ function LeadsPage() {
                     fontSize: '13px',
                     outline: 'none',
                     background: 'var(--input-bg)',
-                    color: 'var(--text-main)'
+                    color: 'var(--text-main)',
+                    marginTop: '8px'
                   }}
                 />
               </label>
