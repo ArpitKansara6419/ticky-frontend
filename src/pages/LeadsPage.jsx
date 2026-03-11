@@ -210,7 +210,7 @@ function LeadsPage() {
     setCountriesList(staticCountries)
   }
 
-  const handleGoogleAddressSelect = async (place) => {
+  const handleGoogleAddressSelect = useMemo(() => async (place) => {
     if (!place || !place.address_components) return
 
     // Parse all address components
@@ -293,7 +293,7 @@ function LeadsPage() {
         console.error('Timezone detection failed', e)
       }
     }
-  }
+  }, [countriesList])
 
   const handleCountrySelectChange = (option) => {
     const ctry = option ? option.value : ''
@@ -655,11 +655,10 @@ function LeadsPage() {
               <label className="leads-field leads-field--full">
                 <span>Details Address Search</span>
                 <Autocomplete
-                  apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}
-                  options={{
+                  options={useMemo(() => ({
                     types: ['address'],
-                  }}
+                  }), [])}
                   placeholder="Type to search global address..."
                   style={{
                     width: '100%',

@@ -474,7 +474,7 @@ function TicketsPage() {
   }
 
   // Handle Google Address Selection
-  const handleGoogleAddressSelect = async (place) => {
+  const handleGoogleAddressSelect = useMemo(() => async (place) => {
     if (!place || !place.address_components) return
 
     // Parse all address components
@@ -530,7 +530,6 @@ function TicketsPage() {
     setZipCode(postalCode.trim())
 
     // Country matching - try to find exact match in our list
-    let countryTimezones = []
     if (countryName) {
       const matchedCountry = countriesList.find(c =>
         c.name.toLowerCase() === countryName.toLowerCase() ||
@@ -542,33 +541,36 @@ function TicketsPage() {
         if (matchedCountry.timezones && matchedCountry.timezones.length > 0) {
           setAvailableTimezones(matchedCountry.timezones)
           setTimezone(matchedCountry.timezones[0])
-          countryTimezones = matchedCountry.timezones
         }
       } else {
-        // If no exact match, still set the country name
         setCountry(countryName)
         setAvailableTimezones([])
         setTimezone('')
       }
     }
 
-    // Try to get precise timezone if geometry exists
-    if (place.geometry && place.geometry.location) {
+    // Auto Timezone based on Latitude/Longitude
+    if (place.geometry?.location) {
       const lat = place.geometry.location.lat()
       const lon = place.geometry.location.lng()
+      setLatitude(lat)
+      setLongitude(lon)
+
       try {
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`)
         const data = await res.json()
-        if (data && data.timezone) {
+        if (data?.timezone) {
           setTimezone(data.timezone)
-          const combinedTimezones = Array.from(new Set([data.timezone, ...countryTimezones]))
-          setAvailableTimezones(combinedTimezones)
+          setAvailableTimezones(prev => {
+            const newList = Array.from(new Set([data.timezone, ...prev]))
+            return newList
+          })
         }
-      } catch (err) {
-        console.error("Failed to fetch precise timezone:", err)
+      } catch (e) {
+        console.error('Timezone detection failed', e)
       }
     }
-  }
+  }, [countriesList])
 
   useEffect(() => {
     loadTickets()
@@ -1456,11 +1458,10 @@ function TicketsPage() {
               <label className="tickets-field tickets-field--full">
                 <span>Address Search</span>
                 <Autocomplete
-                  apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}
-                  options={{
+                  options={useMemo(() => ({
                     types: ['address'],
-                  }}
+                  }), [])}
                   placeholder="Type to search global address..."
                   style={{
                     width: '100%',
