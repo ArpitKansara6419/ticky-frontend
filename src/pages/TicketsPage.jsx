@@ -849,10 +849,8 @@ function TicketsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update time');
 
-      // Update the selectedTicket seamlessly
-      const freshRes = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, { credentials: 'include' });
-      const freshData = await freshRes.json();
-      const freshTicket = freshData.ticket || freshData;
+      // Use the updated ticket from the response directly
+      const freshTicket = data.ticket;
 
       if (freshTicket) {
         setSelectedTicket(freshTicket);
@@ -861,7 +859,7 @@ function TicketsPage() {
         const bt = freshTicket.breakTime !== undefined ? freshTicket.breakTime : freshTicket.break_time;
         setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
 
-        // Also update it in the tickets array without a full list reload to avoid UI jumps
+        // Update the tickets array for real-time list consistency
         setTickets(prev => prev.map(t => t.id === freshTicket.id ? freshTicket : t));
       }
 
