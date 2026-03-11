@@ -658,11 +658,9 @@ function LeadsPage() {
                   apiKey={GOOGLE_MAPS_API_KEY}
                   onPlaceSelected={handleGoogleAddressSelect}
                   options={{
-                    types: ['geocode'],
-                    fields: ['address_components', 'geometry', 'formatted_address']
+                    types: ['address'],
                   }}
                   placeholder="Type to search global address..."
-                  className="leads-autocomplete-input"
                   style={{
                     width: '100%',
                     height: '42px',
@@ -672,8 +670,7 @@ function LeadsPage() {
                     fontSize: '13px',
                     outline: 'none',
                     background: 'var(--input-bg)',
-                    color: 'var(--text-main)',
-                    marginTop: '8px'
+                    color: 'var(--text-main)'
                   }}
                 />
               </label>
