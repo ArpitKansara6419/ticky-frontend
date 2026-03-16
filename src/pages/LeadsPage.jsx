@@ -1341,9 +1341,7 @@ function LeadsPage() {
                     <label>Service Date</label>
                     <span style={{ fontWeight: '700', color: '#10b981', fontSize: '15px' }}>
                       {(() => {
-                        const s = ((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) 
-                          ? selectedLead.followUpDate.split('T')[0] 
-                          : selectedLead.taskStartDate?.split('T')[0];
+                        const s = selectedLead.taskStartDate?.split('T')[0];
                         const e = selectedLead.taskEndDate?.split('T')[0];
                         
                         const formatDate = (ds) => {
