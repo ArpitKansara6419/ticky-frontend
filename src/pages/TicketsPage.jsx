@@ -169,6 +169,7 @@ function TicketsPage() {
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
   // Smart Auto-Sync for Start & End Time based on Task Details
+  // Smart Auto-Sync for Start & End Time based on Task Details
   const autoSyncTime = (startDate, endDate, timeStr) => {
     if (viewMode === 'form' && startDate && timeStr) {
       const startStr = `${startDate}T${timeStr.padStart(5, '0')}`;
@@ -178,6 +179,7 @@ function TicketsPage() {
         const pad = (n) => String(n).padStart(2, '0');
         const formattedStart = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
+        // Update BOTH the override times and the state
         setStartTime(formattedStart);
 
         if (endDate) {
@@ -185,9 +187,11 @@ function TicketsPage() {
           const endD = new Date(endStr);
           if (!isNaN(endD.getTime())) {
             // Add 8 hours as a default standard working block for automatic resolution
-            endD.setHours(endD.getHours() + 8);
+            // But if it's the same day, we just set the same time
+            if (startDate === endDate) {
+               endD.setHours(d.getHours() + 8);
+            }
             const formattedEnd = `${endD.getFullYear()}-${pad(endD.getMonth() + 1)}-${pad(endD.getDate())}T${pad(endD.getHours())}:${pad(endD.getMinutes())}`;
-
             setEndTime(formattedEnd);
           }
         }
@@ -666,12 +670,40 @@ function TicketsPage() {
       setError('')
       setSuccess('')
 
+      // BACKFILL: If activity times are empty, sync them with scheduled details before sending
+      let finalStartTime = startTime;
+      let finalEndTime = endTime;
+
+      if (!finalStartTime && taskStartDate && taskTime) {
+        finalStartTime = `${taskStartDate}T${taskTime.padStart(5, '0')}`;
+      }
+      if (!finalEndTime && taskEndDate && taskTime) {
+        // Default to finish same day + 8 hours if no explicit end time
+        const d = new Date(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
+        d.setHours(d.getHours() + 8);
+        const pad = (n) => String(n).padStart(2, '0');
+        finalEndTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      // SYNC: If activity times are provided, synchronize the scheduled task details to match
+      let finalTaskStartDate = taskStartDate;
+      let finalTaskEndDate = taskEndDate;
+      let finalTaskTimeValue = taskTime;
+
+      if (finalStartTime && finalStartTime.includes('T')) {
+        finalTaskStartDate = finalStartTime.split('T')[0];
+        finalTaskTimeValue = finalStartTime.split('T')[1].slice(0, 5);
+      }
+      if (finalEndTime && finalEndTime.includes('T')) {
+        finalTaskEndDate = finalEndTime.split('T')[0];
+      }
+
       const payload = {
         customerId: Number(customerId),
         leadId: leadId ? Number(leadId) : null,
         clientName,
         taskName,
-        taskTime,
+        taskTime: finalTaskTimeValue,
         scopeOfWork,
         tools,
         engineerName,
@@ -700,10 +732,10 @@ function TicketsPage() {
         leadType,
         cancellationFee: cancellationFee !== '' ? Number(cancellationFee) : null,
         status,
-        taskStartDate: taskStartDate ? String(taskStartDate).split('T')[0] : null,
-        taskEndDate: taskEndDate ? String(taskEndDate).split('T')[0] : null,
-        startTime,
-        endTime,
+        taskStartDate: finalTaskStartDate ? String(finalTaskStartDate).split('T')[0] : null,
+        taskEndDate: finalTaskEndDate ? String(finalTaskEndDate).split('T')[0] : null,
+        startTime: finalStartTime,
+        endTime: finalEndTime,
         breakTime: Number(breakTime) || 0,
       }
 
@@ -725,6 +757,18 @@ function TicketsPage() {
       }
 
       setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
+      
+      // OPTIMISTIC UPDATE: Update the local state immediately so list view is fresh
+      if (data.ticket) {
+        setTickets(prev => {
+          if (isEditing) {
+            return prev.map(t => t.id === data.ticket.id ? data.ticket : t);
+          } else {
+            return [data.ticket, ...prev];
+          }
+        });
+      }
+
       resetForm()
       setViewMode('list')
       await loadTickets()
@@ -1626,6 +1670,16 @@ function TicketsPage() {
             <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
               Manually adjust the working hours if the engineer forgot to resolve the task.
             </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+              <button
+                type="button"
+                className="tickets-secondary-btn"
+                style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
+                onClick={() => autoSyncTime(taskStartDate, taskEndDate, taskTime)}
+              >
+                Sync with Scheduled
+              </button>
+            </div>
             <div className="tickets-grid">
               <label className="tickets-field">
                 <span>Start Time (Override)</span>
