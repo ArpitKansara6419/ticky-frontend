@@ -1367,6 +1367,29 @@ function TicketsPage() {
         </header>
 
         <form className="tickets-form" onSubmit={handleSubmitTicket}>
+          {leadId && (
+            <div className="lead-sync-alert" style={{ 
+              background: 'rgba(59, 130, 246, 0.1)', 
+              border: '1px solid rgba(59, 130, 246, 0.2)', 
+              borderRadius: '12px', 
+              padding: '16px', 
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#1e40af',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              <span style={{ fontSize: '20px' }}>ℹ️</span>
+              <div>
+                This ticket is linked to <strong>Lead #L-{leadId}</strong>. 
+                <span style={{ display: 'block', fontSize: '12px', color: '#60a5fa', marginTop: '4px' }}>
+                  Fully Automatic Sync Active: Any changes made here will automatically update the linked Lead.
+                </span>
+              </div>
+            </div>
+          )}
           {/* Customer & Lead */}
           <section className="tickets-card">
             <h2 className="tickets-section-title">Customer &amp; Lead</h2>
