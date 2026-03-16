@@ -314,6 +314,105 @@ function LeadsPage() {
   const countryOptions = useMemo(() => countriesList.map(c => ({ value: c.name, label: c.name })), [countriesList])
   const timezoneOptions = useMemo(() => availableTimezones.map(t => ({ value: t, label: t })), [availableTimezones])
 
+  // Real-time calculation engine (shared with Tickets)
+  const calculateTicketTotal = (data) => {
+    const {
+      startTime, endTime,
+      hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+      travelCostPerDay, toolCost, billingType, timezone
+    } = data;
+
+    if (!startTime || !endTime) return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 };
+
+    try {
+      // Treat as wall-clock time
+      const s = new Date(startTime.replace(' ', 'T') + 'Z');
+      const e = new Date(endTime.replace(' ', 'T') + 'Z');
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 };
+
+      const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000);
+      const hrs = totSec / 3600;
+
+      const hr = parseFloat(hourlyRate) || 0;
+      const hd = parseFloat(halfDayRate) || 0;
+      const fd = parseFloat(fullDayRate) || 0;
+
+      const targetTZ = timezone || 'UTC';
+      const getZonedInfo = (date) => {
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: targetTZ,
+            hour12: false,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+          }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+          const localDay = new Date(`${parts.year}-${parts.month}-${parts.day}`).getDay();
+          return { dateStr: `${parts.year}-${parts.month}-${parts.day}`, day: localDay, hour: parseInt(parts.hour) };
+        } catch (err) { return { dateStr: '', day: date.getUTCDay(), hour: date.getUTCHours() }; }
+      };
+
+      const startInfo = getZonedInfo(s);
+      const endInfo = getZonedInfo(e);
+      const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
+      const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
+      const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
+      const isSpecialDay = isWeekend || isHoliday;
+      const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10;
+
+      let base = 0, ot = 0, ooh = 0, special = 0;
+
+      if (billingType === 'Hourly') {
+        const billed = Math.max(2, hrs);
+        base = billed * hr;
+        if (isSpecialDay) special = base;
+        else {
+          if (billed > 8) ot = (billed - 8) * (hr * 0.5);
+          if (workIsOOH && ot === 0) ooh = billed * (hr * 0.5);
+        }
+      } else if (billingType === 'Half Day + Hourly') {
+        base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
+        if (isSpecialDay) special = base;
+        else {
+          if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
+          if (workIsOOH && ot === 0) ooh = base * 0.5;
+        }
+      } else if (billingType === 'Full Day + OT') {
+        base = fd;
+        if (isSpecialDay) {
+          special = base;
+          if (hrs > 8) ot = (hrs - 8) * (hr * 1.0);
+        } else {
+          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+          if (workIsOOH && ot === 0) ooh = base * 0.5;
+        }
+      } else if (billingType.includes('Monthly')) {
+        base = parseFloat(monthlyRate) || 0;
+        if (isSpecialDay) special = hrs * (hr * 2.0);
+        else {
+          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+          if (workIsOOH && ot === 0) ooh = hrs * (hr * 0.5);
+        }
+      } else if (billingType === 'Agreed Rate') {
+        base = parseFloat(agreedRate) || 0;
+      } else if (billingType === 'Cancellation') {
+        base = parseFloat(cancellationFee) || 0;
+      }
+
+      const trav = parseFloat(travelCostPerDay) || 0;
+      const tool = parseFloat(toolCost) || 0;
+      const grandTotal = base + ot + ooh + special + trav + tool;
+
+      return {
+        hrs: hrs.toFixed(2),
+        base: base.toFixed(2),
+        ot: ot.toFixed(2),
+        ooh: ooh.toFixed(2),
+        specialDay: special.toFixed(2),
+        grandTotal: grandTotal.toFixed(2)
+      };
+    } catch (e) { return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 }; }
+  };
+
   const openStatusChangeModal = (lead) => {
     setStatusChangeData({
       leadId: lead.id,
@@ -811,6 +910,66 @@ function LeadsPage() {
               </label>
             </div>
           </section>
+
+          {/* Pricing Preview */}
+          {(() => {
+            const res = calculateTicketTotal({
+              startTime: taskStartDate ? `${taskStartDate} ${taskTime}` : '',
+              endTime: taskEndDate ? `${taskEndDate} ${taskTime}` : '',
+              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+              travelCostPerDay, toolCost: totalCost, billingType, timezone
+            });
+
+            if (!res.grandTotal || res.grandTotal == 0) return null;
+
+            return (
+              <div className="preview-box-premium" style={{ 
+                marginBottom: '24px', 
+                background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+                border: '1px solid #10b981',
+                borderRadius: '16px',
+                padding: '24px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
+                      Smart Quote Preview
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '700' }}>
+                      {res.hrs} hrs projected
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Estimated Total</div>
+                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{currency} {res.grandTotal}</div>
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  marginTop: '18px', 
+                  paddingTop: '16px', 
+                  borderTop: '1.5px dashed rgba(16, 185, 129, 0.2)',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '12px'
+                }}>
+                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE</div>
+                    <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{currency} {res.base}</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>OT</div>
+                    <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{currency} {res.ot}</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>PREMIUM</div>
+                    <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="leads-actions-footer">
             <button type="button" className="leads-secondary-btn" onClick={() => setViewMode('list')}>Cancel</button>
