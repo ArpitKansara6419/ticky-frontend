@@ -2108,12 +2108,22 @@ function TicketsPage() {
                               <div className="leads-name-sub">#AIM-T-{String(ticket.id).padStart(3, '0')}</div>
                             </td>
                             <td>{ticket.customerName}</td>
-                            <td>
-                              <div style={{ color: '#15803d', fontWeight: '500' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>Confirmed For</div>
-                                {startDateStr}
-                              </div>
-                            </td>
+                             <td>
+                               <div style={{ color: '#15803d', fontWeight: '600' }}>
+                                 <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.7, marginBottom: '2px', letterSpacing: '0.05em' }}>Confirmed For</div>
+                                 {(() => {
+                                   const formatDate = (ds) => {
+                                     if (!ds) return '';
+                                     const d = new Date(ds);
+                                     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                   };
+                                   const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
+                                   const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
+                                   if (!e || s === e) return formatDate(s);
+                                   return `${formatDate(s)} - ${formatDate(e)}`;
+                                 })()}
+                               </div>
+                             </td>
                             <td>
                               <button
                                 type="button"
@@ -2182,22 +2192,24 @@ function TicketsPage() {
                   <label>Assigned Engineer</label>
                   <span>{selectedTicket.engineerName || '--'}</span>
                 </div>
-                <div className="detail-item">
-                  <label>Start Date</label>
-                  <span>
-                    {isInlineEditing 
-                      ? (inlineStartTime ? inlineStartTime.split('T')[0] : '--')
-                      : (selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '--')
-                    }
-                  </span>
-                </div>
-                <div className="detail-item">
-                  <label>End Date</label>
-                  <span>
-                    {isInlineEditing 
-                      ? (inlineEndTime ? inlineEndTime.split('T')[0] : '--')
-                      : (selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : '--')
-                    }
+                <div className="detail-item--full">
+                  <label>Service Date</label>
+                  <span style={{ fontWeight: '700', color: '#10b981', fontSize: '15px' }}>
+                    {(() => {
+                      const formatDate = (ds) => {
+                        if (!ds) return '';
+                        const d = new Date(ds);
+                        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      };
+                      const s = isInlineEditing 
+                        ? (inlineStartTime ? inlineStartTime.split('T')[0] : '')
+                        : (selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '');
+                      const e = isInlineEditing 
+                        ? (inlineEndTime ? inlineEndTime.split('T')[0] : '')
+                        : (selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : '');
+                      if (!e || s === e) return formatDate(s);
+                      return `${formatDate(s)} - ${formatDate(e)}`;
+                    })()}
                   </span>
                 </div>
                 <div className="detail-item">

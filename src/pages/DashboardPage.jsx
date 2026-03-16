@@ -478,7 +478,19 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   <div className="ticket-mini-body">
                     <p className="ticket-mini-subject"><strong>Subject:</strong> {ticket.taskName || 'No Subject'}</p>
                     <p className="ticket-mini-info"><strong>Location:</strong> {ticket.city || '-'}, {ticket.country || '-'}</p>
-                    <p className="ticket-mini-info"><strong>Date & Time:</strong> {ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : ''} {ticket.taskTime || ''}</p>
+                    <p className="ticket-mini-info">
+                      <strong>Service Date:</strong> {(() => {
+                        const formatDate = (ds) => {
+                          if (!ds) return '';
+                          const d = new Date(ds);
+                          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        };
+                        const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
+                        const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
+                        if (!e || s === e) return formatDate(s);
+                        return `${formatDate(s)} - ${formatDate(e)}`;
+                      })()} {ticket.taskTime || ''}
+                    </p>
                     <p className="ticket-mini-info"><strong>Engineer:</strong> {ticket.engineerName || 'Unassigned'}</p>
                   </div>
                 </div>

@@ -1079,88 +1079,88 @@ function LeadsPage() {
                               }
                             } catch (e) { history = []; }
 
+                            const formatDate = (ds) => {
+                              if (!ds) return '';
+                              const d = new Date(ds);
+                              return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                            };
+
+                            const getRangeStr = (s, e) => {
+                              const sF = formatDate(s);
+                              const eF = formatDate(e);
+                              if (!e || s === e) return sF;
+                              return `${sF} - ${eF}`;
+                            };
+
                             const startDateStr = l.taskStartDate?.split('T')[0];
                             const endDateStr = l.taskEndDate?.split('T')[0];
-                            const isMultiDay = endDateStr && endDateStr > startDateStr;
 
-                            // Filter redundant history (e.g. Confirm -> Confirm on same date)
+                            // Filter redundant history
                             const cleanHistory = history.filter((h, i) => {
                               if (i === 0) return true;
                               const prev = history[i - 1];
-                              // Remove duplicates: same status transition to same date
                               if (h.toStatus === prev.toStatus && h.newDate === prev.newDate) return false;
-                              // Remove Confirm -> Confirm if date didn't change
                               if (h.fromStatus === 'Confirm' && h.toStatus === 'Confirm' && h.newDate === h.prevDate) return false;
                               return true;
                             });
 
-                            // Check if this is a simple "BID -> Confirm" on the same date
                             const firstH = cleanHistory[0];
                             const isSimpleConfirm = cleanHistory.length === 1 &&
                               firstH.fromStatus === 'BID' &&
                               firstH.toStatus === 'Confirm' &&
                               firstH.prevDate === firstH.newDate;
 
-                            // 1. BID Status: Just show date
                             if (l.status === 'BID') {
                               return (
-                                <div className="date-value">
-                                  {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
+                                <div className="date-value" style={{ fontWeight: '500', color: 'var(--text-main)' }}>
+                                  {getRangeStr(startDateStr, endDateStr)}
                                 </div>
                               );
                             }
 
-                            // 2. Cancelled Status: Show Cancelled Label
                             if (l.status === 'Cancelled') {
                               const latestActiveDate = l.followUpDate ? l.followUpDate.split('T')[0] : startDateStr;
+                              const latestActiveEndDate = l.taskEndDate ? l.taskEndDate.split('T')[0] : latestActiveDate;
                               return (
                                 <div style={{ color: '#ef4444', fontWeight: '500', display: 'flex', flexDirection: 'column' }}>
-                                  <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '12px' }}>
-                                    {latestActiveDate}
+                                  <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '11px' }}>
+                                    {getRangeStr(latestActiveDate, latestActiveEndDate)}
                                   </span>
-                                  <span style={{ fontSize: '13px', marginTop: '2px' }}>CANCELLED</span>
+                                  <span style={{ fontSize: '13px', marginTop: '2px', fontWeight: '700' }}>CANCELLED</span>
                                 </div>
                               );
                             }
 
-                            // 2. Simple Confirm (No date change): Show Green Text, No Strikethrough
                             if (l.status === 'Confirm' && (cleanHistory.length === 0 || isSimpleConfirm)) {
                               return (
-                                <div style={{ color: '#15803d', fontWeight: '500' }}>
-                                  <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>Confirmed For</div>
-                                  {startDateStr}{isMultiDay ? ` to ${endDateStr}` : ''}
+                                <div style={{ color: '#15803d', fontWeight: '600' }}>
+                                  <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.7, marginBottom: '2px', letterSpacing: '0.05em' }}>Confirmed For</div>
+                                  {getRangeStr(startDateStr, endDateStr)}
                                 </div>
                               );
                             }
 
-                            // 3. Complex History (Date changed or Rescheduled): Show Stack
                             const originalDate = (cleanHistory.length > 0 && cleanHistory[0].prevDate) ? cleanHistory[0].prevDate : startDateStr;
+                            const originalEndDate = l.taskEndDate?.split('T')[0];
 
                             return (
                               <div className="date-stack">
-                                {/* Original Date struck through */}
-                                <span className="date-value date-value--old" style={{ textDecoration: 'line-through', color: '#9ca3af' }}>
-                                  {originalDate}
+                                <span className="date-value date-value--old" style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '12px' }}>
+                                  {getRangeStr(originalDate, originalEndDate)}
                                 </span>
 
                                 {cleanHistory.map((h, i) => {
-                                  // Skip if date is same as 'original' and it's the first confirm (handled above? no, if we are here, it's complex)
-                                  // Actually, map all significant changes
-
                                   const label = h.toStatus === 'Confirm' ? 'CONFIRMED FOR:' : 'RESCHEDULED TO:';
                                   const color = h.toStatus === 'Confirm' ? '#15803d' : '#f59e0b';
                                   const isLast = i === cleanHistory.length - 1;
-
-                                  // Use history specific end date if available, else current if last
                                   const hStart = h.newDate;
-                                  const hEnd = h.newEndDate || (isLast ? endDateStr : null);
-                                  const hMulti = hEnd && hEnd > hStart;
+                                  const hEnd = h.newEndDate || (isLast ? endDateStr : hStart);
 
                                   return (
                                     <div key={i} className="reschedule-item" style={{ color, marginTop: '4px' }}>
-                                      <div className="date-label" style={{ fontSize: '10px', opacity: 0.8 }}>{label}</div>
-                                      <span className={`date-value ${isLast ? 'date-value--new' : 'date-value--old'}`}>
-                                        {hStart}{hMulti ? ` to ${hEnd}` : ''}
+                                      <div className="date-label" style={{ fontSize: '10px', fontWeight: '700', opacity: 0.8 }}>{label}</div>
+                                      <span className={`date-value ${isLast ? 'date-value--new' : 'date-value--old'}`} style={{ fontWeight: isLast ? '600' : '400' }}>
+                                        {getRangeStr(hStart, hEnd)}
                                       </span>
                                     </div>
                                   );
@@ -1337,13 +1337,25 @@ function LeadsPage() {
                     <label>Type / Category</label>
                     <span>{selectedLead.leadType || '--'}</span>
                   </div>
-                  <div className="detail-item">
-                    <label>Start Date</label>
-                    <span>{((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) ? selectedLead.followUpDate.split('T')[0] : selectedLead.taskStartDate?.split('T')[0]}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>End Date</label>
-                    <span>{selectedLead.taskEndDate ? selectedLead.taskEndDate.split('T')[0] : '--'}</span>
+                  <div className="detail-item--full">
+                    <label>Service Date</label>
+                    <span style={{ fontWeight: '700', color: '#10b981', fontSize: '15px' }}>
+                      {(() => {
+                        const s = ((selectedLead.status === 'Reschedule' || selectedLead.status === 'Confirm') && selectedLead.followUpDate) 
+                          ? selectedLead.followUpDate.split('T')[0] 
+                          : selectedLead.taskStartDate?.split('T')[0];
+                        const e = selectedLead.taskEndDate?.split('T')[0];
+                        
+                        const formatDate = (ds) => {
+                          if (!ds) return '';
+                          const d = new Date(ds);
+                          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        };
+
+                        if (!e || s === e) return formatDate(s);
+                        return `${formatDate(s)} - ${formatDate(e)}`;
+                      })()}
+                    </span>
                   </div>
                   <div className="detail-item">
                     <label>Task Time</label>
