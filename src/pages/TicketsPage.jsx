@@ -2344,48 +2344,52 @@ function TicketsPage() {
                             timezone: selectedTicket.timezone,
                             calcTimezone: 'Ticket Local'
                           });
-                          if (!res) return null;
                           return (
-                            <div style={{
-                              marginBottom: '16px',
-                              padding: '16px',
-                              background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
-                              border: '1px solid #10b981',
-                              borderRadius: '12px',
-                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-                            }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            <div className="preview-box-premium" style={{ marginBottom: '20px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                  <div>
-                                   <div style={{ fontSize: '10px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Real-time Preview</div>
-                                   <div style={{ fontSize: '13px', color: '#065f46', fontWeight: '600', opacity: 0.9 }}>
+                                   <div style={{ fontSize: '11px', fontWeight: '900', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                     <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
+                                     Real-time Preview
+                                   </div>
+                                   <div style={{ fontSize: '14px', color: '#166534', fontWeight: '700' }}>
                                      {res.hrs} hrs billable
                                    </div>
                                  </div>
                                  <div style={{ textAlign: 'right' }}>
-                                   <div style={{ fontSize: '24px', fontWeight: '900', color: '#047857', lineHeight: 1 }}>{selectedTicket.currency} {res.grandTotal}</div>
+                                   <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Grand Total</div>
+                                   <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{selectedTicket.currency} {res.grandTotal}</div>
                                  </div>
                                </div>
+                               
                                <div style={{ 
-                                 marginTop: '12px', 
-                                 paddingTop: '12px', 
-                                 borderTop: '1px solid rgba(16, 185, 129, 0.2)',
-                                 fontSize: '11px', 
-                                 color: '#065f46', 
-                                 display: 'flex',
-                                 gap: '12px',
-                                 fontWeight: '500' 
+                                 marginTop: '18px', 
+                                 paddingTop: '16px', 
+                                 borderTop: '1.5px dashed rgba(16, 185, 129, 0.2)',
+                                 display: 'grid',
+                                 gridTemplateColumns: 'repeat(3, 1fr)',
+                                 gap: '12px'
                                }}>
-                                 <span>Base: <strong>{selectedTicket.currency} {res.base}</strong></span>
-                                 <span>OT: <strong>{selectedTicket.currency} {res.ot}</strong></span>
-                                 <span>Premium: <strong>{selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}</strong></span>
+                                 <div style={{ background: 'rgba(255,255,255,0.4)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                                   <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE</div>
+                                   <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{selectedTicket.currency} {res.base}</div>
+                                 </div>
+                                 <div style={{ background: 'rgba(255,255,255,0.4)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                                   <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>OVERTIME</div>
+                                   <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{selectedTicket.currency} {res.ot}</div>
+                                 </div>
+                                 <div style={{ background: 'rgba(255,255,255,0.4)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                                   <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>PREMIUM</div>
+                                   <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}</div>
+                                 </div>
                                </div>
                              </div>
                            );
                          })()}
 
                         <button
-                          className="tickets-primary-btn"
-                          style={{ width: '100%', padding: '12px', fontSize: '14px', borderRadius: '10px' }}
+                          className="tickets-primary-btn btn-shimmer"
+                          style={{ width: '100%', padding: '14px', fontSize: '15px', borderRadius: '12px', fontWeight: '800', letterSpacing: '0.02em', marginTop: '4px' }}
                           onClick={handleUpdateInlineTime}
                           disabled={isUpdatingTime}
                         >
