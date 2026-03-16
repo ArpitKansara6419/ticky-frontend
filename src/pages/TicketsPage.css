@@ -525,6 +525,12 @@
 .ticket-modal-close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: rotate(90deg);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.ticket-modal-close-btn:active {
+  transform: scale(0.9) rotate(90deg);
 }
 
 .ticket-modal-content {

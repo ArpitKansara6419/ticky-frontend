@@ -6,7 +6,7 @@ import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI'
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDLND9h_AWApPg9gQVYZhhsPmIHMuN-6fg'
 
 const TIMEZONES = [
   'GB United Kingdom (UTC+00:00)',
@@ -19,7 +19,9 @@ const formatForInput = (dateStr) => {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  // Use UTC components to display exactly what is stored in the DB (wall-clock time)
+  // this prevents the 5:30 offset in India when the server is UTC
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 };
 
 const STATIC_COUNTRIES = [
@@ -204,8 +206,9 @@ function TicketsPage() {
     if (!startTime || !endTime) return null;
 
     try {
-      const s = new Date(startTime);
-      const e = new Date(endTime);
+      // Parse as UTC to treat as 'wall-clock' time
+      const s = new Date(startTime.includes('Z') || startTime.includes('+') ? startTime : startTime.replace(' ', 'T') + 'Z');
+      const e = new Date(endTime.includes('Z') || endTime.includes('+') ? endTime : endTime.replace(' ', 'T') + 'Z');
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
 
       const brkSec = (parseInt(breakTime) || 0) * 60;
@@ -1291,7 +1294,7 @@ function TicketsPage() {
               setViewMode('list')
             }}
           >
-            ΓåÉ Back
+            ← Back
           </button>
           <div>
             <h1 className="tickets-title">{editingTicketId ? 'Edit Ticket' : 'Create Ticket'}</h1>
@@ -2061,7 +2064,15 @@ function TicketsPage() {
                 <div className="ticket-badge-id">#AIM-T-{String(selectedTicket.id).padStart(3, '0')}</div>
               </div>
               <p className="ticket-modal-subtitle">{selectedTicket.taskName}</p>
-              <button type="button" className="ticket-modal-close-btn" onClick={handleCloseTicketModal} title="Close"><FiX /></button>
+              <button 
+                type="button" 
+                className="ticket-modal-close-btn" 
+                onClick={handleCloseTicketModal} 
+                title="Close"
+                aria-label="Close"
+              >
+                <FiX />
+              </button>
             </header>
 
             <div className="ticket-modal-content">
@@ -2352,11 +2363,19 @@ function TicketsPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
                         <div className="detail-item" style={{ margin: 0 }}>
                           <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Start Activity</label>
-                          <span style={{ fontWeight: '700', fontSize: '14px' }}>{selectedTicket.startTime ? new Date(selectedTicket.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not started'}</span>
+                          <span style={{ fontWeight: '700', fontSize: '14px' }}>
+                            {selectedTicket.startTime 
+                              ? new Date(selectedTicket.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) 
+                              : 'Not started'}
+                          </span>
                         </div>
                         <div className="detail-item" style={{ margin: 0 }}>
                           <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>End Activity</label>
-                          <span style={{ fontWeight: '700', fontSize: '14px' }}>{selectedTicket.endTime ? new Date(selectedTicket.endTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not finished'}</span>
+                          <span style={{ fontWeight: '700', fontSize: '14px' }}>
+                            {selectedTicket.endTime 
+                              ? new Date(selectedTicket.endTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) 
+                              : 'Not finished'}
+                          </span>
                         </div>
                         <div className="detail-item" style={{ margin: 0 }}>
                           <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Break Time</label>
@@ -2484,37 +2503,34 @@ function TicketsPage() {
                   )}
                 </div>
               </div>
+
+              <div className="ticket-modal-footer">
+                <button className="btn-wow-secondary" onClick={handleCloseTicketModal}>Close</button>
+                <button
+                  className="btn-wow-primary"
+                  onClick={() => {
+                    if (selectedTicket.leadType === 'Dispatch') {
+                      const el = document.querySelector('.dispatch-logs-table-wrapper');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                      if (!isInlineEditing) {
+                        setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
+                        setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
+                        const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
+                        setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
+                      }
+                      setIsInlineEditing(!isInlineEditing);
+                    }
+                  }}
+                >
+                  {selectedTicket.leadType === 'Dispatch' ? 'Edit Time' : (isInlineEditing ? 'Cancel Edit' : 'Edit Time')}
+                </button>
+              </div>
             </div>
           </div>
-
-          <div className="ticket-modal-footer">
-            <button className="btn-wow-secondary" onClick={handleCloseTicketModal}>Close</button>
-            <button
-              className="btn-wow-primary"
-              onClick={() => {
-                if (selectedTicket.leadType === 'Dispatch') {
-                  const el = document.querySelector('.dispatch-logs-table-wrapper');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                  if (!isInlineEditing) {
-                    // Reset state when ENTERING edit mode
-                    setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
-                    setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
-                    const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
-                    setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
-                  }
-                  setIsInlineEditing(!isInlineEditing);
-                }
-              }}
-            >
-              {selectedTicket.leadType === 'Dispatch' ? 'Edit Time' : (isInlineEditing ? 'Cancel Edit' : 'Edit Time')}
-            </button>
-          </div>
         </div>
-        </div >
-  )
-}
-    </section >
+      )}
+    </section>
   )
 }
 

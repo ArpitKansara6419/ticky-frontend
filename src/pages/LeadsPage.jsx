@@ -7,7 +7,7 @@ import Autocomplete from 'react-google-autocomplete'
 import './LeadsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDDVz2pXtvfL3kvQ6m5kNjDYRzuoIwSZTI'
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDLND9h_AWApPg9gQVYZhhsPmIHMuN-6fg'
 
 const LEAD_TYPES = ['Full time', 'Part time', 'Dispatch']
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -1078,6 +1078,14 @@ function LeadsPage() {
             <header className="lead-modal-header">
               <h2>Update Lead Status</h2>
               <p>Change the current progress of: <strong>{statusChangeData.leadName}</strong></p>
+              <button 
+                type="button" 
+                className="lead-modal-close-btn" 
+                onClick={() => setIsStatusModalOpen(false)}
+                title="Close"
+              >
+                <FiX />
+              </button>
             </header>
 
             <div className="lead-modal-content">
@@ -1151,6 +1159,14 @@ function LeadsPage() {
                   <div className="lead-badge-id">#{String(selectedLead.id).padStart(3, '0')}</div>
                 </div>
                 <p className="lead-modal-subtitle">{selectedLead.taskName}</p>
+                <button 
+                  type="button" 
+                  className="lead-modal-close-btn" 
+                  onClick={() => setIsLeadModalOpen(false)}
+                  title="Close"
+                >
+                  <FiX />
+                </button>
               </header>
               <div className="lead-modal-content">
                 <div className="details-grid">
