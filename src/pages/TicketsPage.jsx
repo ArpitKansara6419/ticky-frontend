@@ -2296,18 +2296,33 @@ function TicketsPage() {
                             Sync with Scheduled
                           </button>
                         </div>
-                        <div className="tickets-grid" style={{ marginBottom: '16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
                           <label className="tickets-field">
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>ACTUAL START</span>
-                            <input type="datetime-local" value={inlineStartTime} onChange={e => setInlineStartTime(e.target.value)} style={{ border: '2px solid #e2e8f0', padding: '10px' }} />
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>ACTUAL START</span>
+                            <input 
+                              type="datetime-local" 
+                              value={inlineStartTime} 
+                              onChange={e => setInlineStartTime(e.target.value)} 
+                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }} 
+                            />
                           </label>
                           <label className="tickets-field">
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>ACTUAL END</span>
-                            <input type="datetime-local" value={inlineEndTime} onChange={e => setInlineEndTime(e.target.value)} style={{ border: '2px solid #e2e8f0', padding: '10px' }} />
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>ACTUAL END</span>
+                            <input 
+                              type="datetime-local" 
+                              value={inlineEndTime} 
+                              onChange={e => setInlineEndTime(e.target.value)} 
+                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }} 
+                            />
                           </label>
                           <label className="tickets-field">
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>TOTAL BREAK (MINS)</span>
-                            <input type="number" value={inlineBreakTime} onChange={e => setInlineBreakTime(e.target.value)} style={{ border: '2px solid #e2e8f0', padding: '10px' }} />
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>BREAK (MINS)</span>
+                            <input 
+                              type="number" 
+                              value={inlineBreakTime} 
+                              onChange={e => setInlineBreakTime(e.target.value)} 
+                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }} 
+                            />
                           </label>
                         </div>
 
@@ -2339,16 +2354,34 @@ function TicketsPage() {
                               borderRadius: '12px',
                               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
                             }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real-time Preview</span>
-                                <span style={{ fontSize: '18px', fontWeight: '900', color: '#047857' }}>{selectedTicket.currency} {res.grandTotal}</span>
-                              </div>
-                              <div style={{ fontSize: '12px', color: '#065f46', marginTop: '6px', fontWeight: '500', opacity: 0.9 }}>
-                                {res.hrs} hrs billable • {selectedTicket.currency} {res.base} base • {selectedTicket.currency} {res.ot} OT • {selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)} premium
-                              </div>
-                            </div>
-                          );
-                        })()}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                 <div>
+                                   <div style={{ fontSize: '10px', fontWeight: '800', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Real-time Preview</div>
+                                   <div style={{ fontSize: '13px', color: '#065f46', fontWeight: '600', opacity: 0.9 }}>
+                                     {res.hrs} hrs billable
+                                   </div>
+                                 </div>
+                                 <div style={{ textAlign: 'right' }}>
+                                   <div style={{ fontSize: '24px', fontWeight: '900', color: '#047857', lineHeight: 1 }}>{selectedTicket.currency} {res.grandTotal}</div>
+                                 </div>
+                               </div>
+                               <div style={{ 
+                                 marginTop: '12px', 
+                                 paddingTop: '12px', 
+                                 borderTop: '1px solid rgba(16, 185, 129, 0.2)',
+                                 fontSize: '11px', 
+                                 color: '#065f46', 
+                                 display: 'flex',
+                                 gap: '12px',
+                                 fontWeight: '500' 
+                               }}>
+                                 <span>Base: <strong>{selectedTicket.currency} {res.base}</strong></span>
+                                 <span>OT: <strong>{selectedTicket.currency} {res.ot}</strong></span>
+                                 <span>Premium: <strong>{selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}</strong></span>
+                               </div>
+                             </div>
+                           );
+                         })()}
 
                         <button
                           className="tickets-primary-btn"
@@ -2505,7 +2538,7 @@ function TicketsPage() {
               </div>
 
               <div className="ticket-modal-footer">
-                <button className="btn-wow-secondary" onClick={handleCloseTicketModal}>Close</button>
+                <button className="btn-wow-secondary" onClick={handleCloseTicketModal}><FiX /> Close</button>
                 <button
                   className="btn-wow-primary"
                   onClick={() => {
@@ -2523,7 +2556,7 @@ function TicketsPage() {
                     }
                   }}
                 >
-                  {selectedTicket.leadType === 'Dispatch' ? 'Edit Time' : (isInlineEditing ? 'Cancel Edit' : 'Edit Time')}
+                  {selectedTicket.leadType === 'Dispatch' ? <><FiEdit2 /> Edit Time</> : (isInlineEditing ? <><FiX /> Cancel Edit</> : <><FiEdit2 /> Edit Time</>)}
                 </button>
               </div>
             </div>

@@ -456,7 +456,7 @@
 
 /* --- Ticket Detail Modal (WOW UI) --- */
 .ticket-modal--details {
-  width: 600px;
+  width: 850px;
   max-width: 95vw;
   padding: 0;
   overflow: hidden;
@@ -467,9 +467,9 @@
 
 .ticket-modal-header {
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  padding: 20px 30px;
+  padding: 24px 40px;
   position: relative;
-  border-bottom: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
 }
 
 .ticket-modal-header-info {
@@ -522,6 +522,59 @@
   transition: all 0.2s;
 }
 
+/* --- WOW Modal Footer & Buttons --- */
+.ticket-modal-footer {
+  padding: 20px 40px;
+  background: #f8fafc;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  border-top: 1px solid #e2e8f0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.btn-wow-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px var(--primary-soft);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-wow-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px var(--primary-glow);
+  filter: brightness(1.1);
+}
+
+.btn-wow-secondary {
+  background: white;
+  color: #64748b;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-wow-secondary:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
 .ticket-modal-close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: rotate(90deg);
@@ -534,8 +587,8 @@
 }
 
 .ticket-modal-content {
-  padding: 25px 30px;
-  max-height: 60vh;
+  padding: 30px 40px;
+  max-height: 70vh;
   overflow-y: auto;
 }
 
