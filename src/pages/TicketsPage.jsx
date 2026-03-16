@@ -169,7 +169,6 @@ function TicketsPage() {
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
   // Smart Auto-Sync for Start & End Time based on Task Details
-  // Smart Auto-Sync for Start & End Time based on Task Details
   const autoSyncTime = (startDate, endDate, timeStr) => {
     if (viewMode === 'form' && startDate && timeStr) {
       const startStr = `${startDate}T${timeStr.padStart(5, '0')}`;
@@ -198,6 +197,27 @@ function TicketsPage() {
       }
     }
   }
+
+  // Reverse Sync: Update Task Details from Time Log Overrides
+  const reverseSyncTime = (startVal, endVal) => {
+    if (startVal && startVal.includes('T')) {
+      const [date, time] = startVal.split('T');
+      if (taskStartDate !== date) setTaskStartDate(date);
+      const shortTime = time.slice(0, 5);
+      if (taskTime !== shortTime) setTaskTime(shortTime);
+    }
+    if (endVal && endVal.includes('T')) {
+      const [date] = endVal.split('T');
+      if (taskEndDate !== date) setTaskEndDate(date);
+    }
+  }
+
+  // Effect to keep Task Details in sync with Overrides in Full Form
+  useEffect(() => {
+    if (viewMode === 'form' && (startTime || endTime)) {
+      reverseSyncTime(startTime, endTime);
+    }
+  }, [startTime, endTime, viewMode]);
 
   // Pure calculation function for reuse
   const calculateTicketTotal = (data) => {
@@ -2141,15 +2161,30 @@ function TicketsPage() {
                 </div>
                 <div className="detail-item">
                   <label>Start Date</label>
-                  <span>{selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '--'}</span>
+                  <span>
+                    {isInlineEditing 
+                      ? (inlineStartTime ? inlineStartTime.split('T')[0] : '--')
+                      : (selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '--')
+                    }
+                  </span>
                 </div>
                 <div className="detail-item">
                   <label>End Date</label>
-                  <span>{selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : '--'}</span>
+                  <span>
+                    {isInlineEditing 
+                      ? (inlineEndTime ? inlineEndTime.split('T')[0] : '--')
+                      : (selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : '--')
+                    }
+                  </span>
                 </div>
                 <div className="detail-item">
                   <label>Time</label>
-                  <span>{selectedTicket.taskTime}</span>
+                  <span>
+                    {isInlineEditing 
+                      ? (inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : '--')
+                      : selectedTicket.taskTime
+                    }
+                  </span>
                 </div>
                 <div className="detail-item">
                   <label>Status</label>
