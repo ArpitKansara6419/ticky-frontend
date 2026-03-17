@@ -2470,7 +2470,7 @@ function TicketsPage() {
                             Sync with Scheduled
                           </button>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
                           <label className="tickets-field">
                             <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>ACTUAL START</span>
                             <input 
@@ -2489,13 +2489,14 @@ function TicketsPage() {
                               style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }} 
                             />
                           </label>
-                          <label className="tickets-field">
-                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>BREAK (MINS)</span>
+                          <label className="tickets-field tickets-field--full" style={{ gridColumn: '1 / -1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>BREAK DURATION (MINS)</span>
                             <input 
                               type="number" 
                               value={inlineBreakTime} 
                               onChange={e => setInlineBreakTime(e.target.value)} 
-                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }} 
+                              placeholder="e.g. 30"
+                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px', width: '100%' }} 
                             />
                           </label>
                         </div>
