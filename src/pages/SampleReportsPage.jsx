@@ -154,6 +154,7 @@ const SampleReportsPage = () => {
                                 <th>Client</th>
                                 <th>Engineer</th>
                                 <th>Billing Type</th>
+                                <th>Location</th>
                                 <th>Total Cost</th>
                                 <th>Status</th>
                             </tr>
@@ -166,6 +167,7 @@ const SampleReportsPage = () => {
                                     <td>{job.clientName || 'N/A'}</td>
                                     <td>{job.engineerName}</td>
                                     <td><span className="badge-outline">{job.billingType || 'Hourly'}</span></td>
+                                    <td>{job.city}{job.city && job.country ? `, ${job.country}` : job.country}</td>
                                     <td className="text-bold">€ {job.totalCost || '0.00'}</td>
                                     <td><span className="status-pill status-resolved">{job.status}</span></td>
                                 </tr>

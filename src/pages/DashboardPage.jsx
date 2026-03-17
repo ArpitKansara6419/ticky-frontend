@@ -477,7 +477,23 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   </div>
                   <div className="ticket-mini-body">
                     <p className="ticket-mini-subject"><strong>Subject:</strong> {ticket.taskName || 'No Subject'}</p>
-                    <p className="ticket-mini-info"><strong>Location:</strong> {ticket.city || '-'}, {ticket.country || '-'}</p>
+                    <p className="ticket-mini-info">
+                      <strong>Location:</strong> {ticket.city || '-'}, {ticket.country || '-'}
+                      {(ticket.latitude && ticket.longitude) || ticket.addressLine1 ? (
+                        <a 
+                          href={ticket.latitude && ticket.longitude 
+                            ? `https://www.google.com/maps?q=${ticket.latitude},${ticket.longitude}&z=16`
+                            : `https://www.google.com/maps/search/?q=${encodeURIComponent([ticket.addressLine1, ticket.city, ticket.country].filter(Boolean).join(', '))}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ marginLeft: '8px', color: '#4285F4', display: 'inline-flex', alignItems: 'center' }}
+                          title="View on Map"
+                        >
+                          <FiGlobe size={14} />
+                        </a>
+                      ) : null}
+                    </p>
                     <p className="ticket-mini-info">
                       <strong>Service Date:</strong> {(() => {
                         const formatDate = (ds) => {

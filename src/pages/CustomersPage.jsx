@@ -1017,6 +1017,7 @@ function CustomersPage() {
                 <th>Name</th>
                 <th>Customer Type</th>
                 <th>Authorised Person</th>
+                <th>Location</th>
                 <th>Documents</th>
                 <th>Create Lead</th>
                 <th>Actions</th>
@@ -1025,13 +1026,13 @@ function CustomersPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="customers-empty">
+                  <td colSpan={8} className="customers-empty">
                     Loading customers...
                   </td>
                 </tr>
               ) : paginatedCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="customers-empty">
+                  <td colSpan={8} className="customers-empty">
                     No customers found.
                   </td>
                 </tr>
@@ -1075,6 +1076,9 @@ function CustomersPage() {
                     </td>
                     <td>{customer.customerType === 'company' ? 'Company' : 'Freelancer'}</td>
                     <td>{customer.authorizedPersonName || '-'}</td>
+                    <td style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
+                      {customer.city || '-'}, {customer.country || '-'}
+                    </td>
                     <td>
                       {customer.documentTitle ? (
                         <div className="customers-doc-container">

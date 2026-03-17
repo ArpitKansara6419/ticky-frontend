@@ -1059,6 +1059,7 @@ function LeadsPage() {
                       <th>Service Date</th>
                       <th>Status</th>
                       <th>Reference</th>
+                      <th>Location</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -1211,6 +1212,9 @@ function LeadsPage() {
                               </button>
                             )
                           ) : l.clientTicketNumber || '--'}
+                        </td>
+                        <td style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                          {l.city}, {l.country}
                         </td>
                         <td className="leads-actions-cell">
                           <div className="action-icons">
@@ -1486,6 +1490,10 @@ function LeadsPage() {
                   <div className="detail-item">
                     <label>Travel Cost / Day</label>
                     <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Task Location</label>
+                    <span style={{ fontWeight: '600' }}>{selectedLead.city}, {selectedLead.country}</span>
                   </div>
                 </div>
               </div>

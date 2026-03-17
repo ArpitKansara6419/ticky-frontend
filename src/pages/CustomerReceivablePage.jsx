@@ -537,6 +537,7 @@ const CustomerReceivablePage = () => {
                                             <th>Date</th>
                                             <th>Engineer</th>
                                             <th>Ticket</th>
+                                            <th>Location</th>
                                             <th>Work Time</th>
                                             <th>Premiums</th>
                                             <th className="text-right">Expenses</th>
@@ -563,6 +564,11 @@ const CustomerReceivablePage = () => {
                                                     </td>
                                                     <td><span className="ticket-id-tag">#{item.id}</span></td>
                                                     <td>
+                                                        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                                                            {item.city || '-'}, {item.country || '-'}
+                                                        </div>
+                                                    </td>
+                                                    <td>
                                                         <div style={{ fontWeight: '700' }}>{bd.formattedHours || '00:00'}</div>
                                                     </td>
                                                     <td>
@@ -588,7 +594,7 @@ const CustomerReceivablePage = () => {
                                             );
                                         })}
                                         {filteredUnbilled.length === 0 && (
-                                            <tr><td colSpan="15" className="empty-state">No unbilled work found to match your criteria.</td></tr>
+                                            <tr><td colSpan="10" className="empty-state">No unbilled work found to match your criteria.</td></tr>
                                         )}
                                     </tbody>
                                 </table>

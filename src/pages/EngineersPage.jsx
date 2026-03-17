@@ -610,7 +610,9 @@ function EngineersPage() {
                                 </div>
                                 <div className="detail-item">
                                     <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', marginBottom: '5px', display: 'block' }}>LOCATION</label>
-                                    <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>{selectedEngineer.address || '-'}</div>
+                                    <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>
+                                        {selectedEngineer.address || '-'}{selectedEngineer.city ? `, ${selectedEngineer.city}` : ''}{selectedEngineer.country ? `, ${selectedEngineer.country}` : ''}
+                                    </div>
                                 </div>
                             </div>
 
@@ -814,14 +816,15 @@ function EngineersPage() {
                                                     <th>Status</th>
                                                     <th>Worked Time</th>
                                                     <th>Earnings</th>
+                                                    <th>Location</th>
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {loadingTickets ? (
-                                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Loading tickets...</td></tr>
+                                                    <tr><td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>Loading tickets...</td></tr>
                                                 ) : engTickets.length === 0 ? (
-                                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No tickets found for this engineer.</td></tr>
+                                                    <tr><td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>No tickets found for this engineer.</td></tr>
                                                 ) : (
                                                     engTickets.map(t => {
                                                         const p = calculateEngineerPayoutForTicket(t, selectedEngineer, calcTimezone);
@@ -843,6 +846,9 @@ function EngineersPage() {
                                                                         {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
                                                                         {p.total.toFixed(2)}
                                                                     </div>
+                                                                </td>
+                                                                <td>
+                                                                    {t.city}, {t.country}
                                                                 </td>
                                                                 <td>
                                                                     <div className="engineer-actions">
@@ -1082,7 +1088,10 @@ function EngineersPage() {
                                                 {parseFloat(eng.hourlyRate || 0).toFixed(2)}
                                             </span>
                                         </td>
-                                        <td>{eng.city || eng.address || '-'}</td>
+                                        <td style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                                            {eng.city || eng.address || '-'}
+                                            {eng.city && eng.country ? `, ${eng.country}` : ''}
+                                        </td>
                                         <td>{eng.email}</td>
                                         <td>
                                             <span className={`status-pill status-pill--${eng.status}`}>{eng.status}</span>

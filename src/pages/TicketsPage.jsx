@@ -757,6 +757,8 @@ function TicketsPage() {
         startTime: finalStartTime,
         endTime: finalEndTime,
         breakTime: Number(breakTime) || 0,
+        latitude,
+        longitude,
       }
 
       const isEditing = Boolean(editingTicketId)
@@ -1240,6 +1242,8 @@ function TicketsPage() {
         setCountry(parsedLead.country || '')
         setZipCode(parsedLead.zipCode || '')
         setTimezone(parsedLead.timezone || '')
+        setLatitude(parsedLead.latitude || null)
+        setLongitude(parsedLead.longitude || null)
 
         // Sync timezones immediately using static list
         if (parsedLead.country) {
@@ -1310,6 +1314,8 @@ function TicketsPage() {
       setTotalCost(lead.totalCost != null ? String(lead.totalCost) : '')
       setBillingType(lead.billingType || 'Hourly')
       setLeadType(lead.leadType || 'Full time')
+      setLatitude(lead.latitude || null)
+      setLongitude(lead.longitude || null)
     }
   }, [leadId, leads])
 
@@ -2089,14 +2095,15 @@ function TicketsPage() {
                       <th>Service Date</th>
                       <th>Status</th>
                       <th>Reference</th>
+                      <th>Location</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={6} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>Syncing ticket database...</td></tr>
+                      <tr><td colSpan={7} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>Syncing ticket database...</td></tr>
                     ) : paginatedTickets.length === 0 ? (
-                      <tr><td colSpan={6} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>No tickets found matching your search.</td></tr>
+                      <tr><td colSpan={7} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>No tickets found matching your search.</td></tr>
                     ) : (
                       paginatedTickets.map((ticket) => {
                         const startDateStr = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '--';
@@ -2141,6 +2148,11 @@ function TicketsPage() {
                               >
                                 <FiEye /> View Ticket
                               </button>
+                            </td>
+                            <td>
+                              <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                                {ticket.city}, {ticket.country}
+                              </div>
                             </td>
                             <td>
                               <div className="action-icons">
@@ -2255,6 +2267,44 @@ function TicketsPage() {
                     {` - ${selectedTicket.zipCode}`}
                   </span>
                 </div>
+
+                {/* --- Google Maps Location Button --- */}
+                {(() => {
+                  const lat = selectedTicket.latitude;
+                  const lng = selectedTicket.longitude;
+                  const addressQuery = encodeURIComponent(
+                    [selectedTicket.addressLine1, selectedTicket.city, selectedTicket.zipCode, selectedTicket.country].filter(Boolean).join(', ')
+                  );
+                  const hasCoords = lat && lng;
+                  const mapsLink = hasCoords
+                    ? `https://www.google.com/maps?q=${lat},${lng}&z=16`
+                    : `https://www.google.com/maps/search/?q=${addressQuery}`;
+
+                  return (
+                    <div className="detail-item--full" style={{ marginTop: '4px' }}>
+                      <label>📍 Location on Map</label>
+                      <a
+                        href={mapsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '8px',
+                          padding: '10px 20px', borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #4285F4, #34A853)',
+                          color: 'white', fontWeight: '700', fontSize: '13px',
+                          textDecoration: 'none', border: 'none',
+                          boxShadow: '0 4px 12px rgba(66,133,244,0.35)',
+                          transition: 'opacity 0.2s',
+                          marginTop: '6px'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                      >
+                        <FiGlobe /> View on Google Maps
+                      </a>
+                    </div>
+                  );
+                })()}
 
                 <div className="detail-item--full">
                   <label>Scope of Work</label>

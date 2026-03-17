@@ -110,6 +110,10 @@ function ApprovalsPage({ onViewTicket }) {
                             <FiFileText className="icon-subtle" />
                             <span><strong>Customer:</strong> {approval.customerName}</span>
                         </div>
+                        <div className="info-item">
+                            <FiBriefcase className="icon-subtle" />
+                            <span><strong>Location:</strong> {approval.city || '-'}, {approval.country || '-'}</span>
+                        </div>
                     </div>
 
                     {approval.approvalType === 'Early Closure' && (
