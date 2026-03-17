@@ -45,6 +45,7 @@ import {
   FiChevronUp,
   FiChevronLeft,
   FiChevronRight,
+  FiGlobe,
 } from 'react-icons/fi'
 import './DashboardPage.css'
 

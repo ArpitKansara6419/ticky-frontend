@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FiCheck, FiX, FiAlertCircle, FiClock, FiUser, FiTag, FiFileText, FiRotateCcw, FiInbox } from 'react-icons/fi'
+import { FiCheck, FiX, FiAlertCircle, FiClock, FiUser, FiTag, FiFileText, FiRotateCcw, FiInbox, FiBriefcase } from 'react-icons/fi'
 import './ApprovalsPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
