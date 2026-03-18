@@ -1918,23 +1918,23 @@ function TicketsPage() {
                 {/* OOH / Special Day Warning */}
                 {liveBreakdown.isSpecialDay && (
                   <div className="preview-alert preview-alert--gold">
-                    <span>≡ƒôà</span>
-                    <span>{liveBreakdown.isHoliday ? '≡ƒÄë Public Holiday' : '≡ƒîÉ Weekend'} ΓÇö Special day rate (2x) applied.</span>
+                    <span>📅</span>
+                    <span>{liveBreakdown.isHoliday ? '🎉 Public Holiday' : '🏖️ Weekend'} — Special day rate (2x) applied.</span>
                   </div>
                 )}
                 {!liveBreakdown.isSpecialDay && liveBreakdown.isOOH && parseFloat(liveBreakdown.ooh) > 0 && (
                   <div className="preview-alert preview-alert--ooh">
-                    <span>≡ƒîÖ</span>
+                    <span>🌙</span>
                     <span>
-                      <strong>OOH Premium applied</strong> ΓÇö Work is outside normal hours (08:00ΓÇô18:00).<br />
+                      <strong>OOH Premium applied</strong> — Work is outside normal hours (08:00—18:00).<br />
                       <small>{liveBreakdown.oohReason}</small>
                     </span>
                   </div>
                 )}
                 {!liveBreakdown.isSpecialDay && parseFloat(liveBreakdown.ot) > 0 && (
                   <div className="preview-alert preview-alert--ot">
-                    <span>ΓÅ▒∩╕Å</span>
-                    <span><strong>Overtime applied</strong> ΓÇö {parseFloat(liveBreakdown.otHours).toFixed(1)}h worked beyond 8h standard day.</span>
+                    <span>⏱️</span>
+                    <span><strong>Overtime applied</strong> — {parseFloat(liveBreakdown.otHours).toFixed(1)}h worked beyond 8h standard day.</span>
                   </div>
                 )}
 
@@ -1955,7 +1955,7 @@ function TicketsPage() {
                   )}
                   {parseFloat(liveBreakdown.ooh) > 0 && (
                     <div className="preview-item highlight">
-                      <label>OOH Premium (outside 08:00ΓÇô18:00)</label>
+                      <label>OOH Premium (outside 08:00—18:00)</label>
                       <span>+ {currency} {liveBreakdown.ooh}</span>
                     </div>
                   )}
@@ -1967,7 +1967,7 @@ function TicketsPage() {
                   )}
                   <div className="preview-item total">
                     <label>Grand Total</label>
-                    <span>{currency} {liveBreakdown.total}</span>
+                    <span>{currency} {liveBreakdown.grandTotal}</span>
                   </div>
                 </div>
                 <p className="preview-note">Note: Final calculation is performed by the server upon saving.</p>
