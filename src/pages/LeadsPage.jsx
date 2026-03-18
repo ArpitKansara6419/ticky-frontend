@@ -936,35 +936,32 @@ function LeadsPage() {
                       <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
                       Smart Quote Preview
                     </div>
-                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '700' }}>
-                      {res.hrs} hrs projected
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Estimated Total</div>
-                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{currency} {res.grandTotal}</div>
                   </div>
                 </div>
                 
                 <div style={{ 
-                  marginTop: '18px', 
+                  marginTop: '12px', 
                   paddingTop: '16px', 
                   borderTop: '1.5px dashed rgba(16, 185, 129, 0.2)',
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
                   gap: '12px'
                 }}>
                   <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE</div>
-                    <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{currency} {res.base}</div>
+                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE COST</div>
+                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.base}</div>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
                     <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>OT</div>
-                    <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{currency} {res.ot}</div>
+                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.ot}</div>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>PREMIUM</div>
-                    <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}</div>
+                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>WORKED HOURS</div>
+                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{res.hrs} hrs</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                    <div style={{ fontSize: '9px', color: '#047857', fontWeight: '800', marginBottom: '2px' }}>GRAND TOTAL</div>
+                    <div style={{ fontSize: '16px', color: '#047857', fontWeight: '900' }}>{currency} {res.grandTotal}</div>
                   </div>
                 </div>
               </div>
