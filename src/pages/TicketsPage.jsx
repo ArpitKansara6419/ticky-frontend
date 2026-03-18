@@ -188,7 +188,7 @@ function TicketsPage() {
             // Add 8 hours as a default standard working block for automatic resolution
             // But if it's the same day, we just set the same time
             if (startDate === endDate) {
-               endD.setHours(d.getHours() + 8);
+              endD.setHours(d.getHours() + 8);
             }
             const formattedEnd = `${endD.getFullYear()}-${pad(endD.getMonth() + 1)}-${pad(endD.getDate())}T${pad(endD.getHours())}:${pad(endD.getMinutes())}`;
             setEndTime(formattedEnd);
@@ -265,14 +265,14 @@ function TicketsPage() {
 
       // Explicitly extract wall-clock hours from the input strings to avoid timezone timezone shift bugs
       if (startTime && startTime.includes('T')) {
-          startInfo.hour = parseInt(startTime.split('T')[1].split(':')[0], 10);
+        startInfo.hour = parseInt(startTime.split('T')[1].split(':')[0], 10);
       } else if (startTime && startTime.includes(' ')) {
-          startInfo.hour = parseInt(startTime.split(' ')[1].split(':')[0], 10);
+        startInfo.hour = parseInt(startTime.split(' ')[1].split(':')[0], 10);
       }
       if (endTime && endTime.includes('T')) {
-          endInfo.hour = parseInt(endTime.split('T')[1].split(':')[0], 10);
+        endInfo.hour = parseInt(endTime.split('T')[1].split(':')[0], 10);
       } else if (endTime && endTime.includes(' ')) {
-          endInfo.hour = parseInt(endTime.split(' ')[1].split(':')[0], 10);
+        endInfo.hour = parseInt(endTime.split(' ')[1].split(':')[0], 10);
       }
 
       const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
@@ -792,7 +792,7 @@ function TicketsPage() {
       }
 
       setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
-      
+
       // OPTIMISTIC UPDATE: Update the local state immediately so list view is fresh
       if (data.ticket) {
         setTickets(prev => {
@@ -1387,11 +1387,11 @@ function TicketsPage() {
 
         <form className="tickets-form" onSubmit={handleSubmitTicket}>
           {leadId && (
-            <div className="lead-sync-alert" style={{ 
-              background: 'rgba(59, 130, 246, 0.1)', 
-              border: '1px solid rgba(59, 130, 246, 0.2)', 
-              borderRadius: '12px', 
-              padding: '16px', 
+            <div className="lead-sync-alert" style={{
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              borderRadius: '12px',
+              padding: '16px',
               marginBottom: '24px',
               display: 'flex',
               alignItems: 'center',
@@ -1402,7 +1402,7 @@ function TicketsPage() {
             }}>
               <span style={{ fontSize: '20px' }}>ℹ️</span>
               <div>
-                This ticket is linked to <strong>Lead #L-{leadId}</strong>. 
+                This ticket is linked to <strong>Lead #L-{leadId}</strong>.
                 <span style={{ display: 'block', fontSize: '12px', color: '#60a5fa', marginTop: '4px' }}>
                   Fully Automatic Sync Active: Any changes made here will automatically update the linked Lead.
                 </span>
@@ -2128,22 +2128,22 @@ function TicketsPage() {
                               <div className="leads-name-sub">#AIM-T-{String(ticket.id).padStart(3, '0')}</div>
                             </td>
                             <td>{ticket.customerName}</td>
-                             <td>
-                               <div style={{ color: '#15803d', fontWeight: '600' }}>
-                                 <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.7, marginBottom: '2px', letterSpacing: '0.05em' }}>Confirmed For</div>
-                                 {(() => {
-                                   const formatDate = (ds) => {
-                                     if (!ds) return '';
-                                     const d = new Date(ds);
-                                     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                                   };
-                                   const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
-                                   const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
-                                   if (!e || s === e) return formatDate(s);
-                                   return `${formatDate(s)} - ${formatDate(e)}`;
-                                 })()}
-                               </div>
-                             </td>
+                            <td>
+                              <div style={{ color: '#15803d', fontWeight: '600' }}>
+                                <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.7, marginBottom: '2px', letterSpacing: '0.05em' }}>Confirmed For</div>
+                                {(() => {
+                                  const formatDate = (ds) => {
+                                    if (!ds) return '';
+                                    const d = new Date(ds);
+                                    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                  };
+                                  const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
+                                  const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
+                                  if (!e || s === e) return formatDate(s);
+                                  return `${formatDate(s)} - ${formatDate(e)}`;
+                                })()}
+                              </div>
+                            </td>
                             <td>
                               <button
                                 type="button"
@@ -2196,10 +2196,10 @@ function TicketsPage() {
                 <div className="ticket-badge-id">#AIM-T-{String(selectedTicket.id).padStart(3, '0')}</div>
               </div>
               <p className="ticket-modal-subtitle">{selectedTicket.taskName}</p>
-              <button 
-                type="button" 
-                className="ticket-modal-close-btn" 
-                onClick={handleCloseTicketModal} 
+              <button
+                type="button"
+                className="ticket-modal-close-btn"
+                onClick={handleCloseTicketModal}
                 title="Close"
                 aria-label="Close"
               >
@@ -2226,10 +2226,10 @@ function TicketsPage() {
                         const d = new Date(ds);
                         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                       };
-                      const s = isInlineEditing 
+                      const s = isInlineEditing
                         ? (inlineStartTime ? inlineStartTime.split('T')[0] : '')
                         : (selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '');
-                      const e = isInlineEditing 
+                      const e = isInlineEditing
                         ? (inlineEndTime ? inlineEndTime.split('T')[0] : '')
                         : (selectedTicket.taskEndDate ? String(selectedTicket.taskEndDate).split('T')[0] : '');
                       if (!e || s === e) return formatDate(s);
@@ -2240,7 +2240,7 @@ function TicketsPage() {
                 <div className="detail-item">
                   <label>Time</label>
                   <span>
-                    {isInlineEditing 
+                    {isInlineEditing
                       ? (inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : '--')
                       : selectedTicket.taskTime
                     }
@@ -2486,30 +2486,30 @@ function TicketsPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
                           <label className="tickets-field">
                             <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>ACTUAL START</span>
-                            <input 
-                              type="datetime-local" 
-                              value={inlineStartTime} 
-                              onChange={e => setInlineStartTime(e.target.value)} 
-                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }} 
+                            <input
+                              type="datetime-local"
+                              value={inlineStartTime}
+                              onChange={e => setInlineStartTime(e.target.value)}
+                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }}
                             />
                           </label>
                           <label className="tickets-field">
                             <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>ACTUAL END</span>
-                            <input 
-                              type="datetime-local" 
-                              value={inlineEndTime} 
-                              onChange={e => setInlineEndTime(e.target.value)} 
-                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }} 
+                            <input
+                              type="datetime-local"
+                              value={inlineEndTime}
+                              onChange={e => setInlineEndTime(e.target.value)}
+                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px' }}
                             />
                           </label>
                           <label className="tickets-field tickets-field--full" style={{ gridColumn: '1 / -1' }}>
                             <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>BREAK DURATION (MINS)</span>
-                            <input 
-                              type="number" 
-                              value={inlineBreakTime} 
-                              onChange={e => setInlineBreakTime(e.target.value)} 
+                            <input
+                              type="number"
+                              value={inlineBreakTime}
+                              onChange={e => setInlineBreakTime(e.target.value)}
                               placeholder="e.g. 30"
-                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px', width: '100%' }} 
+                              style={{ borderRadius: '10px', border: '1px solid #cbd5e1', padding: '12px', width: '100%' }}
                             />
                           </label>
                         </div>
@@ -2535,25 +2535,25 @@ function TicketsPage() {
                           return (
                             <div className="preview-box-premium" style={{ marginBottom: '20px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                 <div>
-                                   <div style={{ fontSize: '11px', fontWeight: '900', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                     <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
-                                     Real-time Preview
-                                   </div>
-                                   <div style={{ fontSize: '14px', color: '#166534', fontWeight: '700' }}>
-                                     {res.hrs} hrs billable
-                                   </div>
-                                 </div>
-                                 <div style={{ textAlign: 'right' }}>
-                                   <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Grand Total</div>
-                                   <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{selectedTicket.currency} {res.grandTotal}</div>
-                                 </div>
-                               </div>
-                               
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: '900', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
+                                    Real-time Preview
+                                  </div>
+                                  <div style={{ fontSize: '14px', color: '#166534', fontWeight: '700' }}>
+                                    {res.hrs} hrs billable
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Grand Total</div>
+                                  <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{selectedTicket.currency} {res.grandTotal}</div>
+                                </div>
+                              </div>
 
-                             </div>
-                           );
-                         })()}
+
+                            </div>
+                          );
+                        })()}
 
                         <button
                           className="tickets-primary-btn btn-shimmer"
@@ -2569,16 +2569,16 @@ function TicketsPage() {
                         <div className="detail-item" style={{ margin: 0 }}>
                           <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Start Activity</label>
                           <span style={{ fontWeight: '700', fontSize: '14px' }}>
-                            {selectedTicket.startTime 
-                              ? new Date(selectedTicket.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) 
+                            {selectedTicket.startTime
+                              ? new Date(selectedTicket.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
                               : 'Not started'}
                           </span>
                         </div>
                         <div className="detail-item" style={{ margin: 0 }}>
                           <label style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>End Activity</label>
                           <span style={{ fontWeight: '700', fontSize: '14px' }}>
-                            {selectedTicket.endTime 
-                              ? new Date(selectedTicket.endTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) 
+                            {selectedTicket.endTime
+                              ? new Date(selectedTicket.endTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
                               : 'Not finished'}
                           </span>
                         </div>
