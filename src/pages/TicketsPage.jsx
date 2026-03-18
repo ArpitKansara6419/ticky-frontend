@@ -1270,7 +1270,7 @@ function TicketsPage() {
         setMonthlyRate(parsedLead.monthlyRate != null ? String(parsedLead.monthlyRate) : '')
         setAgreedRate(parsedLead.agreedRate || '')
         setTravelCostPerDay(parsedLead.travelCostPerDay != null ? String(parsedLead.travelCostPerDay) : '')
-        setTotalCost(parsedLead.totalCost != null ? String(parsedLead.totalCost) : '')
+        setTotalCost(parsedLead.toolCost != null ? String(parsedLead.toolCost) : '')
         setBillingType(parsedLead.billingType || 'Hourly')
         setLeadType(parsedLead.leadType || 'Full time')
 
@@ -1311,7 +1311,7 @@ function TicketsPage() {
       setMonthlyRate(lead.monthlyRate != null ? String(lead.monthlyRate) : '')
       setAgreedRate(lead.agreedRate || '')
       setTravelCostPerDay(lead.travelCostPerDay != null ? String(lead.travelCostPerDay) : '')
-      setTotalCost(lead.totalCost != null ? String(lead.totalCost) : '')
+      setTotalCost(lead.toolCost != null ? String(lead.toolCost) : '')
       setBillingType(lead.billingType || 'Hourly')
       setLeadType(lead.leadType || 'Full time')
       setLatitude(lead.latitude || null)
