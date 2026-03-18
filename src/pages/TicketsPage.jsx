@@ -2537,27 +2537,7 @@ function TicketsPage() {
                                  </div>
                                </div>
                                
-                               <div style={{ 
-                                 marginTop: '18px', 
-                                 paddingTop: '16px', 
-                                 borderTop: '1.5px dashed rgba(16, 185, 129, 0.2)',
-                                 display: 'grid',
-                                 gridTemplateColumns: 'repeat(3, 1fr)',
-                                 gap: '12px'
-                               }}>
-                                 <div style={{ background: 'rgba(255,255,255,0.4)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                                   <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE</div>
-                                   <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{selectedTicket.currency} {res.base}</div>
-                                 </div>
-                                 <div style={{ background: 'rgba(255,255,255,0.4)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                                   <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>OVERTIME</div>
-                                   <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{selectedTicket.currency} {res.ot}</div>
-                                 </div>
-                                 <div style={{ background: 'rgba(255,255,255,0.4)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                                   <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>PREMIUM</div>
-                                   <div style={{ fontSize: '12px', color: '#166534', fontWeight: '800' }}>{selectedTicket.currency} {(parseFloat(res.ooh) + parseFloat(res.specialDay)).toFixed(2)}</div>
-                                 </div>
-                               </div>
+
                              </div>
                            );
                          })()}
