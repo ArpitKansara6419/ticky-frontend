@@ -1117,13 +1117,13 @@ function TicketsPage() {
     };
 
     // Time Log Sync ONLY if it doesn't already exist or if ticket implies we should keep existing
-    if (ticket.start_time) {
-      setStartTime(formatForInput(ticket.start_time));
+    if (ticket.startTime) {
+      setStartTime(formatForInput(ticket.startTime));
     }
-    if (ticket.end_time) {
-      setEndTime(formatForInput(ticket.end_time));
+    if (ticket.endTime) {
+      setEndTime(formatForInput(ticket.endTime));
     }
-    setBreakTime(ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0');
+    setBreakTime(ticket.breakTime ? String(Math.floor(ticket.breakTime / 60)) : '0');
   }
 
   const handleViewDocument = (fileUrl) => {
