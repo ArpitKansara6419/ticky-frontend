@@ -262,6 +262,19 @@ function TicketsPage() {
 
       const startInfo = getZonedInfo(s);
       const endInfo = getZonedInfo(e);
+
+      // Explicitly extract wall-clock hours from the input strings to avoid timezone timezone shift bugs
+      if (startTime && startTime.includes('T')) {
+          startInfo.hour = parseInt(startTime.split('T')[1].split(':')[0], 10);
+      } else if (startTime && startTime.includes(' ')) {
+          startInfo.hour = parseInt(startTime.split(' ')[1].split(':')[0], 10);
+      }
+      if (endTime && endTime.includes('T')) {
+          endInfo.hour = parseInt(endTime.split('T')[1].split(':')[0], 10);
+      } else if (endTime && endTime.includes(' ')) {
+          endInfo.hour = parseInt(endTime.split(' ')[1].split(':')[0], 10);
+      }
+
       const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
 
       const PUBLIC_HOLIDAYS = [
@@ -2444,7 +2457,7 @@ function TicketsPage() {
                   </div>
                 )}
 
-                {(isInlineEditing || (selectedTicket.leadType !== 'Dispatch' && (!selectedTicket.startTime || selectedTicket.status === 'Open'))) && (
+                {(isInlineEditing || selectedTicket.leadType !== 'Dispatch') && (
                   <>
                     <div className="detail-item--full divider"></div>
                     <div className="detail-item--full" style={{ marginBottom: '1rem' }}>
