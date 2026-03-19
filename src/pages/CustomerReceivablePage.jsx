@@ -709,108 +709,167 @@ const CustomerReceivablePage = () => {
             )}
 
             {/* --- Ticket Detail Modal --- */}
-            {detailTicket && (
-                <div className="modal-overlay-premium" onClick={() => setDetailTicket(null)}>
-                    <div className="modal-content-premium" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header-premium">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div className="title-icon-glow" style={{ padding: '8px' }}><FiFileText size={20} /></div>
-                                <h3>Cost Breakdown Detail</h3>
+            {detailTicket && (() => {
+                const bd = calculateTicketCostFrontend(detailTicket, calcTimezone, selectedCurrency);
+                const cur = detailTicket.currency || 'USD';
+                const fmtTime = (v) => {
+                    if (!v) return '—';
+                    const d = new Date(v);
+                    if (isNaN(d.getTime())) return '—';
+                    return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+                };
+                const fmtDate = (v) => {
+                    if (!v) return '—';
+                    const d = new Date(v);
+                    if (isNaN(d.getTime())) return '—';
+                    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                };
+                const savedTotal = parseFloat(detailTicket.total_cost) || parseFloat(bd.totalReceivable) || 0;
+
+                return (
+                    <div className="modal-overlay-premium" onClick={() => setDetailTicket(null)}>
+                        <div className="modal-content-premium" style={{ maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                            <div className="modal-header-premium">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div className="title-icon-glow" style={{ padding: '8px' }}><FiFileText size={20} /></div>
+                                    <div>
+                                        <h3 style={{ margin: 0 }}>Ticket Cost Breakdown</h3>
+                                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>#{detailTicket.id} — {detailTicket.task_name}</span>
+                                    </div>
+                                </div>
+                                <button className="close-btn-premium" onClick={() => setDetailTicket(null)}><FiX size={18} /></button>
                             </div>
-                            <button className="close-btn-premium" onClick={() => setDetailTicket(null)}><FiX size={18} /></button>
-                        </div>
-                        <div className="modal-body-premium">
-                            <div className="detail-grid-premium">
-                                <div className="detail-item">
-                                    <label>Reference</label>
-                                    <span className="ticket-id-tag">#{detailTicket.id}</span>
+                            <div className="modal-body-premium">
+
+                                {/* Section 1: Overview */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                                    {[
+                                        { label: 'Customer', value: detailTicket.customer_name || '—' },
+                                        { label: 'Engineer', value: detailTicket.engineer_name || '—' },
+                                        { label: 'Billing Type', value: detailTicket.billing_type || 'Hourly', highlight: true },
+                                        { label: 'Currency', value: cur },
+                                        { label: 'Service Date', value: fmtDate(detailTicket.task_start_date) + (detailTicket.task_end_date && detailTicket.task_end_date !== detailTicket.task_start_date ? ` → ${fmtDate(detailTicket.task_end_date)}` : '') },
+                                        { label: 'Location', value: [detailTicket.city, detailTicket.country].filter(Boolean).join(', ') || '—' },
+                                    ].map(item => (
+                                        <div key={item.label} style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                            <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>{item.label}</div>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: item.highlight ? 'var(--crm-primary, #7c3aed)' : '#1e293b' }}>{item.value}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="detail-item">
-                                    <label>Customer</label>
-                                    <span>{detailTicket.customer_name || 'N/A'}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Technician</label>
-                                    <span>{detailTicket.engineer_name || 'N/A'}</span>
-                                </div>
-                                <div className="detail-item">
-                                    <label>Billing Model</label>
-                                    <span style={{ color: 'var(--crm-primary)' }}>{detailTicket.billing_type || 'Standard'}</span>
-                                </div>
-                                <div className="detail-item" style={{ gridColumn: 'span 2' }}>
-                                    <label>Task Description</label>
-                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: '#475569', fontWeight: '500' }}>
-                                        {detailTicket.task_name || 'No description provided.'}
-                                    </p>
-                                </div>
-                            </div>
 
-                            {(() => {
-                                const bd = calculateTicketCostFrontend(detailTicket, calcTimezone, selectedCurrency);
-                                return (
-                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                                        <div className="breakdown-list-premium">
-                                            {detailTicket.billing_type === 'Cancellation' ? (
-                                                <div className="breakdown-row highlight-premium">
-                                                    <span>Cancellation Penalty</span>
-                                                    <span>{selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="breakdown-row">
-                                                        <span>Labor Base Cost</span>
-                                                        <span>{selectedCurrency} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
-                                                    </div>
-
-                                                    {parseFloat(bd.otPremium) > 0 && (
-                                                        <div className="breakdown-row highlight-premium">
-                                                            <span>Overtime (OT) 1.5x</span>
-                                                            <span>+ {selectedCurrency} {parseFloat(bd.otPremium).toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-
-                                                    {parseFloat(bd.oohPremium) > 0 && (
-                                                        <div className="breakdown-row highlight-premium">
-                                                            <span>Out of Hours (OOH) 1.5x</span>
-                                                            <span>+ {selectedCurrency} {parseFloat(bd.oohPremium).toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-
-                                                    {parseFloat(bd.specialDayPremium) > 0 && (
-                                                        <div className="breakdown-row highlight-premium-gold">
-                                                            <span>Weekend/Holiday Premium 2.0x</span>
-                                                            <span>+ {selectedCurrency} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
-
-                                            {parseFloat(bd.travelCost) > 0 && (
-                                                <div className="breakdown-row">
-                                                    <span>Travel & Logistics</span>
-                                                    <span>+ {selectedCurrency} {parseFloat(bd.travelCost || 0).toFixed(2)}</span>
-                                                </div>
-                                            )}
-
-                                            {parseFloat(bd.toolCost) > 0 && (
-                                                <div className="breakdown-row">
-                                                    <span>Tools & Material</span>
-                                                    <span>+ {selectedCurrency} {parseFloat(bd.toolCost || 0).toFixed(2)}</span>
-                                                </div>
-                                            )}
-
-                                            <div className="breakdown-row total-row-premium">
-                                                <span>Net Receivable</span>
-                                                <span>{selectedCurrency} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
+                                {/* Section 2: Time Logs */}
+                                {(detailTicket.start_time || detailTicket.end_time) && (
+                                    <div style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)', border: '1px solid #c7d2fe', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#6d28d9', textTransform: 'uppercase', marginBottom: '12px' }}>⏱ Activity Time Log</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                                            <div>
+                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME IN</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(detailTicket.start_time)}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME OUT</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(detailTicket.end_time)}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>BREAK</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{detailTicket.break_time ? `${Math.floor(detailTicket.break_time / 60)} min` : '0 min'}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>BILLABLE HRS</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '800', color: '#7c3aed' }}>{bd.formattedHours || `${parseFloat(bd.totalHours || 0).toFixed(2)}h`}</div>
                                             </div>
                                         </div>
                                     </div>
-                                );
-                            })()}
-                        </div>
-                        <div className="modal-footer-premium">
-                            <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
-                        </div>
+                                )}
+
+                                {/* Section 3: Rates */}
+                                <div style={{ background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px', marginBottom: '20px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px' }}>💰 Rate Card</div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                        {[
+                                            { label: 'Hourly Rate', value: detailTicket.hourly_rate },
+                                            { label: 'Half Day Rate', value: detailTicket.half_day_rate },
+                                            { label: 'Full Day Rate', value: detailTicket.full_day_rate },
+                                            { label: 'Monthly Rate', value: detailTicket.monthly_rate },
+                                            { label: 'Agreed / Fixed', value: detailTicket.agreed_rate },
+                                            { label: 'Cancellation Fee', value: detailTicket.cancellation_fee },
+                                        ].map(r => (
+                                            <div key={r.label} style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '2px' }}>{r.label}</div>
+                                                <div style={{ fontSize: '14px', color: parseFloat(r.value) > 0 ? '#1e293b' : '#cbd5e1', fontWeight: '700' }}>
+                                                    {parseFloat(r.value) > 0 ? `${cur} ${parseFloat(r.value).toFixed(2)}` : '—'}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Section 4: Cost Breakdown */}
+                                <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px' }}>📊 Cost Breakdown</div>
+                                    <div className="breakdown-list-premium">
+                                        {detailTicket.billing_type === 'Cancellation' ? (
+                                            <div className="breakdown-row highlight-premium">
+                                                <span>Cancellation Penalty</span>
+                                                <span>{cur} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="breakdown-row">
+                                                    <span>Labor Base Cost</span>
+                                                    <span>{cur} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
+                                                </div>
+                                                {parseFloat(bd.otPremium) > 0 && (
+                                                    <div className="breakdown-row highlight-premium">
+                                                        <span>Overtime (OT) 1.5x</span>
+                                                        <span>+ {cur} {parseFloat(bd.otPremium).toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {parseFloat(bd.oohPremium) > 0 && (
+                                                    <div className="breakdown-row highlight-premium">
+                                                        <span>Out of Hours (OOH) 1.5x</span>
+                                                        <span>+ {cur} {parseFloat(bd.oohPremium).toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {parseFloat(bd.specialDayPremium) > 0 && (
+                                                    <div className="breakdown-row highlight-premium-gold">
+                                                        <span>Weekend/Holiday Premium 2.0x</span>
+                                                        <span>+ {cur} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        {parseFloat(bd.travelCost) > 0 && (
+                                            <div className="breakdown-row">
+                                                <span>Travel &amp; Logistics</span>
+                                                <span>+ {cur} {parseFloat(bd.travelCost).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {parseFloat(detailTicket.tool_cost) > 0 && (
+                                            <div className="breakdown-row">
+                                                <span>Tools &amp; Material</span>
+                                                <span>+ {cur} {parseFloat(detailTicket.tool_cost).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="breakdown-row total-row-premium">
+                                            <span>Net Receivable</span>
+                                            <span>{cur} {savedTotal.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Scope of Work */}
+                                {detailTicket.scope_of_work && (
+                                    <div style={{ marginTop: '16px', background: '#f8fafc', borderRadius: '12px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Scope of Work</div>
+                                        <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: '1.6' }}>{detailTicket.scope_of_work}</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer-premium">
+                                <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
+                            </div>   </div>
                     </div>
                 </div>
             )}
