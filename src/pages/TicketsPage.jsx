@@ -2601,7 +2601,40 @@ function TicketsPage() {
 
                 <div className="detail-item--full divider"></div>
                 <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
-                <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>{selectedTicket.currency} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</span>
+                <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>
+                  {(() => {
+                    // Try to calculate live from actual time if available
+                    if (selectedTicket.startTime && selectedTicket.endTime) {
+                      const liveResult = calculateTicketTotal({
+                        startTime: selectedTicket.startTime,
+                        endTime: selectedTicket.endTime,
+                        breakTime: selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0,
+                        hourlyRate: selectedTicket.hourlyRate,
+                        halfDayRate: selectedTicket.halfDayRate,
+                        fullDayRate: selectedTicket.fullDayRate,
+                        monthlyRate: selectedTicket.monthlyRate,
+                        agreedRate: selectedTicket.agreedRate,
+                        cancellationFee: selectedTicket.cancellationFee,
+                        travelCostPerDay: selectedTicket.travelCostPerDay,
+                        toolCost: selectedTicket.toolCost,
+                        billingType: selectedTicket.billingType || 'Hourly',
+                        timezone: selectedTicket.timezone,
+                        calcTimezone: 'Ticket Local'
+                      });
+                      if (liveResult && parseFloat(liveResult.grandTotal) > 0) {
+                        return `${selectedTicket.currency} ${liveResult.grandTotal}`;
+                      }
+                    }
+                    // Fallback to saved DB total (from backend calculation)
+                    const saved = parseFloat(selectedTicket.totalCost);
+                    const toolC = parseFloat(selectedTicket.toolCost || 0);
+                    const travelC = parseFloat(selectedTicket.travelCostPerDay || 0);
+                    // If saved total is only the tool cost, add travel too
+                    if (saved > 0 && saved !== toolC) return `${selectedTicket.currency} ${saved.toFixed(2)}`;
+                    // Build minimal total from known components
+                    return `${selectedTicket.currency} ${(toolC + travelC).toFixed(2)}`;
+                  })()}
+                </span>
               </div>
 
               <div className="detail-item--full divider"></div>
