@@ -166,13 +166,8 @@ const CustomerReceivablePage = () => {
         const tool = (parseFloat(ticket.tool_cost || 0) * rateMultiplier);
         const totalFallback = base + ot + ooh + sp + trav + tool;
 
-        // OFFICIAL SAVED DB TOTAL has priority
-        const dbTotal = parseFloat(ticket.total_cost || 0) * rateMultiplier;
-        // If dbTotal > 0 and dbTotal >= (tool+trav) it's likely a fully valid grand total saved from ticket update
-        const finalReceivable = (dbTotal > 0 && dbTotal >= (trav + tool)) ? dbTotal : totalFallback;
-
         return {
-            totalReceivable: finalReceivable.toFixed(2),
+            totalReceivable: totalFallback.toFixed(2),
             baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
             totalHours: hrs,
             formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
@@ -878,7 +873,7 @@ const CustomerReceivablePage = () => {
                                         )}
                                         <div className="breakdown-row total-row-premium">
                                             <span>Net Receivable</span>
-                                            <span>{cur} {savedTotal.toFixed(2)}</span>
+                                            <span>{cur} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
