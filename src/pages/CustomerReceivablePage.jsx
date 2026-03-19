@@ -104,9 +104,9 @@ const CustomerReceivablePage = () => {
         }
 
         // Single log logic
-        const s = new Date(ticket.task_start_date);
-        const e = new Date(ticket.task_end_date || ticket.task_start_date);
-        const brk = (parseInt(ticket.break_time_mins) || 0) * 60;
+        const s = new Date(ticket.start_time || ticket.task_start_date);
+        const e = new Date(ticket.end_time || ticket.task_end_date || ticket.start_time || ticket.task_start_date);
+        const brk = (parseInt(ticket.break_time || ticket.break_time_mins || 0)) * 60;
         const dur = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk);
         const hrs = dur / 3600;
 
@@ -145,10 +145,15 @@ const CustomerReceivablePage = () => {
 
         const trav = (parseFloat(ticket.travel_cost_per_day || 0) * rateMultiplier);
         const tool = (parseFloat(ticket.tool_cost || 0) * rateMultiplier);
-        const total = base + ot + ooh + sp + trav + tool;
+        const totalFallback = base + ot + ooh + sp + trav + tool;
+
+        // OFFICIAL SAVED DB TOTAL has priority
+        const dbTotal = parseFloat(ticket.total_cost || 0) * rateMultiplier;
+        // If dbTotal > 0 and dbTotal >= (tool+trav) it's likely a fully valid grand total saved from ticket update
+        const finalReceivable = (dbTotal > 0 && dbTotal >= (trav + tool)) ? dbTotal : totalFallback;
 
         return {
-            totalReceivable: total.toFixed(2),
+            totalReceivable: finalReceivable.toFixed(2),
             baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
             totalHours: hrs,
             formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
