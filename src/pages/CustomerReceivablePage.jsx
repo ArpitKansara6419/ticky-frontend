@@ -104,16 +104,35 @@ const CustomerReceivablePage = () => {
         }
 
         // Single log logic
-        const s = new Date(ticket.start_time || ticket.task_start_date);
-        const e = new Date(ticket.end_time || ticket.task_end_date || ticket.start_time || ticket.task_start_date);
+        const startTimeStr = ticket.start_time || ticket.task_start_date;
+        const endTimeStr = ticket.end_time || ticket.task_end_date || ticket.start_time || ticket.task_start_date;
+        const s = new Date(startTimeStr);
+        const e = new Date(endTimeStr);
         const brk = (parseInt(ticket.break_time || ticket.break_time_mins || 0)) * 60;
         const dur = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk);
         const hrs = dur / 3600;
 
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
+
+        // Explicitly extract wall-clock hours from the input strings to avoid timezone shift bugs
+        if (startTimeStr && startTimeStr.includes('T')) {
+            info.hour = parseInt(startTimeStr.split('T')[1].split(':')[0], 10);
+        } else if (startTimeStr && startTimeStr.includes(' ')) {
+            info.hour = parseInt(startTimeStr.split(' ')[1].split(':')[0], 10);
+        }
+        if (endTimeStr && endTimeStr.includes('T')) {
+            endInfo.hour = parseInt(endTimeStr.split('T')[1].split(':')[0], 10);
+        } else if (endTimeStr && endTimeStr.includes(' ')) {
+            endInfo.hour = parseInt(endTimeStr.split(' ')[1].split(':')[0], 10);
+        }
+
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
-        const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-12-25'];
+        const HOLS = [
+            '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
+            '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
+            '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
+        ];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
         const isO = info.hour < 8 || info.hour >= 18 || endInfo.hour > 18 || hrs > 10;
 
