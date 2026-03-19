@@ -44,7 +44,9 @@ const CustomerReceivablePage = () => {
         if (!ticket) return {};
         const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || 'UTC');
 
-        const rateMultiplier = (EXCHANGE_RATES[targetCurrency] || 1) / (EXCHANGE_RATES[ticket.currency || 'USD'] || 1);
+        // No unit conversion — always show in the ticket's native currency
+        // The currency filter is handled at the list level (filteredUnbilled)
+        const rateMultiplier = 1;
 
         const hr = parseFloat(ticket.hourly_rate || 0) * rateMultiplier;
         const hd = parseFloat(ticket.half_day_rate || 0) * rateMultiplier;
@@ -142,7 +144,7 @@ const CustomerReceivablePage = () => {
         }
 
         const trav = (parseFloat(ticket.travel_cost_per_day || 0) * rateMultiplier);
-        const tool = (parseFloat(ticket.total_cost || 0) * rateMultiplier);
+        const tool = (parseFloat(ticket.tool_cost || 0) * rateMultiplier);
         const total = base + ot + ooh + sp + trav + tool;
 
         return {
@@ -216,12 +218,14 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error("Invoice Fetch Error:", e); }
     };
 
-    // Calculate Dynamic Unbilled Total based on Context
+    // Calculate Dynamic Unbilled Total based on Context (uses filteredUnbilled which already filters by currency)
     const dynamicUnbilledTotal = useMemo(() => {
-        return unbilledList.reduce((sum, item) => {
-            const bd = calculateTicketCostFrontend(item, calcTimezone, selectedCurrency);
-            return sum + parseFloat(bd.totalReceivable);
-        }, 0);
+        return unbilledList
+            .filter(item => (item.currency || 'USD').toUpperCase() === selectedCurrency.toUpperCase())
+            .reduce((sum, item) => {
+                const bd = calculateTicketCostFrontend(item, calcTimezone, selectedCurrency);
+                return sum + parseFloat(bd.totalReceivable);
+            }, 0);
     }, [unbilledList, calcTimezone, selectedCurrency]);
 
     const toggleTicket = (id) => {
@@ -358,7 +362,12 @@ const CustomerReceivablePage = () => {
     const filteredUnbilled = useMemo(() => {
         const search = searchTerm.toLowerCase().trim();
         return unbilledList.filter(item => {
-            // 1. Search filter
+            // 1. Currency filter — show only tickets matching selected currency
+            const ticketCurrency = (item.currency || 'USD').toUpperCase();
+            const filterCurrency = selectedCurrency.toUpperCase();
+            if (ticketCurrency !== filterCurrency) return false;
+
+            // 2. Search filter
             const custName = (item.customer_name || '').toLowerCase();
             const compName = (item.customer_company || '').toLowerCase();
             const engName = (item.engineer_name || '').toLowerCase();
@@ -372,7 +381,7 @@ const CustomerReceivablePage = () => {
 
             if (!matchesSearch) return false;
 
-            // 2. Date filter (Permissive)
+            // 3. Date filter (Permissive)
             if (selectedYear === 'All Years' && selectedMonth === 'All Months') return true;
 
             const tDate = new Date(item.task_start_date);
@@ -384,7 +393,7 @@ const CustomerReceivablePage = () => {
 
             return matchesYear && matchesMonth;
         });
-    }, [unbilledList, searchTerm, selectedYear, selectedMonth]);
+    }, [unbilledList, searchTerm, selectedYear, selectedMonth, selectedCurrency]);
 
     // Pagination Logic for Unbilled
     const totalUnbilledPages = Math.ceil(filteredUnbilled.length / itemsPerPage);
@@ -585,7 +594,7 @@ const CustomerReceivablePage = () => {
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Tools: {parseFloat(bd.toolCost || 0).toFixed(0)}</div>
                                                     </td>
                                                     <td className="receivable-amount">
-                                                        {selectedCurrency} {bd.totalReceivable}
+                                                        {item.currency || 'USD'} {bd.totalReceivable}
                                                     </td>
                                                     <td style={{ textAlign: 'center' }}>
                                                         <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
