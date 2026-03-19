@@ -869,10 +869,11 @@ const CustomerReceivablePage = () => {
                             </div>
                             <div className="modal-footer-premium">
                                 <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
-                            </div>   </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };
