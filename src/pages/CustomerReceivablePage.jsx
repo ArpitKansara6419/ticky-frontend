@@ -135,10 +135,26 @@ const CustomerReceivablePage = () => {
         const tool = parseFloat(ticket.tool_cost || 0);
         const total = base + ot + ooh + sp + trav + tool;
 
+        // PRIORITIZE SAVED VALUES: If the database already has a calculated total_cost, use it.
+        const dbTotal = parseFloat(ticket.total_cost || 0);
+        let finalReceivable = total;
+        let billingGap = 0;
+        
+        if (dbTotal > 0 && Math.abs(dbTotal - total) > 0.05) {
+            finalReceivable = dbTotal;
+            billingGap = dbTotal - total;
+        }
+
         return {
-            totalReceivable: total.toFixed(2), baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
-            totalHours: hrs, formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
-            travelCost: trav, toolCost: tool,
+            totalReceivable: finalReceivable.toFixed(2), 
+            baseCost: (base + billingGap).toFixed(2), // Fold gap into base cost to keep it simple and clean
+            otPremium: ot.toFixed(2), 
+            oohPremium: ooh.toFixed(2), 
+            specialDayPremium: sp.toFixed(2),
+            totalHours: hrs, 
+            formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
+            travelCost: trav, 
+            toolCost: tool,
             otHours: hrs > 8 ? hrs - 8 : 0,
             ooh: ooh > 0 ? 'Yes' : 'No',
             ww: isWK ? 'Yes' : 'No',
@@ -198,9 +214,25 @@ const CustomerReceivablePage = () => {
         } else if (billingType === 'Cancellation') { base = parseFloat(ticket.eng_cancellation_fee) || 0; }
 
         const total = base + ot + ooh + sp;
+        
+        // PRIORITIZE SAVED VALUES for Engineer too
+        const dbTotal = parseFloat(ticket.eng_total_cost || 0);
+        let finalPayout = total;
+        let payoutGap = 0;
+        
+        if (dbTotal > 0 && Math.abs(dbTotal - total) > 0.05) {
+            finalPayout = dbTotal;
+            payoutGap = dbTotal - total;
+        }
+
         return {
-            totalPayout: total.toFixed(2), baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
-            totalHours: hrs, otHours: hrs > 8 ? hrs - 8 : 0
+            totalPayout: finalPayout.toFixed(2), 
+            baseCost: (base + payoutGap).toFixed(2), // Fold gap into base payout
+            otPremium: ot.toFixed(2), 
+            oohPremium: ooh.toFixed(2), 
+            specialDayPremium: sp.toFixed(2),
+            totalHours: hrs, 
+            otHours: hrs > 8 ? hrs - 8 : 0
         };
     };
 
@@ -869,25 +901,25 @@ const CustomerReceivablePage = () => {
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="breakdown-row">
-                                                    <span>Labor Base Cost</span>
+                                                <div className="breakdown-row highlight-premium">
+                                                    <span>Labor &amp; Service Subtotal</span>
                                                     <span>{cur} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
                                                 </div>
                                                 {parseFloat(bd.otPremium) > 0 && (
-                                                    <div className="breakdown-row highlight-premium">
-                                                        <span>Overtime (OT) 1.5x</span>
+                                                    <div className="breakdown-row">
+                                                        <span>Overtime Premium (OT)</span>
                                                         <span>+ {cur} {parseFloat(bd.otPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 {parseFloat(bd.oohPremium) > 0 && (
-                                                    <div className="breakdown-row highlight-premium">
-                                                        <span>Out of Hours (OOH) 1.5x</span>
+                                                    <div className="breakdown-row">
+                                                        <span>Out of Hours (OOH)</span>
                                                         <span>+ {cur} {parseFloat(bd.oohPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 {parseFloat(bd.specialDayPremium) > 0 && (
-                                                    <div className="breakdown-row highlight-premium-gold">
-                                                        <span>Weekend/Holiday Premium 2.0x</span>
+                                                    <div className="breakdown-row">
+                                                        <span>Weekend/Holiday Premium</span>
                                                         <span>+ {cur} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
@@ -905,20 +937,14 @@ const CustomerReceivablePage = () => {
                                                 <span>+ {cur} {parseFloat(detailTicket.tool_cost).toFixed(2)}</span>
                                             </div>
                                         )}
-                                        {Math.abs(adjustment) > 0.01 && (
-                                            <div className="breakdown-row highlight-premium">
-                                                <span>Adjustments / Manual Entry</span>
-                                                <span>{adjustment > 0 ? '+' : '-'} {cur} {Math.abs(adjustment).toFixed(2)}</span>
-                                            </div>
-                                        )}
                                         <div className="breakdown-total-premium" style={{ borderTop: '2px solid #6366f1', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <span style={{ color: '#6366f1', fontSize: '18px', fontWeight: '700' }}>Net Receivable</span>
-                                            <span style={{ color: '#6366f1', fontSize: '18px', fontWeight: '800' }}>{cur} {savedTotal.toFixed(2)}</span>
+                                            <span style={{ color: '#6366f1', fontSize: '18px', fontWeight: '800' }}>{cur} {parseFloat(detailTicket.total_cost || bd.totalReceivable).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Section 5: Engineer Payout Breakdown (NEW) */}
+                                {/* Section 5: Engineer Payout Breakdown */}
                                 <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '14px', border: '1px solid #bbf7d0', marginTop: '24px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                         <div style={{ fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>🔧 Engineer Payout Breakdown</div>
@@ -935,26 +961,26 @@ const CustomerReceivablePage = () => {
                                                     <span>{engCur} {parseFloat(pd.baseCost || 0).toFixed(2)}</span>
                                                 </div>
                                                 {parseFloat(pd.otPremium) > 0 && (
-                                                    <div className="breakdown-row" style={{ color: '#059669', fontStyle: 'italic' }}>
+                                                    <div className="breakdown-row" style={{ color: '#166534' }}>
                                                         <span>Engineer Overtime (OT)</span>
                                                         <span>+ {engCur} {parseFloat(pd.otPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 {parseFloat(pd.oohPremium) > 0 && (
-                                                    <div className="breakdown-row" style={{ color: '#059669', fontStyle: 'italic' }}>
+                                                    <div className="breakdown-row" style={{ color: '#166534' }}>
                                                         <span>Engineer Out of Hours (OOH)</span>
                                                         <span>+ {engCur} {parseFloat(pd.oohPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 {parseFloat(pd.specialDayPremium) > 0 && (
-                                                    <div className="breakdown-row" style={{ color: '#059669', fontStyle: 'italic' }}>
-                                                        <span>Engineer Special Day Premium</span>
+                                                    <div className="breakdown-row" style={{ color: '#166534' }}>
+                                                        <span>Engineer Weekend/Holiday</span>
                                                         <span>+ {engCur} {parseFloat(pd.specialDayPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 <div className="breakdown-total-premium" style={{ borderTop: '2px solid #059669', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <span style={{ color: '#166534', fontWeight: '800' }}>Total Payout</span>
-                                                    <span style={{ color: '#166534', fontWeight: '900' }}>{engCur} {pd.totalPayout}</span>
+                                                    <span style={{ color: '#166534', fontWeight: '900' }}>{engCur} {parseFloat(detailTicket.eng_total_cost || pd.totalPayout).toFixed(2)}</span>
                                                 </div>
                                             </div>
                                         );
