@@ -140,7 +140,9 @@ function TicketsPage() {
   const [monthlyRate, setMonthlyRate] = useState('')
   const [agreedRate, setAgreedRate] = useState('')
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
-  const [totalCost, setTotalCost] = useState('')
+  const [totalCost, setTotalCost] = useState('') // This is actually the FINAL TICKET TOTAL
+  const [toolCostInput, setToolCostInput] = useState('') // New state for Tool Cost input
+  const [cancellationFee, setCancellationFee] = useState('')
 
   // Engineer Payout Configuration States
   const [engPayType, setEngPayType] = useState('Default') // 'Default' | 'Custom'
@@ -155,7 +157,8 @@ function TicketsPage() {
 
   const [status, setStatus] = useState('Assigned')
   const [billingType, setBillingType] = useState('Hourly')
-  const [cancellationFee, setCancellationFee] = useState('')
+  // The cancellationFee state was declared twice, removing the duplicate here.
+  // const [cancellationFee, setCancellationFee] = useState('')
 
   // Map / LatLng states
   const [latitude, setLatitude] = useState(null)
@@ -231,12 +234,12 @@ function TicketsPage() {
   }, [startTime, endTime, viewMode]);
 
   // Pure calculation function for reuse
-  const calculateTicketTotal = (data) => {
+  const calculateTicketTotal = (opts) => {
     const {
       startTime, endTime, breakTime,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
       travelCostPerDay, toolCost, billingType, timezone, calcTimezone
-    } = data;
+    } = opts;
 
     if (!startTime || !endTime) return null;
 
@@ -249,10 +252,6 @@ function TicketsPage() {
       const brkSec = (parseInt(breakTime) || 0) * 60;
       const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
       const hrs = totSec / 3600;
-
-      const hr = parseFloat(hourlyRate) || 0;
-      const hd = parseFloat(halfDayRate) || 0;
-      const fd = parseFloat(fullDayRate) || 0;
 
       const targetTZ = (calcTimezone && calcTimezone !== 'Ticket Local') ? calcTimezone : (timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
 
@@ -274,20 +273,6 @@ function TicketsPage() {
       const startInfo = getZonedInfo(s);
       const endInfo = getZonedInfo(e);
 
-      // Explicitly extract wall-clock hours from the input strings to avoid timezone timezone shift bugs
-      if (startTime && startTime.includes('T')) {
-        startInfo.hour = parseInt(startTime.split('T')[1].split(':')[0], 10);
-      } else if (startTime && startTime.includes(' ')) {
-        startInfo.hour = parseInt(startTime.split(' ')[1].split(':')[0], 10);
-      }
-      if (endTime && endTime.includes('T')) {
-        endInfo.hour = parseInt(endTime.split('T')[1].split(':')[0], 10);
-      } else if (endTime && endTime.includes(' ')) {
-        endInfo.hour = parseInt(endTime.split(' ')[1].split(':')[0], 10);
-      }
-
-      const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
-
       const PUBLIC_HOLIDAYS = [
         '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
         '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
@@ -295,50 +280,64 @@ function TicketsPage() {
       ];
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
-      const workIsOOH = (startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10) && hrs > 0;
+
+      // --- PROPER LOGIC FIX FOR TIMEZONE SHIFTS ---
+      let startHr = startInfo.hour;
+      let endHr = endInfo.hour;
+      if (opts.startTime && opts.startTime.includes('T')) {
+        startHr = parseInt(opts.startTime.split('T')[1].split(':')[0], 10);
+      }
+      if (opts.endTime && opts.endTime.includes('T')) {
+        endHr = parseInt(opts.endTime.split('T')[1].split(':')[0], 10);
+      }
+
+      // OOH strictly only if visual hours are OUTSIDE 08:00 - 18:00
+      const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
+      const hr = parseFloat(opts.hourlyRate) || 0;
+      const hd = parseFloat(opts.halfDayRate) || 0;
+      const fd = parseFloat(opts.fullDayRate) || 0;
+      const bil = opts.billingType;
 
-      if (billingType === 'Hourly') {
-        const billed = Math.max(2, hrs);
-        base = billed * hr;
+      if (bil === 'Hourly') {
+        const b = Math.max(2, hrs); base = b * hr;
         if (isSpecialDay) special = base;
         else {
-          if (billed > 8) ot = (billed - 8) * (hr * 0.5);
-          if (workIsOOH && ot === 0) ooh = billed * (hr * 0.5);
+          // 8 HOUR RULE: No premiums for strictly standard day work
+          if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
+          if (workIsOOH && hrs > 8 && ot === 0) ooh = hrs * (hr * 0.5);
         }
-      } else if (billingType === 'Half Day + Hourly') {
+      } else if (bil === 'Half Day + Hourly') {
         base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
         if (isSpecialDay) special = base;
         else {
           if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
-          if (workIsOOH && ot === 0) ooh = base * 0.5;
+          if (workIsOOH && hrs > 8 && ot === 0) ooh = base * 0.5;
         }
-      } else if (billingType === 'Full Day + OT') {
+      } else if (bil === 'Full Day + OT') {
         base = fd;
-        if (isSpecialDay) {
-          special = base;
-          if (hrs > 8) ot = (hrs - 8) * (hr * 1.0);
-        } else {
-          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-          if (workIsOOH && ot === 0) ooh = base * 0.5;
-        }
-      } else if (billingType.includes('Monthly')) {
-        base = parseFloat(monthlyRate) || 0;
-        if (isSpecialDay) special = hrs * (hr * 2.0);
+        if (isSpecialDay) { special = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
         else {
           if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-          if (workIsOOH && ot === 0) ooh = hrs * (hr * 0.5);
+          if (workIsOOH && hrs > 8 && ot === 0) ooh = base * 0.5;
         }
-      } else if (billingType === 'Agreed Rate') {
-        base = parseFloat(agreedRate) || 0;
-      } else if (billingType === 'Cancellation') {
-        base = parseFloat(cancellationFee) || 0;
-      }
+      } else if (bil.includes('Monthly')) {
+        base = parseFloat(opts.monthlyRate) || 0;
+        if (isSpecialDay) special = hrs * (hr * 2.0);
+        else {
+          // Standard 8h shift on Monthly = NO OT, NO OOH
+          if (hrs > 8) {
+            ot = (hrs - 8) * (hr * 1.5);
+            if (workIsOOH && ot === 0) ooh = hrs * (hr * 0.5);
+          }
+        }
+      } else if (bil === 'Agreed Rate') { base = parseFloat(opts.agreedRate) || 0;
+      } else if (bil === 'Cancellation') { base = parseFloat(opts.cancellationFee) || 0; }
 
-      const toolsVal = parseFloat(toolCost) || 0;
-      const travelVal = parseFloat(travelCostPerDay) || 0;
-      const grand = base + ot + ooh + special + toolsVal + travelVal;
+      const travelVal = parseFloat(opts.travelCostPerDay || 0);
+      const toolsVal = parseFloat(opts.toolCost || 0);
+      const grand = base + ot + ooh + special + travelVal + toolsVal;
 
       return {
         hrs: hrs.toFixed(2),
@@ -360,10 +359,14 @@ function TicketsPage() {
     const res = calculateTicketTotal({
       startTime, endTime, breakTime,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-      travelCostPerDay, toolCost: totalCost, billingType, timezone, calcTimezone
+      travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
     });
     setLiveBreakdown(res);
-  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, totalCost, billingType, timezone, calcTimezone]);
+    // CRITICAL: Update the actual totalCost state for the payload
+    if (res && res.grandTotal) {
+      setTotalCost(res.grandTotal);
+    }
+  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCostInput, billingType, timezone, calcTimezone]);
 
   // Sync Task Dates with Manual Time Log
   useEffect(() => {
@@ -2014,8 +2017,8 @@ function TicketsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={totalCost}
-                  onChange={(e) => setTotalCost(e.target.value)}
+                  value={toolCostInput}
+                  onChange={(e) => setToolCostInput(e.target.value)}
                   placeholder="0.00"
                 />
               </label>
