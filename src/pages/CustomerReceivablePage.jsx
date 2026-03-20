@@ -98,7 +98,7 @@ const CustomerReceivablePage = () => {
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
 
-        // Wall-clock hour extraction to prevent timezone shift bugs for OOH check
+        // USE VISUAL HOURS FROM ISO STRING TO PREVENT TIMEZONE SHIFT BUGS
         let startHr = info.hour;
         let endHr = endInfo.hour;
         if (ticket.start_time && ticket.start_time.includes('T')) {
@@ -112,22 +112,43 @@ const CustomerReceivablePage = () => {
         const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
-        const isO = (startHr < 8 || startHr >= 18 || endHr < 8 || endHr > 18 || hrs > 10) && hrs > 0;
+
+        // OOH strictly only if hours are OUTSIDE 08:00 - 18:00
+        const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
         if (billingType === 'Hourly') {
-            const b = Math.max(2, hrs); base = b * hr; if (isSpecialDay) sp = base;
-            else { if (b > 8) ot = (b - 8) * (hr * 0.5); if (isO && ot === 0) ooh = b * (hr * 0.5); }
+            const b = Math.max(2, hrs); base = b * hr; 
+            if (isSpecialDay) sp = base;
+            else { 
+                // 8 HOUR RULE: No OT or OOH if hours are exactly 8 and within day
+                if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); 
+                if (isO && hrs > 8 && ot === 0) ooh = hrs * (hr * 0.5); 
+            }
         } else if (billingType === 'Half Day + Hourly') {
-            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0); if (isSpecialDay) sp = base;
-            else { if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); if (isO && ot === 0) ooh = base * 0.5; }
+            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0); 
+            if (isSpecialDay) sp = base;
+            else { 
+                if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); 
+                if (isO && hrs > 8 && ot === 0) ooh = base * 0.5; 
+            }
         } else if (billingType === 'Full Day + OT') {
-            base = fd; if (isSpecialDay) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
-            else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = base * 0.5; }
+            base = fd; 
+            if (isSpecialDay) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
+            else { 
+                if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); 
+                if (isO && hrs > 8 && ot === 0) ooh = base * 0.5; 
+            }
         } else if (billingType.includes('Monthly')) {
             base = parseFloat(ticket.monthly_rate) || 0;
             if (isSpecialDay) sp = hrs * (hr * 2.0);
-            else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = hrs * (hr * 0.5); }
+            else { 
+                // Standard 8h shift on Monthly = NO OT, NO OOH
+                if (hrs > 8) {
+                    ot = (hrs - 8) * (hr * 1.5); 
+                    if (isO && ot === 0) ooh = hrs * (hr * 0.5);
+                }
+            }
         } else if (billingType === 'Agreed Rate') { base = parseFloat(ticket.agreed_rate) || 0;
         } else if (billingType === 'Cancellation') { base = parseFloat(ticket.cancellation_fee) || 0; }
 
