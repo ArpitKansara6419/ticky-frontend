@@ -254,7 +254,7 @@ function TicketsPage() {
       const hd = parseFloat(halfDayRate) || 0;
       const fd = parseFloat(fullDayRate) || 0;
 
-      const targetTZ = (calcTimezone && calcTimezone !== 'Ticket Local') ? calcTimezone : (timezone || 'UTC');
+      const targetTZ = (calcTimezone && calcTimezone !== 'Ticket Local') ? calcTimezone : (timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
 
       const getZonedInfo = (date) => {
         try {

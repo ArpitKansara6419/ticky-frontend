@@ -42,7 +42,7 @@ const CustomerReceivablePage = () => {
     // --- FRONTEND CALCULATION ENGINE (Consistent with Tickets/Engineers Page) ---
     const calculateTicketCostFrontend = (ticket, forcedTZ, targetCurrency = 'USD') => {
         if (!ticket) return {};
-        const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || 'UTC');
+        const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
         const rateMultiplier = 1;
 
         const hr = parseFloat(ticket.hourly_rate || 0) * rateMultiplier;
@@ -76,12 +76,17 @@ const CustomerReceivablePage = () => {
                 oohP += parseFloat(res.oohPremium || 0);
                 spP += parseFloat(res.specialDayPremium || 0);
             });
+            const totalOtHrs = totalHrs > 8 ? totalHrs - 8 : 0; // Simplified for multi-log view
             return {
                 totalReceivable: totalRec.toFixed(2),
                 baseCost: baseC, otPremium: otP, oohPremium: oohP, specialDayPremium: spP,
                 totalHours: totalHrs, formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
                 travelCost: parseFloat(ticket.travel_cost_per_day || 0) * logs.length,
-                toolCost: parseFloat(ticket.tool_cost || 0)
+                toolCost: parseFloat(ticket.tool_cost || 0),
+                otHours: totalOtHrs,
+                ooh: oohP > 0 ? 'Yes' : 'No',
+                ww: spP > 0 ? 'Yes' : 'No', // For UI simplicity
+                hw: spP > 0 ? 'Yes' : 'No'
             };
         }
 
@@ -92,11 +97,22 @@ const CustomerReceivablePage = () => {
 
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
+
+        // Wall-clock hour extraction to prevent timezone shift bugs for OOH check
+        let startHr = info.hour;
+        let endHr = endInfo.hour;
+        if (ticket.start_time && ticket.start_time.includes('T')) {
+            startHr = parseInt(ticket.start_time.split('T')[1].split(':')[0], 10);
+        }
+        if (ticket.end_time && ticket.end_time.includes('T')) {
+            endHr = parseInt(ticket.end_time.split('T')[1].split(':')[0], 10);
+        }
+
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
         const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
-        const isO = (info.hour < 8 || info.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10) && hrs > 0;
+        const isO = (startHr < 8 || startHr >= 18 || endHr < 8 || endHr > 18 || hrs > 10) && hrs > 0;
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
         if (billingType === 'Hourly') {
@@ -121,7 +137,12 @@ const CustomerReceivablePage = () => {
 
         return {
             totalReceivable: total.toFixed(2), baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
-            totalHours: hrs, travelCost: trav, toolCost: tool
+            totalHours: hrs, formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
+            travelCost: trav, toolCost: tool,
+            otHours: hrs > 8 ? hrs - 8 : 0,
+            ooh: ooh > 0 ? 'Yes' : 'No',
+            ww: isWK ? 'Yes' : 'No',
+            hw: isH ? 'Yes' : 'No'
         };
     };
 

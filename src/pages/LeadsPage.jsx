@@ -319,15 +319,15 @@ function LeadsPage() {
     const {
       startTime, endTime,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-      travelCostPerDay, toolCost, billingType, timezone
+      travelCostPerDay, toolCost, billingType, timezone, calcTimezone
     } = data;
 
     if (!startTime || !endTime) return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 };
 
     try {
       // Treat as wall-clock time
-      const s = new Date(startTime.replace(' ', 'T') + 'Z');
-      const e = new Date(endTime.replace(' ', 'T') + 'Z');
+      const s = new Date(startTime.includes('T') ? startTime : startTime.replace(' ', 'T') + 'Z');
+      const e = new Date(endTime.includes('T') ? endTime : endTime.replace(' ', 'T') + 'Z');
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 };
 
       const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000);
@@ -337,7 +337,8 @@ function LeadsPage() {
       const hd = parseFloat(halfDayRate) || 0;
       const fd = parseFloat(fullDayRate) || 0;
 
-      const targetTZ = timezone || 'UTC';
+      const targetTZ = (calcTimezone && calcTimezone !== 'Ticket Local') ? calcTimezone : (timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+
       const getZonedInfo = (date) => {
         try {
           const parts = new Intl.DateTimeFormat('en-US', {
@@ -353,11 +354,22 @@ function LeadsPage() {
 
       const startInfo = getZonedInfo(s);
       const endInfo = getZonedInfo(e);
+
+      // Wall-clock hour extraction for robustness
+      if (startTime.includes(' ') || startTime.includes('T')) {
+        const timePart = startTime.includes('T') ? startTime.split('T')[1] : startTime.split(' ')[1];
+        if (timePart) startInfo.hour = parseInt(timePart.split(':')[0], 10);
+      }
+      if (endTime.includes(' ') || endTime.includes('T')) {
+        const timePart = endTime.includes('T') ? endTime.split('T')[1] : endTime.split(' ')[1];
+        if (timePart) endInfo.hour = parseInt(timePart.split(':')[0], 10);
+      }
+
       const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
       const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
-      const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10;
+      const workIsOOH = (startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10) && hrs > 0;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
 
