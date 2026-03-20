@@ -4,7 +4,7 @@ import {
     FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
     FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
     FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload,
-    FiCreditCard, FiCheck
+    FiCreditCard, FiCheck, FiRefreshCw
 } from 'react-icons/fi';
 import './EngineerPayoutPage.css';
 
@@ -164,6 +164,26 @@ const EngineerPayoutPage = () => {
                 <div className="header-left">
                     <h1 className="header-title">Engineer Payouts</h1>
                     <p className="header-subtitle">Manage and track payments for your field engineers</p>
+                    <button 
+                        className="btn-recalculate" 
+                        onClick={async () => {
+                            if (!window.confirm("Recalculate payouts for all old resolved tickets?")) return;
+                            setProcessing(true);
+                            try {
+                                const res = await fetch(`${API_BASE_URL}/payouts/maintenance/recalculate`, { method: 'POST' });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    alert(data.message);
+                                    fetchEngineersSummary();
+                                }
+                            } catch (e) { console.error(e); }
+                            setProcessing(false);
+                        }}
+                        disabled={processing}
+                        style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', cursor: 'pointer', background: '#fff' }}
+                    >
+                        <FiRefreshCw className={processing ? 'spin' : ''} /> Recalculate Old Payouts
+                    </button>
                 </div>
                 <div className="header-stats">
                     <div className="stat-card blue">
@@ -356,11 +376,11 @@ const EngineerPayoutPage = () => {
                                     <div className="payout-breakdown">
                                         <div className="breakdown-row">
                                             <span>Base Pay:</span>
-                                            <span>${parseFloat(detailTicket.eng_total_cost).toFixed(2)}</span>
+                                            <span>${parseFloat(detailTicket.eng_total_cost || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="breakdown-total">
                                             <span>Net Payout:</span>
-                                            <span>${parseFloat(detailTicket.eng_total_cost).toFixed(2)}</span>
+                                            <span>${parseFloat(detailTicket.eng_total_cost || 0).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
