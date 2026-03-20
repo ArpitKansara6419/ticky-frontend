@@ -96,7 +96,7 @@ const CustomerReceivablePage = () => {
         const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
-        const isO = info.hour < 8 || info.hour >= 18 || endInfo.hour > 18 || hrs > 10;
+        const isO = (info.hour < 8 || info.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10) && hrs > 0;
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
         if (billingType === 'Hourly') {
@@ -692,7 +692,8 @@ const CustomerReceivablePage = () => {
                     if (isNaN(d.getTime())) return '—';
                     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                 };
-                const savedTotal = parseFloat(detailTicket.total_cost) || parseFloat(bd.totalReceivable) || 0;
+                const savedTotal = parseFloat(detailTicket.total_cost) > 0 ? parseFloat(detailTicket.total_cost) : parseFloat(bd.totalReceivable);
+                const adjustment = savedTotal - parseFloat(bd.totalReceivable);
 
                 return (
                     <div className="modal-overlay-premium" onClick={() => setDetailTicket(null)}>
@@ -820,10 +821,16 @@ const CustomerReceivablePage = () => {
                                                 <span>+ {cur} {parseFloat(detailTicket.tool_cost).toFixed(2)}</span>
                                             </div>
                                         )}
-                                        <div className="breakdown-row total-row-premium">
-                                            <span>Net Receivable</span>
-                                            <span>{cur} {parseFloat(bd.totalReceivable).toFixed(2)}</span>
-                                        </div>
+                                        {Math.abs(adjustment) > 0.01 && (
+                                            <div className="breakdown-row highlight-premium">
+                                                <span>Adjustments / Manual Entry</span>
+                                                <span>{adjustment > 0 ? '+' : '-'} {cur} {Math.abs(adjustment).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="breakdown-total-premium" style={{ borderTop: '2px dashed #c7d2fe', marginTop: '15px', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>Net Receivable</span>
+                                        <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--crm-primary, #7c3aed)' }}>{cur} {savedTotal.toFixed(2)}</span>
                                     </div>
                                 </div>
 

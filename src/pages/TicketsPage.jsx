@@ -295,7 +295,7 @@ function TicketsPage() {
       ];
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
-      const workIsOOH = startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10;
+      const workIsOOH = (startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10) && hrs > 0;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
 
