@@ -631,6 +631,7 @@ const CustomerReceivablePage = () => {
                                             <th className="text-right">Expenses</th>
                                             <th className="text-right">Receivable</th>
                                             <th className="text-right">Payout</th>
+                                            <th className="text-right">Profit</th>
                                             <th style={{ textAlign: 'center' }}>Detail</th>
                                         </tr>
                                     </thead>
@@ -675,10 +676,13 @@ const CustomerReceivablePage = () => {
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Tools: {parseFloat(bd.toolCost || 0).toFixed(0)}</div>
                                                     </td>
                                                     <td className="receivable-amount" style={{ color: '#6366f1' }}>
-                                                        {item.currency || 'USD'} {bd.totalReceivable}
+                                                        {item.currency || 'USD'} {parseFloat(item.total_cost || bd.totalReceivable).toFixed(2)}
                                                     </td>
                                                     <td className="receivable-amount" style={{ color: '#059669' }}>
-                                                        {item.currency || 'USD'} {pd.totalPayout}
+                                                        {item.currency || 'USD'} {parseFloat(item.eng_total_cost || pd.totalPayout).toFixed(2)}
+                                                    </td>
+                                                    <td className="receivable-amount" style={{ color: '#0f172a', fontWeight: '800' }}>
+                                                        {item.currency || 'USD'} {(parseFloat(item.total_cost || bd.totalReceivable) - parseFloat(item.eng_total_cost || pd.totalPayout)).toFixed(2)}
                                                     </td>
                                                     <td style={{ textAlign: 'center' }}>
                                                         <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
@@ -687,7 +691,7 @@ const CustomerReceivablePage = () => {
                                             );
                                         })}
                                         {filteredUnbilled.length === 0 && (
-                                            <tr><td colSpan="10" className="empty-state">No unbilled work found to match your criteria.</td></tr>
+                                            <tr><td colSpan="11" className="empty-state">No unbilled work found to match your criteria.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
