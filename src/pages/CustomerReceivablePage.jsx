@@ -697,13 +697,13 @@ const CustomerReceivablePage = () => {
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Tools: {parseFloat(bd.toolCost || 0).toFixed(0)}</div>
                                                     </td>
                                                     <td className="receivable-amount" style={{ color: '#6366f1' }}>
-                                                        {item.currency || 'USD'} {parseFloat(item.total_cost || bd.totalReceivable).toFixed(2)}
+                                                        {item.currency || 'USD'} {parseFloat(bd.totalReceivable).toFixed(2)}
                                                     </td>
                                                     <td className="receivable-amount" style={{ color: '#059669' }}>
-                                                        {item.currency || 'USD'} {parseFloat(item.eng_total_cost || pd.totalPayout).toFixed(2)}
+                                                        {item.eng_currency || item.currency || 'USD'} {parseFloat(pd.totalPayout).toFixed(2)}
                                                     </td>
                                                     <td className="receivable-amount" style={{ color: '#0f172a', fontWeight: '800' }}>
-                                                        {item.currency || 'USD'} {(parseFloat(item.total_cost || bd.totalReceivable) - parseFloat(item.eng_total_cost || pd.totalPayout)).toFixed(2)}
+                                                        {item.currency || 'USD'} {(parseFloat(bd.totalReceivable) - parseFloat(pd.totalPayout)).toFixed(2)}
                                                     </td>
                                                     <td style={{ textAlign: 'center' }}>
                                                         <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
