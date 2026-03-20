@@ -43,9 +43,6 @@ const CustomerReceivablePage = () => {
     const calculateTicketCostFrontend = (ticket, forcedTZ, targetCurrency = 'USD') => {
         if (!ticket) return {};
         const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || 'UTC');
-
-        // No unit conversion — always show in the ticket's native currency
-        // The currency filter is handled at the list level (filteredUnbilled)
         const rateMultiplier = 1;
 
         const hr = parseFloat(ticket.hourly_rate || 0) * rateMultiplier;
@@ -57,122 +54,74 @@ const CustomerReceivablePage = () => {
         const getZonedInfo = (date) => {
             try {
                 const parts = new Intl.DateTimeFormat('en-US', {
-                    timeZone: tz,
-                    hour12: false,
-                    year: 'numeric', month: '2-digit', day: '2-digit',
-                    hour: '2-digit', minute: '2-digit'
+                    timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                 }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
                 const dateStr = `${parts.year}-${parts.month}-${parts.day}`;
                 return { dateStr, day: new Date(dateStr).getDay(), hour: parseInt(parts.hour) };
-            } catch (e) {
-                return { dateStr: '', day: date.getDay(), hour: date.getHours() };
-            }
+            } catch (e) { return { dateStr: '', day: date.getDay(), hour: date.getHours() }; }
         };
 
         let logs = [];
-        try {
-            logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []);
-        } catch (e) { logs = []; }
+        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
 
         if (logs.length > 0) {
-            let totalRec = 0; let totalHrs = 0;
-            let hasOT = false; let hasOOH = false; let hasWKND = false; let hasHOL = false;
-
+            let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0;
             logs.forEach(log => {
-                const res = calculateTicketCostFrontend({
-                    ...ticket,
-                    task_start_date: log.start_time,
-                    task_end_date: log.end_time,
-                    break_time_mins: log.break_time_mins || 0,
-                    time_logs: [] // stop recursion
-                }, tz, targetCurrency);
+                if (!log.start_time || !log.end_time) return;
+                const res = calculateTicketCostFrontend({ ...ticket, start_time: log.start_time, end_time: log.end_time, break_time: (log.break_time_mins || 0) * 60, time_logs: [] }, tz, targetCurrency);
                 totalRec += parseFloat(res.totalReceivable || 0);
                 totalHrs += parseFloat(res.totalHours || 0);
-                if (res.otHours > 0) hasOT = true;
-                if (res.ooh === 'Yes') hasOOH = true;
-                if (res.ww === 'Yes') hasWKND = true;
-                if (res.hw === 'Yes') hasHOL = true;
+                baseC += parseFloat(res.baseCost || 0);
+                otP += parseFloat(res.otPremium || 0);
+                oohP += parseFloat(res.oohPremium || 0);
+                spP += parseFloat(res.specialDayPremium || 0);
             });
             return {
                 totalReceivable: totalRec.toFixed(2),
-                formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
-                totalHours: totalHrs,
-                otHours: hasOT ? 1 : 0, ooh: hasOOH ? 'Yes' : 'No', ww: hasWKND ? 'Yes' : 'No', hw: hasHOL ? 'Yes' : 'No',
-                travelCost: parseFloat(ticket.travel_cost_per_day || 0) * rateMultiplier * logs.length,
-                toolCost: parseFloat(ticket.total_cost || 0) * rateMultiplier
+                baseCost: baseC, otPremium: otP, oohPremium: oohP, specialDayPremium: spP,
+                totalHours: totalHrs, formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
+                travelCost: parseFloat(ticket.travel_cost_per_day || 0) * logs.length,
+                toolCost: parseFloat(ticket.tool_cost || 0)
             };
         }
 
-        // Single log logic
-        const startTimeStr = ticket.start_time || ticket.task_start_date;
-        const endTimeStr = ticket.end_time || ticket.task_end_date || ticket.start_time || ticket.task_start_date;
-        const s = new Date(startTimeStr);
-        const e = new Date(endTimeStr);
-        const brk = (parseInt(ticket.break_time || ticket.break_time_mins || 0)) * 60;
-        const dur = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk);
-        const hrs = dur / 3600;
+        const s = new Date(ticket.start_time || ticket.task_start_date);
+        const e = new Date(ticket.end_time || ticket.task_end_date || ticket.start_time);
+        const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
+        const hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
 
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
-
-        // Explicitly extract wall-clock hours from the input strings to avoid timezone shift bugs
-        if (startTimeStr && startTimeStr.includes('T')) {
-            info.hour = parseInt(startTimeStr.split('T')[1].split(':')[0], 10);
-        } else if (startTimeStr && startTimeStr.includes(' ')) {
-            info.hour = parseInt(startTimeStr.split(' ')[1].split(':')[0], 10);
-        }
-        if (endTimeStr && endTimeStr.includes('T')) {
-            endInfo.hour = parseInt(endTimeStr.split('T')[1].split(':')[0], 10);
-        } else if (endTimeStr && endTimeStr.includes(' ')) {
-            endInfo.hour = parseInt(endTimeStr.split(' ')[1].split(':')[0], 10);
-        }
-
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
-        const HOLS = [
-            '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
-            '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
-            '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
-        ];
+        const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
+        const isSpecialDay = isWK || isH;
         const isO = info.hour < 8 || info.hour >= 18 || endInfo.hour > 18 || hrs > 10;
 
-        let base = 0; let ot = 0; let ooh = 0; let sp = 0;
+        let base = 0, ot = 0, ooh = 0, sp = 0;
         if (billingType === 'Hourly') {
-            const billed = Math.max(2, hrs);
-            base = billed * hr;
-            if (isWK || isH) sp = base;
-            else {
-                if (billed > 8) ot = (billed - 8) * (hr * 0.5);
-                if (isO && ot === 0) ooh = billed * (hr * 0.5);
-            }
+            const b = Math.max(2, hrs); base = b * hr; if (isSpecialDay) sp = base;
+            else { if (b > 8) ot = (b - 8) * (hr * 0.5); if (isO && ot === 0) ooh = b * (hr * 0.5); }
         } else if (billingType === 'Half Day + Hourly') {
-            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
-            if (isWK || isH) sp = base;
-            else {
-                if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
-                if (isO && ot === 0) ooh = base * 0.5;
-            }
+            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0); if (isSpecialDay) sp = base;
+            else { if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); if (isO && ot === 0) ooh = base * 0.5; }
         } else if (billingType === 'Full Day + OT') {
-            base = fd;
-            if (isWK || isH) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
+            base = fd; if (isSpecialDay) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
             else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = base * 0.5; }
-        } else if (billingType === 'Agreed Rate') {
-            base = (parseFloat(ticket.agreed_rate) || 0) * rateMultiplier;
-        } else if (billingType === 'Cancellation') {
-            base = (parseFloat(ticket.cancellation_fee) || 0) * rateMultiplier;
-        }
+        } else if (billingType.includes('Monthly')) {
+            base = parseFloat(ticket.monthly_rate) || 0;
+            if (isSpecialDay) sp = hrs * (hr * 2.0);
+            else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = hrs * (hr * 0.5); }
+        } else if (billingType === 'Agreed Rate') { base = parseFloat(ticket.agreed_rate) || 0;
+        } else if (billingType === 'Cancellation') { base = parseFloat(ticket.cancellation_fee) || 0; }
 
-        const trav = (parseFloat(ticket.travel_cost_per_day || 0) * rateMultiplier);
-        const tool = (parseFloat(ticket.tool_cost || 0) * rateMultiplier);
-        const totalFallback = base + ot + ooh + sp + trav + tool;
+        const trav = parseFloat(ticket.travel_cost_per_day || 0);
+        const tool = parseFloat(ticket.tool_cost || 0);
+        const total = base + ot + ooh + sp + trav + tool;
 
         return {
-            totalReceivable: totalFallback.toFixed(2),
-            baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
-            totalHours: hrs,
-            formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
-            otHours: ot > 0 ? 1 : 0, ooh: ooh > 0 ? 'Yes' : 'No', ww: isWK ? 'Yes' : 'No', hw: isH ? 'Yes' : 'No',
-            travelCost: trav, toolCost: tool
+            totalReceivable: total.toFixed(2), baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
+            totalHours: hrs, travelCost: trav, toolCost: tool
         };
     };
 
