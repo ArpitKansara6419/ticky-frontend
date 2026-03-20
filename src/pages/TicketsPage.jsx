@@ -856,6 +856,7 @@ function TicketsPage() {
 
         setSelectedTicket(freshTicket)
         setIsTicketModalOpen(true)
+        setIsInlineEditing(false)
         fetchTicketExtras(ticketId)
         setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : ''))
         setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : ''))
@@ -2865,21 +2866,22 @@ function TicketsPage() {
                 <button
                   className="btn-wow-primary"
                   onClick={() => {
-                    if (selectedTicket.leadType === 'Dispatch') {
-                      const el = document.querySelector('.dispatch-logs-table-wrapper');
-                      if (el) el.scrollIntoView({ behavior: 'smooth' });
-                    } else {
-                      if (!isInlineEditing) {
-                        setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
-                        setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
-                        const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
-                        setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
-                      }
-                      setIsInlineEditing(!isInlineEditing);
+                    if (!isInlineEditing) {
+                      setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
+                      setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
+                      const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
+                      setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
+                    }
+                    setIsInlineEditing(!isInlineEditing);
+                    if (selectedTicket.leadType === 'Dispatch' && !isInlineEditing) {
+                      setTimeout(() => {
+                        const el = document.querySelector('.dispatch-logs-table-wrapper');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }, 100);
                     }
                   }}
                 >
-                  {selectedTicket.leadType === 'Dispatch' ? <><FiEdit2 /> Edit Time</> : (isInlineEditing ? <><FiX /> Cancel Edit</> : <><FiEdit2 /> Edit Time</>)}
+                  {isInlineEditing ? <><FiX /> Cancel Edit</> : <><FiEdit2 /> Edit Time</>}
                 </button>
               </div>
             </div>
