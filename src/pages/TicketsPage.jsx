@@ -142,6 +142,17 @@ function TicketsPage() {
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
   const [totalCost, setTotalCost] = useState('')
 
+  // Engineer Payout Configuration States
+  const [engPayType, setEngPayType] = useState('Default') // 'Default' | 'Custom'
+  const [engBillingType, setEngBillingType] = useState('Hourly')
+  const [engCurrency, setEngCurrency] = useState('USD')
+  const [engHourlyRate, setEngHourlyRate] = useState('')
+  const [engHalfDayRate, setEngHalfDayRate] = useState('')
+  const [engFullDayRate, setEngFullDayRate] = useState('')
+  const [engMonthlyRate, setEngMonthlyRate] = useState('')
+  const [engAgreedRate, setEngAgreedRate] = useState('')
+  const [engCancellationFee, setEngCancellationFee] = useState('')
+
   const [status, setStatus] = useState('Assigned')
   const [billingType, setBillingType] = useState('Hourly')
   const [cancellationFee, setCancellationFee] = useState('')
@@ -428,6 +439,16 @@ function TicketsPage() {
     setTotalCost('')
     setStatus('Assigned')
     setBillingType('Hourly')
+    setCancellationFee('')
+    setEngPayType('Default')
+    setEngBillingType('Hourly')
+    setEngCurrency('USD')
+    setEngHourlyRate('')
+    setEngHalfDayRate('')
+    setEngFullDayRate('')
+    setEngMonthlyRate('')
+    setEngAgreedRate('')
+    setEngCancellationFee('')
     setLeadType('Full time')
     setCancellationFee('')
     setStartTime('')
@@ -772,6 +793,16 @@ function TicketsPage() {
         breakTime: Number(breakTime) || 0,
         latitude,
         longitude,
+        // Engineer Payout Fields
+        engPayType,
+        engBillingType,
+        engCurrency,
+        engHourlyRate: engHourlyRate !== '' ? Number(engHourlyRate) : null,
+        engHalfDayRate: engHalfDayRate !== '' ? Number(engHalfDayRate) : null,
+        engFullDayRate: engFullDayRate !== '' ? Number(engFullDayRate) : null,
+        engMonthlyRate: engMonthlyRate !== '' ? Number(engMonthlyRate) : null,
+        engAgreedRate: engAgreedRate !== '' ? Number(engAgreedRate) : null,
+        engCancellationFee: engCancellationFee !== '' ? Number(engCancellationFee) : null,
       }
 
       const isEditing = Boolean(editingTicketId)
@@ -1094,6 +1125,16 @@ function TicketsPage() {
     setCallInvites(ticket.callInvites || '')
     setDocumentsLabel(ticket.documentsLabel || '')
     setSignoffLabel(ticket.signoffLabel || '')
+
+    setEngPayType(ticket.eng_pay_type || 'Default')
+    setEngBillingType(ticket.eng_billing_type || 'Hourly')
+    setEngCurrency(ticket.eng_currency || 'USD')
+    setEngHourlyRate(ticket.eng_hourly_rate || '')
+    setEngHalfDayRate(ticket.eng_half_day_rate || '')
+    setEngFullDayRate(ticket.eng_full_day_rate || '')
+    setEngMonthlyRate(ticket.eng_monthly_rate || '')
+    setEngAgreedRate(ticket.eng_agreed_rate || '')
+    setEngCancellationFee(ticket.eng_cancellation_fee || '')
 
     // Parse existing labels into the list UI
     if (ticket.documentsLabel) {
@@ -1563,6 +1604,83 @@ function TicketsPage() {
                   ))}
                 </select>
               </label>
+
+              {engineerId && (
+                <div style={{ marginTop: '20px', gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FiDollarSign style={{ color: '#2563eb' }} /> Engineer Payout Configuration
+                  </h3>
+                  
+                  <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}>
+                      <input type="radio" name="engPayType" value="Default" checked={engPayType === 'Default'} onChange={() => setEngPayType('Default')} />
+                      Use Engineer's Default Rates
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}>
+                      <input type="radio" name="engPayType" value="Custom" checked={engPayType === 'Custom'} onChange={() => setEngPayType('Custom')} />
+                      Custom Payout Overrides
+                    </label>
+                  </div>
+
+                  {engPayType === 'Custom' && (
+                    <div className="tickets-grid" style={{ paddingTop: '10px', borderTop: '1px dashed #cbd5e1' }}>
+                      <label className="tickets-field">
+                        <span>Payout Billing Type</span>
+                        <select value={engBillingType} onChange={(e) => setEngBillingType(e.target.value)}>
+                          <option value="Hourly">Hourly</option>
+                          <option value="Half Day + Hourly">Half Day + Hourly</option>
+                          <option value="Full Day + OT">Full Day + OT</option>
+                          <option value="Agreed Rate">Agreed Rate</option>
+                          <option value="Cancellation">Cancellation</option>
+                        </select>
+                      </label>
+
+                      <label className="tickets-field">
+                        <span>Payout Currency</span>
+                        <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)}>
+                          {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        </select>
+                      </label>
+
+                      <div className="tickets-grid" style={{ gridColumn: '1 / -1' }}>
+                        {engBillingType !== 'Agreed Rate' && engBillingType !== 'Cancellation' && (
+                          <>
+                            <label className="tickets-field">
+                              <span>Hourly Rate</span>
+                              <input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} placeholder="0.00" />
+                            </label>
+                            <label className="tickets-field">
+                              <span>Half Day Rate</span>
+                              <input type="number" value={engHalfDayRate} onChange={(e) => setEngHalfDayRate(e.target.value)} placeholder="0.00" />
+                            </label>
+                            <label className="tickets-field">
+                              <span>Full Day Rate</span>
+                              <input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} placeholder="0.00" />
+                            </label>
+                          </>
+                        )}
+                        {engBillingType === 'Agreed Rate' && (
+                          <label className="tickets-field">
+                            <span>Agreed Rate</span>
+                            <input type="number" value={engAgreedRate} onChange={(e) => setEngAgreedRate(e.target.value)} placeholder="0.00" />
+                          </label>
+                        )}
+                        {engBillingType === 'Cancellation' && (
+                          <label className="tickets-field">
+                            <span>Cancellation Penalty</span>
+                            <input type="number" value={engCancellationFee} onChange={(e) => setEngCancellationFee(e.target.value)} placeholder="0.00" />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {engPayType === 'Default' && (
+                    <p style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+                      Rates will be fetched from the selected engineer's profile automatically.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 

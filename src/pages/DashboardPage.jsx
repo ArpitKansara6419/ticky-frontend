@@ -11,6 +11,7 @@ import CustomerReceivablePage from './CustomerReceivablePage'
 import MeetingPage from './MeetingPage'
 import AttendancePage from './AttendancePage'
 import ApprovalsPage from './ApprovalsPage'
+import EngineerPayoutPage from './EngineerPayoutPage'
 import {
   FiHome,
   FiUsers,
@@ -57,6 +58,7 @@ const MAIN_MENU_ITEMS = [
   { id: 'customers', label: 'Customers', icon: FiUserCheck },
   { id: 'leads', label: 'Leads', icon: FiTarget },
   { id: 'customerReceivable', label: 'Customer Receivable', icon: FiFileText },
+  { id: 'engineerPayout', label: 'Engineer Payout', icon: FiCreditCard },
   { id: 'tickets', label: 'Tickets', icon: FiTag },
   { id: 'assetManagement', label: 'Asset Management', icon: FiBox },
   { id: 'projectManagement', label: 'Project Management', icon: FiBriefcase },
@@ -1052,6 +1054,10 @@ function DashboardPage() {
 
     if (activePage === 'customerReceivable') {
       return <CustomerReceivablePage />
+    }
+
+    if (activePage === 'engineerPayout') {
+      return <EngineerPayoutPage />
     }
 
     if (activePage === 'meeting') {
