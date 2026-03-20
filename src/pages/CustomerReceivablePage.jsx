@@ -146,6 +146,64 @@ const CustomerReceivablePage = () => {
         };
     };
 
+    const calculateEngineerPayoutFrontend = (ticket, forcedTZ) => {
+        if (!ticket) return {};
+        const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+        const hr = parseFloat(ticket.eng_hourly_rate || 0);
+        const hd = parseFloat(ticket.eng_half_day_rate || 0);
+        const fd = parseFloat(ticket.eng_full_day_rate || 0);
+        const billingType = ticket.eng_billing_type || 'Hourly';
+
+        const getZonedInfo = (date) => {
+            try {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+                const dateStr = `${parts.year}-${parts.month}-${parts.day}`;
+                return { dateStr, day: new Date(dateStr).getDay(), hour: parseInt(parts.hour) };
+            } catch (e) { return { dateStr: '', day: date.getDay(), hour: date.getHours() }; }
+        };
+
+        const s = new Date(ticket.start_time || ticket.task_start_date);
+        const e = new Date(ticket.end_time || ticket.task_end_date || ticket.start_time);
+        const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
+        const hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
+
+        const info = getZonedInfo(s);
+        const endInfo = getZonedInfo(e);
+
+        let startHr = info.hour;
+        let endHr = endInfo.hour;
+        if (ticket.start_time && ticket.start_time.includes('T')) startHr = parseInt(ticket.start_time.split('T')[1].split(':')[0], 10);
+        if (ticket.end_time && ticket.end_time.includes('T')) endHr = parseInt(ticket.end_time.split('T')[1].split(':')[0], 10);
+
+        const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
+        const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
+        const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
+        const isSpecialDay = isWK || isH;
+        const isO = (startHr < 8 || startHr >= 18 || endHr < 8 || endHr > 18 || hrs > 10) && hrs > 0;
+
+        let base = 0, ot = 0, ooh = 0, sp = 0;
+        if (billingType === 'Hourly') {
+            const b = Math.max(2, hrs); base = b * hr; if (isSpecialDay) sp = base;
+            else { if (b > 8) ot = (b - 8) * (hr * 0.5); if (isO && ot === 0) ooh = b * (hr * 0.5); }
+        } else if (billingType === 'Half Day + Hourly') {
+            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0); if (isSpecialDay) sp = base;
+            else { if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); if (isO && ot === 0) ooh = base * 0.5; }
+        } else if (billingType === 'Full Day + OT') {
+            base = fd; if (isSpecialDay) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
+            else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = base * 0.5; }
+        } else if (billingType === 'Agreed Rate') { base = parseFloat(ticket.eng_agreed_rate) || 0;
+        } else if (billingType === 'Cancellation') { base = parseFloat(ticket.eng_cancellation_fee) || 0; }
+
+        const total = base + ot + ooh + sp;
+        return {
+            totalPayout: total.toFixed(2), baseCost: base, otPremium: ot, oohPremium: ooh, specialDayPremium: sp,
+            totalHours: hrs, otHours: hrs > 8 ? hrs - 8 : 0
+        };
+    };
+
     // Table Filters & Pagination
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
     const [selectedYear, setSelectedYear] = useState('All Years');
@@ -540,12 +598,14 @@ const CustomerReceivablePage = () => {
                                             <th>Premiums</th>
                                             <th className="text-right">Expenses</th>
                                             <th className="text-right">Receivable</th>
+                                            <th className="text-right">Payout</th>
                                             <th style={{ textAlign: 'center' }}>Detail</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {displayedUnbilled.map((item, idx) => {
                                             const bd = calculateTicketCostFrontend(item, calcTimezone, selectedCurrency);
+                                            const pd = calculateEngineerPayoutFrontend(item, calcTimezone);
                                             const firstLetter = (item.engineer_name || 'N').charAt(0);
                                             return (
                                                 <tr key={item.id} className={selectedTicketIds.includes(item.id) ? 'selected' : ''}>
@@ -582,8 +642,11 @@ const CustomerReceivablePage = () => {
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Travel: {parseFloat(bd.travelCost || 0).toFixed(0)}</div>
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Tools: {parseFloat(bd.toolCost || 0).toFixed(0)}</div>
                                                     </td>
-                                                    <td className="receivable-amount">
+                                                    <td className="receivable-amount" style={{ color: '#6366f1' }}>
                                                         {item.currency || 'USD'} {bd.totalReceivable}
+                                                    </td>
+                                                    <td className="receivable-amount" style={{ color: '#059669' }}>
+                                                        {item.currency || 'USD'} {pd.totalPayout}
                                                     </td>
                                                     <td style={{ textAlign: 'center' }}>
                                                         <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
@@ -848,13 +911,55 @@ const CustomerReceivablePage = () => {
                                                 <span>{adjustment > 0 ? '+' : '-'} {cur} {Math.abs(adjustment).toFixed(2)}</span>
                                             </div>
                                         )}
-                                    </div>
-                                    <div className="breakdown-total-premium" style={{ borderTop: '2px dashed #c7d2fe', marginTop: '15px', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>Net Receivable</span>
-                                        <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--crm-primary, #7c3aed)' }}>{cur} {savedTotal.toFixed(2)}</span>
+                                        <div className="breakdown-total-premium" style={{ borderTop: '2px solid #6366f1', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ color: '#6366f1', fontSize: '18px', fontWeight: '700' }}>Net Receivable</span>
+                                            <span style={{ color: '#6366f1', fontSize: '18px', fontWeight: '800' }}>{cur} {savedTotal.toFixed(2)}</span>
+                                        </div>
                                     </div>
                                 </div>
 
+                                {/* Section 5: Engineer Payout Breakdown (NEW) */}
+                                <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '14px', border: '1px solid #bbf7d0', marginTop: '24px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>🔧 Engineer Payout Breakdown</div>
+                                        <div style={{ fontSize: '12px', fontWeight: '700', color: '#059669' }}>{detailTicket.engineer_name}</div>
+                                    </div>
+                                    
+                                    {(() => {
+                                        const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
+                                        const engCur = detailTicket.eng_currency || cur;
+                                        return (
+                                            <div className="breakdown-list-premium">
+                                                <div className="breakdown-row">
+                                                    <span>Base Labor Payout ({detailTicket.eng_billing_type || 'Hourly'})</span>
+                                                    <span>{engCur} {parseFloat(pd.baseCost || 0).toFixed(2)}</span>
+                                                </div>
+                                                {parseFloat(pd.otPremium) > 0 && (
+                                                    <div className="breakdown-row" style={{ color: '#059669', fontStyle: 'italic' }}>
+                                                        <span>Engineer Overtime (OT)</span>
+                                                        <span>+ {engCur} {parseFloat(pd.otPremium).toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {parseFloat(pd.oohPremium) > 0 && (
+                                                    <div className="breakdown-row" style={{ color: '#059669', fontStyle: 'italic' }}>
+                                                        <span>Engineer Out of Hours (OOH)</span>
+                                                        <span>+ {engCur} {parseFloat(pd.oohPremium).toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {parseFloat(pd.specialDayPremium) > 0 && (
+                                                    <div className="breakdown-row" style={{ color: '#059669', fontStyle: 'italic' }}>
+                                                        <span>Engineer Special Day Premium</span>
+                                                        <span>+ {engCur} {parseFloat(pd.specialDayPremium).toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="breakdown-total-premium" style={{ borderTop: '2px solid #059669', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ color: '#166534', fontWeight: '800' }}>Total Payout</span>
+                                                    <span style={{ color: '#166534', fontWeight: '900' }}>{engCur} {pd.totalPayout}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                                 {/* Scope of Work */}
                                 {detailTicket.scope_of_work && (
                                     <div style={{ marginTop: '16px', background: '#f8fafc', borderRadius: '12px', padding: '14px', border: '1px solid #e2e8f0' }}>
