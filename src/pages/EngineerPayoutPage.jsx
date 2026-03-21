@@ -247,7 +247,7 @@ const EngineerPayoutPage = () => {
             .filter(t => selectedTicketIds.includes(t.id))
             .reduce((sum, t) => {
                 const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
-                return sum + parseFloat(t.eng_total_cost || pd.totalPayout || 0);
+                return sum + parseFloat(pd.totalPayout || 0);
             }, 0)
             .toFixed(2);
     }, [unpaidTickets, selectedTicketIds, calcTimezone]);

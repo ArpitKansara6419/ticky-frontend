@@ -156,15 +156,10 @@ const CustomerReceivablePage = () => {
         const tool = parseFloat(ticket.tool_cost || 0);
         const total = base + ot + ooh + sp + trav + tool;
 
-        // PRIORITIZE SAVED VALUES: If the database already has a calculated total_cost, use it.
-        const dbTotal = parseFloat(ticket.total_cost || 0);
+        // Always use live calculation to ensure correctness, especially after fixing the 0.06 bug.
+        // If we need to support manual overrides in the future, we can re-add prioritization logic here.
         let finalReceivable = total;
         let billingGap = 0;
-        
-        if (dbTotal > 0 && Math.abs(dbTotal - total) > 0.05) {
-            finalReceivable = dbTotal;
-            billingGap = dbTotal - total;
-        }
 
         return {
             totalReceivable: finalReceivable.toFixed(2), 
@@ -236,15 +231,9 @@ const CustomerReceivablePage = () => {
 
         const total = base + ot + ooh + sp;
         
-        // PRIORITIZE SAVED VALUES for Engineer too
-        const dbTotal = parseFloat(ticket.eng_total_cost || 0);
+        // Always use live calculation for engineer payout to ensure accuracy.
         let finalPayout = total;
         let payoutGap = 0;
-        
-        if (dbTotal > 0 && Math.abs(dbTotal - total) > 0.05) {
-            finalPayout = dbTotal;
-            payoutGap = dbTotal - total;
-        }
 
         return {
             totalPayout: finalPayout.toFixed(2), 
