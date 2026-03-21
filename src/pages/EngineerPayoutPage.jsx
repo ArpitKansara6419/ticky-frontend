@@ -117,6 +117,7 @@ const EngineerPayoutPage = () => {
             });
 
             if (res.ok) {
+                alert('Payout processed successfully!');
                 // Success - Fetch both summary AND tickets to keep everything in sync
                 await fetchEngineersSummary();
                 await fetchEngineerTickets(selectedEngineerId);
