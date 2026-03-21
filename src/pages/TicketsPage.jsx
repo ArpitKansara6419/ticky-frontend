@@ -2663,12 +2663,12 @@ function TicketsPage() {
                                     Real-time Preview
                                   </div>
                                   <div style={{ fontSize: '14px', color: '#166534', fontWeight: '700' }}>
-                                    {res.hrs} hrs billable
+                                    {res?.hrs || '0.00'} hrs billable
                                   </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                   <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>Grand Total</div>
-                                  <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{selectedTicket.currency} {res.grandTotal}</div>
+                                  <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{selectedTicket.currency} {res?.grandTotal || '0.00'}</div>
                                 </div>
                               </div>
 
