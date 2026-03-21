@@ -2076,7 +2076,7 @@ function TicketsPage() {
                 <div className="preview-grid">
                   <div className="preview-item">
                     <label>Worked Hours</label>
-                    <span>{liveBreakdown.hrs}h</span>
+                    <span>{liveBreakdown?.hrs || '0.00'}h</span>
                   </div>
                   <div className="preview-item">
                     <label>Base Cost</label>
@@ -2101,8 +2101,8 @@ function TicketsPage() {
                     </div>
                   )}
                   <div className="preview-item total">
-                    <label>Grand Total</label>
-                    <span>{currency} {liveBreakdown.grandTotal}</span>
+                    <label>Estimated Grand Total</label>
+                    <span>{currency} {liveBreakdown?.grandTotal || '0.00'}</span>
                   </div>
                 </div>
                 <p className="preview-note">Note: Final calculation is performed by the server upon saving.</p>
