@@ -969,48 +969,6 @@ const CustomerReceivablePage = () => {
                                     </div>
                                 </div>
 
-                                {/* Section 5: Engineer Payout Breakdown */}
-                                <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '14px', border: '1px solid #bbf7d0', marginTop: '24px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>🔧 Engineer Payout Breakdown</div>
-                                        <div style={{ fontSize: '12px', fontWeight: '700', color: '#059669' }}>{detailTicket.engineer_name}</div>
-                                    </div>
-                                    
-                                    {(() => {
-                                        const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
-                                        const engCur = detailTicket.eng_currency || cur;
-                                        return (
-                                            <div className="breakdown-list-premium">
-                                                <div className="breakdown-row">
-                                                    <span>Base Labor Payout ({detailTicket.eng_billing_type || 'Hourly'})</span>
-                                                    <span>{engCur} {parseFloat(pd.baseCost || 0).toFixed(2)}</span>
-                                                </div>
-                                                {parseFloat(pd.otPremium) > 0 && (
-                                                    <div className="breakdown-row" style={{ color: '#166534' }}>
-                                                        <span>Engineer Overtime (OT)</span>
-                                                        <span>+ {engCur} {parseFloat(pd.otPremium).toFixed(2)}</span>
-                                                    </div>
-                                                )}
-                                                {parseFloat(pd.oohPremium) > 0 && (
-                                                    <div className="breakdown-row" style={{ color: '#166534' }}>
-                                                        <span>Engineer Out of Hours (OOH)</span>
-                                                        <span>+ {engCur} {parseFloat(pd.oohPremium).toFixed(2)}</span>
-                                                    </div>
-                                                )}
-                                                {parseFloat(pd.specialDayPremium) > 0 && (
-                                                    <div className="breakdown-row" style={{ color: '#166534' }}>
-                                                        <span>Engineer Weekend/Holiday</span>
-                                                        <span>+ {engCur} {parseFloat(pd.specialDayPremium).toFixed(2)}</span>
-                                                    </div>
-                                                )}
-                                                <div className="breakdown-total-premium" style={{ borderTop: '2px solid #059669', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ color: '#166534', fontWeight: '800' }}>Total Payout</span>
-                                                    <span style={{ color: '#166534', fontWeight: '900' }}>{engCur} {parseFloat(detailTicket.eng_total_cost || pd.totalPayout).toFixed(2)}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
                                 {/* Scope of Work */}
                                 {detailTicket.scope_of_work && (
                                     <div style={{ marginTop: '16px', background: '#f8fafc', borderRadius: '12px', padding: '14px', border: '1px solid #e2e8f0' }}>
