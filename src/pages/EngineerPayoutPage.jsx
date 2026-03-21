@@ -140,13 +140,115 @@ const EngineerPayoutPage = () => {
         eng.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Proper Calculation Logic for Engineers
+    const calculateEngineerPayoutFrontend = (ticket, calcTimezone) => {
+        if (!ticket.start_time || !ticket.end_time) return { totalPayout: 0, hrs: 0, otHours: 0, isOOH: false };
+
+        try {
+            const s = new Date(ticket.start_time);
+            const e = new Date(ticket.end_time);
+            const brkSec = (ticket.break_time || 0) * 60;
+            const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
+            const hrs = totSec / 3600;
+
+            const targetTZ = (calcTimezone && calcTimezone !== 'Ticket Local') ? calcTimezone : (ticket.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+            const getZonedInfo = (date) => {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: targetTZ,
+                    hour12: false,
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                }).formatToParts(date);
+                const p = {}; parts.forEach(pt => p[pt.type] = pt.value);
+                return { hour: parseInt(p.hour), day: date.getDay(), dateStr: `${p.year}-${p.month}-${p.day}` };
+            };
+
+            const info = getZonedInfo(s);
+            const endInfo = getZonedInfo(e);
+            
+            // --- PROPER LOGIC FIX FOR TIMEZONE SHIFTS ---
+            let startHr = info.hour;
+            let endHr = endInfo.hour;
+            if (ticket.start_time.includes('T')) {
+              startHr = parseInt(ticket.start_time.split('T')[1].split(':')[0], 10);
+            }
+            if (ticket.end_time.includes('T')) {
+              endHr = parseInt(ticket.end_time.split('T')[1].split(':')[0], 10);
+            }
+            const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
+
+            const isWeekend = (s.getDay() === 0 || s.getDay() === 6 || e.getDay() === 0 || e.getDay() === 6);
+            const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-10-02', '2026-12-25'];
+            const isHoliday = PUBLIC_HOLIDAYS.includes(info.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
+            const isSpecialDay = isWeekend || isHoliday;
+
+            const billingType = ticket.eng_billing_type || 'Hourly';
+            const hr = parseFloat(ticket.eng_hourly_rate || 0);
+            const hd = parseFloat(ticket.eng_half_day_rate || 0);
+            const fd = parseFloat(ticket.eng_full_day_rate || 0);
+
+            let base = 0, ot = 0, ooh = 0, special = 0;
+
+            if (billingType === 'Hourly') {
+                base = hrs * hr;
+                if (isSpecialDay) special = base;
+                else {
+                    // 8 HOUR RULE: No premiums for strictly standard day work
+                    if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
+                    if (workIsOOH && hrs > 8 && ot === 0) ooh = hrs * (hr * 0.5);
+                }
+            } else if (billingType === 'Half Day + Hourly') {
+                   base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
+                   if (isSpecialDay) special = base;
+                   else {
+                       if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
+                       if (workIsOOH && hrs > 8 && ot === 0) ooh = base * 0.5;
+                   }
+            } else if (billingType === 'Full Day + OT') {
+                base = fd;
+                if (isSpecialDay) { special = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
+                else {
+                    if (hrs > 8) ot = (hrs-8) * (hr * 1.5);
+                    if (workIsOOH && hrs > 8 && ot === 0) ooh = base * 0.5;
+                }
+            } else if (billingType.includes('Monthly')) {
+                base = parseFloat(ticket.eng_monthly_rate || 0);
+                if (isSpecialDay) special = hrs * (hr * 2.0);
+                else {
+                    // Standard 8h shift on Monthly = NO OT, NO OOH
+                    if (hrs > 8) {
+                        ot = (hrs - 8) * (hr * 1.5);
+                        if (workIsOOH && ot === 0) ooh = hrs * (hr * 0.5);
+                    }
+                }
+            }
+
+            return {
+                totalPayout: (base + ot + ooh + special),
+                hrs: hrs.toFixed(2),
+                otHours: (hrs > 8 ? (hrs - 8) : 0).toFixed(1),
+                isOOH: workIsOOH,
+                isSpecialDay,
+                base: base.toFixed(2),
+                ot: ot.toFixed(2),
+                ooh: ooh.toFixed(2),
+                special: special.toFixed(2)
+            };
+        } catch (err) {
+            return { totalPayout: 0, hrs: 0 };
+        }
+    };
+
     // Calculation for selected total (payout)
     const selectedPayoutTotal = useMemo(() => {
         return unpaidTickets
             .filter(t => selectedTicketIds.includes(t.id))
-            .reduce((sum, t) => sum + parseFloat(t.eng_total_cost || 0), 0)
+            .reduce((sum, t) => {
+                const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
+                return sum + parseFloat(t.eng_total_cost || pd.totalPayout || 0);
+            }, 0)
             .toFixed(2);
-    }, [unpaidTickets, selectedTicketIds]);
+    }, [unpaidTickets, selectedTicketIds, calcTimezone]);
 
     if (loading && engineersList.length === 0) {
         return (
@@ -331,7 +433,10 @@ const EngineerPayoutPage = () => {
                                         <td>{ticket.task_name}</td>
                                         <td>{ticket.total_time ? (ticket.total_time / 3600).toFixed(2) + 'h' : 'N/A'}</td>
                                         <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
-                                        <td className="amount-cell">${parseFloat(ticket.eng_total_cost || 0).toFixed(2)}</td>
+                                        <td className="amount-cell">${(() => {
+                                            const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
+                                            return parseFloat(ticket.eng_total_cost || pd.totalPayout || 0).toFixed(2);
+                                        })()}</td>
                                         <td>
                                             <button className="btn-view" onClick={() => handleOpenDetails(ticket)}>
                                                 <FiEye />
@@ -373,16 +478,24 @@ const EngineerPayoutPage = () => {
                                 </div>
                                 <div className="detail-item">
                                     <label>Calculation Breakdown</label>
-                                    <div className="payout-breakdown">
-                                        <div className="breakdown-row">
-                                            <span>Base Pay:</span>
-                                            <span>${parseFloat(detailTicket.eng_total_cost || 0).toFixed(2)}</span>
-                                        </div>
-                                        <div className="breakdown-total">
-                                            <span>Net Payout:</span>
-                                            <span>${parseFloat(detailTicket.eng_total_cost || 0).toFixed(2)}</span>
-                                        </div>
-                                    </div>
+                                    {(() => {
+                                        const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
+                                        return (
+                                            <div className="payout-breakdown">
+                                                <div className="breakdown-row">
+                                                    <span>Base Pay:</span>
+                                                    <span>${pd.base}</span>
+                                                </div>
+                                                {parseFloat(pd.ot) > 0 && <div className="breakdown-row"><span>OT Premium:</span><span>+ ${pd.ot}</span></div>}
+                                                {pd.isOOH && parseFloat(pd.ooh) > 0 && <div className="breakdown-row"><span>OOH Premium:</span><span>+ ${pd.ooh}</span></div>}
+                                                {pd.isSpecialDay && <div className="breakdown-row"><span>Weekend/Holiday:</span><span>+ ${pd.special}</span></div>}
+                                                <div className="breakdown-total">
+                                                    <span>Net Payout:</span>
+                                                    <span>${parseFloat(detailTicket.eng_total_cost || pd.totalPayout).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
