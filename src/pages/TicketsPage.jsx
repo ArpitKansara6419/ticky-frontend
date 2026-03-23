@@ -2047,65 +2047,133 @@ function TicketsPage() {
 
           <div className="tickets-actions-footer">
             {liveBreakdown && (
-              <div className="calculation-preview-card">
-                <h3>Live Estimated Total</h3>
+              <div className="calculation-preview-card" style={{
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: '16px',
+                padding: '24px',
+                marginBottom: '16px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)'
+              }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%', boxShadow: '0 0 8px #6366f1' }}></div>
+                      Live Cost Breakdown
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '600' }}>
+                      {billingType} · {liveBreakdown.hrs}h billable
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total</div>
+                    <div style={{ fontSize: '30px', fontWeight: '900', color: '#a5b4fc', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                      {currency} {liveBreakdown.grandTotal}
+                    </div>
+                  </div>
+                </div>
 
-                {/* OOH / Special Day Warning */}
+                {/* Premium Alerts */}
                 {liveBreakdown.isSpecialDay && (
-                  <div className="preview-alert preview-alert--gold">
+                  <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px', color: '#fbbf24', fontWeight: '600' }}>
                     <span>📅</span>
-                    <span>{liveBreakdown.isHoliday ? '🎉 Public Holiday' : '🏖️ Weekend'} — Special day rate (2x) applied.</span>
+                    <span>{liveBreakdown.isHoliday ? '🎉 Public Holiday' : '🏖️ Weekend'} — Special day rate (2×) applied.</span>
                   </div>
                 )}
                 {!liveBreakdown.isSpecialDay && liveBreakdown.isOOH && parseFloat(liveBreakdown.ooh) > 0 && (
-                  <div className="preview-alert preview-alert--ooh">
+                  <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px', color: '#a5b4fc', fontWeight: '600' }}>
                     <span>🌙</span>
-                    <span>
-                      <strong>OOH Premium applied</strong> — Work is outside normal hours (08:00—18:00).<br />
-                      <small>{liveBreakdown.oohReason}</small>
-                    </span>
+                    <span><strong>OOH Premium</strong> — Work is outside normal hours (08:00—18:00).</span>
                   </div>
                 )}
                 {!liveBreakdown.isSpecialDay && parseFloat(liveBreakdown.ot) > 0 && (
-                  <div className="preview-alert preview-alert--ot">
+                  <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px', color: '#fcd34d', fontWeight: '600' }}>
                     <span>⏱️</span>
-                    <span><strong>Overtime applied</strong> — {parseFloat(liveBreakdown.otHours).toFixed(1)}h worked beyond 8h standard day.</span>
+                    <span><strong>Overtime</strong> — Work exceeded 8h standard shift.</span>
                   </div>
                 )}
 
-                <div className="preview-grid">
-                  <div className="preview-item">
-                    <label>Worked Hours</label>
-                    <span>{liveBreakdown?.hrs || '0.00'}h</span>
+                {/* Breakdown Lines */}
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  
+                  {/* Base */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
+                      Base ({billingType === 'Hourly' ? `${liveBreakdown.hrs}h × ${currency}${hourlyRate}/hr` 
+                           : billingType === 'Half Day + Hourly' ? 'Half Day flat' 
+                           : billingType === 'Full Day + OT' ? 'Full Day flat'
+                           : billingType.includes('Monthly') ? 'Monthly rate'
+                           : billingType === 'Agreed Rate' ? 'Fixed rate'
+                           : 'Cancellation fee'})
+                    </span>
+                    <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700' }}>{currency} {liveBreakdown.base}</span>
                   </div>
-                  <div className="preview-item">
-                    <label>Base Cost</label>
-                    <span>{currency} {liveBreakdown.base}</span>
-                  </div>
+
+                  {/* OT */}
                   {parseFloat(liveBreakdown.ot) > 0 && (
-                    <div className="preview-item highlight">
-                      <label>OT Premium ({parseFloat(liveBreakdown.otHours).toFixed(1)}h ├ù 1.5x)</label>
-                      <span>+ {currency} {liveBreakdown.ot}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: '#fcd34d', fontWeight: '500' }}>
+                        Overtime Premium (1.5×)
+                      </span>
+                      <span style={{ fontSize: '14px', color: '#fcd34d', fontWeight: '700' }}>+ {currency} {liveBreakdown.ot}</span>
                     </div>
                   )}
+
+                  {/* OOH */}
                   {parseFloat(liveBreakdown.ooh) > 0 && (
-                    <div className="preview-item highlight">
-                      <label>OOH Premium (outside 08:00—18:00)</label>
-                      <span>+ {currency} {liveBreakdown.ooh}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '500' }}>
+                        OOH Premium (1.5×)
+                      </span>
+                      <span style={{ fontSize: '14px', color: '#a5b4fc', fontWeight: '700' }}>+ {currency} {liveBreakdown.ooh}</span>
                     </div>
                   )}
-                  {parseFloat(liveBreakdown.special) > 0 && (
-                    <div className="preview-item highlight-gold">
-                      <label>Weekend/Holiday Premium (2x)</label>
-                      <span>+ {currency} {liveBreakdown.special}</span>
+
+                  {/* Special Day */}
+                  {parseFloat(liveBreakdown.specialDay) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: '#fbbf24', fontWeight: '500' }}>
+                        Weekend/Holiday Premium (2×)
+                      </span>
+                      <span style={{ fontSize: '14px', color: '#fbbf24', fontWeight: '700' }}>+ {currency} {liveBreakdown.specialDay}</span>
                     </div>
                   )}
-                  <div className="preview-item total">
-                    <label>Estimated Grand Total</label>
-                    <span>{currency} {liveBreakdown?.grandTotal || '0.00'}</span>
+
+                  {/* Travel Cost */}
+                  {parseFloat(liveBreakdown.travel) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: '#34d399', fontWeight: '500' }}>
+                        Travel Cost / Day
+                      </span>
+                      <span style={{ fontSize: '14px', color: '#34d399', fontWeight: '700' }}>+ {currency} {liveBreakdown.travel}</span>
+                    </div>
+                  )}
+
+                  {/* Tool Cost */}
+                  {parseFloat(liveBreakdown.tools) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: '#f87171', fontWeight: '500' }}>
+                        Tool Cost
+                      </span>
+                      <span style={{ fontSize: '14px', color: '#f87171', fontWeight: '700' }}>+ {currency} {liveBreakdown.tools}</span>
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div style={{ borderTop: '1.5px dashed rgba(99, 102, 241, 0.3)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Grand Total
+                    </span>
+                    <span style={{ fontSize: '22px', color: '#a5b4fc', fontWeight: '900', letterSpacing: '-0.02em' }}>
+                      {currency} {liveBreakdown.grandTotal}
+                    </span>
                   </div>
                 </div>
-                <p className="preview-note">Note: Final calculation is performed by the server upon saving.</p>
+
+                <p style={{ fontSize: '11px', color: '#475569', marginTop: '12px', textAlign: 'center' }}>
+                  ⚡ Live preview — Final total is confirmed on save.
+                </p>
               </div>
             )}
 
