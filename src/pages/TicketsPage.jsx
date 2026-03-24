@@ -2794,11 +2794,13 @@ function TicketsPage() {
                 <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
                 <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>
                   {(() => {
-                    // Try to calculate live from actual time if available
-                    if (selectedTicket.startTime || selectedTicket.endTime) {
+                    // Try to calculate live from actual time OR scheduled if available
+                    const bestStart = selectedTicket.startTime || selectedTicket.taskStartDate;
+                    const bestEnd = selectedTicket.endTime || selectedTicket.taskEndDate || bestStart;
+                    if (bestStart || bestEnd) {
                       const liveResult = calculateTicketTotal({
-                        startTime: selectedTicket.startTime || selectedTicket.endTime,
-                        endTime: selectedTicket.endTime || selectedTicket.startTime,
+                        startTime: bestStart,
+                        endTime: bestEnd,
                         breakTime: selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0,
                         hourlyRate: selectedTicket.hourlyRate,
                         halfDayRate: selectedTicket.halfDayRate,
