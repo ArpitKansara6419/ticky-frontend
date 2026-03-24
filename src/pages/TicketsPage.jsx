@@ -784,7 +784,7 @@ function TicketsPage() {
         monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : null,
         agreedRate,
         travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
-        totalCost: totalCost !== '' ? Number(totalCost) : null,
+        toolCost: toolCostInput !== '' ? Number(toolCostInput) : 0, // Dedicated tool cost — server auto-calculates grand total
         billingType,
         leadType,
         cancellationFee: cancellationFee !== '' ? Number(cancellationFee) : null,
@@ -946,10 +946,10 @@ function TicketsPage() {
         agreedRate: selectedTicket.agreedRate,
         cancellationFee: selectedTicket.cancellationFee,
         travelCostPerDay: selectedTicket.travelCostPerDay,
-        totalCost: selectedTicket.toolCost, // Map toolCost to totalCost for backend
+        toolCost: selectedTicket.toolCost ?? selectedTicket.tool_cost ?? 0, // Dedicated tool cost field
+        billingType: selectedTicket.billingType || selectedTicket.billing_type || 'Hourly',
         status: selectedTicket.status,
         leadType: selectedTicket.leadType,
-        billingType: selectedTicket.billingType,
         // Time fields being updated
         startTime: inlineStartTime,
         endTime: inlineEndTime,
@@ -1918,9 +1918,9 @@ function TicketsPage() {
                   <option value="Hourly">Hourly Only</option>
                   <option value="Half Day + Hourly">Half Day + Hourly</option>
                   <option value="Full Day + OT">Full Day + OT</option>
-                  <option value="Monthly + OT + Weekend">Monthly + OT + Weekend</option>
-                  <option value="Agreed Rate">Fixed Price / Agreed Rate</option>
-                  <option value="Cancellation">Cancellation Fee</option>
+                  <option value="Monthly + OT + Weekend">Monthly + OT + Weekend or Holidays</option>
+                  <option value="Agreed Rate">Agreed rate</option>
+                  <option value="Cancellation">Cancellation / Reschedule charges</option>
                 </select>
               </label>
               <label className="tickets-field">
