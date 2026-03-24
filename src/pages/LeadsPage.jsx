@@ -127,11 +127,11 @@ function LeadsPage() {
   const [fullDayRate, setFullDayRate] = useState('')
   const [monthlyRate, setMonthlyRate] = useState('')
   const [toolsRequired, setToolsRequired] = useState('')
-  const [agreedRate, setAgreedRate] = useState('')
+  const [agreedRate, setAgreedRate] = useState('0')
   const [cancellationFee, setCancellationFee] = useState('')
 
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
-  const [totalCost, setTotalCost] = useState('')
+  const [totalCost, setTotalCost] = useState('0')
   const [billingType, setBillingType] = useState(() => localStorage.getItem('defaultBillingType') || 'Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local')
@@ -171,10 +171,10 @@ function LeadsPage() {
     setFullDayRate('')
     setMonthlyRate('')
     setToolsRequired('')
-    setAgreedRate('')
+    setAgreedRate('0')
     setCancellationFee('')
     setTravelCostPerDay('')
-    setTotalCost('')
+    setTotalCost('0')
     setBillingType(localStorage.getItem('defaultBillingType') || 'Hourly')
     setStatus(LEAD_STATUSES[0])
     setFormError('')
@@ -489,6 +489,15 @@ function LeadsPage() {
 
       setIsStatusModalOpen(false)
       loadLeads()
+
+      // Auto-navigate to Create Ticket if confirmed
+      if (status === 'Confirm') {
+        // Find lead name from the modal state that we just updated
+        if (window.confirm('Lead confirmed! Would you like to create a ticket now?')) {
+          localStorage.setItem('selectedLeadForTicket', JSON.stringify({ ...lead, status: 'Confirm' }))
+          navigate('/dashboard', { state: { openTickets: true } })
+        }
+      }
     } catch (e) { alert(e.message) }
   }
 
@@ -580,9 +589,10 @@ function LeadsPage() {
           halfDayRate: halfDayRate !== '' ? Number(halfDayRate) : null,
           fullDayRate: fullDayRate !== '' ? Number(fullDayRate) : null,
           monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : null,
-          toolsRequired, agreedRate,
+          toolsRequired, 
+          agreedRate: agreedRate !== '' && agreedRate !== null ? Number(agreedRate) : 0,
           travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
-          totalCost: totalCost !== '' ? Number(totalCost) : null,
+          totalCost: (totalCost !== '' && totalCost !== null) ? Number(totalCost) : 0, 
           billingType,
           status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(','),

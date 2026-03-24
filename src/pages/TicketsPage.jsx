@@ -138,9 +138,10 @@ function TicketsPage() {
   const [halfDayRate, setHalfDayRate] = useState('')
   const [fullDayRate, setFullDayRate] = useState('')
   const [monthlyRate, setMonthlyRate] = useState('')
-  const [agreedRate, setAgreedRate] = useState('')
+  const [toolsRequired, setToolsRequired] = useState('')
+  const [agreedRate, setAgreedRate] = useState('0') // Default 0 as requested
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
-  const [totalCost, setTotalCost] = useState('') // This is actually the FINAL TICKET TOTAL
+  const [totalCost, setTotalCost] = useState('0') // This is actually the FINAL TICKET TOTAL
   const [toolCostInput, setToolCostInput] = useState('') // New state for Tool Cost input
   const [cancellationFee, setCancellationFee] = useState('')
 
@@ -326,11 +327,9 @@ function TicketsPage() {
         base = parseFloat(opts.monthlyRate) || 0;
         if (isSpecialDay) special = hrs * (hr * 2.0);
         else {
-          // Standard 8h shift on Monthly = NO OT, NO OOH
-          if (hrs > 8) {
-            ot = (hrs - 8) * (hr * 1.5);
-            if (workIsOOH && ot === 0) ooh = hrs * (hr * 0.5);
-          }
+          // Monthly covers 8h. Extra or OOH is additive.
+          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+          if (workIsOOH && ot === 0 && hrs > 0) ooh = hrs * (hr * 0.5);
         }
       } else if (bil === 'Agreed Rate') { base = parseFloat(opts.agreedRate) || 0;
       } else if (bil === 'Cancellation') { base = parseFloat(opts.cancellationFee) || 0; }
@@ -782,12 +781,12 @@ function TicketsPage() {
         halfDayRate: halfDayRate !== '' ? Number(halfDayRate) : null,
         fullDayRate: fullDayRate !== '' ? Number(fullDayRate) : null,
         monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : null,
-        agreedRate,
+        agreedRate: agreedRate !== '' && agreedRate !== null ? Number(agreedRate) : 0,
         travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
         toolCost: toolCostInput !== '' ? Number(toolCostInput) : 0, // Dedicated tool cost — server auto-calculates grand total
         billingType,
         leadType,
-        cancellationFee: cancellationFee !== '' ? Number(cancellationFee) : null,
+        cancellationFee: cancellationFee !== '' && cancellationFee !== null ? Number(cancellationFee) : 0,
         status,
         taskStartDate: finalTaskStartDate ? String(finalTaskStartDate).split('T')[0] : null,
         taskEndDate: finalTaskEndDate ? String(finalTaskEndDate).split('T')[0] : null,
@@ -1326,9 +1325,10 @@ function TicketsPage() {
         setHalfDayRate(parsedLead.halfDayRate != null ? String(parsedLead.halfDayRate) : '')
         setFullDayRate(parsedLead.fullDayRate != null ? String(parsedLead.fullDayRate) : '')
         setMonthlyRate(parsedLead.monthlyRate != null ? String(parsedLead.monthlyRate) : '')
-        setAgreedRate(parsedLead.agreedRate || '')
+        setAgreedRate(parsedLead.agreedRate || '0')
         setTravelCostPerDay(parsedLead.travelCostPerDay != null ? String(parsedLead.travelCostPerDay) : '')
-        setToolCostInput(parsedLead.toolCost != null ? String(parsedLead.toolCost) : '')
+        setToolCostInput(parsedLead.toolCost != null ? String(parsedLead.toolCost) : '0')
+        setCancellationFee(parsedLead.cancellationFee != null ? String(parsedLead.cancellationFee) : '')
         setBillingType(parsedLead.billingType || 'Hourly')
         setLeadType(parsedLead.leadType || 'Full time')
 
@@ -1367,9 +1367,10 @@ function TicketsPage() {
       setHalfDayRate(lead.halfDayRate != null ? String(lead.halfDayRate) : '')
       setFullDayRate(lead.fullDayRate != null ? String(lead.fullDayRate) : '')
       setMonthlyRate(lead.monthlyRate != null ? String(lead.monthlyRate) : '')
-      setAgreedRate(lead.agreedRate || '')
+      setAgreedRate(lead.agreedRate || '0')
       setTravelCostPerDay(lead.travelCostPerDay != null ? String(lead.travelCostPerDay) : '')
-      setToolCostInput(lead.toolCost != null ? String(lead.toolCost) : '')
+      setToolCostInput(lead.toolCost != null ? String(lead.toolCost) : '0')
+      setCancellationFee(lead.cancellationFee != null ? String(lead.cancellationFee) : '')
       setBillingType(lead.billingType || 'Hourly')
       setLeadType(lead.leadType || 'Full time')
       setLatitude(lead.latitude || null)
@@ -2560,7 +2561,7 @@ function TicketsPage() {
                 </div>
                 <div className="detail-item">
                   <label>Agreed / Fixed Rate</label>
-                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedTicket.agreedRate || '--'}</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>{selectedTicket.currency} {selectedTicket.agreedRate || '0.00'}</span>
                 </div>
 
                 {/* Additional Costs Section */}
