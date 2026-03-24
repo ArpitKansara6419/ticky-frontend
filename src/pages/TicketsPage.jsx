@@ -2795,10 +2795,10 @@ function TicketsPage() {
                 <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>
                   {(() => {
                     // Try to calculate live from actual time if available
-                    if (selectedTicket.startTime && selectedTicket.endTime) {
+                    if (selectedTicket.startTime || selectedTicket.endTime) {
                       const liveResult = calculateTicketTotal({
-                        startTime: selectedTicket.startTime,
-                        endTime: selectedTicket.endTime,
+                        startTime: selectedTicket.startTime || selectedTicket.endTime,
+                        endTime: selectedTicket.endTime || selectedTicket.startTime,
                         breakTime: selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0,
                         hourlyRate: selectedTicket.hourlyRate,
                         halfDayRate: selectedTicket.halfDayRate,
@@ -2812,7 +2812,7 @@ function TicketsPage() {
                         timezone: selectedTicket.timezone,
                         calcTimezone: 'Ticket Local'
                       });
-                      if (liveResult && parseFloat(liveResult.grandTotal) > 0) {
+                      if (liveResult) {
                         return `${selectedTicket.currency} ${liveResult.grandTotal}`;
                       }
                     }
