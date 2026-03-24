@@ -860,8 +860,16 @@ function TicketsPage() {
         setIsTicketModalOpen(true)
         setIsInlineEditing(false)
         fetchTicketExtras(ticketId)
-        setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : ''))
-        setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : ''))
+        const formatForInput = (dateStr) => {
+          if (!dateStr) return '';
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return '';
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+
+        setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : (freshTicket.taskStartDate ? formatForInput(freshTicket.taskStartDate) : '')))
+        setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : (freshTicket.taskEndDate ? formatForInput(freshTicket.taskEndDate) : '')))
         setInlineBreakTime(freshTicket.breakTime ? Math.floor(Number(freshTicket.breakTime) / 60) : (freshTicket.break_time ? Math.floor(Number(freshTicket.break_time) / 60) : '0'))
         setNewExtendEndDate(freshTicket.taskEndDate ? freshTicket.taskEndDate.split('T')[0] : '')
       } else {
@@ -2795,13 +2803,15 @@ function TicketsPage() {
                 <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>
                   {(() => {
                     // Try to calculate live from actual time OR scheduled if available
-                    const bestStart = selectedTicket.startTime || selectedTicket.taskStartDate;
-                    const bestEnd = selectedTicket.endTime || selectedTicket.taskEndDate || bestStart;
+                    // While editing, we prefer the 'inline' states for real-time feedback
+                    const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.taskStartDate);
+                    const bestEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.taskEndDate || bestStart);
+                    
                     if (bestStart || bestEnd) {
                       const liveResult = calculateTicketTotal({
                         startTime: bestStart,
                         endTime: bestEnd,
-                        breakTime: selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0,
+                        breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
                         hourlyRate: selectedTicket.hourlyRate,
                         halfDayRate: selectedTicket.halfDayRate,
                         fullDayRate: selectedTicket.fullDayRate,
