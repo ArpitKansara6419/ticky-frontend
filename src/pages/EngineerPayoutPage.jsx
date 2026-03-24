@@ -423,29 +423,38 @@ const EngineerPayoutPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {unpaidTickets.map(ticket => (
-                                    <tr key={ticket.id} className={selectedTicketIds.includes(ticket.id) ? 'selected' : ''}>
-                                        <td><input 
-                                            type="checkbox" 
-                                            checked={selectedTicketIds.includes(ticket.id)}
-                                            onChange={() => toggleTicketSelection(ticket.id)}
-                                        /></td>
-                                        <td><span className="ticket-id">#{ticket.id}</span></td>
-                                        <td>{ticket.customer_name}</td>
-                                        <td>{ticket.task_name}</td>
-                                        <td>{ticket.total_time ? (ticket.total_time / 3600).toFixed(2) + 'h' : 'N/A'}</td>
-                                        <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
-                                        <td className="amount-cell">${(() => {
-                                            const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
-                                            return parseFloat(ticket.eng_total_cost || pd.totalPayout || 0).toFixed(2);
-                                        })()}</td>
-                                        <td>
-                                            <button className="btn-view" onClick={() => handleOpenDetails(ticket)}>
-                                                <FiEye />
-                                            </button>
+                                {unpaidTickets.length > 0 ? (
+                                    unpaidTickets.map(ticket => (
+                                        <tr key={ticket.id} className={selectedTicketIds.includes(ticket.id) ? 'selected' : ''}>
+                                            <td><input 
+                                                type="checkbox" 
+                                                checked={selectedTicketIds.includes(ticket.id)}
+                                                onChange={() => toggleTicketSelection(ticket.id)}
+                                            /></td>
+                                            <td><span className="ticket-id">#{ticket.id}</span></td>
+                                            <td>{ticket.customer_name}</td>
+                                            <td>{ticket.task_name}</td>
+                                            <td>{ticket.total_time ? (ticket.total_time / 3600).toFixed(2) + 'h' : 'N/A'}</td>
+                                            <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
+                                            <td className="amount-cell">${(() => {
+                                                const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
+                                                return parseFloat(ticket.eng_total_cost || pd.totalPayout || 0).toFixed(2);
+                                            })()}</td>
+                                            <td>
+                                                <button className="btn-view" onClick={() => handleOpenDetails(ticket)}>
+                                                    <FiEye />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="8" className="empty-row" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
+                                            <FiAlertCircle style={{ fontSize: '24px', marginBottom: '8px', display: 'block', margin: '0 auto' }} />
+                                            No unpaid resolved tickets found for this engineer.
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
