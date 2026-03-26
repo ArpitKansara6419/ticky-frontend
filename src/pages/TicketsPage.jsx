@@ -197,30 +197,29 @@ function TicketsPage() {
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
   // Smart Auto-Sync for Start & End Time based on Task Details
+  // TIMEZONE-SAFE: builds wall-clock strings directly without new Date() to avoid local TZ shifts
   const autoSyncTime = (startDate, endDate, timeStr) => {
     if (viewMode === 'form' && startDate && timeStr) {
-      const startStr = `${startDate}T${timeStr.padStart(5, '0')}`;
-      const d = new Date(startStr);
+      const time = timeStr.padStart(5, '0');
+      setStartTime(`${startDate}T${time}`);
 
-      if (!isNaN(d.getTime())) {
-        const pad = (n) => String(n).padStart(2, '0');
-        const formattedStart = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-
-        // Update BOTH the override times and the state
-        setStartTime(formattedStart);
-
-        if (endDate) {
-          const endStr = `${endDate}T${timeStr.padStart(5, '0')}`;
-          const endD = new Date(endStr);
-          if (!isNaN(endD.getTime())) {
-            // Add 8 hours as a default standard working block for automatic resolution
-            // But if it's the same day, we just set the same time
-            if (startDate === endDate) {
-              endD.setHours(d.getHours() + 8);
-            }
-            const formattedEnd = `${endD.getFullYear()}-${pad(endD.getMonth() + 1)}-${pad(endD.getDate())}T${pad(endD.getHours())}:${pad(endD.getMinutes())}`;
-            setEndTime(formattedEnd);
+      if (endDate) {
+        if (startDate === endDate) {
+          // Add 8 hours as default working block — pure string arithmetic, no TZ conversion
+          const [hStr, mStr] = time.split(':');
+          const pad = (n) => String(n).padStart(2, '0');
+          let h = parseInt(hStr, 10) + 8;
+          let d = endDate;
+          if (h >= 24) {
+            // Overflow to next day
+            const baseDate = new Date(`${endDate}T00:00:00Z`);
+            baseDate.setUTCDate(baseDate.getUTCDate() + 1);
+            d = `${baseDate.getUTCFullYear()}-${pad(baseDate.getUTCMonth() + 1)}-${pad(baseDate.getUTCDate())}`;
+            h = h - 24;
           }
+          setEndTime(`${d}T${pad(h)}:${mStr}`);
+        } else {
+          setEndTime(`${endDate}T${time}`);
         }
       }
     }
@@ -2692,20 +2691,6 @@ function TicketsPage() {
 
                     {isInlineEditing ? (
                       <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                          <button
-                            type="button"
-                            className="tickets-secondary-btn"
-                            style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px' }}
-                            onClick={() => {
-                              setInlineStartTime(selectedTicket.taskStartDate ? formatForInput(selectedTicket.taskStartDate) : '');
-                              setInlineEndTime(selectedTicket.taskEndDate ? formatForInput(selectedTicket.taskEndDate) : '');
-                              setInlineBreakTime('0');
-                            }}
-                          >
-                            Sync with Scheduled
-                          </button>
-                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
                           <label className="tickets-field">
                             <span style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em' }}>ACTUAL START</span>
@@ -2975,8 +2960,39 @@ function TicketsPage() {
                   className="btn-wow-primary"
                   onClick={() => {
                     if (!isInlineEditing) {
-                      setInlineStartTime(selectedTicket.startTime ? formatForInput(selectedTicket.startTime) : (selectedTicket.start_time ? formatForInput(selectedTicket.start_time) : ''));
-                      setInlineEndTime(selectedTicket.endTime ? formatForInput(selectedTicket.endTime) : (selectedTicket.end_time ? formatForInput(selectedTicket.end_time) : ''));
+                      // Resolve actual start/end time from ticket
+                      const actualStart = selectedTicket.startTime || selectedTicket.start_time;
+                      const actualEnd   = selectedTicket.endTime   || selectedTicket.end_time;
+
+                      if (actualStart) {
+                        // Ticket already has activity times recorded — use them directly
+                        setInlineStartTime(formatForInput(actualStart));
+                        setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
+                      } else {
+                        // No activity yet — auto-fill from scheduled task details (wall-clock, no TZ shift)
+                        const schedDate  = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
+                        const schedEDate = selectedTicket.taskEndDate   ? selectedTicket.taskEndDate.split('T')[0]   : schedDate;
+                        const schedTime  = selectedTicket.taskTime ? selectedTicket.taskTime.padStart(5, '0') : '08:00';
+                        if (schedDate) {
+                          setInlineStartTime(`${schedDate}T${schedTime}`);
+                          // Default end = same day start + 8 hours (pure arithmetic, no new Date())
+                          const pad = (n) => String(n).padStart(2, '0');
+                          const [hStr, mStr] = schedTime.split(':');
+                          let h = parseInt(hStr, 10) + 8;
+                          let d = schedEDate || schedDate;
+                          if (h >= 24) {
+                            const base = new Date(`${d}T00:00:00Z`);
+                            base.setUTCDate(base.getUTCDate() + 1);
+                            d = `${base.getUTCFullYear()}-${pad(base.getUTCMonth() + 1)}-${pad(base.getUTCDate())}`;
+                            h = h - 24;
+                          }
+                          setInlineEndTime(`${d}T${pad(h)}:${mStr}`);
+                        } else {
+                          setInlineStartTime('');
+                          setInlineEndTime('');
+                        }
+                      }
+
                       const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
                       setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
                     }
