@@ -16,12 +16,25 @@ const TIMEZONES = [
 
 const formatForInput = (dateStr) => {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  let d;
+  if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+    // Force UTC for wall-clock strings from DB to prevent local TZ offset shift
+    d = new Date(dateStr.replace(' ', 'T') + 'Z');
+  } else {
+    d = new Date(dateStr);
+  }
+  
   if (isNaN(d.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
+  
   // Use UTC components to display exactly what is stored in the DB (wall-clock time)
-  // this prevents the 5:30 offset in India when the server is UTC
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+  const year = d.getUTCFullYear();
+  const month = pad(d.getUTCMonth() + 1);
+  const day = pad(d.getUTCDate());
+  const hours = pad(d.getUTCHours());
+  const minutes = pad(d.getUTCMinutes());
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 const STATIC_COUNTRIES = [
@@ -860,17 +873,9 @@ function TicketsPage() {
         setIsTicketModalOpen(true)
         setIsInlineEditing(false)
         fetchTicketExtras(ticketId)
-        const formatForInput = (dateStr) => {
-          if (!dateStr) return '';
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return '';
-          const pad = (n) => String(n).padStart(2, '0');
-          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        };
-
         setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : (freshTicket.taskStartDate ? formatForInput(freshTicket.taskStartDate) : '')))
         setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : (freshTicket.taskEndDate ? formatForInput(freshTicket.taskEndDate) : '')))
-        setInlineBreakTime(freshTicket.breakTime ? Math.floor(Number(freshTicket.breakTime) / 60) : (freshTicket.break_time ? Math.floor(Number(freshTicket.break_time) / 60) : '0'))
+        setInlineBreakTime(freshTicket.breakTime ? String(Math.floor(Number(freshTicket.breakTime) / 60)) : (freshTicket.break_time ? String(Math.floor(Number(freshTicket.break_time) / 60)) : '0'))
         setNewExtendEndDate(freshTicket.taskEndDate ? freshTicket.taskEndDate.split('T')[0] : '')
       } else {
         // Fallback to cached data if API fails
@@ -1173,22 +1178,20 @@ function TicketsPage() {
     setLeadType(ticket.leadType || 'Full time')
     setStatus(ticket.status || 'Open')
 
-    const formatForInput = (dateStr) => {
-      if (!dateStr) return '';
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return '';
-      const pad = (n) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-
-    // Time Log Sync ONLY if it doesn't already exist or if ticket implies we should keep existing
+    // Time Log Sync
     if (ticket.startTime) {
       setStartTime(formatForInput(ticket.startTime));
+    } else if (ticket.start_time) {
+      setStartTime(formatForInput(ticket.start_time));
     }
+    
     if (ticket.endTime) {
       setEndTime(formatForInput(ticket.endTime));
+    } else if (ticket.end_time) {
+      setEndTime(formatForInput(ticket.end_time));
     }
-    setBreakTime(ticket.breakTime ? String(Math.floor(ticket.breakTime / 60)) : '0');
+    
+    setBreakTime(ticket.breakTime ? String(Math.floor(ticket.breakTime / 60)) : (ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0'));
   }
 
   const handleViewDocument = (fileUrl) => {
@@ -1336,9 +1339,20 @@ function TicketsPage() {
         setAgreedRate(parsedLead.agreedRate || '0')
         setTravelCostPerDay(parsedLead.travelCostPerDay != null ? String(parsedLead.travelCostPerDay) : '')
         setToolCostInput(parsedLead.toolCost != null ? String(parsedLead.toolCost) : '0')
-        setCancellationFee(parsedLead.cancellationFee != null ? String(parsedLead.cancellationFee) : '')
+        setCancellationFee(parsedLead.cancellationFee != null ? String(parsedLead.cancellationFee) : (parsedLead.cancellation_fee != null ? String(parsedLead.cancellation_fee) : ''))
         setBillingType(parsedLead.billingType || 'Hourly')
         setLeadType(parsedLead.leadType || 'Full time')
+        
+        // AUTO SYNC TIME: Automatically populate the manual override times from the scheduled lead details
+        const lDate = parsedLead.followUpDate || parsedLead.taskStartDate;
+        const lEndDate = parsedLead.taskEndDate || lDate;
+        const lTime = parsedLead.taskTime || '09:00';
+        
+        if (lDate && lTime) {
+          const sDateOnly = String(lDate).split('T')[0];
+          const eDateOnly = String(lEndDate).split('T')[0];
+          autoSyncTime(sDateOnly, eDateOnly, lTime);
+        }
 
         setViewMode('form')
       }
@@ -1378,11 +1392,21 @@ function TicketsPage() {
       setAgreedRate(lead.agreedRate || '0')
       setTravelCostPerDay(lead.travelCostPerDay != null ? String(lead.travelCostPerDay) : '')
       setToolCostInput(lead.toolCost != null ? String(lead.toolCost) : '0')
-      setCancellationFee(lead.cancellationFee != null ? String(lead.cancellationFee) : '')
+      setCancellationFee(lead.cancellationFee != null ? String(lead.cancellationFee) : (lead.cancellation_fee != null ? String(lead.cancellation_fee) : ''))
       setBillingType(lead.billingType || 'Hourly')
       setLeadType(lead.leadType || 'Full time')
       setLatitude(lead.latitude || null)
       setLongitude(lead.longitude || null)
+
+      // AUTO SYNC TIME: Automatically populate the manual override times from the scheduled lead details
+      const lDate = latestDate;
+      const lEndDate = latestEndDate;
+      const lTime = lead.taskTime || '09:00';
+      if (lDate && lTime) {
+          const sDateOnly = String(lDate).split('T')[0];
+          const eDateOnly = String(lEndDate).split('T')[0];
+          autoSyncTime(sDateOnly, eDateOnly, lTime);
+      }
     }
   }, [leadId, leads])
 
