@@ -292,6 +292,8 @@ function TicketsPage() {
         '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
       ];
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
+      // isWeekend: 0=Sunday, 6=Saturday
+      const isWeekend = startInfo.day === 0 || startInfo.day === 6;
       const isSpecialDay = isWeekend || isHoliday;
 
       // --- PROPER LOGIC FIX FOR TIMEZONE SHIFTS ---
@@ -314,37 +316,38 @@ function TicketsPage() {
       const bil = opts.billingType;
 
       if (bil === 'Hourly') {
-        const b = Math.max(2, hrs); base = b * hr;
-        if (isSpecialDay) special = base;
-        else {
-          // 8 HOUR RULE: No premiums for strictly standard day work
-          if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
-          if (workIsOOH && hrs > 8 && ot === 0) ooh = hrs * (hr * 0.5);
-        }
+        const b = Math.max(2, hrs); 
+        base = b * hr;
+
       } else if (bil === 'Half Day + Hourly') {
-        base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
-        if (isSpecialDay) special = base;
-        else {
-          if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
-          if (workIsOOH && hrs > 8 && ot === 0) ooh = base * 0.5;
+        if (hrs <= 4) {
+          base = hd;
+        } else {
+          base = hd + ((hrs - 4) * hr);
         }
+
       } else if (bil === 'Full Day + OT') {
-        base = fd;
-        if (isSpecialDay) { special = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
-        else {
-          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-          if (workIsOOH && hrs > 8 && ot === 0) ooh = base * 0.5;
+        if (hrs <= 8) {
+          base = fd;
+        } else {
+          ot = (hrs - 8) * (hr * 1.5);
+          base = fd;
         }
+
       } else if (bil.includes('Monthly')) {
         base = parseFloat(opts.monthlyRate) || 0;
-        if (isSpecialDay) special = hrs * (hr * 2.0);
-        else {
-          // Monthly covers 8h. Extra or OOH is additive.
+        if (isSpecialDay) {
+          special = hrs * (hr * 2.0);
+        } else {
           if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-          if (workIsOOH && ot === 0 && hrs > 0) ooh = hrs * (hr * 0.5);
         }
-      } else if (bil === 'Agreed Rate') { base = parseFloat(opts.agreedRate) || 0;
-      } else if (bil === 'Cancellation') { base = parseFloat(opts.cancellationFee) || 0; }
+
+      } else if (bil === 'Agreed Rate') {
+        base = parseFloat(opts.agreedRate) || 0;
+
+      } else if (bil === 'Cancellation') {
+        base = parseFloat(opts.cancellationFee) || 0;
+      }
 
       const travelVal = parseFloat(opts.travelCostPerDay || 0);
       const toolsVal = parseFloat(opts.toolCost || 0);
@@ -2811,12 +2814,11 @@ function TicketsPage() {
                 <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
                 <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>
                   {(() => {
-                    // Try to calculate live from actual time OR scheduled if available
-                    // While editing, we prefer the 'inline' states for real-time feedback
-                    const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.taskStartDate);
-                    const bestEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.taskEndDate || bestStart);
-                    
-                    if (bestStart || bestEnd) {
+                    // Live calculation from ACTUAL activity times only (not date-only taskStartDate)
+                    const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
+                    const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
+
+                    if (bestStart && bestEnd) {
                       const liveResult = calculateTicketTotal({
                         startTime: bestStart,
                         endTime: bestEnd,
