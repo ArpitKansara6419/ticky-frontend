@@ -130,33 +130,51 @@ const CustomerReceivablePage = () => {
         const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
+        let baseBreakdown = "";
+        let otBreakdown = "";
+        let spBreakdown = "";
+        let oohBreakdown = "";
+
         if (billingType === 'Hourly') {
             const b = Math.max(2, hrs); 
             base = b * hr; 
+            baseBreakdown = `Billed ${b.toFixed(2)}h @ ${cur} ${hr.toFixed(2)} (Min 2h)`;
         } else if (billingType === 'Half Day + Hourly') {
             if (hrs <= 4) {
                 base = hd;
+                baseBreakdown = `Fixed Half Day Rate (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
             } else {
-                base = hd + ((hrs - 4) * hr);
+                const extra = hrs - 4;
+                base = hd + (extra * hr);
+                baseBreakdown = `Half Day Rate (${cur} ${hd.toFixed(2)}) + Extra ${extra.toFixed(2)}h @ ${cur} ${hr.toFixed(2)}`;
             }
         } else if (billingType === 'Full Day + OT') {
             base = fd;
+            baseBreakdown = `Fixed Full Day Rate (≤ 8h) = ${cur} ${fd.toFixed(2)}`;
             if (hrs > 8) {
-                ot = (hrs - 8) * (hr * 1.5);
+                const otHrs = hrs - 8;
+                ot = otHrs * (hr * 1.5);
+                otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
         } else if (billingType.includes('Monthly')) {
             base = parseFloat(ticket.monthly_rate) || 0;
+            baseBreakdown = `Fixed Monthly Base = ${cur} ${base.toFixed(2)}`;
             if (isSpecialDay) {
                 sp = hrs * (hr * 2.0);
+                spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${cur} ${(hr * 2.0).toFixed(2)} (2.0x)`;
             } else { 
                 if (hrs > 8) {
-                    ot = (hrs - 8) * (hr * 1.5); 
+                    const otHrs = hrs - 8;
+                    ot = otHrs * (hr * 1.5); 
+                    otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
                 }
             }
         } else if (billingType === 'Agreed Rate') { 
             base = parseFloat(ticket.agreed_rate) || 0;
+            baseBreakdown = `Agreed / Fixed Rate = ${cur} ${base.toFixed(2)}`;
         } else if (billingType === 'Cancellation') { 
             base = parseFloat(ticket.cancellation_fee) || 0; 
+            baseBreakdown = `Fixed Cancellation Fee = ${cur} ${base.toFixed(2)}`;
         }
 
         const trav = parseFloat(ticket.travel_cost_per_day || 0);
@@ -170,18 +188,23 @@ const CustomerReceivablePage = () => {
 
         return {
             totalReceivable: finalReceivable.toFixed(2), 
-            baseCost: (base + billingGap).toFixed(2), // Fold gap into base cost to keep it simple and clean
+            baseCost: (base + billingGap).toFixed(2),
+            baseBreakdown,
             otPremium: ot.toFixed(2), 
+            otBreakdown,
             oohPremium: ooh.toFixed(2), 
+            oohBreakdown,
             specialDayPremium: sp.toFixed(2),
+            spBreakdown,
             totalHours: hrs, 
             formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
             travelCost: trav, 
             toolCost: tool,
-            otHours: hrs > 8 ? hrs - 8 : 0,
-            ooh: ooh > 0 ? 'Yes' : 'No',
-            ww: isWK ? 'Yes' : 'No',
-            hw: isH ? 'Yes' : 'No'
+            isOOH: isO,
+            isSpecialDay,
+            ooh: isO ? 'Yes' : 'No',
+            ww: sp > 0 ? 'Yes' : 'No',
+            hw: sp > 0 ? 'Yes' : 'No'
         };
     };
 
@@ -963,24 +986,36 @@ const CustomerReceivablePage = () => {
                                         ) : (
                                             <>
                                                 <div className="breakdown-row highlight-premium">
-                                                    <span>Labor &amp; Service Subtotal</span>
+                                                    <div>
+                                                        <span>Labor &amp; Service Subtotal</span>
+                                                        <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>{bd.baseBreakdown}</div>
+                                                    </div>
                                                     <span>{cur} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
                                                 </div>
                                                 {parseFloat(bd.otPremium) > 0 && (
                                                     <div className="breakdown-row">
-                                                        <span>Overtime Premium (OT)</span>
+                                                        <div>
+                                                            <span>Overtime Premium (OT)</span>
+                                                            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{bd.otBreakdown}</div>
+                                                        </div>
                                                         <span>+ {cur} {parseFloat(bd.otPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 {parseFloat(bd.oohPremium) > 0 && (
                                                     <div className="breakdown-row">
-                                                        <span>Out of Hours (OOH)</span>
+                                                        <div>
+                                                            <span>Out of Hours (OOH)</span>
+                                                            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{bd.oohBreakdown}</div>
+                                                        </div>
                                                         <span>+ {cur} {parseFloat(bd.oohPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
                                                 {parseFloat(bd.specialDayPremium) > 0 && (
                                                     <div className="breakdown-row">
-                                                        <span>Weekend/Holiday Premium</span>
+                                                        <div>
+                                                            <span>Weekend/Holiday Premium</span>
+                                                            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{bd.spBreakdown}</div>
+                                                        </div>
                                                         <span>+ {cur} {parseFloat(bd.specialDayPremium).toFixed(2)}</span>
                                                     </div>
                                                 )}
@@ -988,13 +1023,13 @@ const CustomerReceivablePage = () => {
                                         )}
                                         {parseFloat(bd.travelCost) > 0 && (
                                             <div className="breakdown-row">
-                                                <span>Travel &amp; Logistics</span>
+                                                <span>Travel &amp; Logistics (Per Day Fee)</span>
                                                 <span>+ {cur} {parseFloat(bd.travelCost).toFixed(2)}</span>
                                             </div>
                                         )}
                                         {parseFloat(detailTicket.tool_cost) > 0 && (
                                             <div className="breakdown-row">
-                                                <span>Tools &amp; Material</span>
+                                                <span>Tools &amp; Material (Lump Sum)</span>
                                                 <span>+ {cur} {parseFloat(detailTicket.tool_cost).toFixed(2)}</span>
                                             </div>
                                         )}

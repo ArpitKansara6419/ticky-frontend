@@ -188,36 +188,53 @@ const EngineerPayoutPage = () => {
             const hr = parseFloat(ticket.eng_hourly_rate || 0);
             const hd = parseFloat(ticket.eng_half_day_rate || 0);
             const fd = parseFloat(ticket.eng_full_day_rate || 0);
-
             let base = 0, ot = 0, ooh = 0, special = 0;
+            let baseBreakdown = "";
+            let otBreakdown = "";
+            let spBreakdown = "";
+            let oohBreakdown = "";
+            const cur = ticket.eng_currency || 'USD';
 
             if (billingType === 'Hourly') {
                 const b = Math.max(2, hrs); 
                 base = b * hr; 
+                baseBreakdown = `Billed ${b.toFixed(2)}h @ ${hr.toFixed(2)} (Min 2h)`;
             } else if (billingType === 'Half Day + Hourly') {
                 if (hrs <= 4) {
                     base = hd;
+                    baseBreakdown = `Fixed Half Day Rate (≤ 4h) = ${hd.toFixed(2)}`;
                 } else {
-                    base = hd + ((hrs - 4) * hr);
+                    const extra = hrs - 4;
+                    base = hd + (extra * hr);
+                    baseBreakdown = `Half Day Rate (${hd.toFixed(2)}) + Extra ${extra.toFixed(2)}h @ ${hr.toFixed(2)}`;
                 }
             } else if (billingType === 'Full Day + OT') {
                 base = fd;
+                baseBreakdown = `Fixed Full Day Rate (≤ 8h) = ${fd.toFixed(2)}`;
                 if (hrs > 8) {
-                    ot = (hrs - 8) * (hr * 1.5);
+                    const otHrs = hrs - 8;
+                    ot = otHrs * (hr * 1.5);
+                    otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
                 }
             } else if (billingType.includes('Monthly')) {
                 base = parseFloat(ticket.eng_monthly_rate) || 0;
+                baseBreakdown = `Fixed Monthly Base = ${base.toFixed(2)}`;
                 if (isSpecialDay) {
                     special = hrs * (hr * 2.0);
+                    spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${(hr * 2.0).toFixed(2)} (2.0x)`;
                 } else { 
                     if (hrs > 8) {
-                        ot = (hrs - 8) * (hr * 1.5); 
+                        const otHrs = hrs - 8;
+                        ot = otHrs * (hr * 1.5); 
+                        otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
                     }
                 }
             } else if (billingType === 'Agreed Rate') { 
                 base = parseFloat(ticket.eng_agreed_rate) || 0;
+                baseBreakdown = `Agreed / Fixed Rate = ${base.toFixed(2)}`;
             } else if (billingType === 'Cancellation') { 
                 base = parseFloat(ticket.eng_cancellation_fee) || 0; 
+                baseBreakdown = `Fixed Cancellation Fee = ${base.toFixed(2)}`;
             }
 
             return {
@@ -227,9 +244,13 @@ const EngineerPayoutPage = () => {
                 isOOH: workIsOOH,
                 isSpecialDay,
                 base: base.toFixed(2),
+                baseBreakdown,
                 ot: ot.toFixed(2),
+                otBreakdown,
                 ooh: ooh.toFixed(2),
-                special: special.toFixed(2)
+                oohBreakdown,
+                special: special.toFixed(2),
+                spBreakdown
             };
         } catch (err) {
             return { totalPayout: 0, hrs: 0 };
@@ -486,20 +507,48 @@ const EngineerPayoutPage = () => {
                                     <label>Calculation Breakdown</label>
                                     {(() => {
                                         const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
+                                        const cur = detailTicket.eng_currency || 'USD';
                                         return (
                                             <div className="payout-breakdown">
-                                                <div className="breakdown-row">
-                                                    <span>Base Pay:</span>
-                                                    <span>${pd.base}</span>
-                                                </div>
-                                                {parseFloat(pd.ot) > 0 && <div className="breakdown-row"><span>OT Premium:</span><span>+ ${pd.ot}</span></div>}
-                                                {pd.isOOH && parseFloat(pd.ooh) > 0 && <div className="breakdown-row"><span>OOH Premium:</span><span>+ ${pd.ooh}</span></div>}
-                                                {pd.isSpecialDay && <div className="breakdown-row"><span>Weekend/Holiday:</span><span>+ ${pd.special}</span></div>}
-                                                <div className="breakdown-total">
-                                                    <span>Net Payout:</span>
-                                                    <span>${parseFloat(detailTicket.eng_total_cost || pd.totalPayout).toFixed(2)}</span>
-                                                </div>
+                                           <div className="payout-row highlight-bold">
+                                        <div className="payout-label-col">
+                                            <span>Base Labor Payout</span>
+                                            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>{pd.baseBreakdown}</div>
+                                        </div>
+                                        <span className="payout-amount">{cur} {pd.base}</span>
+                                    </div>
+                                    {parseFloat(pd.ot) > 0 && (
+                                        <div className="payout-row">
+                                            <div className="payout-label-col">
+                                                <span>Overtime Payout (OT)</span>
+                                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.otBreakdown}</div>
                                             </div>
+                                            <span className="payout-amount">+ {cur} {pd.ot}</span>
+                                        </div>
+                                    )}
+                                    {parseFloat(pd.special) > 0 && (
+                                        <div className="payout-row">
+                                            <div className="payout-label-col">
+                                                <span>Special Day Premium</span>
+                                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.spBreakdown}</div>
+                                            </div>
+                                            <span className="payout-amount">+ {cur} {pd.special}</span>
+                                        </div>
+                                    )}
+                                    {parseFloat(pd.ooh) > 0 && (
+                                        <div className="payout-row">
+                                            <div className="payout-label-col">
+                                                <span>Out of Hours Payout (OOH)</span>
+                                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.oohBreakdown}</div>
+                                            </div>
+                                            <span className="payout-amount">+ {cur} {pd.ooh}</span>
+                                        </div>
+                                    )}
+                                    <div className="payout-total-row" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '2px solid #6366f1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#6366f1' }}>Net Payout</span>
+                                        <span style={{ fontSize: '18px', fontWeight: '800', color: '#6366f1' }}>{cur} {parseFloat(detailTicket.eng_total_cost || pd.totalPayout).toFixed(2)}</span>
+                                    </div>
+                                </div>
                                         );
                                     })()}
                                 </div>
