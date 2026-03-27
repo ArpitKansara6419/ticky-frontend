@@ -201,11 +201,9 @@ const EngineerPayoutPage = () => {
                     base = hd + ((hrs - 4) * hr);
                 }
             } else if (billingType === 'Full Day + OT') {
-                if (hrs <= 8) {
-                    base = fd;
-                } else {
+                base = fd;
+                if (hrs > 8) {
                     ot = (hrs - 8) * (hr * 1.5);
-                    base = fd;
                 }
             } else if (billingType.includes('Monthly')) {
                 base = parseFloat(ticket.eng_monthly_rate) || 0;

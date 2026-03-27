@@ -131,7 +131,7 @@ function LeadsPage() {
   const [cancellationFee, setCancellationFee] = useState('')
 
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
-  const [totalCost, setTotalCost] = useState('0')
+  const [toolCost, setToolCost] = useState('0')
   const [billingType, setBillingType] = useState(() => localStorage.getItem('defaultBillingType') || 'Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local')
@@ -174,7 +174,7 @@ function LeadsPage() {
     setAgreedRate('0')
     setCancellationFee('')
     setTravelCostPerDay('')
-    setTotalCost('0')
+    setToolCost('0')
     setBillingType(localStorage.getItem('defaultBillingType') || 'Hourly')
     setStatus(LEAD_STATUSES[0])
     setFormError('')
@@ -326,8 +326,8 @@ function LeadsPage() {
 
     try {
       // Treat as wall-clock time
-      const s = new Date(startTime.includes('T') ? startTime : startTime.replace(' ', 'T') + 'Z');
-      const e = new Date(endTime.includes('T') ? endTime : endTime.replace(' ', 'T') + 'Z');
+      const s = new Date(startTime.includes('Z') || startTime.includes('+') ? startTime : startTime.replace(' ', 'T') + 'Z');
+      const e = new Date(endTime.includes('Z') || endTime.includes('+') ? endTime : endTime.replace(' ', 'T') + 'Z');
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 };
 
       const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000);
@@ -356,57 +356,46 @@ function LeadsPage() {
       const endInfo = getZonedInfo(e);
 
       // Wall-clock hour extraction for robustness
-      if (startTime.includes(' ') || startTime.includes('T')) {
-        const timePart = startTime.includes('T') ? startTime.split('T')[1] : startTime.split(' ')[1];
-        if (timePart) startInfo.hour = parseInt(timePart.split(':')[0], 10);
-      }
-      if (endTime.includes(' ') || endTime.includes('T')) {
-        const timePart = endTime.includes('T') ? endTime.split('T')[1] : endTime.split(' ')[1];
-        if (timePart) endInfo.hour = parseInt(timePart.split(':')[0], 10);
-      }
+      let startHr = startInfo.hour;
+      let endHr = endInfo.hour;
+      if (startTime.includes('T')) startHr = parseInt(startTime.split('T')[1].split(':')[0], 10);
+      if (endTime.includes('T')) endHr = parseInt(endTime.split('T')[1].split(':')[0], 10);
 
       const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
       const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
-      const workIsOOH = (startInfo.hour < 8 || startInfo.hour >= 18 || endInfo.hour < 8 || endInfo.hour > 18 || hrs > 10) && hrs > 0;
+      
+      const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
 
-      if (billingType === 'Hourly') {
+      const bil = (billingType || '').trim();
+
+      if (bil === 'Hourly') {
         const billed = Math.max(2, hrs);
         base = billed * hr;
-        if (isSpecialDay) special = base;
-        else {
-          if (billed > 8) ot = (billed - 8) * (hr * 0.5);
-          if (workIsOOH && ot === 0) ooh = billed * (hr * 0.5);
+      } else if (bil === 'Half Day + Hourly') {
+        if (hrs <= 4) {
+          base = hd;
+        } else {
+          base = hd + ((hrs - 4) * hr);
         }
-      } else if (billingType === 'Half Day + Hourly') {
-        base = hd + (hrs > 4 ? (hrs - 4) * hr : 0);
-        if (isSpecialDay) special = base;
-        else {
-          if (hrs > 8) ot = (hrs - 8) * (hr * 0.5);
-          if (workIsOOH && ot === 0) ooh = base * 0.5;
-        }
-      } else if (billingType === 'Full Day + OT') {
+      } else if (bil === 'Full Day + OT') {
         base = fd;
+        if (hrs > 8) {
+          ot = (hrs - 8) * (hr * 1.5);
+        }
+      } else if (bil.includes('Monthly')) {
+        base = parseFloat(monthlyRate) || 0;
         if (isSpecialDay) {
-          special = base;
-          if (hrs > 8) ot = (hrs - 8) * (hr * 1.0);
+          special = hrs * (hr * 2.0);
         } else {
           if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-          if (workIsOOH && ot === 0) ooh = base * 0.5;
         }
-      } else if (billingType.includes('Monthly')) {
-        base = parseFloat(monthlyRate) || 0;
-        if (isSpecialDay) special = hrs * (hr * 2.0);
-        else {
-          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-          if (workIsOOH && ot === 0) ooh = hrs * (hr * 0.5);
-        }
-      } else if (billingType === 'Agreed Rate') {
+      } else if (bil === 'Agreed Rate') {
         base = parseFloat(agreedRate) || 0;
-      } else if (billingType === 'Cancellation') {
+      } else if (bil === 'Cancellation') {
         base = parseFloat(cancellationFee) || 0;
       }
 
@@ -592,7 +581,7 @@ function LeadsPage() {
           toolsRequired, 
           agreedRate: agreedRate !== '' && agreedRate !== null ? Number(agreedRate) : 0,
           travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
-          totalCost: (totalCost !== '' && totalCost !== null) ? Number(totalCost) : 0, 
+          toolCost: (toolCost !== '' && toolCost !== null) ? Number(toolCost) : 0, 
           billingType,
           status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(','),
@@ -615,7 +604,7 @@ function LeadsPage() {
     setCurrency(l.currency); setHourlyRate(l.hourlyRate != null ? String(l.hourlyRate) : ''); setHalfDayRate(l.halfDayRate != null ? String(l.halfDayRate) : ''); setFullDayRate(l.fullDayRate != null ? String(l.fullDayRate) : '')
     setMonthlyRate(l.monthlyRate != null ? String(l.monthlyRate) : ''); setToolsRequired(l.toolsRequired || ''); setAgreedRate(l.agreedRate || '')
     setCancellationFee(l.cancellationFee != null ? String(l.cancellationFee) : '')
-    setTravelCostPerDay(l.travelCostPerDay != null ? String(l.travelCostPerDay) : ''); setTotalCost(l.totalCost != null ? String(l.totalCost) : '')
+    setTravelCostPerDay(l.travelCostPerDay != null ? String(l.travelCostPerDay) : ''); setToolCost(l.toolCost != null ? String(l.toolCost) : '')
     setBillingType(l.billingType || 'Hourly'); setStatus(l.status)
     setIsRecurring(l.isRecurring || 'No'); setRecurringStartDate(l.recurringStartDate?.split('T')[0])
     setRecurringEndDate(l.recurringEndDate?.split('T')[0]); setTotalWeeks(l.totalWeeks || ''); setRecurringDays(l.recurringDays?.split(',') || [])
@@ -925,8 +914,8 @@ function LeadsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={totalCost}
-                  onChange={(e) => setTotalCost(e.target.value)}
+                  value={toolCost}
+                  onChange={(e) => setToolCost(e.target.value)}
                   placeholder="0.00"
                 />
               </label>
@@ -939,7 +928,7 @@ function LeadsPage() {
               startTime: taskStartDate ? `${taskStartDate} ${taskTime}` : '',
               endTime: taskEndDate ? `${taskEndDate} ${taskTime}` : '',
               hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-              travelCostPerDay, toolCost: totalCost, billingType, timezone
+              travelCostPerDay, toolCost: toolCost, billingType, timezone
             });
 
             if (!res.grandTotal || res.grandTotal == 0) return null;
@@ -1504,11 +1493,15 @@ function LeadsPage() {
                   </div>
                   <div className="detail-item">
                     <label>Tool Cost</label>
-                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.toolCost || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Travel Cost / Day</label>
                     <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Grand Total (Receivable)</label>
+                    <span style={{ fontWeight: '800', color: '#059669', fontSize: '15px' }}>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Task Location</label>

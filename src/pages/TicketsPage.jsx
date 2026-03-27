@@ -327,11 +327,9 @@ function TicketsPage() {
         }
 
       } else if (bil === 'Full Day + OT') {
-        if (hrs <= 8) {
-          base = fd;
-        } else {
+        base = fd;
+        if (hrs > 8) {
           ot = (hrs - 8) * (hr * 1.5);
-          base = fd;
         }
 
       } else if (bil.includes('Monthly')) {
@@ -2819,7 +2817,15 @@ function TicketsPage() {
                     const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
                     const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
 
-                    if (bestStart && bestEnd) {
+                    if (viewMode === 'form') {
+                      // Reactive preview for the Full Form view
+                      const liveResult = calculateTicketTotal({
+                        startTime, endTime, breakTime,
+                        hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                        travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
+                      });
+                      if (liveResult) return `${currency} ${liveResult.grandTotal}`;
+                    } else if (bestStart && bestEnd) {
                       const liveResult = calculateTicketTotal({
                         startTime: bestStart,
                         endTime: bestEnd,
