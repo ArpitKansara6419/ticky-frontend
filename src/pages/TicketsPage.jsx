@@ -1367,7 +1367,8 @@ function TicketsPage() {
   // Handle external edit request (e.g. from Leads Page)
   // Auto-populate when leadId changes (e.g. from dropdown)
   useEffect(() => {
-    if (!leadId) return
+    // DO NOT auto-populate if we are editing an existing ticket!
+    if (!leadId || editingTicketId) return
     const lead = leads.find(l => String(l.id) === String(leadId))
     if (lead) {
       console.log("Populating ticket form from selected lead:", lead.id)

@@ -131,39 +131,35 @@ const CustomerReceivablePage = () => {
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
         if (billingType === 'Hourly') {
-            const b = Math.max(2, hrs); base = b * hr; 
-            if (isSpecialDay) sp = base;
-            else { 
-                // 8 HOUR RULE: No OT or OOH if hours are exactly 8 and within day
-                if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); 
-                if (isO && hrs > 8 && ot === 0) ooh = hrs * (hr * 0.5); 
-            }
+            const b = Math.max(2, hrs); 
+            base = b * hr; 
         } else if (billingType === 'Half Day + Hourly') {
-            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0); 
-            if (isSpecialDay) sp = base;
-            else { 
-                if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); 
-                if (isO && hrs > 8 && ot === 0) ooh = base * 0.5; 
+            if (hrs <= 4) {
+                base = hd;
+            } else {
+                base = hd + ((hrs - 4) * hr);
             }
         } else if (billingType === 'Full Day + OT') {
-            base = fd; 
-            if (isSpecialDay) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
-            else { 
-                if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); 
-                if (isO && hrs > 8 && ot === 0) ooh = base * 0.5; 
+            if (hrs <= 8) {
+                base = fd;
+            } else {
+                ot = (hrs - 8) * (hr * 1.5);
+                base = fd;
             }
         } else if (billingType.includes('Monthly')) {
             base = parseFloat(ticket.monthly_rate) || 0;
-            if (isSpecialDay) sp = hrs * (hr * 2.0);
-            else { 
-                // Standard 8h shift on Monthly = NO OT, NO OOH
+            if (isSpecialDay) {
+                sp = hrs * (hr * 2.0);
+            } else { 
                 if (hrs > 8) {
                     ot = (hrs - 8) * (hr * 1.5); 
-                    if (isO && ot === 0) ooh = hrs * (hr * 0.5);
                 }
             }
-        } else if (billingType === 'Agreed Rate') { base = parseFloat(ticket.agreed_rate) || 0;
-        } else if (billingType === 'Cancellation') { base = parseFloat(ticket.cancellation_fee) || 0; }
+        } else if (billingType === 'Agreed Rate') { 
+            base = parseFloat(ticket.agreed_rate) || 0;
+        } else if (billingType === 'Cancellation') { 
+            base = parseFloat(ticket.cancellation_fee) || 0; 
+        }
 
         const trav = parseFloat(ticket.travel_cost_per_day || 0);
         const tool = parseFloat(ticket.tool_cost || 0);
@@ -257,22 +253,35 @@ const CustomerReceivablePage = () => {
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
         if (billingType === 'Hourly') {
-            const b = Math.max(2, hrs); base = b * hr; if (isSpecialDay) sp = base;
-            else { if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); if (isO && hrs > 8 && ot === 0) ooh = hrs * (hr * 0.5); }
+            const b = Math.max(2, hrs); 
+            base = b * hr; 
         } else if (billingType === 'Half Day + Hourly') {
-            base = hd + (hrs > 4 ? (hrs - 4) * hr : 0); if (isSpecialDay) sp = base;
-            else { if (hrs > 8) ot = (hrs - 8) * (hr * 0.5); if (isO && hrs > 8 && ot === 0) ooh = base * 0.5; }
+            if (hrs <= 4) {
+                base = hd;
+            } else {
+                base = hd + ((hrs - 4) * hr);
+            }
         } else if (billingType === 'Full Day + OT') {
-            base = fd; if (isSpecialDay) { sp = base; if (hrs > 8) ot = (hrs - 8) * (hr * 1.0); }
-            else { if (hrs > 8) ot = (hrs - 8) * (hr * 1.5); if (isO && hrs > 8 && ot === 0) ooh = base * 0.5; }
+            if (hrs <= 8) {
+                base = fd;
+            } else {
+                ot = (hrs - 8) * (hr * 1.5);
+                base = fd;
+            }
         } else if (billingType.includes('Monthly')) {
             base = parseFloat(ticket.eng_monthly_rate) || 0;
-            if (isSpecialDay) sp = hrs * (hr * 2.0);
-            else { 
-                if (hrs > 8) { ot = (hrs - 8) * (hr * 1.5); if (isO && ot === 0) ooh = hrs * (hr * 0.5); }
+            if (isSpecialDay) {
+                sp = hrs * (hr * 2.0);
+            } else { 
+                if (hrs > 8) { 
+                    ot = (hrs - 8) * (hr * 1.5); 
+                }
             }
-        } else if (billingType === 'Agreed Rate') { base = parseFloat(ticket.eng_agreed_rate) || 0;
-        } else if (billingType === 'Cancellation') { base = parseFloat(ticket.eng_cancellation_fee) || 0; }
+        } else if (billingType === 'Agreed Rate') { 
+            base = parseFloat(ticket.eng_agreed_rate) || 0;
+        } else if (billingType === 'Cancellation') { 
+            base = parseFloat(ticket.eng_cancellation_fee) || 0; 
+        }
 
         const total = base + ot + ooh + sp;
         return {
