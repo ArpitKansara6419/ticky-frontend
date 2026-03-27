@@ -672,6 +672,18 @@ const CustomerReceivablePage = () => {
                             <select className="filter-select" value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
                                 {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                             </select>
+                            <select className="filter-select" value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)}>
+                                {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <select className="filter-select" value={filterEngineer} onChange={e => setFilterEngineer(e.target.value)}>
+                                {uniqueEngineers.map(e => <option key={e} value={e}>{e}</option>)}
+                            </select>
+                            <select className="filter-select" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+                                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                            <select className="filter-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                                {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -740,35 +752,9 @@ const CustomerReceivablePage = () => {
                                                     onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])}
                                                 />
                                             </th>
-                                            <th>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                    <span>Date</span>
-                                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                                        <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} style={{ padding: '4px', fontSize: '10px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none' }}>
-                                                            {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                                                        </select>
-                                                        <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ padding: '4px', fontSize: '10px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none' }}>
-                                                            {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </th>
-                                            <th>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                    <span>Customer</span>
-                                                    <select value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)} style={{ padding: '4px', fontSize: '10px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', maxWidth: '120px' }}>
-                                                        {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
-                                                    </select>
-                                                </div>
-                                            </th>
-                                            <th>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                    <span>Engineer</span>
-                                                    <select value={filterEngineer} onChange={e => setFilterEngineer(e.target.value)} style={{ padding: '4px', fontSize: '10px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', maxWidth: '120px' }}>
-                                                        {uniqueEngineers.map(e => <option key={e} value={e}>{e}</option>)}
-                                                    </select>
-                                                </div>
-                                            </th>
+                                            <th>Date</th>
+                                            <th>Customer</th>
+                                            <th>Engineer</th>
                                             <th>Ticket</th>
                                             <th>Location</th>
                                             <th>Work Time</th>
