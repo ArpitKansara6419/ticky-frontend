@@ -450,6 +450,33 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error(e); }
     };
 
+    const handleUpdateTicketRates = async () => {
+        if (!detailTicket) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/tickets/${detailTicket.id}/rates`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    hourlyRate: detailTicket.hourly_rate,
+                    halfDayRate: detailTicket.half_day_rate,
+                    fullDayRate: detailTicket.full_day_rate,
+                    monthlyRate: detailTicket.monthly_rate,
+                    agreedRate: detailTicket.agreed_rate,
+                    cancellationFee: detailTicket.cancellation_fee,
+                    travelCost: detailTicket.travel_cost_per_day,
+                    toolCost: detailTicket.tool_cost
+                })
+            });
+            if (res.ok) {
+                alert('Rates updated successfully.');
+                fetchUnbilled();
+                fetchInvoices();
+            } else {
+                alert('Failed to update rates.');
+            }
+        } catch (e) { console.error("Error updating rates:", e); }
+    };
+
     const handlePrintInvoice = (invoice) => {
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -956,19 +983,27 @@ const CustomerReceivablePage = () => {
                                 {/* Section 3: Rates */}
                                 <div style={{ background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px', marginBottom: '20px' }}>
                                     <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px' }}>💰 Rate Card</div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                                         {[
-                                            { label: 'Hourly Rate', value: detailTicket.hourly_rate },
-                                            { label: 'Half Day Rate', value: detailTicket.half_day_rate },
-                                            { label: 'Full Day Rate', value: detailTicket.full_day_rate },
-                                            { label: 'Monthly Rate', value: detailTicket.monthly_rate },
-                                            { label: 'Agreed / Fixed', value: detailTicket.agreed_rate },
-                                            { label: 'Cancellation Fee', value: detailTicket.cancellation_fee },
+                                            { label: 'Hourly Rate', key: 'hourly_rate', value: detailTicket.hourly_rate },
+                                            { label: 'Half Day Rate', key: 'half_day_rate', value: detailTicket.half_day_rate },
+                                            { label: 'Full Day Rate', key: 'full_day_rate', value: detailTicket.full_day_rate },
+                                            { label: 'Monthly Rate', key: 'monthly_rate', value: detailTicket.monthly_rate },
+                                            { label: 'Agreed / Fixed', key: 'agreed_rate', value: detailTicket.agreed_rate },
+                                            { label: 'Cancellation Fee', key: 'cancellation_fee', value: detailTicket.cancellation_fee },
+                                            { label: 'Travel Cost / Day', key: 'travel_cost_per_day', value: detailTicket.travel_cost_per_day },
+                                            { label: 'Tool Cost', key: 'tool_cost', value: detailTicket.tool_cost },
                                         ].map(r => (
                                             <div key={r.label} style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '2px' }}>{r.label}</div>
-                                                <div style={{ fontSize: '14px', color: parseFloat(r.value) > 0 ? '#1e293b' : '#cbd5e1', fontWeight: '700' }}>
-                                                    {parseFloat(r.value) > 0 ? `${cur} ${parseFloat(r.value).toFixed(2)}` : '—'}
+                                                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px' }}>{r.label}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '4px 8px', background: '#fff' }}>
+                                                    <span style={{ fontSize: '12px', color: '#94a3b8', marginRight: '4px', fontWeight: 'bold' }}>{cur}</span>
+                                                    <input 
+                                                        type="number" 
+                                                        style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', color: '#1e293b', fontWeight: '600', textAlign: 'center' }}
+                                                        value={r.value === 0 ? 0 : (r.value || '')}
+                                                        onChange={(e) => setDetailTicket({ ...detailTicket, [r.key]: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                                    />
                                                 </div>
                                             </div>
                                         ))}
@@ -1054,8 +1089,9 @@ const CustomerReceivablePage = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="modal-footer-premium">
-                                <button className="btn-primary-premium" onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
+                            <div className="modal-footer-premium" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px' }}>
+                                <button className="btn-secondary" style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
+                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)' }} onClick={handleUpdateTicketRates}>Update Costs & Rates</button>
                             </div>
                         </div>
                     </div>
