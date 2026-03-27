@@ -672,16 +672,34 @@ const CustomerReceivablePage = () => {
                             <select className="filter-select" value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
                                 {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                             </select>
-                            <select className="filter-select" value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)}>
+                            <select className="filter-select" value={filterCustomer} onChange={e => {
+                                setFilterCustomer(e.target.value);
+                                setFilterEngineer('All Engineers');
+                                setSelectedYear('All Years');
+                                setSelectedMonth('All Months');
+                            }}>
                                 {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
-                            <select className="filter-select" value={filterEngineer} onChange={e => setFilterEngineer(e.target.value)}>
+                            <select className="filter-select" value={filterEngineer} onChange={e => {
+                                setFilterEngineer(e.target.value);
+                                setFilterCustomer('All Customers');
+                                setSelectedYear('All Years');
+                                setSelectedMonth('All Months');
+                            }}>
                                 {uniqueEngineers.map(e => <option key={e} value={e}>{e}</option>)}
                             </select>
-                            <select className="filter-select" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+                            <select className="filter-select" value={selectedYear} onChange={e => {
+                                setSelectedYear(e.target.value);
+                                setFilterCustomer('All Customers');
+                                setFilterEngineer('All Engineers');
+                            }}>
                                 {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
-                            <select className="filter-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                            <select className="filter-select" value={selectedMonth} onChange={e => {
+                                setSelectedMonth(e.target.value);
+                                setFilterCustomer('All Customers');
+                                setFilterEngineer('All Engineers');
+                            }}>
                                 {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
                         </div>
