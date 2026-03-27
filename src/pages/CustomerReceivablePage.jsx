@@ -129,6 +129,7 @@ const CustomerReceivablePage = () => {
         // OOH strictly only if hours are OUTSIDE 08:00 - 18:00
         const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
+        const cur = ticket.currency || 'USD';
         let base = 0, ot = 0, ooh = 0, sp = 0;
         let baseBreakdown = "";
         let otBreakdown = "";
