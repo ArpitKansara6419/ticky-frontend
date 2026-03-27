@@ -455,6 +455,9 @@ const CustomerReceivablePage = () => {
 
     const handleUpdateTicketRates = async () => {
         if (!detailTicket) return;
+        
+        const bd = calculateTicketCostFrontend(detailTicket, calcTimezone, selectedCurrency);
+        
         try {
             const res = await fetch(`${API_BASE_URL}/tickets/${detailTicket.id}/rates`, {
                 method: 'PATCH',
@@ -467,7 +470,8 @@ const CustomerReceivablePage = () => {
                     agreedRate: detailTicket.agreed_rate,
                     cancellationFee: detailTicket.cancellation_fee,
                     travelCost: detailTicket.travel_cost_per_day,
-                    toolCost: detailTicket.tool_cost
+                    toolCost: detailTicket.tool_cost,
+                    totalCost: bd.totalReceivable
                 })
             });
             if (res.ok) {
