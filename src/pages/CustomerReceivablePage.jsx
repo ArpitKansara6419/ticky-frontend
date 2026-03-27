@@ -10,6 +10,7 @@ import './CustomerReceivablePage.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const CURRENCIES = [
+    { value: 'All', label: 'All Currencies' },
     { value: 'USD', label: 'USD ($)' },
     { value: 'EUR', label: 'EUR (€)' },
     { value: 'GBP', label: 'GBP (£)' },
@@ -383,10 +384,12 @@ const CustomerReceivablePage = () => {
 
     // Calculate Dynamic Unbilled Total based on Context (uses filteredUnbilled which already filters by currency)
     const dynamicUnbilledTotal = useMemo(() => {
+        const isAll = selectedCurrency === 'All';
         return unbilledList
-            .filter(item => (item.currency || 'USD').toUpperCase() === selectedCurrency.toUpperCase())
+            .filter(item => isAll || (item.currency || 'USD').toUpperCase() === selectedCurrency.toUpperCase())
             .reduce((sum, item) => {
-                const bd = calculateTicketCostFrontend(item, calcTimezone, selectedCurrency);
+                const calcCurrency = isAll ? 'USD' : selectedCurrency;
+                const bd = calculateTicketCostFrontend(item, calcTimezone, calcCurrency);
                 return sum + parseFloat(bd.totalReceivable);
             }, 0);
     }, [unbilledList, calcTimezone, selectedCurrency]);
@@ -556,10 +559,12 @@ const CustomerReceivablePage = () => {
     const filteredUnbilled = useMemo(() => {
         const search = searchTerm.toLowerCase().trim();
         return unbilledList.filter(item => {
-            // 1. Currency filter — show only tickets matching selected currency
-            const ticketCurrency = (item.currency || 'USD').toUpperCase();
-            const filterCurrency = selectedCurrency.toUpperCase();
-            if (ticketCurrency !== filterCurrency) return false;
+            // 1. Currency filter
+            if (selectedCurrency !== 'All') {
+                const ticketCurrency = (item.currency || 'USD').toUpperCase();
+                const filterCurrency = selectedCurrency.toUpperCase();
+                if (ticketCurrency !== filterCurrency) return false;
+            }
 
             // 2. Search filter
             const custName = (item.customer_name || '').toLowerCase();
@@ -705,7 +710,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon amber"><FiFileText /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {((parseFloat(stats.unpaid) || 0) * (EXCHANGE_RATES[selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {((parseFloat(stats.unpaid) || 0) * (EXCHANGE_RATES[selectedCurrency === 'All' ? 'USD' : selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Unpaid Invoices</p>
                         <small style={{ color: '#94a3b8', fontSize: '11px' }}>Awaiting client payment</small>
                     </div>
@@ -713,7 +718,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon emerald"><FiCheckCircle /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {((parseFloat(stats.overdue) || 0) * (EXCHANGE_RATES[selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {((parseFloat(stats.overdue) || 0) * (EXCHANGE_RATES[selectedCurrency === 'All' ? 'USD' : selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Total Overdue</p>
                         <small style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>Requires immediate action</small>
                     </div>
@@ -721,7 +726,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon blue" style={{ background: '#f0f9ff', color: '#0369a1' }}><FiDollarSign /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency} {((parseFloat(stats.paid) || 0) * (EXCHANGE_RATES[selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {((parseFloat(stats.paid) || 0) * (EXCHANGE_RATES[selectedCurrency === 'All' ? 'USD' : selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Collected Revenue</p>
                         <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>Total for {new Date().getFullYear()}</small>
                     </div>

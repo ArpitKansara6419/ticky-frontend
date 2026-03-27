@@ -185,6 +185,7 @@ function EngineersPage() {
         oohRate: '',
         weekendRate: '',
         holidayRate: '',
+        monthlyRate: '',
         city: ''
     });
     const [savingCharges, setSavingCharges] = useState(false);
@@ -274,6 +275,7 @@ function EngineersPage() {
                     oohRate: eng.oohRate || '',
                     weekendRate: eng.weekendRate || '',
                     holidayRate: eng.holidayRate || '',
+                    monthlyRate: eng.monthlyRate || '',
                     city: eng.city || ''
                 });
             }
@@ -445,6 +447,7 @@ function EngineersPage() {
                 oohRate: chargesForm.oohRate,
                 weekendRate: chargesForm.weekendRate,
                 holidayRate: chargesForm.holidayRate,
+                monthlyRate: chargesForm.monthlyRate,
                 city: chargesForm.city
             };
 
@@ -957,6 +960,10 @@ function EngineersPage() {
                                     <div className="form-group">
                                         <label>Agreed Rate</label>
                                         <input type="text" className="form-input" value={chargesForm.agreedRate || ''} onChange={e => setChargesForm({ ...chargesForm, agreedRate: e.target.value })} placeholder="e.g. Fixed $500" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Monthly Charge</label>
+                                        <input type="number" className="form-input" value={chargesForm.monthlyRate} onChange={e => setChargesForm({ ...chargesForm, monthlyRate: e.target.value })} placeholder="0.00" />
                                     </div>
                                 </div>
 
