@@ -764,3 +764,31 @@
         transform: rotate(360deg);
     }
 }
+
+/* Hover Breakdown Tooltip - Specific to Customer Receivables */
+.hover-breakdown-tooltip {
+    position: absolute;
+    right: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: white;
+    border: 1px solid var(--crm-border);
+    box-shadow: var(--shadow-premium);
+    padding: 16px;
+    border-radius: 12px;
+    width: 250px;
+    z-index: 1000;
+    text-align: left;
+    pointer-events: none;
+    animation: fadeIn 0.2s ease;
+}
+
+.hover-breakdown-tooltip .breakdown-row {
+    margin-bottom: 8px;
+    font-size: 11px;
+    flex-wrap: wrap;
+}
+
+.hover-breakdown-tooltip .breakdown-row span {
+    font-size: 12px;
+}

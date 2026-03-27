@@ -321,8 +321,11 @@ const CustomerReceivablePage = () => {
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
     const [selectedYear, setSelectedYear] = useState('All Years');
     const [selectedMonth, setSelectedMonth] = useState('All Months');
+    const [filterCustomer, setFilterCustomer] = useState('All Customers');
+    const [filterEngineer, setFilterEngineer] = useState('All Engineers');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+    const [hoveredCostTicketId, setHoveredCostTicketId] = useState(null);
 
     // Modal / Selection
     const [selectedTicketIds, setSelectedTicketIds] = useState([]);
@@ -577,10 +580,23 @@ const CustomerReceivablePage = () => {
 
             const matchesYear = (selectedYear === 'All Years' || y === selectedYear);
             const matchesMonth = (selectedMonth === 'All Months' || m === selectedMonth);
+            
+            const matchesCustFilter = filterCustomer === 'All Customers' || (item.customer_name === filterCustomer);
+            const matchesEngFilter = filterEngineer === 'All Engineers' || (item.engineer_name === filterEngineer);
 
-            return matchesYear && matchesMonth;
+            return matchesYear && matchesMonth && matchesCustFilter && matchesEngFilter;
         });
-    }, [unbilledList, searchTerm, selectedYear, selectedMonth, selectedCurrency]);
+    }, [unbilledList, searchTerm, selectedYear, selectedMonth, selectedCurrency, filterCustomer, filterEngineer]);
+
+    const uniqueCustomers = useMemo(() => {
+        const custs = new Set(unbilledList.map(t => t.customer_name).filter(Boolean));
+        return ['All Customers', ...Array.from(custs).sort()];
+    }, [unbilledList]);
+
+    const uniqueEngineers = useMemo(() => {
+        const engs = new Set(unbilledList.map(t => t.engineer_name).filter(Boolean));
+        return ['All Engineers', ...Array.from(engs).sort()];
+    }, [unbilledList]);
 
     // Pagination Logic for Unbilled
     const totalUnbilledPages = Math.ceil(filteredUnbilled.length / itemsPerPage);
@@ -655,6 +671,12 @@ const CustomerReceivablePage = () => {
                         <div className="receivable-filters-premium">
                             <select className="filter-select" value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
                                 {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                            <select className="filter-select" value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)}>
+                                {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <select className="filter-select" value={filterEngineer} onChange={e => setFilterEngineer(e.target.value)}>
+                                {uniqueEngineers.map(e => <option key={e} value={e}>{e}</option>)}
                             </select>
                             <select className="filter-select" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
                                 {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
@@ -731,11 +753,11 @@ const CustomerReceivablePage = () => {
                                                 />
                                             </th>
                                             <th>Date</th>
+                                            <th>Customer</th>
                                             <th>Engineer</th>
                                             <th>Ticket</th>
                                             <th>Location</th>
                                             <th>Work Time</th>
-                                            <th>Premiums</th>
                                             <th className="text-right">Expenses</th>
                                             <th className="text-right">Receivable</th>
                                             <th className="text-right">Payout</th>
@@ -756,6 +778,9 @@ const CustomerReceivablePage = () => {
                                                         <div style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(item.task_start_date).getFullYear()}</div>
                                                     </td>
                                                     <td>
+                                                        <div style={{ fontWeight: '700', color: '#1e293b' }}>{item.customer_name || 'N/A'}</div>
+                                                    </td>
+                                                    <td>
                                                         <div className="engineer-cell">
                                                             <div className="engineer-avatar">{firstLetter}</div>
                                                             <div style={{ fontWeight: '700' }}>{item.engineer_name || 'N/A'}</div>
@@ -770,15 +795,6 @@ const CustomerReceivablePage = () => {
                                                     <td>
                                                         <div style={{ fontWeight: '700' }}>{bd.formattedHours || '00:00'}</div>
                                                     </td>
-                                                    <td>
-                                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                                            {bd.otHours > 0 && <span className="multiplier-tag ot">OT 1.5x</span>}
-                                                            {bd.ooh === 'Yes' && <span className="multiplier-tag ooh">OOH 1.5x</span>}
-                                                            {bd.ww === 'Yes' && <span className="multiplier-tag ww">WKND 2.0x</span>}
-                                                            {bd.hw === 'Yes' && <span className="multiplier-tag ww">HOL 2.0x</span>}
-                                                            {!bd.otHours && bd.ooh !== 'Yes' && bd.ww !== 'Yes' && bd.hw !== 'Yes' && <span style={{ color: '#cbd5e1' }}>--</span>}
-                                                        </div>
-                                                    </td>
                                                     <td className="text-right">
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Travel: {parseFloat(bd.travelCost || 0).toFixed(0)}</div>
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Tools: {parseFloat(bd.toolCost || 0).toFixed(0)}</div>
@@ -792,8 +808,36 @@ const CustomerReceivablePage = () => {
                                                     <td className="receivable-amount" style={{ color: '#0f172a', fontWeight: '800' }}>
                                                         {item.currency || 'USD'} {(parseFloat(bd.totalReceivable) - parseFloat(pd.totalPayout)).toFixed(2)}
                                                     </td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        <button className="eye-btn-v3" title="View Detailed Breakdown" onClick={() => handleOpenDetails(item)}><FiEye /></button>
+                                                    <td style={{ textAlign: 'center', position: 'relative' }}>
+                                                        <button 
+                                                            className="eye-btn-v3" 
+                                                            title="View Detailed Breakdown" 
+                                                            onClick={() => handleOpenDetails(item)}
+                                                            onMouseEnter={() => setHoveredCostTicketId(item.id)}
+                                                            onMouseLeave={() => setHoveredCostTicketId(null)}
+                                                        >
+                                                            <FiEye />
+                                                        </button>
+
+                                                        {hoveredCostTicketId === item.id && (
+                                                            <div className="hover-breakdown-tooltip">
+                                                                <div style={{ fontSize: '10px', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', marginBottom: '8px' }}>Cost Breakdown</div>
+                                                                <div className="breakdown-row highlight-premium">
+                                                                    <span>Subtotal</span>
+                                                                    <span>{item.currency || 'USD'} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
+                                                                </div>
+                                                                {parseFloat(bd.otPremium) > 0 && <div className="breakdown-row"><span>OT Premium</span><span>+ {item.currency || 'USD'} {parseFloat(bd.otPremium).toFixed(2)}</span></div>}
+                                                                {parseFloat(bd.oohPremium) > 0 && <div className="breakdown-row"><span>OOH</span><span>+ {item.currency || 'USD'} {parseFloat(bd.oohPremium).toFixed(2)}</span></div>}
+                                                                {parseFloat(bd.specialDayPremium) > 0 && <div className="breakdown-row"><span>Special Day</span><span>+ {item.currency || 'USD'} {parseFloat(bd.specialDayPremium).toFixed(2)}</span></div>}
+                                                                {parseFloat(bd.travelCost) > 0 && <div className="breakdown-row"><span>Travel</span><span>+ {item.currency || 'USD'} {parseFloat(bd.travelCost).toFixed(2)}</span></div>}
+                                                                {parseFloat(bd.toolCost) > 0 && <div className="breakdown-row"><span>Tools</span><span>+ {item.currency || 'USD'} {parseFloat(bd.toolCost).toFixed(2)}</span></div>}
+                                                                <div className="breakdown-row" style={{ borderTop: '1px solid #e2e8f0', margin: '4px 0', padding: 0 }}></div>
+                                                                <div className="breakdown-row highlight-premium" style={{ marginBottom: 0 }}>
+                                                                    <span>Net Total</span>
+                                                                    <span>{item.currency || 'USD'} {bd.totalReceivable}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
