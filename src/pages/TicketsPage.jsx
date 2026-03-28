@@ -2825,12 +2825,6 @@ function TicketsPage() {
                   </>
                 )}
 
-                    // Fallback to saved DB total (from backend calculation)
-                    const saved = parseFloat(selectedTicket.totalCost);
-                    return `${selectedTicket.currency} ${isNaN(saved) ? '0.00' : saved.toFixed(2)}`;
-                  })()}
-                </span>
-
                 <div className="detail-item--full divider"></div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
