@@ -397,6 +397,15 @@ function LeadsPage() {
         base = parseFloat(agreedRate) || 0;
       } else if (bil === 'Cancellation') {
         base = parseFloat(cancellationFee) || 0;
+      } else if (bil === 'Mixed Mode') {
+        if (hrs <= 4) {
+          base = hd;
+        } else if (hrs <= 8) {
+          base = fd;
+        } else {
+          base = fd;
+          ot = (hrs - 8) * (hr * 1.5);
+        }
       }
 
       const trav = parseFloat(travelCostPerDay) || 0;
@@ -863,8 +872,9 @@ function LeadsPage() {
                   <option value="Half Day + Hourly">2) Half Day + Hourly</option>
                   <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
                   <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
-                  <option value="Agreed Rate">5) Agreed/Fixed Rate</option>
-                  <option value="Cancellation">6) Cancellation/Reschedule Fee</option>
+                  <option value="Mixed Mode">5) Mixed (Half/Full/OT Tier)</option>
+                  <option value="Agreed Rate">6) Agreed/Fixed Rate</option>
+                  <option value="Cancellation">7) Cancellation/Reschedule Fee</option>
                 </select>
               </label>
 
@@ -1467,23 +1477,23 @@ function LeadsPage() {
                   </div>
                   <div className="detail-item">
                     <label>Hourly Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.hourlyRate || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.hourlyRate || selectedLead.hourly_rate || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Half Day Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.halfDayRate || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.halfDayRate || selectedLead.half_day_rate || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Full Day Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.fullDayRate || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.fullDayRate || selectedLead.full_day_rate || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Monthly Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.monthlyRate || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.monthlyRate || selectedLead.monthly_rate || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Agreed / Fixed Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.agreedRate || '--'}</span>
+                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.agreedRate || selectedLead.agreed_rate || '--'}</span>
                   </div>
 
                   {/* Additional Costs Section */}
@@ -1493,15 +1503,15 @@ function LeadsPage() {
                   </div>
                   <div className="detail-item">
                     <label>Tool Cost</label>
-                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.toolCost || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.toolCost || selectedLead.tool_cost || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Travel Cost / Day</label>
-                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || selectedLead.travel_cost_per_day || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Grand Total (Receivable)</label>
-                    <span style={{ fontWeight: '800', color: '#059669', fontSize: '15px' }}>{selectedLead.currency} {selectedLead.totalCost || '0.00'}</span>
+                    <span style={{ fontWeight: '800', color: '#059669', fontSize: '15px' }}>{selectedLead.currency} {selectedLead.totalCost || selectedLead.total_cost || '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Task Location</label>

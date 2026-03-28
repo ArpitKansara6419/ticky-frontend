@@ -177,6 +177,20 @@ const CustomerReceivablePage = () => {
         } else if (billingType === 'Cancellation') { 
             base = parseFloat(ticket.cancellation_fee) || 0; 
             baseBreakdown = `Fixed Cancellation Fee = ${cur} ${base.toFixed(2)}`;
+        } else if (billingType === 'Mixed Mode') {
+            if (hrs <= 4) {
+                base = hd;
+                baseBreakdown = `Billed as Half Day (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
+            } else if (hrs <= 8) {
+                base = fd;
+                baseBreakdown = `Billed as Full Day (4-8h) = ${cur} ${fd.toFixed(2)}`;
+            } else {
+                base = fd;
+                baseBreakdown = `Full Day Base (8h) = ${cur} ${fd.toFixed(2)}`;
+                const otHrs = hrs - 8;
+                ot = otHrs * (hr * 1.5);
+                otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
+            }
         }
 
         const trav = parseFloat(ticket.travel_cost_per_day || 0);
@@ -304,6 +318,15 @@ const CustomerReceivablePage = () => {
             base = parseFloat(ticket.eng_agreed_rate) || 0;
         } else if (billingType === 'Cancellation') { 
             base = parseFloat(ticket.eng_cancellation_fee) || 0; 
+        } else if (billingType === 'Mixed Mode') {
+            if (hrs <= 4) {
+                base = hd;
+            } else if (hrs <= 8) {
+                base = fd;
+            } else {
+                base = fd;
+                ot = (hrs - 8) * (hr * 1.5);
+            }
         }
 
         const total = base + ot + ooh + sp;
@@ -388,9 +411,16 @@ const CustomerReceivablePage = () => {
         return unbilledList
             .filter(item => isAll || (item.currency || 'USD').toUpperCase() === selectedCurrency.toUpperCase())
             .reduce((sum, item) => {
-                const calcCurrency = isAll ? 'USD' : selectedCurrency;
-                const bd = calculateTicketCostFrontend(item, calcTimezone, calcCurrency);
-                return sum + parseFloat(bd.totalReceivable);
+                const cur = (item.currency || 'USD').toUpperCase();
+                const bd = calculateTicketCostFrontend(item, calcTimezone, cur);
+                const val = parseFloat(bd.totalReceivable) || 0;
+                
+                if (isAll) {
+                    // Convert to USD base
+                    const rate = EXCHANGE_RATES[cur] || 1;
+                    return sum + (val / rate);
+                }
+                return sum + val;
             }, 0);
     }, [unbilledList, calcTimezone, selectedCurrency]);
 

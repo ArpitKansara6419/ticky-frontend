@@ -183,6 +183,7 @@ function TicketsPage() {
   const [breakTime, setBreakTime] = useState('0') // in minutes
 
   const [liveBreakdown, setLiveBreakdown] = useState(null);
+  const [payoutLiveBreakdown, setPayoutLiveBreakdown] = useState(null);
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineStartTime, setInlineStartTime] = useState('');
   const [inlineEndTime, setInlineEndTime] = useState('');
@@ -374,11 +375,26 @@ function TicketsPage() {
       travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
     });
     setLiveBreakdown(res);
-    // CRITICAL: Update the actual totalCost state for the payload
     if (res && res.grandTotal) {
       setTotalCost(res.grandTotal);
     }
-  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCostInput, billingType, timezone, calcTimezone]);
+
+    const payRes = calculateTicketTotal({
+      startTime, endTime, breakTime,
+      hourlyRate: engHourlyRate || 0,
+      halfDayRate: engHalfDayRate || 0,
+      fullDayRate: engFullDayRate || 0,
+      monthlyRate: engMonthlyRate || 0,
+      agreedRate: engAgreedRate || 0,
+      cancellationFee: engCancellationFee || 0,
+      travelCostPerDay: 0,
+      toolCost: 0,
+      billingType: engBillingType,
+      timezone,
+      calcTimezone
+    });
+    setPayoutLiveBreakdown(payRes);
+  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCostInput, billingType, timezone, calcTimezone, engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee, engBillingType]);
 
   // Sync Task Dates with Manual Time Log
   useEffect(() => {
@@ -2809,53 +2825,83 @@ function TicketsPage() {
                   </>
                 )}
 
-                <div className="detail-item--full divider"></div>
-                <label style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary-color, #7c3aed)', margin: 0 }}>Grand Total (Receivable)</label>
-                <span style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color, #7c3aed)' }}>
-                  {(() => {
-                    // Live calculation from ACTUAL activity times only (not date-only taskStartDate)
-                    const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
-                    const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
-
-                    if (viewMode === 'form') {
-                      // Reactive preview for the Full Form view
-                      const liveResult = calculateTicketTotal({
-                        startTime, endTime, breakTime,
-                        hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                        travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
-                      });
-                      if (liveResult) return `${currency} ${liveResult.grandTotal}`;
-                    } else if (bestStart && bestEnd) {
-                      const liveResult = calculateTicketTotal({
-                        startTime: bestStart,
-                        endTime: bestEnd,
-                        breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
-                        hourlyRate: selectedTicket.hourlyRate,
-                        halfDayRate: selectedTicket.halfDayRate,
-                        fullDayRate: selectedTicket.fullDayRate,
-                        monthlyRate: selectedTicket.monthlyRate,
-                        agreedRate: selectedTicket.agreedRate,
-                        cancellationFee: selectedTicket.cancellationFee,
-                        travelCostPerDay: selectedTicket.travelCostPerDay,
-                        toolCost: selectedTicket.toolCost,
-                        billingType: selectedTicket.billingType || 'Hourly',
-                        timezone: selectedTicket.timezone,
-                        calcTimezone: 'Ticket Local'
-                      });
-                      if (liveResult) {
-                        return `${selectedTicket.currency} ${liveResult.grandTotal}`;
-                      }
-                    }
                     // Fallback to saved DB total (from backend calculation)
                     const saved = parseFloat(selectedTicket.totalCost);
-                    const toolC = parseFloat(selectedTicket.toolCost || 0);
-                    const travelC = parseFloat(selectedTicket.travelCostPerDay || 0);
-                    // If saved total is only the tool cost, add travel too
-                    if (saved > 0 && saved !== toolC) return `${selectedTicket.currency} ${saved.toFixed(2)}`;
-                    // Build minimal total from known components
-                    return `${selectedTicket.currency} ${(toolC + travelC).toFixed(2)}`;
+                    return `${selectedTicket.currency} ${isNaN(saved) ? '0.00' : saved.toFixed(2)}`;
                   })()}
                 </span>
+
+                <div className="detail-item--full divider"></div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '800', color: '#7c3aed', margin: 0, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Grand Total (Receivable)</label>
+                    <span style={{ fontSize: '22px', fontWeight: '900', color: '#7c3aed' }}>
+                      {(() => {
+                        const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
+                        const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
+
+                        if (viewMode === 'form') {
+                          if (liveBreakdown) return `${currency} ${liveBreakdown.grandTotal}`;
+                        } else if (bestStart && bestEnd) {
+                          const liveResult = calculateTicketTotal({
+                            startTime: bestStart,
+                            endTime: bestEnd,
+                            breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
+                            hourlyRate: selectedTicket.hourlyRate,
+                            halfDayRate: selectedTicket.halfDayRate,
+                            fullDayRate: selectedTicket.fullDayRate,
+                            monthlyRate: selectedTicket.monthlyRate,
+                            agreedRate: selectedTicket.agreedRate,
+                            cancellationFee: selectedTicket.cancellationFee,
+                            travelCostPerDay: selectedTicket.travelCostPerDay,
+                            toolCost: selectedTicket.toolCost,
+                            billingType: selectedTicket.billingType || 'Hourly',
+                            timezone: selectedTicket.timezone,
+                            calcTimezone: 'Ticket Local'
+                          });
+                          if (liveResult) return `${selectedTicket.currency} ${liveResult.grandTotal}`;
+                        }
+                        const saved = parseFloat(selectedTicket.totalCost);
+                        return `${selectedTicket.currency} ${isNaN(saved) ? '0.00' : saved.toFixed(2)}`;
+                      })()}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '800', color: '#059669', margin: 0, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Grand Total (Payout)</label>
+                    <span style={{ fontSize: '22px', fontWeight: '900', color: '#059669' }}>
+                      {(() => {
+                        const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
+                        const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
+
+                        if (viewMode === 'form') {
+                          if (payoutLiveBreakdown) return `${engCurrency} ${payoutLiveBreakdown.grandTotal}`;
+                        } else if (bestStart && bestEnd) {
+                          const liveResult = calculateTicketTotal({
+                            startTime: bestStart,
+                            endTime: bestEnd,
+                            breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
+                            hourlyRate: selectedTicket.eng_hourly_rate,
+                            halfDayRate: selectedTicket.eng_half_day_rate,
+                            fullDayRate: selectedTicket.eng_full_day_rate,
+                            monthlyRate: selectedTicket.eng_monthly_rate,
+                            agreedRate: selectedTicket.eng_agreed_rate,
+                            cancellationFee: selectedTicket.eng_cancellation_fee,
+                            travelCostPerDay: 0,
+                            toolCost: 0,
+                            billingType: selectedTicket.eng_billing_type || 'Hourly',
+                            timezone: selectedTicket.timezone,
+                            calcTimezone: 'Ticket Local'
+                          });
+                          if (liveResult) return `${selectedTicket.eng_currency || selectedTicket.currency} ${liveResult.grandTotal}`;
+                        }
+                        const saved = parseFloat(selectedTicket.eng_total_cost);
+                        return `${selectedTicket.eng_currency || selectedTicket.currency} ${isNaN(saved) ? '0.00' : saved.toFixed(2)}`;
+                      })()}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="detail-item--full divider"></div>
