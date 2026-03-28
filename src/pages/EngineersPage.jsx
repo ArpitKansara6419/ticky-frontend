@@ -186,6 +186,7 @@ function EngineersPage() {
         weekendRate: '',
         holidayRate: '',
         monthlyRate: '',
+        billingType: 'Hourly',
         city: ''
     });
     const [savingCharges, setSavingCharges] = useState(false);
@@ -276,6 +277,7 @@ function EngineersPage() {
                     weekendRate: eng.weekendRate || '',
                     holidayRate: eng.holidayRate || '',
                     monthlyRate: eng.monthlyRate || '',
+                    billingType: eng.billingType || 'Hourly',
                     city: eng.city || ''
                 });
             }
@@ -448,6 +450,7 @@ function EngineersPage() {
                 weekendRate: chargesForm.weekendRate,
                 holidayRate: chargesForm.holidayRate,
                 monthlyRate: chargesForm.monthlyRate,
+                billingType: chargesForm.billingType,
                 city: chargesForm.city
             };
 
@@ -939,6 +942,17 @@ function EngineersPage() {
                                             <option value="EUR">EUR - Euro (€)</option>
                                             <option value="GBP">GBP - Pound (£)</option>
                                             <option value="INR">INR - Rupee (₹)</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Default Billing Type</label>
+                                        <select className="form-input" value={chargesForm.billingType} onChange={e => setChargesForm({ ...chargesForm, billingType: e.target.value })}>
+                                            <option value="Hourly">Hourly</option>
+                                            <option value="Half Day + Hourly">Half Day + Hourly</option>
+                                            <option value="Full Day + OT">Full Day + OT</option>
+                                            <option value="Mixed Mode">Mixed Mode (Half/Full/OT)</option>
+                                            <option value="Agreed Rate">Agreed Rate</option>
+                                            <option value="Cancellation">Cancellation</option>
                                         </select>
                                     </div>
                                     <div className="form-group">

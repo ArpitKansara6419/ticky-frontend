@@ -333,6 +333,16 @@ function TicketsPage() {
           ot = (hrs - 8) * (hr * 1.5);
         }
 
+      } else if (bil === 'Mixed Mode') {
+        if (hrs <= 4) {
+          base = hd;
+        } else if (hrs <= 8) {
+          base = fd;
+        } else {
+          base = fd;
+          ot = (hrs - 8) * (hr * 1.5);
+        }
+
       } else if (bil.includes('Monthly')) {
         base = parseFloat(opts.monthlyRate) || 0;
         if (isSpecialDay) {
@@ -1646,7 +1656,20 @@ function TicketsPage() {
                     const id = e.target.value
                     setEngineerId(id)
                     const eng = engineers.find(en => String(en.id) === String(id))
-                    if (eng) setEngineerName(eng.name)
+                    if (eng) {
+                      setEngineerName(eng.name)
+                      // Auto-sync Engineer's default billing type if not already overridden
+                      if (engPayType === 'Default') {
+                        setEngBillingType(eng.billing_type || 'Hourly')
+                        setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '')
+                        setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '')
+                        setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '')
+                        setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
+                        setEngAgreedRate(eng.agreed_rate || '')
+                        setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
+                        setEngCurrency(eng.currency || 'USD')
+                      }
+                    }
                   }}
                   disabled={loadingDropdowns}
                 >
@@ -1665,15 +1688,21 @@ function TicketsPage() {
                     <FiDollarSign style={{ color: '#2563eb' }} /> Engineer Payout Configuration
                   </h3>
                   
-                  <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}>
-                      <input type="radio" name="engPayType" value="Default" checked={engPayType === 'Default'} onChange={() => setEngPayType('Default')} />
-                      Use Engineer's Default Rates
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}>
-                      <input type="radio" name="engPayType" value="Custom" checked={engPayType === 'Custom'} onChange={() => setEngPayType('Custom')} />
-                      Custom Payout Overrides
-                    </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div className="payout-type-selector" style={{ background: engPayType === 'Default' ? '#eff6ff' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Default' ? '#3b82f6' : '#e2e8f0', cursor: 'pointer' }} onClick={() => setEngPayType('Default')}>
+                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#1e40af', fontWeight: '700' }}>
+                          <input type="radio" name="engPayType" value="Default" checked={engPayType === 'Default'} readOnly />
+                          Engineers Profile Rates
+                       </label>
+                       <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Automatically use rates from the engineer's profile.</p>
+                    </div>
+                    <div className="payout-type-selector" style={{ background: engPayType === 'Custom' ? '#fdf2f8' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Custom' ? '#db2777' : '#e2e8f0', cursor: 'pointer' }} onClick={() => setEngPayType('Custom')}>
+                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#831843', fontWeight: '700' }}>
+                          <input type="radio" name="engPayType" value="Custom" checked={engPayType === 'Custom'} readOnly />
+                          Custom Ticket Rates
+                       </label>
+                       <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Manually override rates and billing type for this ticket.</p>
+                    </div>
                   </div>
 
                   {engPayType === 'Custom' && (
@@ -1684,6 +1713,7 @@ function TicketsPage() {
                           <option value="Hourly">Hourly</option>
                           <option value="Half Day + Hourly">Half Day + Hourly</option>
                           <option value="Full Day + OT">Full Day + OT</option>
+                          <option value="Mixed Mode">Mixed Mode (Half/Full/OT)</option>
                           <option value="Agreed Rate">Agreed Rate</option>
                           <option value="Cancellation">Cancellation</option>
                         </select>
@@ -1968,6 +1998,7 @@ function TicketsPage() {
                   <option value="Hourly">Hourly Only</option>
                   <option value="Half Day + Hourly">Half Day + Hourly</option>
                   <option value="Full Day + OT">Full Day + OT</option>
+                  <option value="Mixed Mode">Mixed Mode (Half/Full/OT)</option>
                   <option value="Monthly + OT + Weekend">Monthly + OT + Weekend or Holidays</option>
                   <option value="Agreed Rate">Agreed rate</option>
                   <option value="Cancellation">Cancellation / Reschedule charges</option>
