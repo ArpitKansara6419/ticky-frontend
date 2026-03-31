@@ -196,6 +196,9 @@ function TicketsPage() {
   const [newExtendEndDate, setNewExtendEndDate] = useState('');
   const [isExtending, setIsExtending] = useState(false);
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
+  const [expandedTicketRows, setExpandedTicketRows] = useState(new Set()); // for multi-day expandable rows
+  const [reassignModalOpen, setReassignModalOpen] = useState(false);
+  const [reassignTicketId, setReassignTicketId] = useState(null);
 
   // Smart Auto-Sync for Start & End Time based on Task Details
   // TIMEZONE-SAFE: builds wall-clock strings directly without new Date() to avoid local TZ shifts
@@ -345,9 +348,12 @@ function TicketsPage() {
 
       } else if (bil.includes('Monthly')) {
         base = parseFloat(opts.monthlyRate) || 0;
-        if (isSpecialDay) {
+        if (isWeekend || isHoliday) {
+          // Weekend/Holiday: monthly base already covers normal days.
+          // Extra special-day premium (2.0x hourly) is charged ON TOP.
           special = hrs * (hr * 2.0);
         } else {
+          // Normal weekday: count towards monthly total, apply OT if > 8h
           if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
         }
 
@@ -994,6 +1000,29 @@ function TicketsPage() {
         breakTime: Number(inlineBreakTime) || 0
       };
 
+      const calc = calculateTicketTotal({
+        startTime: inlineStartTime,
+        endTime: inlineEndTime,
+        breakTime: inlineBreakTime,
+        hourlyRate: selectedTicket.hourlyRate,
+        halfDayRate: selectedTicket.halfDayRate,
+        fullDayRate: selectedTicket.fullDayRate,
+        monthlyRate: selectedTicket.monthlyRate,
+        agreedRate: selectedTicket.agreedRate,
+        cancellationFee: selectedTicket.cancellationFee,
+        travelCostPerDay: selectedTicket.travelCostPerDay,
+        toolCost: selectedTicket.toolCost,
+        billingType: selectedTicket.billingType,
+        timezone: selectedTicket.timezone,
+        calcTimezone: 'Ticket Local'
+      });
+      
+      const hrsVal = parseFloat(calc?.hrs || 0);
+      if (hrsVal > 8 && payload.status !== 'On Hold') {
+        payload.status = 'On Hold';
+        alert('Shift exceeded 8 hours. Ticket has been automatically placed ON HOLD.');
+      }
+
       const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1067,6 +1096,22 @@ function TicketsPage() {
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Update failed');
+      
+      // Auto-hold logic for Dispatch log updates
+      const updatedLog = data;
+      if (updatedLog.startTime && updatedLog.endTime) {
+         const dur = (new Date(updatedLog.endTime) - new Date(updatedLog.startTime)) / 3600000 - (updatedLog.breakTimeMins / 60);
+         if (dur > 8) {
+           await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, {
+             method: 'PUT',
+             headers: { 'Content-Type': 'application/json' },
+             credentials: 'include',
+             body: JSON.stringify({ status: 'On Hold' })
+           });
+           alert('Day shift exceeded 8 hours. Ticket status updated to ON HOLD.');
+         }
+      }
+
       fetchTicketExtras(selectedTicket.id);
       loadTickets();
     } catch (e) { alert(e.message); }
@@ -1369,6 +1414,19 @@ function TicketsPage() {
         setBillingType(parsedLead.billingType || 'Hourly')
         setLeadType(parsedLead.leadType || 'Full time')
         
+        // Engineer Payout Configuration from LeadsPage assignment modal
+        setEngineerId(parsedLead.engineerId ? String(parsedLead.engineerId) : '')
+        setEngineerName(parsedLead.engineerName || '')
+        setEngPayType(parsedLead.engPayType || 'Default')
+        setEngBillingType(parsedLead.engBillingType || 'Hourly')
+        setEngMonthlyRate(parsedLead.engMonthlyRate || '')
+        setEngHourlyRate(parsedLead.engHourlyRate || '')
+        setEngHalfDayRate(parsedLead.engHalfDayRate || '')
+        setEngFullDayRate(parsedLead.engFullDayRate || '')
+        setEngAgreedRate(parsedLead.engAgreedRate || '')
+        setEngCancellationFee(parsedLead.engCancellationFee || '')
+        setEngCurrency(parsedLead.engCurrency || 'USD')
+
         // AUTO SYNC TIME: Automatically populate the manual override times from the scheduled lead details
         const lDate = parsedLead.followUpDate || parsedLead.taskStartDate;
         const lEndDate = parsedLead.taskEndDate || lDate;
@@ -1710,12 +1768,13 @@ function TicketsPage() {
                       <label className="tickets-field">
                         <span>Payout Billing Type</span>
                         <select value={engBillingType} onChange={(e) => setEngBillingType(e.target.value)}>
-                          <option value="Hourly">Hourly</option>
-                          <option value="Half Day + Hourly">Half Day + Hourly</option>
-                          <option value="Full Day + OT">Full Day + OT</option>
-                          <option value="Mixed Mode">Mixed Mode (Half/Full/OT)</option>
-                          <option value="Agreed Rate">Agreed Rate</option>
-                          <option value="Cancellation">Cancellation</option>
+                          <option value="Hourly">1) Hourly Only (min 2 hrs)</option>
+                          <option value="Half Day + Hourly">2) Half Day + Hourly</option>
+                          <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
+                          <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
+                          <option value="Mixed Mode">5) Mixed (Half/Full/OT Tier)</option>
+                          <option value="Agreed Rate">6) Agreed/Fixed Rate</option>
+                          <option value="Cancellation">7) Cancellation Fee</option>
                         </select>
                       </label>
 
@@ -1741,6 +1800,12 @@ function TicketsPage() {
                               <span>Full Day Rate</span>
                               <input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} placeholder="0.00" />
                             </label>
+                            {engBillingType === 'Monthly + OT + Weekend' && (
+                              <label className="tickets-field">
+                                <span>Monthly Rate</span>
+                                <input type="number" value={engMonthlyRate} onChange={(e) => setEngMonthlyRate(e.target.value)} placeholder="0.00" />
+                              </label>
+                            )}
                           </>
                         )}
                         {engBillingType === 'Agreed Rate' && (
@@ -2389,16 +2454,61 @@ function TicketsPage() {
                     ) : paginatedTickets.length === 0 ? (
                       <tr><td colSpan={7} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>No tickets found matching your search.</td></tr>
                     ) : (
-                      paginatedTickets.map((ticket) => {
-                        const startDateStr = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '--';
+                      paginatedTickets.flatMap((ticket) => {
+                        // Parse time_logs for multi-day Dispatch tickets
+                        let parsedLogs = [];
+                        try {
+                          if (ticket.time_logs) {
+                            parsedLogs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : ticket.time_logs;
+                          }
+                        } catch(e) { parsedLogs = []; }
 
-                        return (
-                          <tr key={ticket.id}>
+                        const isDispatch = ticket.leadType === 'Dispatch' && parsedLogs.length > 0;
+                        const isExpanded = expandedTicketRows.has(ticket.id);
+
+                        // Check if any single day exceeds 8hrs (8hr shift exceeded indicator)
+                        const hasExceeded8h = parsedLogs.some(log => {
+                          if (!log.start_time || !log.end_time) return false;
+                          const hrs = (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60);
+                          return hrs > 8;
+                        });
+
+                        const mainRow = (
+                          <tr key={ticket.id} style={{ background: isExpanded ? 'rgba(99,102,241,0.04)' : undefined }}>
                             <td>
-                              <div className="leads-name-main">{ticket.taskName}</div>
-                              <div className="leads-name-sub">#AIM-T-{String(ticket.id).padStart(3, '0')}</div>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                {isDispatch && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setExpandedTicketRows(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(ticket.id)) next.delete(ticket.id);
+                                        else next.add(ticket.id);
+                                        return next;
+                                      });
+                                    }}
+                                    style={{ flexShrink: 0, marginTop: '3px', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', padding: '2px 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', lineHeight: 1.4 }}
+                                    title={isExpanded ? 'Collapse days' : 'Expand days'}
+                                  >
+                                    {isExpanded ? '▲' : '▼'} {parsedLogs.length}d
+                                  </button>
+                                )}
+                                <div>
+                                  <div className="leads-name-main">{ticket.taskName}</div>
+                                  <div className="leads-name-sub">#AIM-T-{String(ticket.id).padStart(3, '0')}</div>
+                                  {hasExceeded8h && (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '3px', background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a', borderRadius: '5px', padding: '2px 7px', fontSize: '10px', fontWeight: '700' }}>
+                                      ⏱ 8hr Shift Exceeded
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </td>
-                            <td>{ticket.customerName}</td>
+                            <td>
+                              <div style={{ fontWeight: '600', fontSize: '13px' }}>{ticket.customerName}</div>
+                              {ticket.engineerName && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>👷 {ticket.engineerName}</div>}
+                            </td>
                             <td>
                               <div style={{ color: '#15803d', fontWeight: '600' }}>
                                 <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.7, marginBottom: '2px', letterSpacing: '0.05em' }}>Confirmed For</div>
@@ -2416,13 +2526,20 @@ function TicketsPage() {
                               </div>
                             </td>
                             <td>
-                              <button
-                                type="button"
-                                className={`status-badge status-badge--${(ticket.status || 'open').toLowerCase().replace(' ', '-')}`}
-                              >
-                                <span className="status-dot"></span>
-                                {ticket.status}
-                              </button>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                <button
+                                  type="button"
+                                  className={`status-badge status-badge--${(ticket.status || 'open').toLowerCase().replace(' ', '-')}`}
+                                >
+                                  <span className="status-dot"></span>
+                                  {ticket.status}
+                                </button>
+                                {ticket.status === 'On Hold' && (
+                                  <div style={{ fontSize: '10px', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', padding: '2px 6px', fontWeight: '600' }}>
+                                    🔒 Resume next day
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td>
                               <button
@@ -2442,11 +2559,64 @@ function TicketsPage() {
                               <div className="action-icons">
                                 <button className="action-btn view" onClick={() => openTicketModal(ticket.id)} title="View Detail"><FiEye /></button>
                                 <button className="action-btn edit" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
+                                {(ticket.status === 'On Hold' || ticket.status === 'Assigned' || ticket.status === 'Open') && (
+                                  <button
+                                    className="action-btn"
+                                    title="Re-assign Engineer"
+                                    style={{ color: '#f59e0b', borderColor: '#fde68a', background: '#fffbeb', fontSize: '14px' }}
+                                    onClick={() => { setReassignTicketId(ticket.id); setReassignModalOpen(true); }}
+                                  >
+                                    🔄
+                                  </button>
+                                )}
                                 <button className="action-btn delete" onClick={() => handleDeleteTicket(ticket.id)} title="Delete"><FiTrash2 /></button>
                               </div>
                             </td>
                           </tr>
-                        )
+                        );
+
+                        // Sub-rows for each day's time log (expanded only for Dispatch tickets)
+                        const subRows = isExpanded ? parsedLogs.map((log, idx) => {
+                          const logDate = log.task_date
+                            ? new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+                            : `Day ${idx + 1}`;
+                          const rawHrs = (log.start_time && log.end_time)
+                            ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60)
+                            : null;
+                          const hrs = rawHrs !== null ? rawHrs.toFixed(2) : '--';
+                          const exceeded = rawHrs !== null && rawHrs > 8;
+                          const isWeekend = log.task_date ? [0, 6].includes(new Date(log.task_date).getDay()) : false;
+                          return (
+                            <tr key={`${ticket.id}-log-${log.id || idx}`}
+                              style={{ background: exceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}
+                            >
+                              <td style={{ paddingLeft: '36px', fontSize: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ color: '#6366f1', fontWeight: '700' }}>↳</span>
+                                  <span style={{ fontWeight: '600', color: '#374151' }}>{logDate}</span>
+                                  {isWeekend && <span style={{ background: '#fde68a', color: '#92400e', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>WKND</span>}
+                                  {log.is_holiday && <span style={{ background: '#fce7f3', color: '#9d174d', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>HOLIDAY</span>}
+                                  {exceeded && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>⏱ {hrs}h</span>}
+                                </div>
+                              </td>
+                              <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                  <span>In: <strong>{log.start_time ? new Date(log.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</strong></span>
+                                  <span>Out: <strong>{log.end_time ? new Date(log.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</strong></span>
+                                  <span style={{ color: '#94a3b8' }}>Break: {log.break_time_mins || 0}m</span>
+                                </div>
+                              </td>
+                              <td colSpan={4}>
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: exceeded ? '#b45309' : '#059669' }}>
+                                  {hrs !== '--' ? `${hrs}h` : '--'}
+                                  {exceeded ? ' ⚠ Exceeds 8h — Hold auto-applies' : ''}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        }) : [];
+
+                        return [mainRow, ...subRows];
                       })
                     )}
                   </tbody>
@@ -2457,6 +2627,97 @@ function TicketsPage() {
           )
         })()}
       </section >
+
+      {/* ── Re-assign Engineer Modal ── */}
+      {reassignModalOpen && reassignTicketId && (
+        <div className="ticket-modal-backdrop" onClick={() => { setReassignModalOpen(false); setReassignTicketId(null); }} role="dialog" aria-modal="true">
+          <div className="ticket-modal" style={{ maxWidth: '480px', width: '95%' }} onClick={e => e.stopPropagation()}>
+            <header className="ticket-modal-header">
+              <div className="ticket-modal-header-info">
+                <h2>Re-assign Engineer</h2>
+                <div className="ticket-badge-id">#AIM-T-{String(reassignTicketId).padStart(3, '0')}</div>
+              </div>
+              <p className="ticket-modal-subtitle">Select a different engineer to take over this ticket</p>
+              <button type="button" className="ticket-modal-close-btn" onClick={() => { setReassignModalOpen(false); setReassignTicketId(null); }}><FiX /></button>
+            </header>
+            <div className="ticket-modal-content" style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                  Select Replacement Engineer *
+                </label>
+                <select
+                  id="reassign-engineer-select"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: '500', color: '#1e293b', outline: 'none', background: 'var(--input-bg, #fff)' }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>Choose an engineer...</option>
+                  {engineers.map(eng => (
+                    <option key={eng.id} value={eng.id}>{eng.name} {eng.city ? `— ${eng.city}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                  Reason / Note (optional)
+                </label>
+                <textarea
+                  id="reassign-reason-input"
+                  rows={3}
+                  placeholder="e.g. Original engineer on leave. Reassigning to backup engineer."
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px', resize: 'vertical', outline: 'none', background: 'var(--input-bg, #fff)' }}
+                />
+              </div>
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px', fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>⚠️</span>
+                <span>Re-assigning will update the ticket's engineer. The original assignment will remain in the notes for audit trail.</span>
+              </div>
+            </div>
+            <div className="ticket-modal-footer">
+              <button className="btn-wow-secondary" onClick={() => { setReassignModalOpen(false); setReassignTicketId(null); }}>
+                <FiX /> Cancel
+              </button>
+              <button
+                className="btn-wow-primary"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+                onClick={async () => {
+                  const sel = document.getElementById('reassign-engineer-select');
+                  const reason = document.getElementById('reassign-reason-input');
+                  const newEngId = sel?.value;
+                  const newEng = engineers.find(e => String(e.id) === String(newEngId));
+                  if (!newEngId || !newEng) { alert('Please select an engineer.'); return; }
+                  try {
+                    const res = await fetch(`${API_BASE_URL}/tickets/${reassignTicketId}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({ engineerName: newEng.name, engineerId: newEng.id, status: 'Assigned' })
+                    });
+                    if (res.ok) {
+                      // Add a note
+                      if (reason?.value) {
+                        await fetch(`${API_BASE_URL}/tickets/${reassignTicketId}/notes`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ content: `Re-assigned to ${newEng.name}. ${reason.value}`, authorType: 'admin' })
+                        });
+                      }
+                      setReassignModalOpen(false);
+                      setReassignTicketId(null);
+                      loadTickets();
+                      alert(`Ticket successfully re-assigned to ${newEng.name}`);
+                    } else {
+                      alert('Failed to re-assign. Please try again.');
+                    }
+                  } catch(e) { console.error(e); alert('Error during re-assignment.'); }
+                }}
+              >
+                🔄 Confirm Re-assign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isTicketModalOpen && selectedTicket && (
         <div className="ticket-modal-backdrop" onClick={handleCloseTicketModal} role="dialog" aria-modal="true">

@@ -97,6 +97,19 @@ function LeadsPage() {
       }
     }
   }, [followUpDate, statusChangeEndDate])
+  const [engineers, setEngineers] = useState([])
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [selectedLeadForAssign, setSelectedLeadForAssign] = useState(null)
+  const [assignEngineerId, setAssignEngineerId] = useState('')
+  const [assignPayType, setAssignPayType] = useState('Default') // 'Default' (Profile) | 'Custom' (Customer)
+  const [assignEngBillingType, setAssignEngBillingType] = useState('Hourly')
+  const [assignEngMonthlyRate, setAssignEngMonthlyRate] = useState('')
+  const [assignEngHourlyRate, setAssignEngHourlyRate] = useState('')
+  const [assignEngHalfDayRate, setAssignEngHalfDayRate] = useState('')
+  const [assignEngFullDayRate, setAssignEngFullDayRate] = useState('')
+  const [assignEngAgreedRate, setAssignEngAgreedRate] = useState('')
+  const [assignEngCancellationFee, setAssignEngCancellationFee] = useState('')
+  const [assignEngCurrency, setAssignEngCurrency] = useState('USD')
 
   // Form Fields
   const [taskName, setTaskName] = useState('')
@@ -132,7 +145,7 @@ function LeadsPage() {
 
   const [travelCostPerDay, setTravelCostPerDay] = useState('')
   const [toolCost, setToolCost] = useState('0')
-  const [billingType, setBillingType] = useState(() => localStorage.getItem('defaultBillingType') || 'Hourly')
+  const [billingType, setBillingType] = useState('Hourly')
   const [status, setStatus] = useState(LEAD_STATUSES[0])
   const [calcTimezone, setCalcTimezone] = useState('Ticket Local')
 
@@ -175,7 +188,7 @@ function LeadsPage() {
     setCancellationFee('')
     setTravelCostPerDay('')
     setToolCost('0')
-    setBillingType(localStorage.getItem('defaultBillingType') || 'Hourly')
+    setBillingType('Hourly')
     setStatus(LEAD_STATUSES[0])
     setFormError('')
     setFormSuccess('')
@@ -537,9 +550,14 @@ function LeadsPage() {
     const fetchInit = async () => {
       setLoadingCustomers(true)
       try {
-        const res = await fetch(`${API_BASE_URL}/leads/customers`, { credentials: 'include' })
-        const data = await res.json()
-        setCustomers(data.customers || [])
+        const [custRes, engRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/leads/customers`, { credentials: 'include' }),
+          fetch(`${API_BASE_URL}/engineers`, { credentials: 'include' })
+        ])
+        const custData = await custRes.json()
+        const engData = await engRes.json()
+        setCustomers(custData.customers || [])
+        setEngineers(engData.engineers || [])
       } catch (e) { console.error(e) }
       setLoadingCustomers(false)
     }
@@ -865,9 +883,8 @@ function LeadsPage() {
               <label className="leads-field" style={{ gridColumn: 'span 3' }}>
                 <span>Billing Type *</span>
                 <select value={billingType} onChange={(e) => {
-                  setBillingType(e.target.value);
-                  localStorage.setItem('defaultBillingType', e.target.value);
-                }} required>
+                    setBillingType(e.target.value);
+                  }} required>
                   <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
                   <option value="Half Day + Hourly">2) Half Day + Hourly</option>
                   <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
@@ -1222,8 +1239,10 @@ function LeadsPage() {
                                 type="button"
                                 className="leads-create-ticket-btn"
                                 onClick={() => {
-                                  localStorage.setItem('selectedLeadForTicket', JSON.stringify(l))
-                                  navigate('/dashboard', { state: { openTickets: true } })
+                                  setSelectedLeadForAssign(l)
+                                  setAssignEngineerId('')
+                                  setAssignPayType('Default')
+                                  setIsAssignModalOpen(true)
                                 }}
                               >
                                 <FiFileText /> Ticket
@@ -1526,6 +1545,152 @@ function LeadsPage() {
           </div>
         )
       }
+      {/* --- Engineer Assignment Modal --- */}
+      {isAssignModalOpen && selectedLeadForAssign && (
+        <div className="lead-modal-backdrop" onClick={() => setIsAssignModalOpen(false)}>
+          <div className="lead-modal" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+            <div className="lead-modal-header">
+              <div className="lead-modal-header-info">
+                <h2>Engineer Payout Configuration</h2>
+                <p>#AIM-L-{String(selectedLeadForAssign.id).padStart(3, '0')} — {selectedLeadForAssign.taskName}</p>
+              </div>
+              <button className="lead-modal-close-btn" onClick={() => setIsAssignModalOpen(false)}><FiX /></button>
+            </div>
+            <div className="lead-modal-content" style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                  Select Engineer *
+                </label>
+                <select
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: '500' }}
+                  value={assignEngineerId}
+                  onChange={(e) => setAssignEngineerId(e.target.value)}
+                >
+                  <option value="">Choose an engineer...</option>
+                  {engineers.map(eng => (
+                    <option key={eng.id} value={eng.id}>{eng.name} ({eng.city || 'No City'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '12px' }}>
+                  Payout Configuration Type
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAssignPayType('Default')}
+                    style={{
+                      padding: '12px', borderRadius: '10px', border: '2px solid',
+                      borderColor: assignPayType === 'Default' ? '#6366f1' : '#e2e8f0',
+                      background: assignPayType === 'Default' ? '#f5f3ff' : '#fff',
+                      color: assignPayType === 'Default' ? '#4f46e5' : '#64748b',
+                      fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    👷 Engineer Profile Rates
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignPayType('Custom')}
+                    style={{
+                      padding: '12px', borderRadius: '10px', border: '2px solid',
+                      borderColor: assignPayType === 'Custom' ? '#6366f1' : '#e2e8f0',
+                      background: assignPayType === 'Custom' ? '#f5f3ff' : '#fff',
+                      color: assignPayType === 'Custom' ? '#4f46e5' : '#64748b',
+                      fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    📄 Customer Ticket Rates
+                  </button>
+                </div>
+              </div>
+
+              {assignPayType === 'Custom' && (
+                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', animation: 'fadeIn 0.3s ease' }}>
+                  <div style={{ marginBottom: '15px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Billing Type (Engineer)</label>
+                    <select
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                      value={assignEngBillingType}
+                      onChange={(e) => setAssignEngBillingType(e.target.value)}
+                    >
+                      <option value="Hourly">Hourly</option>
+                      <option value="Half Day + Hourly">Half Day + Hourly</option>
+                      <option value="Full Day + OT">Full Day + OT</option>
+                      <option value="Monthly + OT + Weekend">Monthly + OT + Weekend</option>
+                      <option value="Agreed Rate">Agreed Rate</option>
+                    </select>
+                  </div>
+
+                  {assignEngBillingType === 'Monthly + OT + Weekend' && (
+                    <div style={{ marginBottom: '15px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Monthly Rate ({assignEngCurrency})</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 2500"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={assignEngMonthlyRate}
+                        onChange={(e) => setAssignEngMonthlyRate(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Hourly Rate</label>
+                      <input
+                        type="number"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={assignEngHourlyRate}
+                        onChange={(e) => setAssignEngHourlyRate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Agreed Rate</label>
+                      <input
+                        type="number"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={assignEngAgreedRate}
+                        onChange={(e) => setAssignEngAgreedRate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="lead-modal-footer">
+              <button className="btn-wow-secondary" onClick={() => setIsAssignModalOpen(false)}>Cancel</button>
+              <button
+                className="btn-wow-primary"
+                disabled={!assignEngineerId}
+                onClick={() => {
+                  const selectedEng = engineers.find(e => String(e.id) === String(assignEngineerId));
+                  const payload = {
+                    ...selectedLeadForAssign,
+                    engineerId: assignEngineerId,
+                    engineerName: selectedEng?.name || '',
+                    engPayType: assignPayType,
+                    engBillingType: assignEngBillingType,
+                    engMonthlyRate: assignEngMonthlyRate,
+                    engHourlyRate: assignEngHourlyRate,
+                    engHalfDayRate: assignEngHalfDayRate,
+                    engFullDayRate: assignEngFullDayRate,
+                    engAgreedRate: assignEngAgreedRate,
+                    engCancellationFee: assignEngCancellationFee,
+                    engCurrency: assignEngCurrency
+                  };
+                  localStorage.setItem('selectedLeadForTicket', JSON.stringify(payload))
+                  navigate('/dashboard', { state: { openTickets: true } })
+                }}
+              >
+                Create Ticket & Move ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section >
   )
 }

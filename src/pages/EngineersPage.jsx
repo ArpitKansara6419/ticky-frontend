@@ -945,14 +945,15 @@ function EngineersPage() {
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Default Billing Type</label>
+                                        <label>Billing Type (Engineer)</label>
                                         <select className="form-input" value={chargesForm.billingType} onChange={e => setChargesForm({ ...chargesForm, billingType: e.target.value })}>
-                                            <option value="Hourly">Hourly</option>
-                                            <option value="Half Day + Hourly">Half Day + Hourly</option>
-                                            <option value="Full Day + OT">Full Day + OT</option>
-                                            <option value="Mixed Mode">Mixed Mode (Half/Full/OT)</option>
-                                            <option value="Agreed Rate">Agreed Rate</option>
-                                            <option value="Cancellation">Cancellation</option>
+                                            <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
+                                            <option value="Half Day + Hourly">2) Half Day + Hourly</option>
+                                            <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
+                                            <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
+                                            <option value="Mixed Mode">5) Mixed (Half/Full/OT Tier)</option>
+                                            <option value="Agreed Rate">6) Agreed/Fixed Rate</option>
+                                            <option value="Cancellation">7) Cancellation/Reschedule Fee</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
