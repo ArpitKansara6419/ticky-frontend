@@ -1493,7 +1493,16 @@ function TicketsPage() {
           autoSyncTime(sDateOnly, eDateOnly, lTime);
       }
     }
-  }, [leadId, leads])
+  }, [leads, leadId])
+
+  // Auto-sync Lead Type based on Date Range
+  useEffect(() => {
+    if (taskStartDate && taskEndDate && taskStartDate !== taskEndDate) {
+      if (leadType !== 'Dispatch') setLeadType('Dispatch')
+    } else if (taskStartDate && taskEndDate && taskStartDate === taskEndDate) {
+      if (leadType === 'Dispatch') setLeadType('Full time')
+    }
+  }, [taskStartDate, taskEndDate])
 
   useEffect(() => {
     const ticketIdToEdit = localStorage.getItem('editTicketId')
@@ -2463,7 +2472,7 @@ function TicketsPage() {
                           }
                         } catch(e) { parsedLogs = []; }
 
-                        const isDispatch = ticket.leadType === 'Dispatch' && parsedLogs.length > 0;
+                        const isDispatch = (ticket.leadType === 'Dispatch') || (parsedLogs.length > 0);
                         const isExpanded = expandedTicketRows.has(ticket.id);
 
                         // Check if any single day exceeds 8hrs (8hr shift exceeded indicator)

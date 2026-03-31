@@ -546,6 +546,15 @@ function LeadsPage() {
     setSummary({ total, bid, confirmed, rescheduled })
   }, [leads])
 
+  // Auto-sync Lead Type based on Date Range
+  useEffect(() => {
+    if (taskStartDate && taskEndDate && taskStartDate !== taskEndDate) {
+      if (leadType !== 'Dispatch') setLeadType('Dispatch')
+    } else if (taskStartDate && taskEndDate && taskStartDate === taskEndDate) {
+      if (leadType === 'Dispatch') setLeadType('Full time')
+    }
+  }, [taskStartDate, taskEndDate])
+
   useEffect(() => {
     const fetchInit = async () => {
       setLoadingCustomers(true)
