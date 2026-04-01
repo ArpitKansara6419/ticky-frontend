@@ -2989,7 +2989,12 @@ function TicketsPage() {
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                       <input 
                                         type="time" 
-                                        defaultValue={log.start_time ? new Date(log.start_time).toTimeString().slice(0, 5) : ''} 
+                                        defaultValue={(() => {
+                                          if (!log.start_time) return '';
+                                          // Extract HH:mm directly from the string to avoid TZ shift
+                                          const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
+                                          return match ? `${match[1]}:${match[2]}` : '';
+                                        })()} 
                                         onBlur={e => {
                                           if(!e.target.value) return;
                                           const baseDate = String(log.task_date).split('T')[0];
@@ -2998,7 +3003,11 @@ function TicketsPage() {
                                       />
                                       <input 
                                         type="time" 
-                                        defaultValue={log.end_time ? new Date(log.end_time).toTimeString().slice(0, 5) : ''} 
+                                        defaultValue={(() => {
+                                          if (!log.end_time) return '';
+                                          const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
+                                          return match ? `${match[1]}:${match[2]}` : '';
+                                        })()} 
                                         onBlur={e => {
                                           if(!e.target.value) return;
                                           const baseDate = String(log.task_date).split('T')[0];
