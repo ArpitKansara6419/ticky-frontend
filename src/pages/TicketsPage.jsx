@@ -1096,9 +1096,10 @@ function TicketsPage() {
         body: JSON.stringify(data)
       });
       if (!res.ok) throw new Error('Update failed');
+      const resData = await res.json();
       
       // Auto-hold logic for Dispatch log updates
-      const updatedLog = data;
+      const updatedLog = data; // use the data passed to the function
       if (updatedLog.startTime && updatedLog.endTime) {
          const dur = (new Date(updatedLog.endTime) - new Date(updatedLog.startTime)) / 3600000 - (updatedLog.breakTimeMins / 60);
          if (dur > 8) {
@@ -2986,10 +2987,32 @@ function TicketsPage() {
                                 <td style={{ padding: '10px' }}>
                                   <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
                                     <div style={{ display: 'flex', gap: '10px' }}>
-                                      <input type="time" defaultValue={log.start_time ? new Date(log.start_time).toTimeString().slice(0, 5) : ''} onBlur={e => handleUpdateLog(log.id, { startTime: log.task_date.split('T')[0] + ' ' + e.target.value })} />
-                                      <input type="time" defaultValue={log.end_time ? new Date(log.end_time).toTimeString().slice(0, 5) : ''} onBlur={e => handleUpdateLog(log.id, { endTime: log.task_date.split('T')[0] + ' ' + e.target.value })} />
+                                      <input 
+                                        type="time" 
+                                        defaultValue={log.start_time ? new Date(log.start_time).toTimeString().slice(0, 5) : ''} 
+                                        onBlur={e => {
+                                          if(!e.target.value) return;
+                                          const baseDate = String(log.task_date).split('T')[0];
+                                          handleUpdateLog(log.id, { startTime: `${baseDate} ${e.target.value}:00` });
+                                        }} 
+                                      />
+                                      <input 
+                                        type="time" 
+                                        defaultValue={log.end_time ? new Date(log.end_time).toTimeString().slice(0, 5) : ''} 
+                                        onBlur={e => {
+                                          if(!e.target.value) return;
+                                          const baseDate = String(log.task_date).split('T')[0];
+                                          handleUpdateLog(log.id, { endTime: `${baseDate} ${e.target.value}:00` });
+                                        }} 
+                                      />
                                     </div>
-                                    <input type="number" placeholder="Break mins" style={{ width: '80px' }} defaultValue={log.break_time_mins} onBlur={e => handleUpdateLog(log.id, { breakTimeMins: parseInt(e.target.value) })} />
+                                    <input 
+                                      type="number" 
+                                      placeholder="Break mins" 
+                                      style={{ width: '80px' }} 
+                                      defaultValue={log.break_time_mins} 
+                                      onBlur={e => handleUpdateLog(log.id, { breakTimeMins: parseInt(e.target.value) || 0 })} 
+                                    />
                                   </div>
                                 </td>
                                 <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: 'var(--primary-color)' }}>
