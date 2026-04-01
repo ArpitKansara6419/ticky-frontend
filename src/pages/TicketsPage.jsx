@@ -2998,7 +2998,8 @@ function TicketsPage() {
                                         onChange={() => {}}
                                         onBlur={e => {
                                           if(!e.target.value) return;
-                                          const baseDate = String(log.task_date).split('T')[0];
+                                          const d = new Date(log.task_date);
+                                          const baseDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
                                           handleUpdateLog(log.id, { startTime: `${baseDate} ${e.target.value}:00` });
                                         }} 
                                       />
@@ -3013,7 +3014,8 @@ function TicketsPage() {
                                         onChange={() => {}}
                                         onBlur={e => {
                                           if(!e.target.value) return;
-                                          const baseDate = String(log.task_date).split('T')[0];
+                                          const d = new Date(log.task_date);
+                                          const baseDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
                                           handleUpdateLog(log.id, { endTime: `${baseDate} ${e.target.value}:00` });
                                         }} 
                                       />
