@@ -2626,8 +2626,16 @@ function TicketsPage() {
                               </td>
                               <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                  <span>In: <strong>{log.start_time ? new Date(log.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</strong></span>
-                                  <span>Out: <strong>{log.end_time ? new Date(log.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</strong></span>
+                                  <span>In: <strong>{(() => {
+                                      if (!log.start_time) return '--';
+                                      const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
+                                      return match ? `${match[1]}:${match[2]}` : '--';
+                                    })()}</strong></span>
+                                  <span>Out: <strong>{(() => {
+                                      if (!log.end_time) return '--';
+                                      const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
+                                      return match ? `${match[1]}:${match[2]}` : '--';
+                                    })()}</strong></span>
                                   <span style={{ color: '#94a3b8' }}>Break: {log.break_time_mins || 0}m</span>
                                 </div>
                               </td>
@@ -3038,7 +3046,11 @@ function TicketsPage() {
                                   <button
                                     className="btn-wow-secondary"
                                     style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #ef4444', color: '#ef4444' }}
-                                    onClick={() => handleResolveEarly(log.task_date.split('T')[0])}
+                                    onClick={() => {
+                                      const d = new Date(log.task_date);
+                                      const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                                      handleResolveEarly(dateStr);
+                                    }}
                                   >
                                     Resolve Here
                                   </button>
