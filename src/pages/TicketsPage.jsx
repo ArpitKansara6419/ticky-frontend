@@ -1833,9 +1833,24 @@ function TicketsPage() {
                     </div>
                   )}
                   {engPayType === 'Default' && (
-                    <p style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
-                      Rates will be fetched from the selected engineer's profile automatically.
-                    </p>
+                    <div style={{ marginTop: '12px', background: '#f1f5f9', padding: '15px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                       <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <FiInfo style={{ color: '#64748b' }} /> Current Profile Rates:
+                       </p>
+                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br/> {engBillingType}</div>
+                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br/> {engCurrency} {engHourlyRate || '0.00'}</div>
+                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Half Day:</b><br/> {engCurrency} {engHalfDayRate || '0.00'}</div>
+                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Full Day:</b><br/> {engCurrency} {engFullDayRate || '0.00'}</div>
+                          {engBillingType === 'Monthly + OT + Weekend' && (
+                             <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Monthly:</b><br/> {engCurrency} {engMonthlyRate || '0.00'}</div>
+                          )}
+                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancellation:</b><br/> {engCurrency} {engCancellationFee || '0.00'}</div>
+                       </div>
+                       <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '10px', fontStyle: 'italic' }}>
+                          These rates are pulled from the engineer's profile. Switch to "Custom Ticket Rates" above to override.
+                       </p>
+                    </div>
                   )}
                 </div>
               )}
