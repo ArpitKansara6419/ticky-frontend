@@ -2994,53 +2994,62 @@ function TicketsPage() {
                                 </td>
                                 <td style={{ padding: '10px' }}>
                                   <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                       <input 
                                         type="time" 
-                                        key={`start-${log.id}-${log.start_time}`}
-                                        value={(() => {
+                                        id={`start-input-${log.id}`}
+                                        defaultValue={(() => {
                                           if (!log.start_time) return '';
                                           const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
                                           return match ? `${match[1]}:${match[2]}` : '';
                                         })()} 
-                                        onChange={() => {}}
-                                        onBlur={e => {
-                                          if(!e.target.value) return;
-                                          const d = new Date(log.task_date);
-                                          const baseDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                                          handleUpdateLog(log.id, { startTime: `${baseDate} ${e.target.value}:00` });
-                                        }} 
                                       />
+                                      <span style={{ fontSize: '10px', color: '#94a3b8' }}>to</span>
                                       <input 
                                         type="time" 
-                                        key={`end-${log.id}-${log.end_time}`}
-                                        value={(() => {
+                                        id={`end-input-${log.id}`}
+                                        defaultValue={(() => {
                                           if (!log.end_time) return '';
                                           const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
                                           return match ? `${match[1]}:${match[2]}` : '';
                                         })()} 
-                                        onChange={() => {}}
-                                        onBlur={e => {
-                                          if(!e.target.value) return;
-                                          const d = new Date(log.task_date);
-                                          const baseDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                                          handleUpdateLog(log.id, { endTime: `${baseDate} ${e.target.value}:00` });
-                                        }} 
                                       />
                                     </div>
-                                    <input 
-                                      type="number" 
-                                      key={`break-${log.id}-${log.break_time_mins}`}
-                                      placeholder="Break mins" 
-                                      style={{ width: '80px' }} 
-                                      value={log.break_time_mins || 0} 
-                                      onChange={() => {}}
-                                      onBlur={e => handleUpdateLog(log.id, { breakTimeMins: parseInt(e.target.value) || 0 })} 
-                                    />
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                      <input 
+                                        type="number" 
+                                        id={`break-input-${log.id}`}
+                                        placeholder="Break mins" 
+                                        style={{ width: '80px', height: '30px', padding: '0 8px', borderRadius: '6px', fontSize: '12px' }} 
+                                        defaultValue={log.break_time_mins || 0} 
+                                      />
+                                      <button
+                                        className="tickets-primary-btn"
+                                        style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '6px', background: '#059669' }}
+                                        onClick={() => {
+                                          const st = document.getElementById(`start-input-${log.id}`).value;
+                                          const et = document.getElementById(`end-input-${log.id}`).value;
+                                          const br = document.getElementById(`break-input-${log.id}`).value;
+                                          if (!st || !et) {
+                                             alert("Please enter both START and END time.");
+                                             return;
+                                          }
+                                          const d = new Date(log.task_date);
+                                          const bD = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                                          handleUpdateLog(log.id, { 
+                                             startTime: `${bD} ${st}:00`,
+                                             endTime: `${bD} ${et}:00`,
+                                             breakTimeMins: parseInt(br) || 0 
+                                          });
+                                        }}
+                                      >
+                                        ✓ Update
+                                      </button>
+                                    </div>
                                   </div>
                                 </td>
                                 <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: 'var(--primary-color)' }}>
-                                  {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
+                                  {dur > 0 ? (dur.toFixed(2) + 'h') : '--'}
                                 </td>
                                 <td style={{ padding: '10px', textAlign: 'right' }}>
                                   <button
