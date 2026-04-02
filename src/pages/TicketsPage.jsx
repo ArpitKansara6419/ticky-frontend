@@ -976,9 +976,10 @@ function TicketsPage() {
         const freshTicket = data.ticket || data;
 
         setSelectedTicket(freshTicket)
+        setTimeLogs(freshTicket.time_logs || [])  // Immediately available from backend
         setIsTicketModalOpen(true)
         setIsInlineEditing(false)
-        fetchTicketExtras(ticketId)
+        fetchTicketExtras(ticketId)  // Also fetch for notes/attachments/expenses
         setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : (freshTicket.taskStartDate ? formatForInput(freshTicket.taskStartDate) : '')))
         setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : (freshTicket.taskEndDate ? formatForInput(freshTicket.taskEndDate) : '')))
         setInlineBreakTime(freshTicket.breakTime ? String(Math.floor(Number(freshTicket.breakTime) / 60)) : (freshTicket.break_time ? String(Math.floor(Number(freshTicket.break_time) / 60)) : '0'))
@@ -1420,6 +1421,8 @@ function TicketsPage() {
   const handleCloseTicketModal = () => {
     setIsTicketModalOpen(false)
     setSelectedTicket(null)
+    setTimeLogs([])
+    setIsInlineEditing(false)
   }
 
   // Check for lead data passed from Leads page via localStorage
@@ -3246,9 +3249,45 @@ function TicketsPage() {
                                    </div>
                                  </td>
                                  <td style={{ padding: '10px', textAlign: 'center' }}>
-                                   <div style={{ fontWeight: '800', color: exceeded ? '#ef4444' : '#6366f1' }}>{dur > 0 ? dur.toFixed(2) + 'h' : '--'}</div>
-                                   {exceeded && <div style={{ fontSize: '9px', color: '#ef4444', fontWeight: '700' }}>⚠ HOLD</div>}
-                                 </td>
+                                    {(() => {
+                                      const logDate = String(log.task_date || '').split('T')[0];
+                                      let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
+                                      let isEst = false;
+                                      if (!ls || !le) {
+                                        if (!logDate) return <span style={{ color: '#94a3b8' }}>--</span>;
+                                        const ct = (selectedTicket.taskTime || '08:00').slice(0, 5);
+                                        ls = `${logDate}T${ct}:00`;
+                                        const ed = new Date(`${logDate}T${ct}:00Z`);
+                                        ed.setUTCHours(ed.getUTCHours() + 8);
+                                        le = ed.toISOString().slice(0, 16);
+                                        lb = 0; isEst = true;
+                                      }
+                                      const logRes = calculateTicketTotal({
+                                        startTime: ls, endTime: le, breakTime: lb,
+                                        hourlyRate: selectedTicket.hourlyRate,
+                                        halfDayRate: selectedTicket.halfDayRate,
+                                        fullDayRate: selectedTicket.fullDayRate,
+                                        monthlyRate: selectedTicket.monthlyRate,
+                                        agreedRate: selectedTicket.agreedRate,
+                                        cancellationFee: selectedTicket.cancellationFee,
+                                        travelCostPerDay: selectedTicket.travelCostPerDay,
+                                        toolCost: selectedTicket.toolCost,
+                                        billingType: selectedTicket.billingType || 'Hourly',
+                                        timezone: selectedTicket.timezone,
+                                        calcTimezone: 'Ticket Local'
+                                      });
+                                      const cost = logRes?.grandTotal || '0.00';
+                                      return (
+                                        <div>
+                                          <div style={{ fontWeight: '800', color: exceeded ? '#ef4444' : '#6366f1', fontSize: '12px' }}>
+                                            {selectedTicket.currency} {cost}
+                                          </div>
+                                          {isEst && <div style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>est.</div>}
+                                          {exceeded && <div style={{ fontSize: '9px', color: '#ef4444', fontWeight: '700' }}>⚠ HOLD</div>}
+                                        </div>
+                                      );
+                                    })()}
+                                  </td>
                                  <td style={{ padding: '10px', textAlign: 'right' }}>
                                    <button className="btn-wow-secondary" style={{ padding: '2px 8px', fontSize: '10px', borderColor: '#ef4444', color: '#ef4444' }} onClick={() => handleResolveEarly(log.task_date.split('T')[0])}>Resolve Early</button>
                                  </td>
@@ -3394,14 +3433,30 @@ function TicketsPage() {
                     <span style={{ fontSize: '22px', fontWeight: '900', color: '#7c3aed' }}>
                       {(() => {
                         const isMulti = selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0];
-                        if (isMulti && (timeLogs || []).length > 0) {
+                        if (isMulti) {
+                          const sdStr = selectedTicket.taskStartDate?.split('T')[0];
+                          const edStr = selectedTicket.taskEndDate?.split('T')[0];
+                          const allDates = getDatesInRange(sdStr, edStr);
+                          const cleanTaskTime = (selectedTicket.taskTime || '08:00').toString().slice(0, 5);
+                          const logsToUse = (timeLogs && timeLogs.length > 0)
+                            ? timeLogs
+                            : allDates.map(d => ({ task_date: d }));
                           let total = 0;
-                          timeLogs.forEach(log => {
-                            if (!log.start_time || !log.end_time) return;
+                          logsToUse.forEach(log => {
+                            const tDate = String(log.task_date || '').split('T')[0];
+                            if (!tDate) return;
+                            let sTime, eTime, brk;
+                            if (log.start_time && log.end_time) {
+                              sTime = log.start_time; eTime = log.end_time; brk = log.break_time_mins || 0;
+                            } else {
+                              sTime = `${tDate}T${cleanTaskTime}:00`;
+                              const dEnd = new Date(`${tDate}T${cleanTaskTime}:00Z`);
+                              dEnd.setUTCHours(dEnd.getUTCHours() + 8);
+                              eTime = dEnd.toISOString().slice(0, 16);
+                              brk = 0;
+                            }
                             const res = calculateTicketTotal({
-                              startTime: log.start_time,
-                              endTime: log.end_time,
-                              breakTime: log.break_time_mins || 0,
+                              startTime: sTime, endTime: eTime, breakTime: brk,
                               hourlyRate: selectedTicket.hourlyRate,
                               halfDayRate: selectedTicket.halfDayRate,
                               fullDayRate: selectedTicket.fullDayRate,
@@ -3409,14 +3464,13 @@ function TicketsPage() {
                               agreedRate: selectedTicket.agreedRate,
                               cancellationFee: selectedTicket.cancellationFee,
                               travelCostPerDay: selectedTicket.travelCostPerDay,
-                              toolCost: 0, // Tool cost added once at end
+                              toolCost: selectedTicket.toolCost,
                               billingType: selectedTicket.billingType || 'Hourly',
                               timezone: selectedTicket.timezone,
                               calcTimezone: 'Ticket Local'
                             });
                             total += parseFloat(res?.grandTotal || 0);
                           });
-                          total += parseFloat(selectedTicket.toolCost || 0);
                           return `${selectedTicket.currency} ${total.toFixed(2)}`;
                         }
 
@@ -3453,14 +3507,30 @@ function TicketsPage() {
                     <span style={{ fontSize: '22px', fontWeight: '900', color: '#059669' }}>
                       {(() => {
                         const isMulti = selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0];
-                        if (isMulti && (timeLogs || []).length > 0) {
+                        if (isMulti) {
+                          const sdStr2 = selectedTicket.taskStartDate?.split('T')[0];
+                          const edStr2 = selectedTicket.taskEndDate?.split('T')[0];
+                          const allDates2 = getDatesInRange(sdStr2, edStr2);
+                          const cleanTaskTime2 = (selectedTicket.taskTime || '08:00').toString().slice(0, 5);
+                          const logsToUse2 = (timeLogs && timeLogs.length > 0)
+                            ? timeLogs
+                            : allDates2.map(d => ({ task_date: d }));
                           let total = 0;
-                          timeLogs.forEach(log => {
-                            if (!log.start_time || !log.end_time) return;
+                          logsToUse2.forEach(log => {
+                            const tDate = String(log.task_date || '').split('T')[0];
+                            if (!tDate) return;
+                            let sTime, eTime, brk;
+                            if (log.start_time && log.end_time) {
+                              sTime = log.start_time; eTime = log.end_time; brk = log.break_time_mins || 0;
+                            } else {
+                              sTime = `${tDate}T${cleanTaskTime2}:00`;
+                              const dEnd2 = new Date(`${tDate}T${cleanTaskTime2}:00Z`);
+                              dEnd2.setUTCHours(dEnd2.getUTCHours() + 8);
+                              eTime = dEnd2.toISOString().slice(0, 16);
+                              brk = 0;
+                            }
                             const res = calculateTicketTotal({
-                              startTime: log.start_time,
-                              endTime: log.end_time,
-                              breakTime: log.break_time_mins || 0,
+                              startTime: sTime, endTime: eTime, breakTime: brk,
                               hourlyRate: selectedTicket.eng_hourly_rate,
                               halfDayRate: selectedTicket.eng_half_day_rate,
                               fullDayRate: selectedTicket.eng_full_day_rate,

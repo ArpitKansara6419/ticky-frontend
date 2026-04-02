@@ -67,36 +67,49 @@ const CustomerReceivablePage = () => {
 
         const bil = ticket.billing_type || 'Hourly';
         if (logs.length > 0) {
-            let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0;
+            let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
             logs.forEach(log => {
-                if (!log.start_time || !log.end_time) return;
-                const res = calculateTicketCostFrontend({ ...ticket, start_time: log.start_time, end_time: log.end_time, break_time: (log.break_time_mins || 0) * 60, time_logs: [] }, tz, targetCurrency);
+                let sTime = log.start_time;
+                let eTime = log.end_time;
+                let brk = (log.break_time_mins || 0) * 60;
+
+                if (!sTime || !eTime) {
+                    const dStr = String(log.task_date || '').split('T')[0];
+                    if (!dStr) return;
+                    const ct = String(ticket.task_time || '08:00').slice(0, 5);
+                    const sDT = new Date(`${dStr}T${ct}:00Z`);
+                    sTime = sDT.toISOString().slice(0, 19).replace('T', ' ');
+                    const eDT = new Date(sDT.getTime() + 8 * 3600000);
+                    eTime = eDT.toISOString().slice(0, 19).replace('T', ' ');
+                    brk = 0;
+                }
+
+                const res = calculateTicketCostFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [] }, tz, targetCurrency);
                 
                 totalHrs += parseFloat(res.totalHours || 0);
-                if (bil === 'Hourly' || bil === 'Half Day + Hourly' || bil === 'Full Day + OT') {
+                if (bil === 'Hourly' || bil === 'Half Day + Hourly' || bil === 'Full Day + OT' || bil === 'Mixed Mode') {
                     baseC += parseFloat(res.baseCost || 0);
                 }
                 otP += parseFloat(res.otPremium || 0);
                 oohP += parseFloat(res.oohPremium || 0);
                 spP += parseFloat(res.specialDayPremium || 0);
                 travC += parseFloat(res.travelCost || 0);
+                toolC += parseFloat(res.toolCost || 0);
             });
             
-            // For Monthly/Agreed, base cost is added only once for the whole ticket
             if (bil.includes('Monthly') || bil === 'Agreed Rate' || bil === 'Cancellation') {
                 const dummy = calculateTicketCostFrontend({ ...ticket, time_logs: [] }, tz, targetCurrency);
                 baseC = parseFloat(dummy.baseCost);
             }
             
-            const toolC = parseFloat(ticket.tool_cost || 0);
             totalRec = baseC + otP + oohP + spP + travC + toolC;
 
             return {
                 totalReceivable: totalRec.toFixed(2),
                 baseCost: baseC.toFixed(2), otPremium: otP.toFixed(2), oohPremium: oohP.toFixed(2), specialDayPremium: spP.toFixed(2),
                 totalHours: totalHrs, formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
-                travelCost: travC,
-                toolCost: toolC,
+                travelCost: travC.toFixed(2),
+                toolCost: toolC.toFixed(2),
                 otHours: totalHrs > 8 ? totalHrs - 8 : 0,
                 ooh: oohP > 0 ? 'Yes' : 'No',
                 ww: spP > 0 ? 'Yes' : 'No',
@@ -238,10 +251,24 @@ const CustomerReceivablePage = () => {
         if (logs.length > 0) {
             let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0;
             logs.forEach(log => {
-                if (!log.start_time || !log.end_time) return;
-                const res = calculateEngineerPayoutFrontend({ ...ticket, start_time: log.start_time, end_time: log.end_time, break_time: (log.break_time_mins || 0) * 60, time_logs: [] }, tz);
+                let sTime = log.start_time;
+                let eTime = log.end_time;
+                let brk = (log.break_time_mins || 0) * 60;
+
+                if (!sTime || !eTime) {
+                    const dStr = String(log.task_date || '').split('T')[0];
+                    if (!dStr) return;
+                    const ct = String(ticket.task_time || '08:00').slice(0, 5);
+                    const sDT = new Date(`${dStr}T${ct}:00Z`);
+                    sTime = sDT.toISOString().slice(0, 19).replace('T', ' ');
+                    const eDT = new Date(sDT.getTime() + 8 * 3600000);
+                    eTime = eDT.toISOString().slice(0, 19).replace('T', ' ');
+                    brk = 0;
+                }
+
+                const res = calculateEngineerPayoutFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [] }, tz);
                 totalHrs += parseFloat(res.totalHours || 0);
-                if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT') {
+                if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT' || billingType === 'Mixed Mode') {
                     baseC += parseFloat(res.baseCost || 0);
                 }
                 otP += parseFloat(res.otPremium || 0);
@@ -1146,10 +1173,10 @@ const CustomerReceivablePage = () => {
                                                 <span>+ {cur} {parseFloat(bd.travelCost).toFixed(2)}</span>
                                             </div>
                                         )}
-                                        {parseFloat(detailTicket.tool_cost) > 0 && (
+                                        {parseFloat(bd.toolCost) > 0 && (
                                             <div className="breakdown-row">
-                                                <span>Tools &amp; Material (Lump Sum)</span>
-                                                <span>+ {cur} {parseFloat(detailTicket.tool_cost).toFixed(2)}</span>
+                                                <span>Tools &amp; Material (Total)</span>
+                                                <span>+ {cur} {parseFloat(bd.toolCost).toFixed(2)}</span>
                                             </div>
                                         )}
                                         <div className="breakdown-total-premium" style={{ borderTop: '2px solid #6366f1', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
