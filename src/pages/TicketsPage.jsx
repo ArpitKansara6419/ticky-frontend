@@ -401,33 +401,39 @@ function TicketsPage() {
     } catch (err) { return null; }
   };
 
-  // Live Calculation Logic (Mirrors Backend)
   useEffect(() => {
     const isMultiDay = taskStartDate && taskEndDate && taskStartDate !== taskEndDate;
-    
+    const daysArr = isMultiDay ? getDatesInRange(taskStartDate, taskEndDate) : [];
+    const numDays = daysArr.length || 1;
+
     if (isMultiDay) {
-        const dates = getDatesInRange(taskStartDate, taskEndDate);
         let totalReceivable = 0;
         let totalPayout = 0;
         let totalHrs = 0;
-        let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: String(toolCostInput || 0), travel: '0.00' };
+        let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: numDays };
 
-        dates.forEach((d) => {
-            // Estimate based on scheduled taskTime (e.g. 09:00) to 8 hours later
+        daysArr.forEach((d) => {
             const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
             const sTime = `${d}T${cleanTime}:00Z`;
             const sDate = new Date(sTime);
-            
-            if (isNaN(sDate.getTime())) return; // Skip invalid estimates
+            if (isNaN(sDate.getTime())) return;
 
-            const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000)); // Default 8hr span
+            const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000));
             const eTime = eTimeDate.toISOString().replace('Z', '');
 
             const res = calculateTicketTotal({
                 startTime: sTime, endTime: eTime, breakTime: '0', 
                 hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                travelCostPerDay, toolCost: 0, billingType, timezone, calcTimezone
+                travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
             });
+
+            const payRes = calculateTicketTotal({
+                startTime: sTime, endTime: eTime, breakTime: '0', 
+                hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0, monthlyRate: engMonthlyRate || 0, 
+                agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
+                travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
+            });
+
             if (res) {
                 totalReceivable += parseFloat(res.grandTotal);
                 totalHrs += parseFloat(res.hrs);
@@ -436,24 +442,14 @@ function TicketsPage() {
                 combinedBreakdown.ooh = (parseFloat(combinedBreakdown.ooh) + parseFloat(res.ooh)).toFixed(2);
                 combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
                 combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
-                combinedBreakdown.isSpecialDay = combinedBreakdown.isSpecialDay || res.isSpecialDay;
-                combinedBreakdown.isOOH = combinedBreakdown.isOOH || res.isOOH;
+                combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
             }
-
-            const payRes = calculateTicketTotal({
-                startTime: sTime, endTime: eTime, breakTime: '0',
-                hourlyRate: engHourlyRate || 0,
-                halfDayRate: engHalfDayRate || 0,
-                fullDayRate: engFullDayRate || 0,
-                monthlyRate: engMonthlyRate || 0,
-                agreedRate: engAgreedRate || 0,
-                cancellationFee: engCancellationFee || 0,
-                travelCostPerDay: 0, toolCost: 0, billingType: engBillingType, timezone, calcTimezone
-            });
-            if (payRes) totalPayout += parseFloat(payRes.grandTotal);
+            if (payRes) {
+                totalPayout += parseFloat(payRes.grandTotal);
+            }
         });
 
-        const finalGrandTotal = (totalReceivable + parseFloat(toolCostInput || 0)).toFixed(2);
+        const finalGrandTotal = totalReceivable.toFixed(2);
         setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
         setTotalCost(finalGrandTotal);
         setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2) });
@@ -464,7 +460,7 @@ function TicketsPage() {
           hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
           travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
         });
-        setLiveBreakdown(res);
+        setLiveBreakdown({ ...res, days: 1 });
         if (res && res.grandTotal) {
           setTotalCost(res.grandTotal);
         }
@@ -477,15 +473,18 @@ function TicketsPage() {
           monthlyRate: engMonthlyRate || 0,
           agreedRate: engAgreedRate || 0,
           cancellationFee: engCancellationFee || 0,
-          travelCostPerDay: 0,
-          toolCost: 0,
-          billingType: engBillingType,
-          timezone,
-          calcTimezone
+          travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
         });
-        setPayoutLiveBreakdown(payRes);
+        if (payRes) {
+            setPayoutLiveBreakdown({ grandTotal: payRes.grandTotal });
+        }
     }
-  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCostInput, billingType, timezone, calcTimezone, engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee, engBillingType, taskStartDate, taskEndDate, taskTime]);
+  }, [
+    startTime, endTime, breakTime, taskStartDate, taskEndDate, taskTime,
+    hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+    engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee,
+    travelCostPerDay, toolCostInput, billingType, engBillingType, timezone, calcTimezone
+  ]);
 
   // Sync Task Dates with Manual Time Log
   useEffect(() => {
@@ -2210,7 +2209,7 @@ function TicketsPage() {
                                  endTime: eTime,
                                  breakTime: '0',
                                  hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                                 travelCostPerDay, toolCost: 0, billingType, timezone, calcTimezone
+                                 travelCostPerDay: 0, toolCost: 0, billingType, timezone, calcTimezone
                                });
 
                                return (
@@ -2528,24 +2527,14 @@ function TicketsPage() {
                   )}
 
                   {/* Travel Cost */}
-                  {parseFloat(liveBreakdown.travel) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', color: '#34d399', fontWeight: '500' }}>
-                        Travel Cost / Day
-                      </span>
-                      <span style={{ fontSize: '14px', color: '#34d399', fontWeight: '700' }}>+ {currency} {liveBreakdown.travel}</span>
-                    </div>
-                  )}
-
-                  {/* Tool Cost */}
-                  {parseFloat(liveBreakdown.tools) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', color: '#f87171', fontWeight: '500' }}>
-                        Tool Cost
-                      </span>
-                      <span style={{ fontSize: '14px', color: '#f87171', fontWeight: '700' }}>+ {currency} {liveBreakdown.tools}</span>
-                    </div>
-                  )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '6px' }}>
+                          <span>Travel Cost / Day (Total)</span>
+                          <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.travel}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '12px' }}>
+                          <span>Tool Cost / Day (Total)</span>
+                          <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.tools}</span>
+                        </div>
 
                   {/* Divider */}
                   <div style={{ borderTop: '1.5px dashed rgba(99, 102, 241, 0.3)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2558,13 +2547,13 @@ function TicketsPage() {
                   </div>
 
                   {payoutLiveBreakdown && (
-                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '3px solid #10b981', padding: '10px 14px', marginTop: '12px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '10px', color: '#6ee7b7', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engineer Payout Estimation</div>
-                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>Based on {engBillingType}</div>
-                      </div>
-                      <div style={{ fontSize: '18px', color: '#6ee7b7', fontWeight: '800' }}>
-                        {engCurrency || currency} {payoutLiveBreakdown.grandTotal}
+                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '10px', borderLeft: '4px solid #10b981', marginTop: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div>
+                              <span style={{ display: 'block', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>Engineer Payout Estimation</span>
+                              <span style={{ fontSize: '9px', color: '#94a3b8' }}>Based on {engBillingType || 'Profile'} Rates (+ Travel & Tool)</span>
+                          </div>
+                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
                       </div>
                     </div>
                   )}
