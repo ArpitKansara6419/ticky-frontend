@@ -1505,6 +1505,24 @@ function TicketsPage() {
     }
   }, [taskStartDate, taskEndDate])
 
+  // AUTO-FETCH ENGINEER RATES EFFECT
+  // This solves the issue where rates weren't pre-populating when coming from Leads
+  useEffect(() => {
+    if (viewMode === 'form' && engineerId && engineers.length > 0 && engPayType === 'Default' && !editingTicketId) {
+      const eng = engineers.find(en => String(en.id) === String(engineerId));
+      if (eng) {
+        setEngBillingType(eng.billing_type || 'Hourly');
+        setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '');
+        setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '');
+        setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '');
+        setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '');
+        setEngAgreedRate(eng.agreed_rate || '');
+        setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '');
+        setEngCurrency(eng.currency || 'USD');
+      }
+    }
+  }, [engineerId, engineers, engPayType, viewMode, editingTicketId]);
+
   useEffect(() => {
     const ticketIdToEdit = localStorage.getItem('editTicketId')
     const syncLeadToTicket = localStorage.getItem('syncLeadToTicket')
@@ -2018,51 +2036,140 @@ function TicketsPage() {
             </div>
           </section>
 
-          {/* Time Log (Manual Override) */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Time Log (Manual Override)</h2>
-            <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
-              Manually adjust the working hours if the engineer forgot to resolve the task.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-              <button
-                type="button"
-                className="tickets-secondary-btn"
-                style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
-                onClick={() => autoSyncTime(taskStartDate, taskEndDate, taskTime)}
-              >
-                Sync with Scheduled
-              </button>
-            </div>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>Start Time (Override)</span>
-                <input
-                  type="datetime-local"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>End Time (Override)</span>
-                <input
-                  type="datetime-local"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Break Time (Minutes)</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={breakTime}
-                  onChange={(e) => setBreakTime(e.target.value)}
-                  placeholder="0"
-                />
-              </label>
-            </div>
-          </section>
+          {/* Manual Time Override (Same Day Only) */}
+          {leadType === 'Full time' && (
+            <section className="tickets-card">
+              <h2 className="tickets-section-title">Time Log (Manual Override)</h2>
+              <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
+                Manually adjust the working hours if the engineer forgot to resolve the task.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                <button
+                  type="button"
+                  className="tickets-secondary-btn"
+                  style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
+                  onClick={() => autoSyncTime(taskStartDate, taskEndDate, taskTime)}
+                >
+                  Sync with Scheduled
+                </button>
+              </div>
+              <div className="tickets-grid">
+                <label className="tickets-field">
+                  <span>Start Time (Override)</span>
+                  <input
+                    type="datetime-local"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </label>
+                <label className="tickets-field">
+                  <span>End Time (Override)</span>
+                  <input
+                    type="datetime-local"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                </label>
+                <label className="tickets-field">
+                  <span>Break Time (Minutes)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={breakTime}
+                    onChange={(e) => setBreakTime(e.target.value)}
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+            </section>
+          )}
+
+          {/* Daily Shift Logs (Multi-day Dispatch Only) */}
+          {leadType === 'Dispatch' && (
+             <section className="tickets-card">
+                <h2 className="tickets-section-title">Daily Shift Logs (Multi-day)</h2>
+                <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '12px', color: '#6366f1' }}>
+                  ⚡ Assign different engineers per day if needed. Logs recorded here will override any global schedule.
+                </p>
+                
+                {timeLogs.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', background: '#f8fafc', borderRadius: '12px' }}>
+                    Click "Create Ticket" to generate daily logs first, or update them in the Ticket Detail view.
+                  </div>
+                ) : (
+                  <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0' }}>
+                    <table className="tickets-table" style={{ fontSize: '12px' }}>
+                       <thead>
+                          <tr>
+                             <th>Date</th>
+                             <th>Engineer</th>
+                             <th>Time In / Out</th>
+                             <th>Status</th>
+                             <th style={{ textAlign: 'right' }}>Action</th>
+                          </tr>
+                       </thead>
+                       <tbody>
+                          {timeLogs.map(log => (
+                             <tr key={log.id}>
+                                <td><b style={{ color: '#475569' }}>{new Date(log.task_date).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b></td>
+                                <td>
+                                   <select 
+                                      style={{ padding: '4px', fontSize: '11px', width: '100%' }}
+                                      value={log.engineer_id || engineerId}
+                                      onChange={(e) => handleUpdateLog(log.id, { engineerId: Number(e.target.value) })}
+                                   >
+                                      {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                   </select>
+                                </td>
+                                <td>
+                                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                      <input 
+                                         type="time" 
+                                         style={{ padding: '2px', fontSize: '11px' }}
+                                         defaultValue={log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '09:00'}
+                                         onBlur={(e) => {
+                                            const [h, m] = e.target.value.split(':');
+                                            const d = new Date(log.task_date);
+                                            d.setHours(parseInt(h), parseInt(m), 0);
+                                            handleUpdateLog(log.id, { startTime: d.toISOString() });
+                                         }}
+                                      />
+                                      <span>→</span>
+                                      <input 
+                                         type="time" 
+                                         style={{ padding: '2px', fontSize: '11px' }}
+                                         defaultValue={log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '18:00'}
+                                         onBlur={(e) => {
+                                            const [h, m] = e.target.value.split(':');
+                                            const d = new Date(log.task_date);
+                                            d.setHours(parseInt(h), parseInt(m), 0);
+                                            handleUpdateLog(log.id, { endTime: d.toISOString() });
+                                         }}
+                                      />
+                                   </div>
+                                </td>
+                                <td>
+                                   <span className={`status-pill status-${(log.status || 'Pending').toLowerCase().replace(' ', '-')}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
+                                      {log.status || 'Pending'}
+                                   </span>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                   {log.status !== 'Completed' && (
+                                     <button 
+                                        type="button" 
+                                        style={{ fontSize: '10px', color: '#ef4444' }}
+                                        onClick={() => handleResolveEarly(log.task_date)}
+                                     >Resolve Early</button>
+                                   )}
+                                </td>
+                             </tr>
+                          ))}
+                       </tbody>
+                    </table>
+                  </div>
+                )}
+             </section>
+          )}
 
           {/* Pricing & Rates */}
           <section className="tickets-card">
@@ -2982,91 +3089,108 @@ function TicketsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {timeLogs.map(log => {
-                            const dur = (log.start_time && log.end_time)
-                              ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
-                              : 0;
-                            return (
-                              <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={{ padding: '10px' }}>
-                                  <div style={{ fontWeight: '600' }}>{new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
-                                  <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
-                                </td>
-                                <td style={{ padding: '10px' }}>
-                                  <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                      <input 
-                                        type="time" 
-                                        id={`start-input-${log.id}`}
-                                        defaultValue={(() => {
-                                          if (!log.start_time) return '';
-                                          const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
-                                          return match ? `${match[1]}:${match[2]}` : '';
-                                        })()} 
-                                      />
-                                      <span style={{ fontSize: '10px', color: '#94a3b8' }}>to</span>
-                                      <input 
-                                        type="time" 
-                                        id={`end-input-${log.id}`}
-                                        defaultValue={(() => {
-                                          if (!log.end_time) return '';
-                                          const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
-                                          return match ? `${match[1]}:${match[2]}` : '';
-                                        })()} 
-                                      />
+                            {timeLogs.map(log => {
+                              const dur = (log.start_time && log.end_time)
+                                ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
+                                : 0;
+                              const exceeded = dur > 8;
+                              return (
+                                <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: exceeded ? 'rgba(251, 191, 36, 0.05)' : undefined }}>
+                                  <td style={{ padding: '10px' }}>
+                                    <div style={{ fontWeight: '600' }}>{new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
+                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
+                                  </td>
+                                  <td style={{ padding: '10px' }}>
+                                     <select 
+                                        style={{ padding: '4px', fontSize: '11px', width: '100%', marginBottom: '6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}
+                                        value={log.engineer_id || selectedTicket.engineerId}
+                                        onChange={(e) => handleUpdateLog(log.id, { engineerId: Number(e.target.value) })}
+                                     >
+                                        {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                     </select>
+                                    <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <input 
+                                          type="time" 
+                                          id={`start-input-${log.id}`}
+                                          style={{ padding: '2px', fontSize: '11px' }}
+                                          defaultValue={(() => {
+                                            if (!log.start_time) return '';
+                                            const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
+                                            return match ? `${match[1]}:${match[2]}` : '';
+                                          })()} 
+                                        />
+                                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>to</span>
+                                        <input 
+                                          type="time" 
+                                          id={`end-input-${log.id}`}
+                                          style={{ padding: '2px', fontSize: '11px' }}
+                                          defaultValue={(() => {
+                                            if (!log.end_time) return '';
+                                            const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
+                                            return match ? `${match[1]}:${match[2]}` : '';
+                                          })()} 
+                                        />
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <input 
+                                          type="number" 
+                                          id={`break-input-${log.id}`}
+                                          placeholder="Break mins" 
+                                          style={{ width: '80px', height: '24px', padding: '0 8px', borderRadius: '4px', fontSize: '11px', border: '1px solid #e2e8f0' }} 
+                                          defaultValue={log.break_time_mins || 0} 
+                                        />
+                                        <button
+                                          className="tickets-primary-btn"
+                                          style={{ padding: '2px 10px', fontSize: '10px', borderRadius: '4px', background: '#059669' }}
+                                          onClick={() => {
+                                            const st = document.getElementById(`start-input-${log.id}`).value;
+                                            const et = document.getElementById(`end-input-${log.id}`).value;
+                                            const br = document.getElementById(`break-input-${log.id}`).value;
+                                            if (!st || !et) {
+                                               alert("Please enter both START and END time.");
+                                               return;
+                                            }
+                                            const d = new Date(log.task_date);
+                                            const bD = d.toISOString().split('T')[0];
+                                            handleUpdateLog(log.id, { 
+                                               startTime: `${bD}T${st}:00.000Z`,
+                                               endTime: `${bD}T${et}:00.000Z`,
+                                               breakTimeMins: parseInt(br) || 0 
+                                            });
+                                          }}
+                                        >
+                                          ✓ Update Log
+                                        </button>
+                                      </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                      <input 
-                                        type="number" 
-                                        id={`break-input-${log.id}`}
-                                        placeholder="Break mins" 
-                                        style={{ width: '80px', height: '30px', padding: '0 8px', borderRadius: '6px', fontSize: '12px' }} 
-                                        defaultValue={log.break_time_mins || 0} 
-                                      />
-                                      <button
-                                        className="tickets-primary-btn"
-                                        style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '6px', background: '#059669' }}
-                                        onClick={() => {
-                                          const st = document.getElementById(`start-input-${log.id}`).value;
-                                          const et = document.getElementById(`end-input-${log.id}`).value;
-                                          const br = document.getElementById(`break-input-${log.id}`).value;
-                                          if (!st || !et) {
-                                             alert("Please enter both START and END time.");
-                                             return;
-                                          }
-                                          const d = new Date(log.task_date);
-                                          const bD = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                                          handleUpdateLog(log.id, { 
-                                             startTime: `${bD} ${st}:00`,
-                                             endTime: `${bD} ${et}:00`,
-                                             breakTimeMins: parseInt(br) || 0 
-                                          });
-                                        }}
-                                      >
-                                        ✓ Update
-                                      </button>
+                                  </td>
+                                  <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700' }}>
+                                    <div style={{ color: exceeded ? '#b45309' : '#6366f1' }}>
+                                      {dur > 0 ? (dur.toFixed(2) + 'h') : '--'}
                                     </div>
-                                  </div>
-                                </td>
-                                <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: 'var(--primary-color)' }}>
-                                  {dur > 0 ? (dur.toFixed(2) + 'h') : '--'}
-                                </td>
-                                <td style={{ padding: '10px', textAlign: 'right' }}>
-                                  <button
-                                    className="btn-wow-secondary"
-                                    style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #ef4444', color: '#ef4444' }}
-                                    onClick={() => {
-                                      const d = new Date(log.task_date);
-                                      const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                                      handleResolveEarly(dateStr);
-                                    }}
-                                  >
-                                    Resolve Here
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                                    {exceeded && (
+                                       <div style={{ fontSize: '9px', background: '#fef3c7', color: '#b45309', borderRadius: '3px', padding: '1px 4px', marginTop: '2px' }}>
+                                          ⚠️ Shift Exceeded
+                                       </div>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '10px', textAlign: 'right' }}>
+                                    <button
+                                      className="btn-wow-secondary"
+                                      style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #ef4444', color: '#ef4444' }}
+                                      onClick={() => {
+                                        const d = new Date(log.task_date);
+                                        const dateStr = d.toISOString().split('T')[0];
+                                        handleResolveEarly(dateStr);
+                                      }}
+                                    >
+                                      Resolve Here
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                         </tbody>
                       </table>
                     </div>
