@@ -414,8 +414,12 @@ function TicketsPage() {
 
         dates.forEach((d) => {
             // Estimate based on scheduled taskTime (e.g. 09:00) to 8 hours later
-            const sTime = `${d}T${taskTime.padStart(5, '0')}:00Z`;
+            const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
+            const sTime = `${d}T${cleanTime}:00Z`;
             const sDate = new Date(sTime);
+            
+            if (isNaN(sDate.getTime())) return; // Skip invalid estimates
+
             const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000)); // Default 8hr span
             const eTime = eTimeDate.toISOString().replace('Z', '');
 
@@ -2192,9 +2196,18 @@ function TicketsPage() {
                                  ? (new Date(existingLog.end_time) - new Date(existingLog.start_time)) / 3600000 - (existingLog.break_time_mins / 60)
                                  : 8; 
                                
+                               const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
+                               const sTime = `${dStr}T${cleanTime}:00Z`;
+                               const startD = new Date(sTime);
+                               let eTime = '';
+                               
+                               if (!isNaN(startD.getTime())) {
+                                  eTime = new Date(startD.getTime() + (8 * 3600 * 1000)).toISOString();
+                               }
+
                                const dayCostBreakdown = calculateTicketTotal({
-                                 startTime: `${dStr}T${taskTime?.padStart(5, '0') || '09:00'}:00Z`,
-                                 endTime: new Date(new Date(`${dStr}T${taskTime?.padStart(5, '0') || '09:00'}:00Z`).getTime() + (8 * 3600 * 1000)).toISOString(),
+                                 startTime: sTime,
+                                 endTime: eTime,
                                  breakTime: '0',
                                  hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
                                  travelCostPerDay, toolCost: 0, billingType, timezone, calcTimezone
@@ -3218,9 +3231,17 @@ function TicketsPage() {
                                      {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
                                    </select>
                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                      <input type="time" id={`vst-${lIdx}`} defaultValue={log.start_time ? new Date(log.start_time).toISOString().split('T')[1].slice(0, 5) : ''} style={{ fontSize: '11px', padding: '2px' }} />
+                                      <input type="time" id={`vst-${lIdx}`} defaultValue={(() => {
+                                        if (!log.start_time) return '';
+                                        const d = new Date(log.start_time);
+                                        return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[1].slice(0, 5);
+                                      })()} style={{ fontSize: '11px', padding: '2px' }} />
                                       <span>-</span>
-                                      <input type="time" id={`vet-${lIdx}`} defaultValue={log.end_time ? new Date(log.end_time).toISOString().split('T')[1].slice(0, 5) : ''} style={{ fontSize: '11px', padding: '2px' }} />
+                                      <input type="time" id={`vet-${lIdx}`} defaultValue={(() => {
+                                        if (!log.end_time) return '';
+                                        const d = new Date(log.end_time);
+                                        return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[1].slice(0, 5);
+                                      })()} style={{ fontSize: '11px', padding: '2px' }} />
                                       <input type="number" id={`vbr-${lIdx}`} defaultValue={log.break_time_mins || 0} style={{ width: '35px', fontSize: '11px', padding: '2px' }} />
                                       <button className="tickets-primary-btn" style={{ padding: '2px 6px', fontSize: '10px' }} onClick={() => {
                                          const st = document.getElementById(`vst-${lIdx}`).value;
