@@ -1503,25 +1503,24 @@ function TicketsPage() {
     } else if (taskStartDate && taskEndDate && taskStartDate === taskEndDate) {
       if (leadType === 'Dispatch') setLeadType('Full time')
     }
-  }, [taskStartDate, taskEndDate])
+  }, [taskStartDate, taskEndDate, leadType])
 
-  // AUTO-FETCH ENGINEER RATES EFFECT
-  // This solves the issue where rates weren't pre-populating when coming from Leads
+  // Effect to AUTO-POPULATE Engineer Profile Rates
   useEffect(() => {
-    if (viewMode === 'form' && engineerId && engineers.length > 0 && engPayType === 'Default' && !editingTicketId) {
-      const eng = engineers.find(en => String(en.id) === String(engineerId));
+    if (engineerId && engineers.length > 0 && engPayType === 'Default') {
+      const eng = engineers.find(e => String(e.id) === String(engineerId));
       if (eng) {
-        setEngBillingType(eng.billing_type || 'Hourly');
-        setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '');
-        setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '');
-        setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '');
-        setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '');
-        setEngAgreedRate(eng.agreed_rate || '');
-        setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '');
-        setEngCurrency(eng.currency || 'USD');
+         setEngBillingType(eng.billing_type || 'Hourly');
+         setEngHourlyRate(String(eng.hourly_rate || '0.00'));
+         setEngHalfDayRate(String(eng.half_day_rate || '0.00'));
+         setEngFullDayRate(String(eng.full_day_rate || '0.00'));
+         setEngMonthlyRate(String(eng.monthly_rate || '0.00'));
+         setEngAgreedRate(String(eng.agreed_rate || '0.00'));
+         setEngCancellationFee(String(eng.cancellation_fee || '0.00'));
+         setEngCurrency(eng.currency || 'USD');
       }
     }
-  }, [engineerId, engineers, engPayType, viewMode, editingTicketId]);
+  }, [engineerId, engineers, engPayType]);
 
   useEffect(() => {
     const ticketIdToEdit = localStorage.getItem('editTicketId')
@@ -2036,140 +2035,138 @@ function TicketsPage() {
             </div>
           </section>
 
-          {/* Manual Time Override (Same Day Only) */}
-          {leadType === 'Full time' && (
-            <section className="tickets-card">
-              <h2 className="tickets-section-title">Time Log (Manual Override)</h2>
-              <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
-                Manually adjust the working hours if the engineer forgot to resolve the task.
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                <button
-                  type="button"
-                  className="tickets-secondary-btn"
-                  style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
-                  onClick={() => autoSyncTime(taskStartDate, taskEndDate, taskTime)}
-                >
-                  Sync with Scheduled
-                </button>
-              </div>
-              <div className="tickets-grid">
-                <label className="tickets-field">
-                  <span>Start Time (Override)</span>
-                  <input
-                    type="datetime-local"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </label>
-                <label className="tickets-field">
-                  <span>End Time (Override)</span>
-                  <input
-                    type="datetime-local"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </label>
-                <label className="tickets-field">
-                  <span>Break Time (Minutes)</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={breakTime}
-                    onChange={(e) => setBreakTime(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
-              </div>
-            </section>
-          )}
-
-          {/* Daily Shift Logs (Multi-day Dispatch Only) */}
-          {leadType === 'Dispatch' && (
-             <section className="tickets-card">
-                <h2 className="tickets-section-title">Daily Shift Logs (Multi-day)</h2>
-                <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '12px', color: '#6366f1' }}>
-                  ⚡ Assign different engineers per day if needed. Logs recorded here will override any global schedule.
-                </p>
-                
-                {timeLogs.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', background: '#f8fafc', borderRadius: '12px' }}>
-                    Click "Create Ticket" to generate daily logs first, or update them in the Ticket Detail view.
+          {/* Conditional Time Adjustment Section */}
+          {(() => {
+            const isMultiDay = taskStartDate && taskEndDate && taskStartDate !== taskEndDate;
+            
+            if (!isMultiDay) {
+              // Same Day Task
+              return (
+                <section className="tickets-card">
+                  <h2 className="tickets-section-title">Time Log (Manual Override)</h2>
+                  <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
+                    Adjust working hours for a single-day task.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                    <button
+                      type="button"
+                      className="tickets-secondary-btn"
+                      style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
+                      onClick={() => autoSyncTime(taskStartDate, taskEndDate, taskTime)}
+                    >
+                      Sync with Scheduled
+                    </button>
                   </div>
-                ) : (
-                  <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0' }}>
+                  <div className="tickets-grid">
+                    <label className="tickets-field">
+                      <span>Start Time (Override)</span>
+                      <input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                    </label>
+                    <label className="tickets-field">
+                      <span>End Time (Override)</span>
+                      <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                    </label>
+                    <label className="tickets-field">
+                      <span>Break Time (Minutes)</span>
+                      <input type="number" min="0" value={breakTime} onChange={(e) => setBreakTime(e.target.value)} placeholder="0" />
+                    </label>
+                  </div>
+                </section>
+              );
+            } else {
+              // Multi-Day Task
+              return (
+                <section className="tickets-card">
+                  <h2 className="tickets-section-title">📅 Daily Shift Logs (Multi-day Dispatch)</h2>
+                  <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '12px', color: '#6366f1' }}>
+                    Assign different engineers or set individual times per day.
+                  </p>
+                  
+                  <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                     <table className="tickets-table" style={{ fontSize: '12px' }}>
                        <thead>
-                          <tr>
-                             <th>Date</th>
-                             <th>Engineer</th>
-                             <th>Time In / Out</th>
-                             <th>Status</th>
-                             <th style={{ textAlign: 'right' }}>Action</th>
+                          <tr style={{ background: '#f8fafc' }}>
+                             <th style={{ padding: '10px' }}>Date</th>
+                             <th style={{ padding: '10px' }}>Engineer</th>
+                             <th style={{ padding: '10px' }}>Shift (In / Out / Break)</th>
+                             <th style={{ padding: '10px', textAlign: 'center' }}>Total</th>
                           </tr>
                        </thead>
                        <tbody>
-                          {timeLogs.map(log => (
-                             <tr key={log.id}>
-                                <td><b style={{ color: '#475569' }}>{new Date(log.task_date).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b></td>
-                                <td>
-                                   <select 
-                                      style={{ padding: '4px', fontSize: '11px', width: '100%' }}
-                                      value={log.engineer_id || engineerId}
-                                      onChange={(e) => handleUpdateLog(log.id, { engineerId: Number(e.target.value) })}
-                                   >
-                                      {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                   </select>
-                                </td>
-                                <td>
-                                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                      <input 
-                                         type="time" 
-                                         style={{ padding: '2px', fontSize: '11px' }}
-                                         defaultValue={log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '09:00'}
-                                         onBlur={(e) => {
-                                            const [h, m] = e.target.value.split(':');
-                                            const d = new Date(log.task_date);
-                                            d.setHours(parseInt(h), parseInt(m), 0);
-                                            handleUpdateLog(log.id, { startTime: d.toISOString() });
-                                         }}
-                                      />
-                                      <span>→</span>
-                                      <input 
-                                         type="time" 
-                                         style={{ padding: '2px', fontSize: '11px' }}
-                                         defaultValue={log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '18:00'}
-                                         onBlur={(e) => {
-                                            const [h, m] = e.target.value.split(':');
-                                            const d = new Date(log.task_date);
-                                            d.setHours(parseInt(h), parseInt(m), 0);
-                                            handleUpdateLog(log.id, { endTime: d.toISOString() });
-                                         }}
-                                      />
-                                   </div>
-                                </td>
-                                <td>
-                                   <span className={`status-pill status-${(log.status || 'Pending').toLowerCase().replace(' ', '-')}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
-                                      {log.status || 'Pending'}
-                                   </span>
-                                </td>
-                                <td style={{ textAlign: 'right' }}>
-                                   {log.status !== 'Completed' && (
-                                     <button 
-                                        type="button" 
-                                        style={{ fontSize: '10px', color: '#ef4444' }}
-                                        onClick={() => handleResolveEarly(log.task_date)}
-                                     >Resolve Early</button>
-                                   )}
-                                </td>
-                             </tr>
-                          ))}
+                          {(() => {
+                            const dates = [];
+                            let curr = new Date(taskStartDate);
+                            const end = new Date(taskEndDate);
+                            while (curr <= end && dates.length < 31) { // Safety cap
+                              dates.push(curr.toISOString().split('T')[0]);
+                              curr.setDate(curr.getDate() + 1);
+                            }
+
+                            return dates.map((dStr, idx) => {
+                              const existingLog = (timeLogs || []).find(l => l.task_date?.split('T')[0] === dStr) || {};
+                              const dur = (existingLog.start_time && existingLog.end_time)
+                                ? (new Date(existingLog.end_time) - new Date(existingLog.start_time)) / 3600000 - (existingLog.break_time_mins / 60)
+                                : 0;
+
+                              return (
+                                <tr key={dStr} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: '10px' }}>
+                                    <b style={{ color: '#475569' }}>{new Date(dStr).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b>
+                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(dStr).getDay()) ? 'Weekend' : 'Weekday'}</div>
+                                  </td>
+                                  <td style={{ padding: '10px' }}>
+                                    {editingTicketId ? (
+                                      <select 
+                                        style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
+                                        value={existingLog.engineer_id || engineerId}
+                                        onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
+                                      >
+                                        {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                      </select>
+                                    ) : (
+                                       <span style={{ fontSize: '11px', color: '#64748b' }}>Primary Engineer</span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                      <input type="time" id={`fst-${idx}`} defaultValue="09:00" style={{ padding: '2px', fontSize: '11px' }} />
+                                      <span>to</span>
+                                      <input type="time" id={`fet-${idx}`} defaultValue="18:00" style={{ padding: '2px', fontSize: '11px' }} />
+                                      <input type="number" id={`fbr-${idx}`} placeholder="Break" defaultValue="0" style={{ width: '45px', padding: '2px', fontSize: '11px' }} />
+                                      {editingTicketId && (
+                                        <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
+                                           const st = document.getElementById(`fst-${idx}`).value;
+                                           const et = document.getElementById(`fet-${idx}`).value;
+                                           const br = document.getElementById(`fbr-${idx}`).value;
+                                           handleUpdateLog(existingLog.id, {
+                                              startTime: `${dStr}T${st}:00.000Z`,
+                                              endTime: `${dStr}T${et}:00.000Z`,
+                                              breakTimeMins: parseInt(br) || 0
+                                           });
+                                        }}>Update</button>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
+                                    {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
+                                    {dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                        </tbody>
                     </table>
                   </div>
-                )}
-             </section>
-          )}
+                  {!editingTicketId && (
+                     <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', background: '#fef3c7', padding: '10px', borderRadius: '8px' }}>
+                        💡 <strong>Note:</strong> Daily logs with individual times/engineers can be managed in detail once the ticket is created or while editing.
+                     </div>
+                  )}
+                </section>
+              );
+            }
+          })()}
 
           {/* Pricing & Rates */}
           <section className="tickets-card">
@@ -3061,10 +3058,11 @@ function TicketsPage() {
 
                 <div className="detail-item--full divider"></div>
 
-                {selectedTicket.leadType === 'Dispatch' && (
+                {/* Condition: Multi-day Dispatch (dates differ) */}
+                {(selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0]) ? (
                   <div className="detail-item--full" style={{ marginTop: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Multi-day Time Logs</label>
+                      <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>📅 Daily Shift Logs</label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <input
                           type="date"
@@ -3073,7 +3071,7 @@ function TicketsPage() {
                           style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }}
                         />
                         <button className="btn-wow-secondary" onClick={handleExtendJob} disabled={isExtending} style={{ padding: '4px 12px', fontSize: '11px' }}>
-                          {isExtending ? 'Extending...' : 'Extend Job'}
+                          {isExtending ? 'Extending...' : '+ Add Day'}
                         </button>
                       </div>
                     </div>
@@ -3083,121 +3081,65 @@ function TicketsPage() {
                         <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                           <tr>
                             <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
-                            <th style={{ padding: '10px', textAlign: 'left' }}>In / Out / Break</th>
+                            <th style={{ padding: '10px', textAlign: 'left' }}>Engineer & Times</th>
                             <th style={{ padding: '10px', textAlign: 'center' }}>Total</th>
-                            <th style={{ padding: '10px', textAlign: 'right' }}>Actions</th>
+                            <th style={{ padding: '10px', textAlign: 'right' }}>Action</th>
                           </tr>
                         </thead>
                         <tbody>
-                            {timeLogs.map(log => {
-                              const dur = (log.start_time && log.end_time)
-                                ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
-                                : 0;
-                              const exceeded = dur > 8;
-                              return (
-                                <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: exceeded ? 'rgba(251, 191, 36, 0.05)' : undefined }}>
-                                  <td style={{ padding: '10px' }}>
-                                    <div style={{ fontWeight: '600' }}>{new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
-                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
-                                  </td>
-                                  <td style={{ padding: '10px' }}>
-                                     <select 
-                                        style={{ padding: '4px', fontSize: '11px', width: '100%', marginBottom: '6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}
-                                        value={log.engineer_id || selectedTicket.engineerId}
-                                        onChange={(e) => handleUpdateLog(log.id, { engineerId: Number(e.target.value) })}
-                                     >
-                                        {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                     </select>
-                                    <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
-                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <input 
-                                          type="time" 
-                                          id={`start-input-${log.id}`}
-                                          style={{ padding: '2px', fontSize: '11px' }}
-                                          defaultValue={(() => {
-                                            if (!log.start_time) return '';
-                                            const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
-                                            return match ? `${match[1]}:${match[2]}` : '';
-                                          })()} 
-                                        />
-                                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>to</span>
-                                        <input 
-                                          type="time" 
-                                          id={`end-input-${log.id}`}
-                                          style={{ padding: '2px', fontSize: '11px' }}
-                                          defaultValue={(() => {
-                                            if (!log.end_time) return '';
-                                            const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
-                                            return match ? `${match[1]}:${match[2]}` : '';
-                                          })()} 
-                                        />
-                                      </div>
-                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <input 
-                                          type="number" 
-                                          id={`break-input-${log.id}`}
-                                          placeholder="Break mins" 
-                                          style={{ width: '80px', height: '24px', padding: '0 8px', borderRadius: '4px', fontSize: '11px', border: '1px solid #e2e8f0' }} 
-                                          defaultValue={log.break_time_mins || 0} 
-                                        />
-                                        <button
-                                          className="tickets-primary-btn"
-                                          style={{ padding: '2px 10px', fontSize: '10px', borderRadius: '4px', background: '#059669' }}
-                                          onClick={() => {
-                                            const st = document.getElementById(`start-input-${log.id}`).value;
-                                            const et = document.getElementById(`end-input-${log.id}`).value;
-                                            const br = document.getElementById(`break-input-${log.id}`).value;
-                                            if (!st || !et) {
-                                               alert("Please enter both START and END time.");
-                                               return;
-                                            }
-                                            const d = new Date(log.task_date);
-                                            const bD = d.toISOString().split('T')[0];
-                                            handleUpdateLog(log.id, { 
-                                               startTime: `${bD}T${st}:00.000Z`,
-                                               endTime: `${bD}T${et}:00.000Z`,
-                                               breakTimeMins: parseInt(br) || 0 
-                                            });
-                                          }}
-                                        >
-                                          ✓ Update Log
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700' }}>
-                                    <div style={{ color: exceeded ? '#b45309' : '#6366f1' }}>
-                                      {dur > 0 ? (dur.toFixed(2) + 'h') : '--'}
-                                    </div>
-                                    {exceeded && (
-                                       <div style={{ fontSize: '9px', background: '#fef3c7', color: '#b45309', borderRadius: '3px', padding: '1px 4px', marginTop: '2px' }}>
-                                          ⚠️ Shift Exceeded
-                                       </div>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: '10px', textAlign: 'right' }}>
-                                    <button
-                                      className="btn-wow-secondary"
-                                      style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #ef4444', color: '#ef4444' }}
-                                      onClick={() => {
-                                        const d = new Date(log.task_date);
-                                        const dateStr = d.toISOString().split('T')[0];
-                                        handleResolveEarly(dateStr);
-                                      }}
-                                    >
-                                      Resolve Here
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
+                          {(timeLogs || []).map((log, lIdx) => {
+                             const dur = (log.start_time && log.end_time)
+                               ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
+                               : 0;
+                             const exceeded = dur > 8;
+                             return (
+                               <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: exceeded ? 'rgba(239, 68, 68, 0.02)' : 'transparent' }}>
+                                 <td style={{ padding: '10px' }}>
+                                   <div style={{ fontWeight: '700' }}>{new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
+                                   <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
+                                 </td>
+                                 <td style={{ padding: '10px' }}>
+                                   <select 
+                                     style={{ width: '100%', padding: '4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '4px' }}
+                                     value={log.engineer_id || selectedTicket.engineerId}
+                                     onChange={(e) => handleUpdateLog(log.id, { engineerId: Number(e.target.value) })}
+                                   >
+                                     {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                   </select>
+                                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                      <input type="time" id={`vst-${lIdx}`} defaultValue={log.start_time ? new Date(log.start_time).toISOString().split('T')[1].slice(0, 5) : ''} style={{ fontSize: '11px', padding: '2px' }} />
+                                      <span>-</span>
+                                      <input type="time" id={`vet-${lIdx}`} defaultValue={log.end_time ? new Date(log.end_time).toISOString().split('T')[1].slice(0, 5) : ''} style={{ fontSize: '11px', padding: '2px' }} />
+                                      <input type="number" id={`vbr-${lIdx}`} defaultValue={log.break_time_mins || 0} style={{ width: '35px', fontSize: '11px', padding: '2px' }} />
+                                      <button className="tickets-primary-btn" style={{ padding: '2px 6px', fontSize: '10px' }} onClick={() => {
+                                         const st = document.getElementById(`vst-${lIdx}`).value;
+                                         const et = document.getElementById(`vet-${lIdx}`).value;
+                                         const br = document.getElementById(`vbr-${lIdx}`).value;
+                                         if (!st || !et) return;
+                                         handleUpdateLog(log.id, {
+                                            startTime: `${log.task_date.split('T')[0]}T${st}:00.000Z`,
+                                            endTime: `${log.task_date.split('T')[0]}T${et}:00.000Z`,
+                                            breakTimeMins: parseInt(br) || 0
+                                         });
+                                      }}>Save</button>
+                                   </div>
+                                 </td>
+                                 <td style={{ padding: '10px', textAlign: 'center' }}>
+                                   <div style={{ fontWeight: '800', color: exceeded ? '#ef4444' : '#6366f1' }}>{dur > 0 ? dur.toFixed(2) + 'h' : '--'}</div>
+                                   {exceeded && <div style={{ fontSize: '9px', color: '#ef4444', fontWeight: '700' }}>⚠ HOLD</div>}
+                                 </td>
+                                 <td style={{ padding: '10px', textAlign: 'right' }}>
+                                   <button className="btn-wow-secondary" style={{ padding: '2px 8px', fontSize: '10px', borderColor: '#ef4444', color: '#ef4444' }} onClick={() => handleResolveEarly(log.task_date.split('T')[0])}>Resolve Early</button>
+                                 </td>
+                               </tr>
+                             );
+                          })}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                )}
-
-                {(isInlineEditing || selectedTicket.leadType !== 'Dispatch') && (
+                ) : (
+                  /* Condition: Same-day Task (dates match) */
                   <>
                     <div className="detail-item--full divider"></div>
                     <div className="detail-item--full" style={{ marginBottom: '1rem' }}>
@@ -3275,8 +3217,6 @@ function TicketsPage() {
                                   <div style={{ fontSize: '28px', fontWeight: '900', color: '#047857', letterSpacing: '-0.03em', lineHeight: 1 }}>{selectedTicket.currency} {res?.grandTotal || '0.00'}</div>
                                 </div>
                               </div>
-
-
                             </div>
                           );
                         })()}
@@ -3305,7 +3245,7 @@ function TicketsPage() {
                           <span style={{ fontWeight: '700', fontSize: '14px' }}>
                             {selectedTicket.endTime
                               ? new Date(selectedTicket.endTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
-                              : 'Not finished'}
+                               : 'Not finished'}
                           </span>
                         </div>
                         <div className="detail-item" style={{ margin: 0 }}>
@@ -3332,12 +3272,37 @@ function TicketsPage() {
                     <label style={{ fontSize: '13px', fontWeight: '800', color: '#7c3aed', margin: 0, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Grand Total (Receivable)</label>
                     <span style={{ fontSize: '22px', fontWeight: '900', color: '#7c3aed' }}>
                       {(() => {
+                        const isMulti = selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0];
+                        if (isMulti && (timeLogs || []).length > 0) {
+                          let total = 0;
+                          timeLogs.forEach(log => {
+                            if (!log.start_time || !log.end_time) return;
+                            const res = calculateTicketTotal({
+                              startTime: log.start_time,
+                              endTime: log.end_time,
+                              breakTime: log.break_time_mins || 0,
+                              hourlyRate: selectedTicket.hourlyRate,
+                              halfDayRate: selectedTicket.halfDayRate,
+                              fullDayRate: selectedTicket.fullDayRate,
+                              monthlyRate: selectedTicket.monthlyRate,
+                              agreedRate: selectedTicket.agreedRate,
+                              cancellationFee: selectedTicket.cancellationFee,
+                              travelCostPerDay: selectedTicket.travelCostPerDay,
+                              toolCost: 0, // Tool cost added once at end
+                              billingType: selectedTicket.billingType || 'Hourly',
+                              timezone: selectedTicket.timezone,
+                              calcTimezone: 'Ticket Local'
+                            });
+                            total += parseFloat(res?.grandTotal || 0);
+                          });
+                          total += parseFloat(selectedTicket.toolCost || 0);
+                          return `${selectedTicket.currency} ${total.toFixed(2)}`;
+                        }
+
                         const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
                         const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
 
-                        if (viewMode === 'form') {
-                          if (liveBreakdown) return `${currency} ${liveBreakdown.grandTotal}`;
-                        } else if (bestStart && bestEnd) {
+                        if (bestStart && bestEnd) {
                           const liveResult = calculateTicketTotal({
                             startTime: bestStart,
                             endTime: bestEnd,
@@ -3366,12 +3331,36 @@ function TicketsPage() {
                     <label style={{ fontSize: '13px', fontWeight: '800', color: '#059669', margin: 0, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Grand Total (Payout)</label>
                     <span style={{ fontSize: '22px', fontWeight: '900', color: '#059669' }}>
                       {(() => {
+                        const isMulti = selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0];
+                        if (isMulti && (timeLogs || []).length > 0) {
+                          let total = 0;
+                          timeLogs.forEach(log => {
+                            if (!log.start_time || !log.end_time) return;
+                            const res = calculateTicketTotal({
+                              startTime: log.start_time,
+                              endTime: log.end_time,
+                              breakTime: log.break_time_mins || 0,
+                              hourlyRate: selectedTicket.eng_hourly_rate,
+                              halfDayRate: selectedTicket.eng_half_day_rate,
+                              fullDayRate: selectedTicket.eng_full_day_rate,
+                              monthlyRate: selectedTicket.eng_monthly_rate,
+                              agreedRate: selectedTicket.eng_agreed_rate,
+                              cancellationFee: selectedTicket.eng_cancellation_fee,
+                              travelCostPerDay: 0,
+                              toolCost: 0,
+                              billingType: selectedTicket.eng_billing_type || 'Hourly',
+                              timezone: selectedTicket.timezone,
+                              calcTimezone: 'Ticket Local'
+                            });
+                            total += parseFloat(res?.grandTotal || 0);
+                          });
+                          return `${selectedTicket.eng_currency || selectedTicket.currency} ${total.toFixed(2)}`;
+                        }
+
                         const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
                         const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
 
-                        if (viewMode === 'form') {
-                          if (payoutLiveBreakdown) return `${engCurrency} ${payoutLiveBreakdown.grandTotal}`;
-                        } else if (bestStart && bestEnd) {
+                        if (bestStart && bestEnd) {
                           const liveResult = calculateTicketTotal({
                             startTime: bestStart,
                             endTime: bestEnd,
@@ -3395,6 +3384,41 @@ function TicketsPage() {
                       })()}
                     </span>
                   </div>
+                </div>
+
+                <div className="ticket-modal-footer">
+                  <button className="btn-wow-secondary" onClick={handleCloseTicketModal}><FiX /> Close</button>
+                  <button
+                    className="btn-wow-primary"
+                    onClick={() => {
+                      if (!isInlineEditing) {
+                        const actualStart = selectedTicket.startTime || selectedTicket.start_time;
+                        const actualEnd   = selectedTicket.endTime   || selectedTicket.end_time;
+                        if (actualStart) {
+                          setInlineStartTime(formatForInput(actualStart));
+                          setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
+                        } else {
+                          const schedDate  = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
+                          const schedTime  = selectedTicket.taskTime ? selectedTicket.taskTime.padStart(5, '0') : '08:00';
+                          if (schedDate) {
+                            setInlineStartTime(`${schedDate}T${schedTime}`);
+                            setInlineEndTime(`${schedDate}T16:00`);
+                          }
+                        }
+                        const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
+                        setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
+                      }
+                      setIsInlineEditing(!isInlineEditing);
+                      if ((selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0]) && !isInlineEditing) {
+                        setTimeout(() => {
+                           const el = document.querySelector('.dispatch-logs-table-wrapper');
+                           if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }
+                    }}
+                  >
+                    {isInlineEditing ? <><FiX /> Cancel Edit</> : <><FiEdit2 /> Edit Time</>}
+                  </button>
                 </div>
               </div>
 
