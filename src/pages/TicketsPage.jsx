@@ -250,6 +250,24 @@ function TicketsPage() {
     }
   }, [startTime, endTime, viewMode]);
 
+  const getDatesInRange = (start, end) => {
+    const dates = [];
+    if (!start || !end) return dates;
+    
+    // Use UTC midnights to avoid local offset shifts for YYYY-MM-DD strings
+    let curr = new Date(`${start}T00:00:00Z`);
+    const stop = new Date(`${end}T00:00:00Z`);
+    
+    // Safety cap to prevent infinity if dates are invalid
+    let count = 0;
+    while (curr <= stop && count < 366) {
+      dates.push(curr.toISOString().split('T')[0]);
+      curr.setUTCDate(curr.getUTCDate() + 1);
+      count++;
+    }
+    return dates;
+  };
+
   // Pure calculation function for reuse
   const calculateTicketTotal = (opts) => {
     const {
@@ -385,32 +403,85 @@ function TicketsPage() {
 
   // Live Calculation Logic (Mirrors Backend)
   useEffect(() => {
-    const res = calculateTicketTotal({
-      startTime, endTime, breakTime,
-      hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-      travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
-    });
-    setLiveBreakdown(res);
-    if (res && res.grandTotal) {
-      setTotalCost(res.grandTotal);
-    }
+    const isMultiDay = taskStartDate && taskEndDate && taskStartDate !== taskEndDate;
+    
+    if (isMultiDay) {
+        const dates = getDatesInRange(taskStartDate, taskEndDate);
+        let totalReceivable = 0;
+        let totalPayout = 0;
+        let totalHrs = 0;
+        let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: String(toolCostInput || 0), travel: '0.00' };
 
-    const payRes = calculateTicketTotal({
-      startTime, endTime, breakTime,
-      hourlyRate: engHourlyRate || 0,
-      halfDayRate: engHalfDayRate || 0,
-      fullDayRate: engFullDayRate || 0,
-      monthlyRate: engMonthlyRate || 0,
-      agreedRate: engAgreedRate || 0,
-      cancellationFee: engCancellationFee || 0,
-      travelCostPerDay: 0,
-      toolCost: 0,
-      billingType: engBillingType,
-      timezone,
-      calcTimezone
-    });
-    setPayoutLiveBreakdown(payRes);
-  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCostInput, billingType, timezone, calcTimezone, engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee, engBillingType]);
+        dates.forEach((d) => {
+            // Estimate based on scheduled taskTime (e.g. 09:00) to 8 hours later
+            const sTime = `${d}T${taskTime.padStart(5, '0')}:00Z`;
+            const sDate = new Date(sTime);
+            const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000)); // Default 8hr span
+            const eTime = eTimeDate.toISOString().replace('Z', '');
+
+            const res = calculateTicketTotal({
+                startTime: sTime, endTime: eTime, breakTime: '0', 
+                hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                travelCostPerDay, toolCost: 0, billingType, timezone, calcTimezone
+            });
+            if (res) {
+                totalReceivable += parseFloat(res.grandTotal);
+                totalHrs += parseFloat(res.hrs);
+                combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + parseFloat(res.base)).toFixed(2);
+                combinedBreakdown.ot = (parseFloat(combinedBreakdown.ot) + parseFloat(res.ot)).toFixed(2);
+                combinedBreakdown.ooh = (parseFloat(combinedBreakdown.ooh) + parseFloat(res.ooh)).toFixed(2);
+                combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
+                combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
+                combinedBreakdown.isSpecialDay = combinedBreakdown.isSpecialDay || res.isSpecialDay;
+                combinedBreakdown.isOOH = combinedBreakdown.isOOH || res.isOOH;
+            }
+
+            const payRes = calculateTicketTotal({
+                startTime: sTime, endTime: eTime, breakTime: '0',
+                hourlyRate: engHourlyRate || 0,
+                halfDayRate: engHalfDayRate || 0,
+                fullDayRate: engFullDayRate || 0,
+                monthlyRate: engMonthlyRate || 0,
+                agreedRate: engAgreedRate || 0,
+                cancellationFee: engCancellationFee || 0,
+                travelCostPerDay: 0, toolCost: 0, billingType: engBillingType, timezone, calcTimezone
+            });
+            if (payRes) totalPayout += parseFloat(payRes.grandTotal);
+        });
+
+        const finalGrandTotal = (totalReceivable + parseFloat(toolCostInput || 0)).toFixed(2);
+        setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
+        setTotalCost(finalGrandTotal);
+        setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2) });
+
+    } else {
+        const res = calculateTicketTotal({
+          startTime, endTime, breakTime,
+          hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+          travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
+        });
+        setLiveBreakdown(res);
+        if (res && res.grandTotal) {
+          setTotalCost(res.grandTotal);
+        }
+
+        const payRes = calculateTicketTotal({
+          startTime, endTime, breakTime,
+          hourlyRate: engHourlyRate || 0,
+          halfDayRate: engHalfDayRate || 0,
+          fullDayRate: engFullDayRate || 0,
+          monthlyRate: engMonthlyRate || 0,
+          agreedRate: engAgreedRate || 0,
+          cancellationFee: engCancellationFee || 0,
+          travelCostPerDay: 0,
+          toolCost: 0,
+          billingType: engBillingType,
+          timezone,
+          calcTimezone
+        });
+        setPayoutLiveBreakdown(payRes);
+    }
+  }, [startTime, endTime, breakTime, hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCostInput, billingType, timezone, calcTimezone, engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee, engBillingType, taskStartDate, taskEndDate, taskTime]);
 
   // Sync Task Dates with Manual Time Log
   useEffect(() => {
@@ -1505,22 +1576,27 @@ function TicketsPage() {
     }
   }, [taskStartDate, taskEndDate, leadType])
 
-  // Effect to AUTO-POPULATE Engineer Profile Rates
-  useEffect(() => {
+  const syncProfileRates = useCallback(() => {
     if (engineerId && engineers.length > 0 && engPayType === 'Default') {
       const eng = engineers.find(e => String(e.id) === String(engineerId));
       if (eng) {
+         console.log(`[SYNC] Auto-populating profile rates for ${eng.name}`);
          setEngBillingType(eng.billing_type || 'Hourly');
-         setEngHourlyRate(String(eng.hourly_rate || '0.00'));
-         setEngHalfDayRate(String(eng.half_day_rate || '0.00'));
-         setEngFullDayRate(String(eng.full_day_rate || '0.00'));
-         setEngMonthlyRate(String(eng.monthly_rate || '0.00'));
+         setEngHourlyRate(String(eng.hourly_rate != null ? eng.hourly_rate : '0.00'));
+         setEngHalfDayRate(String(eng.half_day_rate != null ? eng.half_day_rate : '0.00'));
+         setEngFullDayRate(String(eng.full_day_rate != null ? eng.full_day_rate : '0.00'));
+         setEngMonthlyRate(String(eng.monthly_rate != null ? eng.monthly_rate : '0.00'));
          setEngAgreedRate(String(eng.agreed_rate || '0.00'));
-         setEngCancellationFee(String(eng.cancellation_fee || '0.00'));
+         setEngCancellationFee(String(eng.cancellation_fee != null ? eng.cancellation_fee : '0.00'));
          setEngCurrency(eng.currency || 'USD');
       }
     }
   }, [engineerId, engineers, engPayType]);
+
+  // Effect to AUTO-POPULATE Engineer Profile Rates
+  useEffect(() => {
+    syncProfileRates();
+  }, [syncProfileRates]);
 
   useEffect(() => {
     const ticketIdToEdit = localStorage.getItem('editTicketId')
@@ -1774,7 +1850,20 @@ function TicketsPage() {
                   </h3>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                    <div className="payout-type-selector" style={{ background: engPayType === 'Default' ? '#eff6ff' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Default' ? '#3b82f6' : '#e2e8f0', cursor: 'pointer' }} onClick={() => setEngPayType('Default')}>
+                    <div className="payout-type-selector" style={{ background: engPayType === 'Default' ? '#eff6ff' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Default' ? '#3b82f6' : '#e2e8f0', cursor: 'pointer' }} onClick={() => {
+                        setEngPayType('Default');
+                        const eng = engineers.find(en => String(en.id) === String(engineerId));
+                        if (eng) {
+                            setEngBillingType(eng.billing_type || 'Hourly')
+                            setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '')
+                            setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '')
+                            setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '')
+                            setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
+                            setEngAgreedRate(eng.agreed_rate || '')
+                            setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
+                            setEngCurrency(eng.currency || 'USD')
+                        }
+                    }}>
                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#1e40af', fontWeight: '700' }}>
                           <input type="radio" name="engPayType" value="Default" checked={engPayType === 'Default'} readOnly />
                           Engineers Profile Rates
@@ -2089,70 +2178,80 @@ function TicketsPage() {
                              <th style={{ padding: '10px' }}>Date</th>
                              <th style={{ padding: '10px' }}>Engineer</th>
                              <th style={{ padding: '10px' }}>Shift (In / Out / Break)</th>
-                             <th style={{ padding: '10px', textAlign: 'center' }}>Total</th>
+                             <th style={{ padding: '10px', textAlign: 'center' }}>Hrs</th>
+                             <th style={{ padding: '10px', textAlign: 'right' }}>Est. Cost</th>
                           </tr>
                        </thead>
                        <tbody>
                           {(() => {
-                            const dates = [];
-                            let curr = new Date(taskStartDate);
-                            const end = new Date(taskEndDate);
-                            while (curr <= end && dates.length < 31) { // Safety cap
-                              dates.push(curr.toISOString().split('T')[0]);
-                              curr.setDate(curr.getDate() + 1);
-                            }
+                            const dates = getDatesInRange(taskStartDate, taskEndDate);
 
                             return dates.map((dStr, idx) => {
-                              const existingLog = (timeLogs || []).find(l => l.task_date?.split('T')[0] === dStr) || {};
-                              const dur = (existingLog.start_time && existingLog.end_time)
-                                ? (new Date(existingLog.end_time) - new Date(existingLog.start_time)) / 3600000 - (existingLog.break_time_mins / 60)
-                                : 0;
+                               const existingLog = (timeLogs || []).find(l => l.task_date?.split('T')[0] === dStr) || {};
+                               const dur = (existingLog.start_time && existingLog.end_time)
+                                 ? (new Date(existingLog.end_time) - new Date(existingLog.start_time)) / 3600000 - (existingLog.break_time_mins / 60)
+                                 : 8; 
+                               
+                               const dayCostBreakdown = calculateTicketTotal({
+                                 startTime: `${dStr}T${taskTime?.padStart(5, '0') || '09:00'}:00Z`,
+                                 endTime: new Date(new Date(`${dStr}T${taskTime?.padStart(5, '0') || '09:00'}:00Z`).getTime() + (8 * 3600 * 1000)).toISOString(),
+                                 breakTime: '0',
+                                 hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                                 travelCostPerDay, toolCost: 0, billingType, timezone, calcTimezone
+                               });
 
-                              return (
-                                <tr key={dStr} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                  <td style={{ padding: '10px' }}>
-                                    <b style={{ color: '#475569' }}>{new Date(dStr).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b>
-                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(dStr).getDay()) ? 'Weekend' : 'Weekday'}</div>
-                                  </td>
-                                  <td style={{ padding: '10px' }}>
-                                    {editingTicketId ? (
-                                      <select 
-                                        style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
-                                        value={existingLog.engineer_id || engineerId}
-                                        onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
-                                      >
-                                        {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                      </select>
-                                    ) : (
-                                       <span style={{ fontSize: '11px', color: '#64748b' }}>Primary Engineer</span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: '10px' }}>
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                      <input type="time" id={`fst-${idx}`} defaultValue="09:00" style={{ padding: '2px', fontSize: '11px' }} />
-                                      <span>to</span>
-                                      <input type="time" id={`fet-${idx}`} defaultValue="18:00" style={{ padding: '2px', fontSize: '11px' }} />
-                                      <input type="number" id={`fbr-${idx}`} placeholder="Break" defaultValue="0" style={{ width: '45px', padding: '2px', fontSize: '11px' }} />
-                                      {editingTicketId && (
-                                        <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
-                                           const st = document.getElementById(`fst-${idx}`).value;
-                                           const et = document.getElementById(`fet-${idx}`).value;
-                                           const br = document.getElementById(`fbr-${idx}`).value;
-                                           handleUpdateLog(existingLog.id, {
-                                              startTime: `${dStr}T${st}:00.000Z`,
-                                              endTime: `${dStr}T${et}:00.000Z`,
-                                              breakTimeMins: parseInt(br) || 0
-                                           });
-                                        }}>Update</button>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
-                                    {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
-                                    {dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
-                                  </td>
-                                </tr>
-                              );
+                               return (
+                                 <tr key={dStr} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                   <td style={{ padding: '10px' }}>
+                                     <b style={{ color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b>
+                                     <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
+                                   </td>
+                                   <td style={{ padding: '10px' }}>
+                                     {editingTicketId ? (
+                                       <select 
+                                         style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
+                                         value={existingLog.engineer_id || engineerId}
+                                         onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
+                                       >
+                                         {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                       </select>
+                                     ) : (
+                                        <span style={{ fontSize: '11px', color: '#64748b' }}>{engineerName || 'Primary Engineer'}</span>
+                                     )}
+                                   </td>
+                                   <td style={{ padding: '10px' }}>
+                                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                       <input type="time" id={`fst-${idx}`} defaultValue={taskTime || "09:00"} style={{ padding: '2px', fontSize: '11px' }} />
+                                       <span>to</span>
+                                       <input type="time" id={`fet-${idx}`} defaultValue={(() => {
+                                          if (!taskTime) return "18:00";
+                                          const [h, m] = taskTime.split(':').map(Number);
+                                          return `${String((h + 8) % 24).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
+                                       })()} style={{ padding: '2px', fontSize: '11px' }} />
+                                       <input type="number" id={`fbr-${idx}`} placeholder="Break" defaultValue="0" style={{ width: '45px', padding: '2px', fontSize: '11px' }} />
+                                       {editingTicketId && (
+                                         <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
+                                            const st = document.getElementById(`fst-${idx}`).value;
+                                            const et = document.getElementById(`fet-${idx}`).value;
+                                            const br = document.getElementById(`fbr-${idx}`).value;
+                                            handleUpdateLog(existingLog.id, {
+                                               startTime: `${dStr}T${st}:00.000Z`,
+                                               endTime: `${dStr}T${et}:00.000Z`,
+                                               breakTimeMins: parseInt(br) || 0
+                                            });
+                                         }}>Update</button>
+                                       )}
+                                     </div>
+                                   </td>
+                                   <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
+                                     {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
+                                     {editingTicketId && dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
+                                   </td>
+                                   <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
+                                      {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
+                                   </td>
+                                 </tr>
+                               );
                             });
                           })()}
                        </tbody>
@@ -2438,12 +2537,24 @@ function TicketsPage() {
                   {/* Divider */}
                   <div style={{ borderTop: '1.5px dashed rgba(99, 102, 241, 0.3)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Grand Total
+                      Grand Total (Receivable)
                     </span>
                     <span style={{ fontSize: '22px', color: '#a5b4fc', fontWeight: '900', letterSpacing: '-0.02em' }}>
                       {currency} {liveBreakdown.grandTotal}
                     </span>
                   </div>
+
+                  {payoutLiveBreakdown && (
+                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '3px solid #10b981', padding: '10px 14px', marginTop: '12px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#6ee7b7', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engineer Payout Estimation</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>Based on {engBillingType}</div>
+                      </div>
+                      <div style={{ fontSize: '18px', color: '#6ee7b7', fontWeight: '800' }}>
+                        {engCurrency || currency} {payoutLiveBreakdown.grandTotal}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <p style={{ fontSize: '11px', color: '#475569', marginTop: '12px', textAlign: 'center' }}>
