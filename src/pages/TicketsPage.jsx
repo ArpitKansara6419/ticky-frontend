@@ -924,6 +924,7 @@ function TicketsPage() {
         engMonthlyRate: engMonthlyRate !== '' ? Number(engMonthlyRate) : null,
         engAgreedRate: engAgreedRate !== '' ? Number(engAgreedRate) : null,
         engCancellationFee: engCancellationFee !== '' ? Number(engCancellationFee) : null,
+        timeLogs: (leadType === 'Dispatch' || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate)) ? timeLogs : []
       }
 
       const isEditing = Boolean(editingTicketId)
