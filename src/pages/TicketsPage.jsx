@@ -1410,6 +1410,10 @@ function TicketsPage() {
       }
       fillFormFromTicket(data.ticket)
       setEditingTicketId(ticketId)
+      
+      // Fetch extras (like time logs) so the daily shifts table is populated correctly
+      fetchTicketExtras(ticketId)
+      
       setViewMode('form')
     } catch (err) {
       console.error('Edit ticket error', err)
@@ -2149,9 +2153,9 @@ function TicketsPage() {
 
           {/* Conditional Time Adjustment Section */}
           {(() => {
-            const isMultiDay = taskStartDate && taskEndDate && taskStartDate !== taskEndDate;
-
-            if (!isMultiDay) {
+            const isDispatch = (leadType === 'Dispatch') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate);
+            
+            if (!isDispatch) {
               // Same Day Task
               return (
                 <section className="tickets-card">
