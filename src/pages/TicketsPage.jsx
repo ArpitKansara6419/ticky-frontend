@@ -2240,13 +2240,17 @@ function TicketsPage() {
                                    </td>
                                    <td style={{ padding: '10px' }}>
                                      {editingTicketId ? (
-                                       <select 
-                                         style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
-                                         value={existingLog.engineer_id || engineerId}
-                                         onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
-                                       >
-                                         {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                       </select>
+                                       existingLog.id ? (
+                                         <select 
+                                           style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
+                                           value={existingLog.engineer_id || engineerId}
+                                           onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
+                                         >
+                                           {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                         </select>
+                                       ) : (
+                                         <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>Pending save...</div>
+                                       )
                                      ) : (
                                         <span style={{ fontSize: '11px', color: '#64748b' }}>{engineerName || 'Primary Engineer'}</span>
                                      )}
@@ -2261,7 +2265,7 @@ function TicketsPage() {
                                           return `${String((h + 8) % 24).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
                                        })()} style={{ padding: '2px', fontSize: '11px' }} />
                                        <input type="number" id={`fbr-${idx}`} placeholder="Break" defaultValue="0" style={{ width: '45px', padding: '2px', fontSize: '11px' }} />
-                                       {editingTicketId && (
+                                       {editingTicketId && existingLog.id && (
                                          <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
                                             const st = document.getElementById(`fst-${idx}`).value;
                                             const et = document.getElementById(`fet-${idx}`).value;
