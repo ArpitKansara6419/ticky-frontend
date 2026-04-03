@@ -3554,7 +3554,7 @@ function TicketsPage() {
                           const logsToUse = (timeLogs && timeLogs.length > 0)
                             ? timeLogs
                             : allDates.map(d => ({ task_date: d }));
-                          let total = 0;
+                          let totalR = 0;
                           logsToUse.forEach(log => {
                             let sTime, eTime, brk;
                             if (log.start_time && log.end_time) {
@@ -3570,7 +3570,7 @@ function TicketsPage() {
                               eTime = dEnd.toISOString().slice(0, 16);
                               brk = 0;
                             }
-                            const res = calculateTicketTotal({
+                            const resR = calculateTicketTotal({
                               startTime: sTime, endTime: eTime, breakTime: brk,
                               hourlyRate: selectedTicket.hourlyRate,
                               halfDayRate: selectedTicket.halfDayRate,
@@ -3584,18 +3584,18 @@ function TicketsPage() {
                               timezone: selectedTicket.timezone,
                               calcTimezone: 'Ticket Local'
                             });
-                            total += parseFloat(res?.grandTotal || 0);
+                            totalR += parseFloat(resR?.grandTotal || 0);
                           });
-                          return `${selectedTicket.currency} ${total.toFixed(2)}`;
+                          return `${selectedTicket.currency} ${totalR.toFixed(2)}`;
                         }
 
-                        const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
-                        const bestEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.end_time);
+                        const bStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
+                        const bEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.end_time);
 
-                        if (bestStart && bestEnd) {
-                          const liveResult = calculateTicketTotal({
-                            startTime: bestStart,
-                            endTime: bestEnd,
+                        if (bStart && bEnd) {
+                          const lResult = calculateTicketTotal({
+                            startTime: bStart,
+                            endTime: bEnd,
                             breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
                             hourlyRate: selectedTicket.hourlyRate,
                             halfDayRate: selectedTicket.halfDayRate,
@@ -3609,10 +3609,10 @@ function TicketsPage() {
                             timezone: selectedTicket.timezone,
                             calcTimezone: 'Ticket Local'
                           });
-                          if (liveResult) return `${selectedTicket.currency} ${liveResult.grandTotal}`;
+                          if (lResult) return `${selectedTicket.currency} ${lResult.grandTotal}`;
                         }
-                        const saved = parseFloat(selectedTicket.totalCost);
-                        return `${selectedTicket.currency} ${isNaN(saved) ? '0.00' : saved.toFixed(2)}`;
+                        const sVal = parseFloat(selectedTicket.totalCost);
+                        return `${selectedTicket.currency} ${isNaN(sVal) ? '0.00' : sVal.toFixed(2)}`;
                       })()}
                     </span>
                   </div>
@@ -3623,20 +3623,6 @@ function TicketsPage() {
                       {(() => {
                         const isMulti = selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0];
                         if (isMulti) {
-                          const sdStr2 = selectedTicket.taskStartDate?.split('T')[0];
-                          const edStr2 = selectedTicket.taskEndDate?.split('T')[0];
-                          const allDates2 = getDatesInRange(sdStr2, edStr2);
-                          const cleanTaskTime2 = (selectedTicket.taskTime || '08:00').toString().slice(0, 5);
-                          const logsToUse2 = (timeLogs && timeLogs.length > 0)
-                            ? timeLogs
-                            : allDates2.map(d => ({ task_date: d }));
-                          let total = 0;
-                          logsToUse2.forEach(log => {
-                            let sTime, eTime, brk;
-                            if (log.start_time && log.end_time) {
-                              sTime = log.start_time; eTime = log.end_time; brk = log.break_time_mins || 0;
-                            } else {
-                              const d = new Date(log.task_date);
                           const sdStr = selectedTicket.taskStartDate?.split('T')[0];
                           const edStr = selectedTicket.taskEndDate?.split('T')[0];
                           const allDates = getDatesInRange(sdStr, edStr);
@@ -3644,7 +3630,7 @@ function TicketsPage() {
                           const logsToUse = (timeLogs && timeLogs.length > 0)
                             ? timeLogs
                             : allDates.map(d => ({ task_date: d }));
-                          let total = 0;
+                          let totalP = 0;
                           logsToUse.forEach(log => {
                             let sTime, eTime, brk;
                             if (log.start_time && log.end_time) {
@@ -3660,7 +3646,7 @@ function TicketsPage() {
                               eTime = dEnd.toISOString().slice(0, 16);
                               brk = 0;
                             }
-                            const res = calculateTicketTotal({
+                            const resP = calculateTicketTotal({
                               startTime: sTime, endTime: eTime, breakTime: brk,
                               hourlyRate: selectedTicket.engHourlyRate,
                               halfDayRate: selectedTicket.engHalfDayRate,
@@ -3674,18 +3660,18 @@ function TicketsPage() {
                               timezone: selectedTicket.timezone,
                               calcTimezone: 'Ticket Local'
                             });
-                            total += parseFloat(res?.grandTotal || 0);
+                            totalP += parseFloat(resP?.grandTotal || 0);
                           });
-                          return `${selectedTicket.eng_currency || selectedTicket.currency} ${total.toFixed(2)}`;
+                          return `${selectedTicket.eng_currency || selectedTicket.currency} ${totalP.toFixed(2)}`;
                         }
 
-                        const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
-                        const bestEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.end_time);
+                        const bStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
+                        const bEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.end_time);
 
-                        if (bestStart && bestEnd) {
-                          const liveResult = calculateTicketTotal({
-                            startTime: bestStart,
-                            endTime: bestEnd,
+                        if (bStart && bEnd) {
+                          const lResult = calculateTicketTotal({
+                            startTime: bStart,
+                            endTime: bEnd,
                             breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
                             hourlyRate: selectedTicket.engHourlyRate,
                             halfDayRate: selectedTicket.engHalfDayRate,
@@ -3699,10 +3685,10 @@ function TicketsPage() {
                             timezone: selectedTicket.timezone,
                             calcTimezone: 'Ticket Local'
                           });
-                          if (liveResult) return `${selectedTicket.eng_currency || selectedTicket.currency} ${liveResult.grandTotal}`;
+                          if (lResult) return `${selectedTicket.eng_currency || selectedTicket.currency} ${lResult.grandTotal}`;
                         }
-                        const saved = parseFloat(selectedTicket.engTotalCost || selectedTicket.eng_total_cost);
-                        return `${selectedTicket.eng_currency || selectedTicket.currency} ${isNaN(saved) ? '0.00' : saved.toFixed(2)}`;
+                        const sValP = parseFloat(selectedTicket.engTotalCost || selectedTicket.eng_total_cost);
+                        return `${selectedTicket.eng_currency || selectedTicket.currency} ${isNaN(sValP) ? '0.00' : sValP.toFixed(2)}`;
                       })()}
                     </span>
                   </div>
