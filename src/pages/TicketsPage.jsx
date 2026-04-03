@@ -2242,8 +2242,8 @@ function TicketsPage() {
                               endTime: le,
                               breakTime: lb,
                               hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                              travelCostPerDay: travelCost, 
-                              toolCost: toolCost, 
+                              travelCostPerDay: travelCostPerDay, 
+                              toolCost: toolCostInput, 
                               billingType, timezone, calcTimezone
                             });
 
@@ -3505,8 +3505,8 @@ function TicketsPage() {
                               monthlyRate: monthlyRate,
                               agreedRate: agreedRate,
                               cancellationFee: cancellationFee,
-                              travelCostPerDay: travelCost,
-                              toolCost: toolCost,
+                              travelCostPerDay: travelCostPerDay,
+                              toolCost: toolCostInput,
                               billingType: billingType,
                               timezone: timezone,
                               calcTimezone: 'Ticket Local'
@@ -3530,8 +3530,8 @@ function TicketsPage() {
                             monthlyRate: monthlyRate,
                             agreedRate: agreedRate,
                             cancellationFee: cancellationFee,
-                            travelCostPerDay: travelCost,
-                            toolCost: toolCost,
+                            travelCostPerDay: travelCostPerDay,
+                            toolCost: toolCostInput,
                             billingType: billingType,
                             timezone: timezone,
                             calcTimezone: 'Ticket Local'
