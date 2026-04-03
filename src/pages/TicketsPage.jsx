@@ -2232,12 +2232,19 @@ function TicketsPage() {
                               eTime = new Date(startD.getTime() + (8 * 3600 * 1000)).toISOString();
                             }
 
+                            // Use actual log times if available; else default to scheduled 8h shift
+                            const ls = existingLog.start_time || sTime;
+                            const le = existingLog.end_time || eTime;
+                            const lb = existingLog.break_time_mins || 0;
+
                             const dayCostBreakdown = calculateTicketTotal({
-                              startTime: sTime,
-                              endTime: eTime,
-                              breakTime: '0',
+                              startTime: ls,
+                              endTime: le,
+                              breakTime: lb,
                               hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                              travelCostPerDay: 0, toolCost: 0, billingType, timezone, calcTimezone
+                              travelCostPerDay: travelCost, 
+                              toolCost: toolCost, 
+                              billingType, timezone, calcTimezone
                             });
 
                             return (
@@ -3295,7 +3302,7 @@ function TicketsPage() {
                                       le = ed.toISOString().slice(0, 16);
                                       lb = 0; isEst = true;
                                     }
-                                    const logRes = calculateTicketTotal({
+                                    const res = calculateTicketTotal({
                                       startTime: ls, endTime: le, breakTime: lb,
                                       hourlyRate: selectedTicket.hourlyRate,
                                       halfDayRate: selectedTicket.halfDayRate,
@@ -3309,7 +3316,7 @@ function TicketsPage() {
                                       timezone: selectedTicket.timezone,
                                       calcTimezone: 'Ticket Local'
                                     });
-                                    const cost = logRes?.grandTotal || '0.00';
+                                    const cost = res?.grandTotal || '0.00';
                                     return (
                                       <div>
                                         <div style={{ fontWeight: '800', color: exceeded ? '#ef4444' : '#6366f1', fontSize: '12px' }}>
@@ -3492,16 +3499,16 @@ function TicketsPage() {
                             }
                             const res = calculateTicketTotal({
                               startTime: sTime, endTime: eTime, breakTime: brk,
-                              hourlyRate: selectedTicket.hourlyRate,
-                              halfDayRate: selectedTicket.halfDayRate,
-                              fullDayRate: selectedTicket.fullDayRate,
-                              monthlyRate: selectedTicket.monthlyRate,
-                              agreedRate: selectedTicket.agreedRate,
-                              cancellationFee: selectedTicket.cancellationFee,
-                              travelCostPerDay: selectedTicket.travelCostPerDay,
-                              toolCost: selectedTicket.toolCost,
-                              billingType: selectedTicket.billingType || 'Hourly',
-                              timezone: selectedTicket.timezone,
+                              hourlyRate: hourlyRate,
+                              halfDayRate: halfDayRate,
+                              fullDayRate: fullDayRate,
+                              monthlyRate: monthlyRate,
+                              agreedRate: agreedRate,
+                              cancellationFee: cancellationFee,
+                              travelCostPerDay: travelCost,
+                              toolCost: toolCost,
+                              billingType: billingType,
+                              timezone: timezone,
                               calcTimezone: 'Ticket Local'
                             });
                             total += parseFloat(res?.grandTotal || 0);
@@ -3517,16 +3524,16 @@ function TicketsPage() {
                             startTime: bestStart,
                             endTime: bestEnd,
                             breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
-                            hourlyRate: selectedTicket.hourlyRate,
-                            halfDayRate: selectedTicket.halfDayRate,
-                            fullDayRate: selectedTicket.fullDayRate,
-                            monthlyRate: selectedTicket.monthlyRate,
-                            agreedRate: selectedTicket.agreedRate,
-                            cancellationFee: selectedTicket.cancellationFee,
-                            travelCostPerDay: selectedTicket.travelCostPerDay,
-                            toolCost: selectedTicket.toolCost,
-                            billingType: selectedTicket.billingType || 'Hourly',
-                            timezone: selectedTicket.timezone,
+                            hourlyRate: hourlyRate,
+                            halfDayRate: halfDayRate,
+                            fullDayRate: fullDayRate,
+                            monthlyRate: monthlyRate,
+                            agreedRate: agreedRate,
+                            cancellationFee: cancellationFee,
+                            travelCostPerDay: travelCost,
+                            toolCost: toolCost,
+                            billingType: billingType,
+                            timezone: timezone,
                             calcTimezone: 'Ticket Local'
                           });
                           if (liveResult) return `${selectedTicket.currency} ${liveResult.grandTotal}`;
@@ -3568,16 +3575,16 @@ function TicketsPage() {
                             }
                             const res = calculateTicketTotal({
                               startTime: sTime, endTime: eTime, breakTime: brk,
-                              hourlyRate: selectedTicket.eng_hourly_rate,
-                              halfDayRate: selectedTicket.eng_half_day_rate,
-                              fullDayRate: selectedTicket.eng_full_day_rate,
-                              monthlyRate: selectedTicket.eng_monthly_rate,
-                              agreedRate: selectedTicket.eng_agreed_rate,
-                              cancellationFee: selectedTicket.eng_cancellation_fee,
+                              hourlyRate: engHourlyRate,
+                              halfDayRate: engHalfDayRate,
+                              fullDayRate: engFullDayRate,
+                              monthlyRate: engMonthlyRate,
+                              agreedRate: engAgreedRate,
+                              cancellationFee: engCancellationFee,
                               travelCostPerDay: 0,
                               toolCost: 0,
-                              billingType: selectedTicket.eng_billing_type || 'Hourly',
-                              timezone: selectedTicket.timezone,
+                              billingType: engBillingType,
+                              timezone: timezone,
                               calcTimezone: 'Ticket Local'
                             });
                             total += parseFloat(res?.grandTotal || 0);
@@ -3593,16 +3600,16 @@ function TicketsPage() {
                             startTime: bestStart,
                             endTime: bestEnd,
                             breakTime: isInlineEditing ? Number(inlineBreakTime) : (selectedTicket.breakTime ? Math.floor(selectedTicket.breakTime / 60) : 0),
-                            hourlyRate: selectedTicket.eng_hourly_rate,
-                            halfDayRate: selectedTicket.eng_half_day_rate,
-                            fullDayRate: selectedTicket.eng_full_day_rate,
-                            monthlyRate: selectedTicket.eng_monthly_rate,
-                            agreedRate: selectedTicket.eng_agreed_rate,
-                            cancellationFee: selectedTicket.eng_cancellation_fee,
+                            hourlyRate: engHourlyRate,
+                            halfDayRate: engHalfDayRate,
+                            fullDayRate: engFullDayRate,
+                            monthlyRate: engMonthlyRate,
+                            agreedRate: engAgreedRate,
+                            cancellationFee: engCancellationFee,
                             travelCostPerDay: 0,
                             toolCost: 0,
-                            billingType: selectedTicket.eng_billing_type || 'Hourly',
-                            timezone: selectedTicket.timezone,
+                            billingType: engBillingType,
+                            timezone: timezone,
                             calcTimezone: 'Ticket Local'
                           });
                           if (liveResult) return `${selectedTicket.eng_currency || selectedTicket.currency} ${liveResult.grandTotal}`;
