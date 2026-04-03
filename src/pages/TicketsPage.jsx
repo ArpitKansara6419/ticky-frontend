@@ -1032,43 +1032,50 @@ function TicketsPage() {
         }
       };
 
+      const ticket = selectedTicket || {};
+      const tId = ticket.id || editingTicketId;
+      if (!tId) {
+        alert('Error: Ticket ID not found.');
+        return;
+      }
+
       // Send only the required fields for updating
       const payload = {
-        customerId: selectedTicket.customerId,
-        leadId: selectedTicket.leadId,
-        clientName: selectedTicket.clientName,
-        taskName: selectedTicket.taskName,
-        taskStartDate: inlineStartTime ? inlineStartTime.split('T')[0] : formatDateOnly(selectedTicket.taskStartDate),
-        taskEndDate: inlineEndTime ? inlineEndTime.split('T')[0] : formatDateOnly(selectedTicket.taskEndDate),
-        taskTime: inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : selectedTicket.taskTime,
-        scopeOfWork: selectedTicket.scopeOfWork,
-        tools: selectedTicket.tools,
-        engineerName: selectedTicket.engineerName,
-        engineerId: selectedTicket.engineerId,
-        apartment: selectedTicket.apartment,
-        addressLine1: selectedTicket.addressLine1,
-        addressLine2: selectedTicket.addressLine2,
-        city: selectedTicket.city,
-        country: selectedTicket.country,
-        zipCode: selectedTicket.zipCode,
-        timezone: selectedTicket.timezone,
-        pocDetails: selectedTicket.pocDetails,
-        reDetails: selectedTicket.reDetails,
-        callInvites: selectedTicket.callInvites,
-        documentsLabel: selectedTicket.documentsLabel,
-        signoffLabel: selectedTicket.signoffLabel,
-        currency: selectedTicket.currency,
-        hourlyRate: selectedTicket.hourlyRate,
-        halfDayRate: selectedTicket.halfDayRate,
-        fullDayRate: selectedTicket.fullDayRate,
-        monthlyRate: selectedTicket.monthlyRate,
-        agreedRate: selectedTicket.agreedRate,
-        cancellationFee: selectedTicket.cancellationFee,
-        travelCostPerDay: selectedTicket.travelCostPerDay,
-        toolCost: selectedTicket.toolCost ?? selectedTicket.tool_cost ?? 0, // Dedicated tool cost field
-        billingType: selectedTicket.billingType || selectedTicket.billing_type || 'Hourly',
-        status: selectedTicket.status,
-        leadType: selectedTicket.leadType,
+        customerId: ticket.customerId,
+        leadId: ticket.leadId,
+        clientName: ticket.clientName,
+        taskName: ticket.taskName,
+        taskStartDate: inlineStartTime ? inlineStartTime.split('T')[0] : formatDateOnly(ticket.taskStartDate),
+        taskEndDate: inlineEndTime ? inlineEndTime.split('T')[0] : formatDateOnly(ticket.taskEndDate),
+        taskTime: inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : ticket.taskTime,
+        scopeOfWork: ticket.scopeOfWork,
+        tools: ticket.tools,
+        engineerName: ticket.engineerName,
+        engineerId: ticket.engineerId,
+        apartment: ticket.apartment,
+        addressLine1: ticket.addressLine1,
+        addressLine2: ticket.addressLine2,
+        city: ticket.city,
+        country: ticket.country,
+        zipCode: ticket.zipCode,
+        timezone: ticket.timezone,
+        pocDetails: ticket.pocDetails,
+        reDetails: ticket.reDetails,
+        callInvites: ticket.callInvites,
+        documentsLabel: ticket.documentsLabel,
+        signoffLabel: ticket.signoffLabel,
+        currency: ticket.currency,
+        hourlyRate: ticket.hourlyRate,
+        halfDayRate: ticket.halfDayRate,
+        fullDayRate: ticket.fullDayRate,
+        monthlyRate: ticket.monthlyRate,
+        agreedRate: ticket.agreedRate,
+        cancellationFee: ticket.cancellationFee,
+        travelCostPerDay: ticket.travelCostPerDay,
+        toolCost: ticket.toolCost ?? ticket.tool_cost ?? 0, // Dedicated tool cost field
+        billingType: ticket.billingType || ticket.billing_type || 'Hourly',
+        status: ticket.status,
+        leadType: ticket.leadType,
         // Time fields being updated
         startTime: inlineStartTime,
         endTime: inlineEndTime,
@@ -1098,7 +1105,7 @@ function TicketsPage() {
         alert('Shift exceeded 8 hours. Ticket has been automatically placed ON HOLD.');
       }
 
-      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, {
+      const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -1132,6 +1139,7 @@ function TicketsPage() {
   };
 
   const fetchTicketExtras = async (ticketId) => {
+    if (!ticketId) return;
     try {
       const [notesRes, attachRes, expRes, logsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/tickets/${ticketId}/notes`, { credentials: 'include' }),
@@ -1162,9 +1170,14 @@ function TicketsPage() {
   }
 
   const handleUpdateLog = async (logId, data) => {
+    const ticketId = selectedTicket?.id || editingTicketId;
+    if (!ticketId) {
+      alert('Error: Ticket ID not found.');
+      return;
+    }
     setIsUpdatingLog(logId);
     try {
-      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/time-logs/${logId}`, {
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1174,11 +1187,11 @@ function TicketsPage() {
       const resData = await res.json();
       
       // Auto-hold logic for Dispatch log updates
-      const updatedLog = data; // use the data passed to the function
+      const updatedLog = data; 
       if (updatedLog.startTime && updatedLog.endTime) {
          const dur = (new Date(updatedLog.endTime) - new Date(updatedLog.startTime)) / 3600000 - (updatedLog.breakTimeMins / 60);
          if (dur > 8) {
-           await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, {
+           await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
              method: 'PUT',
              headers: { 'Content-Type': 'application/json' },
              credentials: 'include',
@@ -1188,17 +1201,19 @@ function TicketsPage() {
          }
       }
 
-      fetchTicketExtras(selectedTicket.id);
+      fetchTicketExtras(ticketId);
       loadTickets();
     } catch (e) { alert(e.message); }
     setIsUpdatingLog(null);
   }
 
   const handleResolveEarly = async (date) => {
+    const tId = selectedTicket?.id || editingTicketId;
+    if (!tId) return;
     if (!window.confirm(`Are you sure you want to resolve this ticket early on ${date}? Future logs will be deleted.`)) return;
     setIsResolvingEarly(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/resolve-early`, {
+      const res = await fetch(`${API_BASE_URL}/tickets/${tId}/resolve-early`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1212,27 +1227,29 @@ function TicketsPage() {
   }
 
   const handleExtendJob = async () => {
-    if (!newExtendEndDate) return;
+    const tId = selectedTicket?.id || editingTicketId;
+    if (!newExtendEndDate || !tId) return;
     setIsExtending(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/extend`, {
+      const res = await fetch(`${API_BASE_URL}/tickets/${tId}/extend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ newEndDate: newExtendEndDate })
       });
       if (!res.ok) throw new Error('Extension failed');
-      fetchTicketExtras(selectedTicket.id);
+      fetchTicketExtras(tId);
       loadTickets();
     } catch (e) { alert(e.message); }
     setIsExtending(false);
   }
 
   const handleAddAdminNote = async () => {
-    if (!newAdminNote.trim()) return;
+    const tId = selectedTicket?.id || editingTicketId;
+    if (!newAdminNote.trim() || !tId) return;
     setAddingNote(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}/notes`, {
+      const res = await fetch(`${API_BASE_URL}/tickets/${tId}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1241,7 +1258,7 @@ function TicketsPage() {
 
       if (res.ok) {
         setNewAdminNote('');
-        fetchTicketExtras(selectedTicket.id);
+        fetchTicketExtras(tId);
       }
     } catch (e) {
       console.error('Error adding note', e);
