@@ -1183,7 +1183,11 @@ function TicketsPage() {
         credentials: 'include',
         body: JSON.stringify(data)
       });
-      if (!res.ok) throw new Error('Update failed');
+      if (!res.ok) {
+        let errData;
+        try { errData = await res.json(); } catch(e) { errData = {}; }
+        throw new Error(errData.message || 'Update failed');
+      }
       const resData = await res.json();
 
       // Auto-hold logic for Dispatch log updates
