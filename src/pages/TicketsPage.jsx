@@ -23,17 +23,17 @@ const formatForInput = (dateStr) => {
   } else {
     d = new Date(dateStr);
   }
-  
+
   if (isNaN(d.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
-  
+
   // Use UTC components to display exactly what is stored in the DB (wall-clock time)
   const year = d.getUTCFullYear();
   const month = pad(d.getUTCMonth() + 1);
   const day = pad(d.getUTCDate());
   const hours = pad(d.getUTCHours());
   const minutes = pad(d.getUTCMinutes());
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -253,11 +253,11 @@ function TicketsPage() {
   const getDatesInRange = (start, end) => {
     const dates = [];
     if (!start || !end) return dates;
-    
+
     // Use UTC midnights to avoid local offset shifts for YYYY-MM-DD strings
     let curr = new Date(`${start}T00:00:00Z`);
     const stop = new Date(`${end}T00:00:00Z`);
-    
+
     // Safety cap to prevent infinity if dates are invalid
     let count = 0;
     while (curr <= stop && count < 366) {
@@ -338,7 +338,7 @@ function TicketsPage() {
       const bil = opts.billingType;
 
       if (bil === 'Hourly') {
-        const b = Math.max(2, hrs); 
+        const b = Math.max(2, hrs);
         base = b * hr;
 
       } else if (bil === 'Half Day + Hourly') {
@@ -407,77 +407,77 @@ function TicketsPage() {
     const numDays = daysArr.length || 1;
 
     if (isMultiDay) {
-        let totalReceivable = 0;
-        let totalPayout = 0;
-        let totalHrs = 0;
-        let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: numDays };
+      let totalReceivable = 0;
+      let totalPayout = 0;
+      let totalHrs = 0;
+      let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: numDays };
 
-        daysArr.forEach((d) => {
-            const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
-            const sTime = `${d}T${cleanTime}:00Z`;
-            const sDate = new Date(sTime);
-            if (isNaN(sDate.getTime())) return;
+      daysArr.forEach((d) => {
+        const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
+        const sTime = `${d}T${cleanTime}:00Z`;
+        const sDate = new Date(sTime);
+        if (isNaN(sDate.getTime())) return;
 
-            const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000));
-            const eTime = eTimeDate.toISOString().replace('Z', '');
+        const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000));
+        const eTime = eTimeDate.toISOString().replace('Z', '');
 
-            const res = calculateTicketTotal({
-                startTime: sTime, endTime: eTime, breakTime: '0', 
-                hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
-            });
-
-            const payRes = calculateTicketTotal({
-                startTime: sTime, endTime: eTime, breakTime: '0', 
-                hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0, monthlyRate: engMonthlyRate || 0, 
-                agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
-                travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
-            });
-
-            if (res) {
-                totalReceivable += parseFloat(res.grandTotal);
-                totalHrs += parseFloat(res.hrs);
-                combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + parseFloat(res.base)).toFixed(2);
-                combinedBreakdown.ot = (parseFloat(combinedBreakdown.ot) + parseFloat(res.ot)).toFixed(2);
-                combinedBreakdown.ooh = (parseFloat(combinedBreakdown.ooh) + parseFloat(res.ooh)).toFixed(2);
-                combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
-                combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
-                combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
-            }
-            if (payRes) {
-                totalPayout += parseFloat(payRes.grandTotal);
-            }
-        });
-
-        const finalGrandTotal = totalReceivable.toFixed(2);
-        setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
-        setTotalCost(finalGrandTotal);
-        setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2) });
-
-    } else {
         const res = calculateTicketTotal({
-          startTime, endTime, breakTime,
+          startTime: sTime, endTime: eTime, breakTime: '0',
           hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
           travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
         });
-        setLiveBreakdown({ ...res, days: 1 });
-        if (res && res.grandTotal) {
-          setTotalCost(res.grandTotal);
-        }
 
         const payRes = calculateTicketTotal({
-          startTime, endTime, breakTime,
-          hourlyRate: engHourlyRate || 0,
-          halfDayRate: engHalfDayRate || 0,
-          fullDayRate: engFullDayRate || 0,
-          monthlyRate: engMonthlyRate || 0,
-          agreedRate: engAgreedRate || 0,
-          cancellationFee: engCancellationFee || 0,
+          startTime: sTime, endTime: eTime, breakTime: '0',
+          hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0, monthlyRate: engMonthlyRate || 0,
+          agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
           travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
         });
-        if (payRes) {
-            setPayoutLiveBreakdown({ grandTotal: payRes.grandTotal });
+
+        if (res) {
+          totalReceivable += parseFloat(res.grandTotal);
+          totalHrs += parseFloat(res.hrs);
+          combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + parseFloat(res.base)).toFixed(2);
+          combinedBreakdown.ot = (parseFloat(combinedBreakdown.ot) + parseFloat(res.ot)).toFixed(2);
+          combinedBreakdown.ooh = (parseFloat(combinedBreakdown.ooh) + parseFloat(res.ooh)).toFixed(2);
+          combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
+          combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
+          combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
         }
+        if (payRes) {
+          totalPayout += parseFloat(payRes.grandTotal);
+        }
+      });
+
+      const finalGrandTotal = totalReceivable.toFixed(2);
+      setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
+      setTotalCost(finalGrandTotal);
+      setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2) });
+
+    } else {
+      const res = calculateTicketTotal({
+        startTime, endTime, breakTime,
+        hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+        travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
+      });
+      setLiveBreakdown({ ...res, days: 1 });
+      if (res && res.grandTotal) {
+        setTotalCost(res.grandTotal);
+      }
+
+      const payRes = calculateTicketTotal({
+        startTime, endTime, breakTime,
+        hourlyRate: engHourlyRate || 0,
+        halfDayRate: engHalfDayRate || 0,
+        fullDayRate: engFullDayRate || 0,
+        monthlyRate: engMonthlyRate || 0,
+        agreedRate: engAgreedRate || 0,
+        cancellationFee: engCancellationFee || 0,
+        travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
+      });
+      if (payRes) {
+        setPayoutLiveBreakdown({ grandTotal: payRes.grandTotal });
+      }
     }
   }, [
     startTime, endTime, breakTime, taskStartDate, taskEndDate, taskTime,
@@ -1098,7 +1098,7 @@ function TicketsPage() {
         timezone: selectedTicket.timezone,
         calcTimezone: 'Ticket Local'
       });
-      
+
       const hrsVal = parseFloat(calc?.hrs || 0);
       if (hrsVal > 8 && payload.status !== 'On Hold') {
         payload.status = 'On Hold';
@@ -1185,20 +1185,20 @@ function TicketsPage() {
       });
       if (!res.ok) throw new Error('Update failed');
       const resData = await res.json();
-      
+
       // Auto-hold logic for Dispatch log updates
-      const updatedLog = data; 
+      const updatedLog = data;
       if (updatedLog.startTime && updatedLog.endTime) {
-         const dur = (new Date(updatedLog.endTime) - new Date(updatedLog.startTime)) / 3600000 - (updatedLog.breakTimeMins / 60);
-         if (dur > 8) {
-           await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
-             method: 'PUT',
-             headers: { 'Content-Type': 'application/json' },
-             credentials: 'include',
-             body: JSON.stringify({ status: 'On Hold' })
-           });
-           alert('Day shift exceeded 8 hours. Ticket status updated to ON HOLD.');
-         }
+        const dur = (new Date(updatedLog.endTime) - new Date(updatedLog.startTime)) / 3600000 - (updatedLog.breakTimeMins / 60);
+        if (dur > 8) {
+          await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ status: 'On Hold' })
+          });
+          alert('Day shift exceeded 8 hours. Ticket status updated to ON HOLD.');
+        }
       }
 
       fetchTicketExtras(ticketId);
@@ -1348,13 +1348,13 @@ function TicketsPage() {
     } else if (ticket.start_time) {
       setStartTime(formatForInput(ticket.start_time));
     }
-    
+
     if (ticket.endTime) {
       setEndTime(formatForInput(ticket.endTime));
     } else if (ticket.end_time) {
       setEndTime(formatForInput(ticket.end_time));
     }
-    
+
     setBreakTime(ticket.breakTime ? String(Math.floor(ticket.breakTime / 60)) : (ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0'));
   }
 
@@ -1508,7 +1508,7 @@ function TicketsPage() {
         setCancellationFee(parsedLead.cancellationFee != null ? String(parsedLead.cancellationFee) : (parsedLead.cancellation_fee != null ? String(parsedLead.cancellation_fee) : ''))
         setBillingType(parsedLead.billingType || 'Hourly')
         setLeadType(parsedLead.leadType || 'Full time')
-        
+
         // Engineer Payout Configuration from LeadsPage assignment modal
         setEngineerId(parsedLead.engineerId ? String(parsedLead.engineerId) : '')
         setEngineerName(parsedLead.engineerName || '')
@@ -1526,7 +1526,7 @@ function TicketsPage() {
         const lDate = parsedLead.followUpDate || parsedLead.taskStartDate;
         const lEndDate = parsedLead.taskEndDate || lDate;
         const lTime = parsedLead.taskTime || '09:00';
-        
+
         if (lDate && lTime) {
           const sDateOnly = String(lDate).split('T')[0];
           const eDateOnly = String(lEndDate).split('T')[0];
@@ -1583,9 +1583,9 @@ function TicketsPage() {
       const lEndDate = latestEndDate;
       const lTime = lead.taskTime || '09:00';
       if (lDate && lTime) {
-          const sDateOnly = String(lDate).split('T')[0];
-          const eDateOnly = String(lEndDate).split('T')[0];
-          autoSyncTime(sDateOnly, eDateOnly, lTime);
+        const sDateOnly = String(lDate).split('T')[0];
+        const eDateOnly = String(lEndDate).split('T')[0];
+        autoSyncTime(sDateOnly, eDateOnly, lTime);
       }
     }
   }, [leads, leadId])
@@ -1603,15 +1603,15 @@ function TicketsPage() {
     if (engineerId && engineers.length > 0 && engPayType === 'Default') {
       const eng = engineers.find(e => String(e.id) === String(engineerId));
       if (eng) {
-         console.log(`[SYNC] Auto-populating profile rates for ${eng.name}`);
-         setEngBillingType(eng.billing_type || 'Hourly');
-         setEngHourlyRate(String(eng.hourly_rate != null ? eng.hourly_rate : '0.00'));
-         setEngHalfDayRate(String(eng.half_day_rate != null ? eng.half_day_rate : '0.00'));
-         setEngFullDayRate(String(eng.full_day_rate != null ? eng.full_day_rate : '0.00'));
-         setEngMonthlyRate(String(eng.monthly_rate != null ? eng.monthly_rate : '0.00'));
-         setEngAgreedRate(String(eng.agreed_rate || '0.00'));
-         setEngCancellationFee(String(eng.cancellation_fee != null ? eng.cancellation_fee : '0.00'));
-         setEngCurrency(eng.currency || 'USD');
+        console.log(`[SYNC] Auto-populating profile rates for ${eng.name}`);
+        setEngBillingType(eng.billing_type || 'Hourly');
+        setEngHourlyRate(String(eng.hourly_rate != null ? eng.hourly_rate : '0.00'));
+        setEngHalfDayRate(String(eng.half_day_rate != null ? eng.half_day_rate : '0.00'));
+        setEngFullDayRate(String(eng.full_day_rate != null ? eng.full_day_rate : '0.00'));
+        setEngMonthlyRate(String(eng.monthly_rate != null ? eng.monthly_rate : '0.00'));
+        setEngAgreedRate(String(eng.agreed_rate || '0.00'));
+        setEngCancellationFee(String(eng.cancellation_fee != null ? eng.cancellation_fee : '0.00'));
+        setEngCurrency(eng.currency || 'USD');
       }
     }
   }, [engineerId, engineers, engPayType]);
@@ -1871,34 +1871,34 @@ function TicketsPage() {
                   <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <FiDollarSign style={{ color: '#2563eb' }} /> Engineer Payout Configuration
                   </h3>
-                  
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                     <div className="payout-type-selector" style={{ background: engPayType === 'Default' ? '#eff6ff' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Default' ? '#3b82f6' : '#e2e8f0', cursor: 'pointer' }} onClick={() => {
-                        setEngPayType('Default');
-                        const eng = engineers.find(en => String(en.id) === String(engineerId));
-                        if (eng) {
-                            setEngBillingType(eng.billing_type || 'Hourly')
-                            setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '')
-                            setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '')
-                            setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '')
-                            setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
-                            setEngAgreedRate(eng.agreed_rate || '')
-                            setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
-                            setEngCurrency(eng.currency || 'USD')
-                        }
+                      setEngPayType('Default');
+                      const eng = engineers.find(en => String(en.id) === String(engineerId));
+                      if (eng) {
+                        setEngBillingType(eng.billing_type || 'Hourly')
+                        setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '')
+                        setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '')
+                        setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '')
+                        setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
+                        setEngAgreedRate(eng.agreed_rate || '')
+                        setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
+                        setEngCurrency(eng.currency || 'USD')
+                      }
                     }}>
-                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#1e40af', fontWeight: '700' }}>
-                          <input type="radio" name="engPayType" value="Default" checked={engPayType === 'Default'} readOnly />
-                          Engineers Profile Rates
-                       </label>
-                       <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Automatically use rates from the engineer's profile.</p>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#1e40af', fontWeight: '700' }}>
+                        <input type="radio" name="engPayType" value="Default" checked={engPayType === 'Default'} readOnly />
+                        Engineers Profile Rates
+                      </label>
+                      <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Automatically use rates from the engineer's profile.</p>
                     </div>
                     <div className="payout-type-selector" style={{ background: engPayType === 'Custom' ? '#fdf2f8' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Custom' ? '#db2777' : '#e2e8f0', cursor: 'pointer' }} onClick={() => setEngPayType('Custom')}>
-                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#831843', fontWeight: '700' }}>
-                          <input type="radio" name="engPayType" value="Custom" checked={engPayType === 'Custom'} readOnly />
-                          Custom Ticket Rates
-                       </label>
-                       <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Manually override rates and billing type for this ticket.</p>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#831843', fontWeight: '700' }}>
+                        <input type="radio" name="engPayType" value="Custom" checked={engPayType === 'Custom'} readOnly />
+                        Custom Ticket Rates
+                      </label>
+                      <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Manually override rates and billing type for this ticket.</p>
                     </div>
                   </div>
 
@@ -1964,22 +1964,22 @@ function TicketsPage() {
                   )}
                   {engPayType === 'Default' && (
                     <div style={{ marginTop: '12px', background: '#f1f5f9', padding: '15px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                       <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <FiInfo style={{ color: '#64748b' }} /> Current Profile Rates:
-                       </p>
-                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br/> {engBillingType}</div>
-                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br/> {engCurrency} {engHourlyRate || '0.00'}</div>
-                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Half Day:</b><br/> {engCurrency} {engHalfDayRate || '0.00'}</div>
-                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Full Day:</b><br/> {engCurrency} {engFullDayRate || '0.00'}</div>
-                          {engBillingType === 'Monthly + OT + Weekend' && (
-                             <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Monthly:</b><br/> {engCurrency} {engMonthlyRate || '0.00'}</div>
-                          )}
-                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancellation:</b><br/> {engCurrency} {engCancellationFee || '0.00'}</div>
-                       </div>
-                       <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '10px', fontStyle: 'italic' }}>
-                          These rates are pulled from the engineer's profile. Switch to "Custom Ticket Rates" above to override.
-                       </p>
+                      <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <FiInfo style={{ color: '#64748b' }} /> Current Profile Rates:
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br /> {engBillingType}</div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br /> {engCurrency} {engHourlyRate || '0.00'}</div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Half Day:</b><br /> {engCurrency} {engHalfDayRate || '0.00'}</div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Full Day:</b><br /> {engCurrency} {engFullDayRate || '0.00'}</div>
+                        {engBillingType === 'Monthly + OT + Weekend' && (
+                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Monthly:</b><br /> {engCurrency} {engMonthlyRate || '0.00'}</div>
+                        )}
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancellation:</b><br /> {engCurrency} {engCancellationFee || '0.00'}</div>
+                      </div>
+                      <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '10px', fontStyle: 'italic' }}>
+                        These rates are pulled from the engineer's profile. Switch to "Custom Ticket Rates" above to override.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -2150,7 +2150,7 @@ function TicketsPage() {
           {/* Conditional Time Adjustment Section */}
           {(() => {
             const isMultiDay = taskStartDate && taskEndDate && taskStartDate !== taskEndDate;
-            
+
             if (!isMultiDay) {
               // Same Day Task
               return (
@@ -2193,110 +2193,110 @@ function TicketsPage() {
                   <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '12px', color: '#6366f1' }}>
                     Assign different engineers or set individual times per day.
                   </p>
-                  
+
                   <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                     <table className="tickets-table" style={{ fontSize: '12px' }}>
-                       <thead>
-                          <tr style={{ background: '#f8fafc' }}>
-                             <th style={{ padding: '10px' }}>Date</th>
-                             <th style={{ padding: '10px' }}>Engineer</th>
-                             <th style={{ padding: '10px' }}>Shift (In / Out / Break)</th>
-                             <th style={{ padding: '10px', textAlign: 'center' }}>Hrs</th>
-                             <th style={{ padding: '10px', textAlign: 'right' }}>Est. Cost</th>
-                          </tr>
-                       </thead>
-                       <tbody>
-                          {(() => {
-                            const dates = getDatesInRange(taskStartDate, taskEndDate);
+                      <thead>
+                        <tr style={{ background: '#f8fafc' }}>
+                          <th style={{ padding: '10px' }}>Date</th>
+                          <th style={{ padding: '10px' }}>Engineer</th>
+                          <th style={{ padding: '10px' }}>Shift (In / Out / Break)</th>
+                          <th style={{ padding: '10px', textAlign: 'center' }}>Hrs</th>
+                          <th style={{ padding: '10px', textAlign: 'right' }}>Est. Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const dates = getDatesInRange(taskStartDate, taskEndDate);
 
-                            return dates.map((dStr, idx) => {
-                               const existingLog = (timeLogs || []).find(l => l.task_date?.split('T')[0] === dStr) || {};
-                               const dur = (existingLog.start_time && existingLog.end_time)
-                                 ? (new Date(existingLog.end_time) - new Date(existingLog.start_time)) / 3600000 - (existingLog.break_time_mins / 60)
-                                 : 8; 
-                               
-                               const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
-                               const sTime = `${dStr}T${cleanTime}:00Z`;
-                               const startD = new Date(sTime);
-                               let eTime = '';
-                               
-                               if (!isNaN(startD.getTime())) {
-                                  eTime = new Date(startD.getTime() + (8 * 3600 * 1000)).toISOString();
-                               }
+                          return dates.map((dStr, idx) => {
+                            const existingLog = (timeLogs || []).find(l => l.task_date?.split('T')[0] === dStr) || {};
+                            const dur = (existingLog.start_time && existingLog.end_time)
+                              ? (new Date(existingLog.end_time) - new Date(existingLog.start_time)) / 3600000 - (existingLog.break_time_mins / 60)
+                              : 8;
 
-                               const dayCostBreakdown = calculateTicketTotal({
-                                 startTime: sTime,
-                                 endTime: eTime,
-                                 breakTime: '0',
-                                 hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                                 travelCostPerDay: 0, toolCost: 0, billingType, timezone, calcTimezone
-                               });
+                            const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
+                            const sTime = `${dStr}T${cleanTime}:00Z`;
+                            const startD = new Date(sTime);
+                            let eTime = '';
 
-                               return (
-                                 <tr key={dStr} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                   <td style={{ padding: '10px' }}>
-                                     <b style={{ color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b>
-                                     <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
-                                   </td>
-                                   <td style={{ padding: '10px' }}>
-                                     {editingTicketId ? (
-                                       existingLog.id ? (
-                                         <select 
-                                           style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
-                                           value={existingLog.engineer_id || engineerId}
-                                           onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
-                                         >
-                                           {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                         </select>
-                                       ) : (
-                                         <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>Pending save...</div>
-                                       )
-                                     ) : (
-                                        <span style={{ fontSize: '11px', color: '#64748b' }}>{engineerName || 'Primary Engineer'}</span>
-                                     )}
-                                   </td>
-                                   <td style={{ padding: '10px' }}>
-                                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                       <input type="time" id={`fst-${idx}`} defaultValue={taskTime || "09:00"} style={{ padding: '2px', fontSize: '11px' }} />
-                                       <span>to</span>
-                                       <input type="time" id={`fet-${idx}`} defaultValue={(() => {
-                                          if (!taskTime) return "18:00";
-                                          const [h, m] = taskTime.split(':').map(Number);
-                                          return `${String((h + 8) % 24).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
-                                       })()} style={{ padding: '2px', fontSize: '11px' }} />
-                                       <input type="number" id={`fbr-${idx}`} placeholder="Break" defaultValue="0" style={{ width: '45px', padding: '2px', fontSize: '11px' }} />
-                                       {editingTicketId && existingLog.id && (
-                                         <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
-                                            const st = document.getElementById(`fst-${idx}`).value;
-                                            const et = document.getElementById(`fet-${idx}`).value;
-                                            const br = document.getElementById(`fbr-${idx}`).value;
-                                            handleUpdateLog(existingLog.id, {
-                                               startTime: `${dStr}T${st}:00.000Z`,
-                                               endTime: `${dStr}T${et}:00.000Z`,
-                                               breakTimeMins: parseInt(br) || 0
-                                            });
-                                         }}>Update</button>
-                                       )}
-                                     </div>
-                                   </td>
-                                   <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
-                                     {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
-                                     {editingTicketId && dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
-                                   </td>
-                                   <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
-                                      {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
-                                   </td>
-                                 </tr>
-                               );
+                            if (!isNaN(startD.getTime())) {
+                              eTime = new Date(startD.getTime() + (8 * 3600 * 1000)).toISOString();
+                            }
+
+                            const dayCostBreakdown = calculateTicketTotal({
+                              startTime: sTime,
+                              endTime: eTime,
+                              breakTime: '0',
+                              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                              travelCostPerDay: 0, toolCost: 0, billingType, timezone, calcTimezone
                             });
-                          })()}
-                       </tbody>
+
+                            return (
+                              <tr key={dStr} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '10px' }}>
+                                  <b style={{ color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b>
+                                  <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
+                                </td>
+                                <td style={{ padding: '10px' }}>
+                                  {editingTicketId ? (
+                                    existingLog.id ? (
+                                      <select
+                                        style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
+                                        value={existingLog.engineer_id || engineerId}
+                                        onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
+                                      >
+                                        {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                      </select>
+                                    ) : (
+                                      <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>Pending save...</div>
+                                    )
+                                  ) : (
+                                    <span style={{ fontSize: '11px', color: '#64748b' }}>{engineerName || 'Primary Engineer'}</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px' }}>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <input type="time" id={`fst-${idx}`} defaultValue={taskTime || "09:00"} style={{ padding: '2px', fontSize: '11px' }} />
+                                    <span>to</span>
+                                    <input type="time" id={`fet-${idx}`} defaultValue={(() => {
+                                      if (!taskTime) return "18:00";
+                                      const [h, m] = taskTime.split(':').map(Number);
+                                      return `${String((h + 8) % 24).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
+                                    })()} style={{ padding: '2px', fontSize: '11px' }} />
+                                    <input type="number" id={`fbr-${idx}`} placeholder="Break" defaultValue="0" style={{ width: '45px', padding: '2px', fontSize: '11px' }} />
+                                    {editingTicketId && existingLog.id && (
+                                      <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
+                                        const st = document.getElementById(`fst-${idx}`).value;
+                                        const et = document.getElementById(`fet-${idx}`).value;
+                                        const br = document.getElementById(`fbr-${idx}`).value;
+                                        handleUpdateLog(existingLog.id, {
+                                          startTime: `${dStr}T${st}:00.000Z`,
+                                          endTime: `${dStr}T${et}:00.000Z`,
+                                          breakTimeMins: parseInt(br) || 0
+                                        });
+                                      }}>Update</button>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
+                                  {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
+                                  {editingTicketId && dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
+                                  {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
                     </table>
                   </div>
                   {!editingTicketId && (
-                     <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', background: '#fef3c7', padding: '10px', borderRadius: '8px' }}>
-                        💡 <strong>Note:</strong> Daily logs with individual times/engineers can be managed in detail once the ticket is created or while editing.
-                     </div>
+                    <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', background: '#fef3c7', padding: '10px', borderRadius: '8px' }}>
+                      💡 <strong>Note:</strong> Daily logs with individual times/engineers can be managed in detail once the ticket is created or while editing.
+                    </div>
                   )}
                 </section>
               );
@@ -2506,16 +2506,16 @@ function TicketsPage() {
 
                 {/* Breakdown Lines */}
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  
+
                   {/* Base */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
-                      Base ({billingType === 'Hourly' ? `${liveBreakdown.hrs}h × ${currency}${hourlyRate}/hr` 
-                           : billingType === 'Half Day + Hourly' ? 'Half Day flat' 
-                           : billingType === 'Full Day + OT' ? 'Full Day flat'
-                           : billingType.includes('Monthly') ? 'Monthly rate'
-                           : billingType === 'Agreed Rate' ? 'Fixed rate'
-                           : 'Cancellation fee'})
+                      Base ({billingType === 'Hourly' ? `${liveBreakdown.hrs}h × ${currency}${hourlyRate}/hr`
+                        : billingType === 'Half Day + Hourly' ? 'Half Day flat'
+                          : billingType === 'Full Day + OT' ? 'Full Day flat'
+                            : billingType.includes('Monthly') ? 'Monthly rate'
+                              : billingType === 'Agreed Rate' ? 'Fixed rate'
+                                : 'Cancellation fee'})
                     </span>
                     <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700' }}>{currency} {liveBreakdown.base}</span>
                   </div>
@@ -2551,14 +2551,14 @@ function TicketsPage() {
                   )}
 
                   {/* Travel Cost */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '6px' }}>
-                          <span>Travel Cost / Day (Total)</span>
-                          <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.travel}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '12px' }}>
-                          <span>Tool Cost / Day (Total)</span>
-                          <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.tools}</span>
-                        </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '6px' }}>
+                    <span>Travel Cost / Day (Total)</span>
+                    <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.travel}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '12px' }}>
+                    <span>Tool Cost / Day (Total)</span>
+                    <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.tools}</span>
+                  </div>
 
                   {/* Divider */}
                   <div style={{ borderTop: '1.5px dashed rgba(99, 102, 241, 0.3)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2573,11 +2573,11 @@ function TicketsPage() {
                   {payoutLiveBreakdown && (
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '10px', borderLeft: '4px solid #10b981', marginTop: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <div>
-                              <span style={{ display: 'block', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>Engineer Payout Estimation</span>
-                              <span style={{ fontSize: '9px', color: '#94a3b8' }}>Based on {engBillingType || 'Profile'} Rates (+ Travel & Tool)</span>
-                          </div>
-                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>Engineer Payout Estimation</span>
+                          <span style={{ fontSize: '9px', color: '#94a3b8' }}>Based on {engBillingType || 'Profile'} Rates (+ Travel & Tool)</span>
+                        </div>
+                        <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
                       </div>
                     </div>
                   )}
@@ -2727,7 +2727,7 @@ function TicketsPage() {
                           if (ticket.time_logs) {
                             parsedLogs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : ticket.time_logs;
                           }
-                        } catch(e) { parsedLogs = []; }
+                        } catch (e) { parsedLogs = []; }
 
                         const isDispatch = (ticket.leadType === 'Dispatch') || (parsedLogs.length > 0);
                         const isExpanded = expandedTicketRows.has(ticket.id);
@@ -2868,15 +2868,15 @@ function TicketsPage() {
                               <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                   <span>In: <strong>{(() => {
-                                      if (!log.start_time) return '--';
-                                      const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
-                                      return match ? `${match[1]}:${match[2]}` : '--';
-                                    })()}</strong></span>
+                                    if (!log.start_time) return '--';
+                                    const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
+                                    return match ? `${match[1]}:${match[2]}` : '--';
+                                  })()}</strong></span>
                                   <span>Out: <strong>{(() => {
-                                      if (!log.end_time) return '--';
-                                      const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
-                                      return match ? `${match[1]}:${match[2]}` : '--';
-                                    })()}</strong></span>
+                                    if (!log.end_time) return '--';
+                                    const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
+                                    return match ? `${match[1]}:${match[2]}` : '--';
+                                  })()}</strong></span>
                                   <span style={{ color: '#94a3b8' }}>Break: {log.break_time_mins || 0}m</span>
                                 </div>
                               </td>
@@ -2983,7 +2983,7 @@ function TicketsPage() {
                     } else {
                       alert('Failed to re-assign. Please try again.');
                     }
-                  } catch(e) { console.error(e); alert('Error during re-assignment.'); }
+                  } catch (e) { console.error(e); alert('Error during re-assignment.'); }
                 }}
               >
                 🔄 Confirm Re-assign
@@ -3225,95 +3225,95 @@ function TicketsPage() {
                         </thead>
                         <tbody>
                           {(timeLogs || []).map((log, lIdx) => {
-                             const dur = (log.start_time && log.end_time)
-                               ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
-                               : 0;
-                             const exceeded = dur > 8;
-                             return (
-                               <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: exceeded ? 'rgba(239, 68, 68, 0.02)' : 'transparent' }}>
-                                 <td style={{ padding: '10px' }}>
-                                   <div style={{ fontWeight: '700' }}>{new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
-                                   <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
-                                 </td>
-                                 <td style={{ padding: '10px' }}>
-                                   <select 
-                                     style={{ width: '100%', padding: '4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '4px' }}
-                                     value={log.engineer_id || selectedTicket.engineerId}
-                                     onChange={(e) => handleUpdateLog(log.id, { engineerId: Number(e.target.value) })}
-                                   >
-                                     {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                   </select>
-                                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                      <input type="time" id={`vst-${lIdx}`} defaultValue={(() => {
-                                        if (!log.start_time) return '';
-                                        const d = new Date(log.start_time);
-                                        return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[1].slice(0, 5);
-                                      })()} style={{ fontSize: '11px', padding: '2px' }} />
-                                      <span>-</span>
-                                      <input type="time" id={`vet-${lIdx}`} defaultValue={(() => {
-                                        if (!log.end_time) return '';
-                                        const d = new Date(log.end_time);
-                                        return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[1].slice(0, 5);
-                                      })()} style={{ fontSize: '11px', padding: '2px' }} />
-                                      <input type="number" id={`vbr-${lIdx}`} defaultValue={log.break_time_mins || 0} style={{ width: '35px', fontSize: '11px', padding: '2px' }} />
-                                      <button className="tickets-primary-btn" style={{ padding: '2px 6px', fontSize: '10px' }} onClick={() => {
-                                         const st = document.getElementById(`vst-${lIdx}`).value;
-                                         const et = document.getElementById(`vet-${lIdx}`).value;
-                                         const br = document.getElementById(`vbr-${lIdx}`).value;
-                                         if (!st || !et) return;
-                                         handleUpdateLog(log.id, {
-                                            startTime: `${log.task_date.split('T')[0]}T${st}:00.000Z`,
-                                            endTime: `${log.task_date.split('T')[0]}T${et}:00.000Z`,
-                                            breakTimeMins: parseInt(br) || 0
-                                         });
-                                      }}>Save</button>
-                                   </div>
-                                 </td>
-                                 <td style={{ padding: '10px', textAlign: 'center' }}>
-                                    {(() => {
-                                      const logDate = String(log.task_date || '').split('T')[0];
-                                      let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
-                                      let isEst = false;
-                                      if (!ls || !le) {
-                                        if (!logDate) return <span style={{ color: '#94a3b8' }}>--</span>;
-                                        const ct = (selectedTicket.taskTime || '08:00').slice(0, 5);
-                                        ls = `${logDate}T${ct}:00`;
-                                        const ed = new Date(`${logDate}T${ct}:00Z`);
-                                        ed.setUTCHours(ed.getUTCHours() + 8);
-                                        le = ed.toISOString().slice(0, 16);
-                                        lb = 0; isEst = true;
-                                      }
-                                      const logRes = calculateTicketTotal({
-                                        startTime: ls, endTime: le, breakTime: lb,
-                                        hourlyRate: selectedTicket.hourlyRate,
-                                        halfDayRate: selectedTicket.halfDayRate,
-                                        fullDayRate: selectedTicket.fullDayRate,
-                                        monthlyRate: selectedTicket.monthlyRate,
-                                        agreedRate: selectedTicket.agreedRate,
-                                        cancellationFee: selectedTicket.cancellationFee,
-                                        travelCostPerDay: selectedTicket.travelCostPerDay,
-                                        toolCost: selectedTicket.toolCost,
-                                        billingType: selectedTicket.billingType || 'Hourly',
-                                        timezone: selectedTicket.timezone,
-                                        calcTimezone: 'Ticket Local'
+                            const dur = (log.start_time && log.end_time)
+                              ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - (log.break_time_mins / 60)
+                              : 0;
+                            const exceeded = dur > 8;
+                            return (
+                              <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: exceeded ? 'rgba(239, 68, 68, 0.02)' : 'transparent' }}>
+                                <td style={{ padding: '10px' }}>
+                                  <div style={{ fontWeight: '700' }}>{new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
+                                  <div style={{ fontSize: '10px', color: '#94a3b8' }}>{log.is_weekend ? 'Weekend' : 'Weekday'}</div>
+                                </td>
+                                <td style={{ padding: '10px' }}>
+                                  <select
+                                    style={{ width: '100%', padding: '4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '4px' }}
+                                    value={log.engineer_id || selectedTicket.engineerId}
+                                    onChange={(e) => handleUpdateLog(log.id, { engineerId: Number(e.target.value) })}
+                                  >
+                                    {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                  </select>
+                                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                    <input type="time" id={`vst-${lIdx}`} defaultValue={(() => {
+                                      if (!log.start_time) return '';
+                                      const d = new Date(log.start_time);
+                                      return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[1].slice(0, 5);
+                                    })()} style={{ fontSize: '11px', padding: '2px' }} />
+                                    <span>-</span>
+                                    <input type="time" id={`vet-${lIdx}`} defaultValue={(() => {
+                                      if (!log.end_time) return '';
+                                      const d = new Date(log.end_time);
+                                      return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[1].slice(0, 5);
+                                    })()} style={{ fontSize: '11px', padding: '2px' }} />
+                                    <input type="number" id={`vbr-${lIdx}`} defaultValue={log.break_time_mins || 0} style={{ width: '35px', fontSize: '11px', padding: '2px' }} />
+                                    <button className="tickets-primary-btn" style={{ padding: '2px 6px', fontSize: '10px' }} onClick={() => {
+                                      const st = document.getElementById(`vst-${lIdx}`).value;
+                                      const et = document.getElementById(`vet-${lIdx}`).value;
+                                      const br = document.getElementById(`vbr-${lIdx}`).value;
+                                      if (!st || !et) return;
+                                      handleUpdateLog(log.id, {
+                                        startTime: `${log.task_date.split('T')[0]}T${st}:00.000Z`,
+                                        endTime: `${log.task_date.split('T')[0]}T${et}:00.000Z`,
+                                        breakTimeMins: parseInt(br) || 0
                                       });
-                                      const cost = logRes?.grandTotal || '0.00';
-                                      return (
-                                        <div>
-                                          <div style={{ fontWeight: '800', color: exceeded ? '#ef4444' : '#6366f1', fontSize: '12px' }}>
-                                            {selectedTicket.currency} {cost}
-                                          </div>
-                                          {isEst && <div style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>est.</div>}
-                                          {exceeded && <div style={{ fontSize: '9px', color: '#ef4444', fontWeight: '700' }}>⚠ HOLD</div>}
+                                    }}>Save</button>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'center' }}>
+                                  {(() => {
+                                    const logDate = String(log.task_date || '').split('T')[0];
+                                    let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
+                                    let isEst = false;
+                                    if (!ls || !le) {
+                                      if (!logDate) return <span style={{ color: '#94a3b8' }}>--</span>;
+                                      const ct = (selectedTicket.taskTime || '08:00').slice(0, 5);
+                                      ls = `${logDate}T${ct}:00`;
+                                      const ed = new Date(`${logDate}T${ct}:00Z`);
+                                      ed.setUTCHours(ed.getUTCHours() + 8);
+                                      le = ed.toISOString().slice(0, 16);
+                                      lb = 0; isEst = true;
+                                    }
+                                    const logRes = calculateTicketTotal({
+                                      startTime: ls, endTime: le, breakTime: lb,
+                                      hourlyRate: selectedTicket.hourlyRate,
+                                      halfDayRate: selectedTicket.halfDayRate,
+                                      fullDayRate: selectedTicket.fullDayRate,
+                                      monthlyRate: selectedTicket.monthlyRate,
+                                      agreedRate: selectedTicket.agreedRate,
+                                      cancellationFee: selectedTicket.cancellationFee,
+                                      travelCostPerDay: selectedTicket.travelCostPerDay,
+                                      toolCost: selectedTicket.toolCost,
+                                      billingType: selectedTicket.billingType || 'Hourly',
+                                      timezone: selectedTicket.timezone,
+                                      calcTimezone: 'Ticket Local'
+                                    });
+                                    const cost = logRes?.grandTotal || '0.00';
+                                    return (
+                                      <div>
+                                        <div style={{ fontWeight: '800', color: exceeded ? '#ef4444' : '#6366f1', fontSize: '12px' }}>
+                                          {selectedTicket.currency} {cost}
                                         </div>
-                                      );
-                                    })()}
-                                  </td>
-                                 <td style={{ padding: '10px', textAlign: 'right' }}>
-                                   <button className="btn-wow-secondary" style={{ padding: '2px 8px', fontSize: '10px', borderColor: '#ef4444', color: '#ef4444' }} onClick={() => handleResolveEarly(log.task_date.split('T')[0])}>Resolve Early</button>
-                                 </td>
-                               </tr>
-                             );
+                                        {isEst && <div style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>est.</div>}
+                                        {exceeded && <div style={{ fontSize: '9px', color: '#ef4444', fontWeight: '700' }}>⚠ HOLD</div>}
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'right' }}>
+                                  <button className="btn-wow-secondary" style={{ padding: '2px 8px', fontSize: '10px', borderColor: '#ef4444', color: '#ef4444' }} onClick={() => handleResolveEarly(log.task_date.split('T')[0])}>Resolve Early</button>
+                                </td>
+                              </tr>
+                            );
                           })}
                         </tbody>
                       </table>
@@ -3426,7 +3426,7 @@ function TicketsPage() {
                           <span style={{ fontWeight: '700', fontSize: '14px' }}>
                             {selectedTicket.endTime
                               ? new Date(selectedTicket.endTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
-                               : 'Not finished'}
+                              : 'Not finished'}
                           </span>
                         </div>
                         <div className="detail-item" style={{ margin: 0 }}>
@@ -3447,7 +3447,7 @@ function TicketsPage() {
                 )}
 
                 <div className="detail-item--full divider"></div>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
                   <div>
                     <label style={{ fontSize: '13px', fontWeight: '800', color: '#7c3aed', margin: 0, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Grand Total (Receivable)</label>
@@ -3498,7 +3498,7 @@ function TicketsPage() {
                         }
 
                         const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
-                        const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
+                        const bestEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.end_time);
 
                         if (bestStart && bestEnd) {
                           const liveResult = calculateTicketTotal({
@@ -3574,7 +3574,7 @@ function TicketsPage() {
                         }
 
                         const bestStart = isInlineEditing ? inlineStartTime : (selectedTicket.startTime || selectedTicket.start_time);
-                        const bestEnd   = isInlineEditing ? inlineEndTime   : (selectedTicket.endTime   || selectedTicket.end_time);
+                        const bestEnd = isInlineEditing ? inlineEndTime : (selectedTicket.endTime || selectedTicket.end_time);
 
                         if (bestStart && bestEnd) {
                           const liveResult = calculateTicketTotal({
@@ -3609,13 +3609,13 @@ function TicketsPage() {
                     onClick={() => {
                       if (!isInlineEditing) {
                         const actualStart = selectedTicket.startTime || selectedTicket.start_time;
-                        const actualEnd   = selectedTicket.endTime   || selectedTicket.end_time;
+                        const actualEnd = selectedTicket.endTime || selectedTicket.end_time;
                         if (actualStart) {
                           setInlineStartTime(formatForInput(actualStart));
                           setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
                         } else {
-                          const schedDate  = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
-                          const schedTime  = selectedTicket.taskTime ? selectedTicket.taskTime.padStart(5, '0') : '08:00';
+                          const schedDate = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
+                          const schedTime = selectedTicket.taskTime ? selectedTicket.taskTime.padStart(5, '0') : '08:00';
                           if (schedDate) {
                             setInlineStartTime(`${schedDate}T${schedTime}`);
                             setInlineEndTime(`${schedDate}T16:00`);
@@ -3627,8 +3627,8 @@ function TicketsPage() {
                       setIsInlineEditing(!isInlineEditing);
                       if ((selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0]) && !isInlineEditing) {
                         setTimeout(() => {
-                           const el = document.querySelector('.dispatch-logs-table-wrapper');
-                           if (el) el.scrollIntoView({ behavior: 'smooth' });
+                          const el = document.querySelector('.dispatch-logs-table-wrapper');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
                         }, 100);
                       }
                     }}
@@ -3751,7 +3751,7 @@ function TicketsPage() {
                     if (!isInlineEditing) {
                       // Resolve actual start/end time from ticket
                       const actualStart = selectedTicket.startTime || selectedTicket.start_time;
-                      const actualEnd   = selectedTicket.endTime   || selectedTicket.end_time;
+                      const actualEnd = selectedTicket.endTime || selectedTicket.end_time;
 
                       if (actualStart) {
                         // Ticket already has activity times recorded — use them directly
@@ -3759,9 +3759,9 @@ function TicketsPage() {
                         setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
                       } else {
                         // No activity yet — auto-fill from scheduled task details (wall-clock, no TZ shift)
-                        const schedDate  = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
-                        const schedEDate = selectedTicket.taskEndDate   ? selectedTicket.taskEndDate.split('T')[0]   : schedDate;
-                        const schedTime  = selectedTicket.taskTime ? selectedTicket.taskTime.padStart(5, '0') : '08:00';
+                        const schedDate = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
+                        const schedEDate = selectedTicket.taskEndDate ? selectedTicket.taskEndDate.split('T')[0] : schedDate;
+                        const schedTime = selectedTicket.taskTime ? selectedTicket.taskTime.padStart(5, '0') : '08:00';
                         if (schedDate) {
                           setInlineStartTime(`${schedDate}T${schedTime}`);
                           // Default end = same day start + 8 hours (pure arithmetic, no new Date())
