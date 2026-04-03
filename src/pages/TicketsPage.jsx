@@ -413,25 +413,33 @@ function TicketsPage() {
       let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: numDays };
 
       daysArr.forEach((d) => {
-        const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
-        const sTime = `${d}T${cleanTime}:00Z`;
-        const sDate = new Date(sTime);
-        if (isNaN(sDate.getTime())) return;
-
-        const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000));
-        const eTime = eTimeDate.toISOString().replace('Z', '');
+        const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
+        
+        let sTime, eTime, bMins = 0;
+        if (existing && existing.start_time && existing.end_time) {
+          sTime = existing.start_time;
+          eTime = existing.end_time;
+          bMins = existing.break_time_mins || 0;
+        } else {
+          const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
+          sTime = `${d}T${cleanTime}:00Z`;
+          const sDate = new Date(sTime);
+          if (isNaN(sDate.getTime())) return;
+          const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000));
+          eTime = eTimeDate.toISOString().replace('Z', '');
+        }
 
         const res = calculateTicketTotal({
-          startTime: sTime, endTime: eTime, breakTime: '0',
+          startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
           travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
         });
 
         const payRes = calculateTicketTotal({
-          startTime: sTime, endTime: eTime, breakTime: '0',
+          startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0, monthlyRate: engMonthlyRate || 0,
           agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
-          travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
+          travelCostPerDay: 0, toolCost: 0, billingType: engBillingType, timezone, calcTimezone
         });
 
         if (res) {
@@ -483,7 +491,7 @@ function TicketsPage() {
     startTime, endTime, breakTime, taskStartDate, taskEndDate, taskTime,
     hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
     engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee,
-    travelCostPerDay, toolCostInput, billingType, engBillingType, timezone, calcTimezone
+    travelCostPerDay, toolCostInput, billingType, engBillingType, timezone, calcTimezone, timeLogs
   ]);
 
   // Sync Task Dates with Manual Time Log
@@ -609,6 +617,40 @@ function TicketsPage() {
       setLoading(false)
     }
   }
+
+  // Initialize/Sync Time Logs during CREATE mode for Dispatch tickets
+  useEffect(() => {
+    if (!editingTicketId && (leadType === 'Dispatch' || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate))) {
+      const dates = getDatesInRange(taskStartDate, taskEndDate);
+      const ct = (taskTime || '09:00').slice(0, 5);
+      
+      const newLogs = dates.map(dStr => {
+        const existing = timeLogs.find(l => (l.task_date || '').split('T')[0] === dStr);
+        if (existing) return existing;
+
+        const sTime = `${dStr}T${ct}:00.000Z`;
+        const startD = new Date(sTime);
+        let eTime = '';
+        if (!isNaN(startD.getTime())) {
+          eTime = new Date(startD.getTime() + (8 * 3600 * 1000)).toISOString();
+        }
+        return {
+          task_date: dStr,
+          start_time: sTime,
+          end_time: eTime,
+          break_time_mins: 0,
+          engineer_id: engineerId || null
+        };
+      });
+
+      // Simple deep equality check or just check length/dates to avoid infinite loops
+      const currentDates = timeLogs.map(l => (l.task_date || '').split('T')[0]).join(',');
+      const targetDates = dates.join(',');
+      if (currentDates !== targetDates) {
+        setTimeLogs(newLogs);
+      }
+    }
+  }, [taskStartDate, taskEndDate, taskTime, editingTicketId, leadType, engineerId]);
 
   const loadDropdowns = async () => {
     try {
@@ -2273,14 +2315,44 @@ function TicketsPage() {
                                 </td>
                                 <td style={{ padding: '10px' }}>
                                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                    <input type="time" id={`fst-${idx}`} defaultValue={taskTime || "09:00"} style={{ padding: '2px', fontSize: '11px' }} />
+                                    <input 
+                                      type="time" 
+                                      id={`fst-${idx}`} 
+                                      value={existingLog.start_time ? existingLog.start_time.split('T')[1].slice(0,5) : (taskTime || "09:00")} 
+                                      style={{ padding: '2px', fontSize: '11px' }} 
+                                      onChange={(e) => {
+                                        const newTime = e.target.value;
+                                        if(!editingTicketId) {
+                                          setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, start_time: `${dStr}T${newTime}:00.000Z` } : l));
+                                        }
+                                      }}
+                                    />
                                     <span>to</span>
-                                    <input type="time" id={`fet-${idx}`} defaultValue={(() => {
-                                      if (!taskTime) return "18:00";
-                                      const [h, m] = taskTime.split(':').map(Number);
-                                      return `${String((h + 8) % 24).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
-                                    })()} style={{ padding: '2px', fontSize: '11px' }} />
-                                    <input type="number" id={`fbr-${idx}`} placeholder="Break" defaultValue="0" style={{ width: '45px', padding: '2px', fontSize: '11px' }} />
+                                    <input 
+                                      type="time" 
+                                      id={`fet-${idx}`} 
+                                      value={existingLog.end_time ? existingLog.end_time.split('T')[1].slice(0,5) : "18:00"} 
+                                      style={{ padding: '2px', fontSize: '11px' }} 
+                                      onChange={(e) => {
+                                        const newTime = e.target.value;
+                                        if(!editingTicketId) {
+                                          setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, end_time: `${dStr}T${newTime}:00.000Z` } : l));
+                                        }
+                                      }}
+                                    />
+                                    <input 
+                                      type="number" 
+                                      id={`fbr-${idx}`} 
+                                      placeholder="Break" 
+                                      value={existingLog.break_time_mins || 0} 
+                                      style={{ width: '45px', padding: '2px', fontSize: '11px' }} 
+                                      onChange={(e) => {
+                                        const bMins = parseInt(e.target.value) || 0;
+                                        if(!editingTicketId) {
+                                          setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, break_time_mins: bMins } : l));
+                                        }
+                                      }}
+                                    />
                                     {editingTicketId && existingLog.id && (
                                       <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
                                         const st = document.getElementById(`fst-${idx}`).value;
