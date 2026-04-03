@@ -2274,6 +2274,10 @@ function TicketsPage() {
                                         const st = document.getElementById(`fst-${idx}`).value;
                                         const et = document.getElementById(`fet-${idx}`).value;
                                         const br = document.getElementById(`fbr-${idx}`).value;
+                                        if (!st || !et) {
+                                          alert('Please provide both Start and End times.');
+                                          return;
+                                        }
                                         handleUpdateLog(existingLog.id, {
                                           startTime: `${dStr}T${st}:00.000Z`,
                                           endTime: `${dStr}T${et}:00.000Z`,
