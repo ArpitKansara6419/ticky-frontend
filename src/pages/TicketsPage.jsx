@@ -3443,14 +3443,16 @@ function TicketsPage() {
                             : allDates.map(d => ({ task_date: d }));
                           let total = 0;
                           logsToUse.forEach(log => {
-                            const tDate = String(log.task_date || '').split('T')[0];
-                            if (!tDate) return;
                             let sTime, eTime, brk;
                             if (log.start_time && log.end_time) {
                               sTime = log.start_time; eTime = log.end_time; brk = log.break_time_mins || 0;
                             } else {
-                              sTime = `${tDate}T${cleanTaskTime}:00`;
-                              const dEnd = new Date(`${tDate}T${cleanTaskTime}:00Z`);
+                              const d = new Date(log.task_date);
+                              if (isNaN(d.getTime())) return;
+                              const dateStr = d.toISOString().split('T')[0];
+                              sTime = `${dateStr}T${cleanTaskTime}:00`;
+                              const dEnd = new Date(`${dateStr}T${cleanTaskTime}:00Z`);
+                              if (isNaN(dEnd.getTime())) return;
                               dEnd.setUTCHours(dEnd.getUTCHours() + 8);
                               eTime = dEnd.toISOString().slice(0, 16);
                               brk = 0;
@@ -3517,14 +3519,16 @@ function TicketsPage() {
                             : allDates2.map(d => ({ task_date: d }));
                           let total = 0;
                           logsToUse2.forEach(log => {
-                            const tDate = String(log.task_date || '').split('T')[0];
-                            if (!tDate) return;
                             let sTime, eTime, brk;
                             if (log.start_time && log.end_time) {
                               sTime = log.start_time; eTime = log.end_time; brk = log.break_time_mins || 0;
                             } else {
-                              sTime = `${tDate}T${cleanTaskTime2}:00`;
-                              const dEnd2 = new Date(`${tDate}T${cleanTaskTime2}:00Z`);
+                              const d = new Date(log.task_date);
+                              if (isNaN(d.getTime())) return;
+                              const dateStr = d.toISOString().split('T')[0];
+                              sTime = `${dateStr}T${cleanTaskTime2}:00`;
+                              const dEnd2 = new Date(`${dateStr}T${cleanTaskTime2}:00Z`);
+                              if (isNaN(dEnd2.getTime())) return;
                               dEnd2.setUTCHours(dEnd2.getUTCHours() + 8);
                               eTime = dEnd2.toISOString().slice(0, 16);
                               brk = 0;
