@@ -1054,6 +1054,7 @@ function TicketsPage() {
         setTimeLogs(freshTicket.time_logs || [])  // Immediately available from backend
         setIsTicketModalOpen(true)
         setIsInlineEditing(false)
+        if (engineers.length === 0) loadDropdowns(); 
         fetchTicketExtras(ticketId)  // Also fetch for notes/attachments/expenses
         setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : (freshTicket.taskStartDate ? formatForInput(freshTicket.taskStartDate) : '')))
         setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : (freshTicket.taskEndDate ? formatForInput(freshTicket.taskEndDate) : '')))
@@ -3102,6 +3103,9 @@ function TicketsPage() {
                       }
                       setReassignModalOpen(false);
                       setReassignTicketId(null);
+                      if (isTicketModalOpen && selectedTicket?.id === reassignTicketId) {
+                        openTicketModal(reassignTicketId);
+                      }
                       loadTickets();
                       alert(`Ticket successfully re-assigned to ${newEng.name}`);
                     } else {
@@ -3145,7 +3149,16 @@ function TicketsPage() {
                 </div>
                 <div className="detail-item">
                   <label>Assigned Engineer</label>
-                  <span>{selectedTicket.engineerName || '--'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: '500' }}>{selectedTicket.engineerName || '--'}</span>
+                    <button 
+                      className="btn-wow-secondary" 
+                      style={{ padding: '2px 8px', fontSize: '10px' }}
+                      onClick={() => { setReassignTicketId(selectedTicket.id); setReassignModalOpen(true); }}
+                    >
+                      Change
+                    </button>
+                  </div>
                 </div>
                 <div className="detail-item--full">
                   <label>Service Date</label>
