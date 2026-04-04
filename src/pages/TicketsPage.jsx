@@ -42,6 +42,13 @@ const formatForInput = (dateStr) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+const safeExtractTime = (dtStr) => {
+  if (!dtStr) return '';
+  const str = String(dtStr);
+  const match = str.match(/(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : '';
+};
+
 const STATIC_COUNTRIES = [
   { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
   { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
@@ -176,8 +183,7 @@ function TicketsPage() {
 
   const [status, setStatus] = useState('Assigned')
   const [billingType, setBillingType] = useState('Hourly')
-  // The cancellationFee state was declared twice, removing the duplicate here.
-  // const [cancellationFee, setCancellationFee] = useState('')
+  const [isFillingForm, setIsFillingForm] = useState(false)
 
   // Map / LatLng states
   const [latitude, setLatitude] = useState(null)
@@ -407,6 +413,7 @@ function TicketsPage() {
   };
 
   useEffect(() => {
+    if (isFillingForm) return;
     const isMultiDay = taskStartDate && taskEndDate && taskStartDate !== taskEndDate;
     const daysArr = isMultiDay ? getDatesInRange(taskStartDate, taskEndDate) : [];
     const numDays = daysArr.length || 1;
@@ -528,7 +535,7 @@ function TicketsPage() {
     startTime, endTime, breakTime, taskStartDate, taskEndDate, taskTime,
     hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
     engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee,
-    travelCostPerDay, toolCostInput, billingType, engBillingType, timezone, calcTimezone, timeLogs
+    travelCostPerDay, toolCostInput, billingType, engBillingType, timezone, calcTimezone, timeLogs, isFillingForm
   ]);
 
   // Sync Task Dates with Manual Time Log
@@ -1340,7 +1347,7 @@ function TicketsPage() {
       eng_agreed_rate: ticket.engAgreedRate ?? ticket.eng_agreed_rate ?? '',
       eng_cancellation_fee: ticket.engCancellationFee ?? ticket.eng_cancellation_fee ?? ''
     }
-
+    setIsFillingForm(true);
     setCustomerId(normalized.customerId ? String(normalized.customerId) : '')
     setLeadId(normalized.leadId ? String(normalized.leadId) : '')
     setClientName(normalized.clientName || '')
@@ -1411,6 +1418,9 @@ function TicketsPage() {
     if (start) setStartTime(formatForInput(start));
     if (end) setEndTime(formatForInput(end));
     setBreakTime(normalized.breakTime != null ? String(Math.floor(Number(normalized.breakTime) / 60)) : (normalized.break_time != null ? String(Math.floor(Number(normalized.break_time) / 60)) : '0'));
+    
+    // Release guard after a short timeout to let states settle
+    setTimeout(() => setIsFillingForm(false), 500);
   }
 
   const handleViewDocument = (fileUrl) => {
@@ -2280,17 +2290,13 @@ function TicketsPage() {
                             const actualEndStr = existingLog.end_time || existingLog.endTime;
                             const actualBreak = existingLog.break_time_mins != null ? Number(existingLog.break_time_mins) : (existingLog.breakTime != null ? Number(existingLog.breakTime) : 0);
 
-                            const lStart = actualStartStr ? actualStartStr.split('T')[1].slice(0,5) : cleanTaskTime;
-                            
-                            let lEnd = '';
-                            if (actualEndStr) {
-                              lEnd = actualEndStr.split('T')[1].slice(0,5);
-                            } else {
-                              // Default to 8-hour shift from scheduled start
-                              const [h, m] = lStart.split(':');
-                              let endH = parseInt(h, 10) + 8;
-                              if (endH >= 24) endH = 23; // cap at midnight for simple default
-                              lEnd = `${String(endH).padStart(2, '0')}:${m}`;
+                            const lStart = safeExtractTime(actualStartStr) || cleanTaskTime;
+                            let lEnd = safeExtractTime(actualEndStr);
+                            if (!lEnd) {
+                               const [h, m] = (lStart || '09:00').split(':');
+                               let endH = parseInt(h, 10) + 8;
+                               if (endH >= 24) endH = 23;
+                               lEnd = `${String(endH).padStart(2, '0')}:${m || '00'}`;
                             }
 
                             const dur = calculateDuration(lStart, lEnd, actualBreak);
@@ -3067,7 +3073,12 @@ function TicketsPage() {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
                       credentials: 'include',
-                      body: JSON.stringify({ engineerName: newEng.name, engineerId: newEng.id, status: 'Assigned' })
+                      body: JSON.stringify({ 
+                        engineerName: newEng.name, 
+                        engineerId: newEng.id, 
+                        status: 'Assigned',
+                        engPayType: 'Default' // Reset to new engineer's profile rates
+                      })
                     });
 
                     if (res.ok) {
@@ -3267,8 +3278,8 @@ function TicketsPage() {
                                       {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
                                     </select>
                                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                      <input type="time" id={`vs-${i}`} defaultValue={L.start_time ? new Date(L.start_time).toISOString().split('T')[1].slice(0, 5) : ''} style={{ fontSize: '10px', padding: '2px' }} />
-                                      <input type="time" id={`ve-${i}`} defaultValue={L.end_time ? new Date(L.end_time).toISOString().split('T')[1].slice(0, 5) : ''} style={{ fontSize: '10px', padding: '2px' }} />
+                                      <input type="time" id={`vs-${i}`} defaultValue={safeExtractTime(L.start_time)} style={{ fontSize: '10px', padding: '2px' }} />
+                                      <input type="time" id={`ve-${i}`} defaultValue={safeExtractTime(L.end_time)} style={{ fontSize: '10px', padding: '2px' }} />
                                       <button className="tickets-primary-btn" style={{ padding: '2px 4px', fontSize: '10px' }} onClick={() => {
                                         const s = document.getElementById(`vs-${i}`).value, e = document.getElementById(`ve-${i}`).value;
                                         if (s && e) handleUpdateLog(L.id, { startTime: `${L.task_date.split('T')[0]}T${s}:00.000Z`, endTime: `${L.task_date.split('T')[0]}T${e}:00.000Z` });
@@ -3285,11 +3296,11 @@ function TicketsPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                           <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b' }}>GRAND TOTAL (RECEIVABLE)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1' }}>{selectedTicket.currency} {totalR.toFixed(2)}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1' }}>{selectedTicket.currency} {totalR > 0 ? totalR.toFixed(2) : parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
                           </div>
                           <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534' }}>GRAND TOTAL (PAYOUT)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669' }}>{selectedTicket.eng_currency || selectedTicket.currency} {totalP.toFixed(2)}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669' }}>{selectedTicket.eng_currency || selectedTicket.currency} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.engTotalCost || 0).toFixed(2)}</div>
                           </div>
                         </div>
                       </div>
