@@ -3356,7 +3356,8 @@ function TicketsPage() {
                           <tr>
                             <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
                             <th style={{ padding: '10px', textAlign: 'left' }}>Engineer & Times</th>
-                            <th style={{ padding: '10px', textAlign: 'center' }}>Total</th>
+                            <th style={{ padding: '10px', textAlign: 'right' }}>Receivable</th>
+                            <th style={{ padding: '10px', textAlign: 'right' }}>Payout</th>
                             <th style={{ padding: '10px', textAlign: 'right' }}>Action</th>
                           </tr>
                         </thead>
@@ -3406,15 +3407,13 @@ function TicketsPage() {
                                     }}>Save</button>
                                   </div>
                                 </td>
-                                <td style={{ padding: '10px', textAlign: 'center' }}>
+                                <td style={{ padding: '10px', textAlign: 'right' }}>
                                   {(() => {
                                     const logDate = String(log.task_date || '').split('T')[0];
                                     let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
                                     let isEst = false;
                                     if (!ls || !le) {
-                                      // Skip Weekend/Holiday inference (Requested: count naa thau joiae)
-                                      if (log.is_weekend) return <span style={{ color: '#94a3b8' }}>0.00 (Weekend)</span>;
-                                      
+                                      if (log.is_weekend) return <span style={{ color: '#94a3b8' }}>0.00</span>;
                                       if (!logDate) return <span style={{ color: '#94a3b8' }}>--</span>;
                                       const ct = (selectedTicket.taskTime || '08:00').slice(0, 5);
                                       ls = `${logDate}T${ct}:00`;
@@ -3437,14 +3436,72 @@ function TicketsPage() {
                                       timezone: selectedTicket.timezone,
                                       calcTimezone: 'Ticket Local'
                                     });
-                                    const cost = res?.grandTotal || '0.00';
                                     return (
                                       <div>
-                                        <div style={{ fontWeight: '800', color: exceeded ? '#ef4444' : '#6366f1', fontSize: '12px' }}>
-                                          {selectedTicket.currency} {cost}
+                                        <div style={{ fontWeight: '800', color: '#6366f1', fontSize: '12px' }}>
+                                          {selectedTicket.currency} {res?.grandTotal || '0.00'}
                                         </div>
                                         {isEst && <div style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>est.</div>}
-                                        {exceeded && <div style={{ fontSize: '9px', color: '#ef4444', fontWeight: '700' }}>⚠ HOLD</div>}
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'right' }}>
+                                  {(() => {
+                                    const logDate = String(log.task_date || '').split('T')[0];
+                                    let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
+                                    if (!ls || !le) {
+                                      if (log.is_weekend) return <span style={{ color: '#94a3b8' }}>0.00</span>;
+                                      if (!logDate) return <span style={{ color: '#94a3b8' }}>--</span>;
+                                      const ct = (selectedTicket.taskTime || '08:00').slice(0, 5);
+                                      ls = `${logDate}T${ct}:00`;
+                                      const ed = new Date(`${logDate}T${ct}:00Z`);
+                                      ed.setUTCHours(ed.getUTCHours() + 8);
+                                      le = ed.toISOString().slice(0, 16);
+                                      lb = 0;
+                                    }
+
+                                    let pRates = {
+                                      hourlyRate: selectedTicket.engHourlyRate || 0,
+                                      halfDayRate: selectedTicket.engHalfDayRate || 0,
+                                      fullDayRate: selectedTicket.engFullDayRate || 0,
+                                      monthlyRate: selectedTicket.engMonthlyRate || 0,
+                                      agreedRate: selectedTicket.engAgreedRate || 0,
+                                      cancellationFee: selectedTicket.engCancellationFee || 0,
+                                      billingType: selectedTicket.engBillingType || 'Hourly'
+                                    };
+                                    const logEngId = log.engineer_id || log.engineerId;
+                                    if (logEngId && Number(logEngId) !== Number(selectedTicket.engineerId)) {
+                                      const specificEng = engineers.find(en => Number(en.id) === Number(logEngId));
+                                      if (specificEng) {
+                                        pRates = {
+                                          hourlyRate: specificEng.hourly_rate || 0,
+                                          halfDayRate: specificEng.half_day_rate || 0,
+                                          fullDayRate: specificEng.full_day_rate || 0,
+                                          monthlyRate: specificEng.monthly_rate || 0,
+                                          agreedRate: specificEng.agreed_rate || 0,
+                                          cancellationFee: specificEng.cancellation_fee || 0,
+                                          billingType: specificEng.billing_type || 'Hourly'
+                                        };
+                                      }
+                                    }
+
+                                    const resP = calculateTicketTotal({
+                                      startTime: ls, endTime: le, breakTime: lb,
+                                      hourlyRate: pRates.hourlyRate,
+                                      halfDayRate: pRates.halfDayRate,
+                                      fullDayRate: pRates.fullDayRate,
+                                      monthlyRate: pRates.monthlyRate,
+                                      agreedRate: pRates.agreedRate,
+                                      cancellationFee: pRates.cancellationFee,
+                                      travelCostPerDay: 0, toolCost: 0,
+                                      billingType: pRates.billingType,
+                                      timezone: selectedTicket.timezone,
+                                      calcTimezone: 'Ticket Local'
+                                    });
+                                    return (
+                                      <div style={{ fontWeight: '800', color: '#059669', fontSize: '12px' }}>
+                                        {selectedTicket.eng_currency || selectedTicket.currency} {resP?.grandTotal || '0.00'}
                                       </div>
                                     );
                                   })()}
@@ -3694,17 +3751,45 @@ function TicketsPage() {
                               eTime = dEnd.toISOString().slice(0, 16);
                               brk = 0;
                             }
+
+                            // Dynamic Payout Logic: Use specific engineer rates for this log row
+                            let pRates = {
+                              hourlyRate: selectedTicket.engHourlyRate || 0,
+                              halfDayRate: selectedTicket.engHalfDayRate || 0,
+                              fullDayRate: selectedTicket.engFullDayRate || 0,
+                              monthlyRate: selectedTicket.engMonthlyRate || 0,
+                              agreedRate: selectedTicket.engAgreedRate || 0,
+                              cancellationFee: selectedTicket.engCancellationFee || 0,
+                              billingType: selectedTicket.engBillingType || 'Hourly'
+                            };
+
+                            const logEngId = log.engineer_id || log.engineerId;
+                            if (logEngId && Number(logEngId) !== Number(selectedTicket.engineerId)) {
+                              const specificEng = engineers.find(en => Number(en.id) === Number(logEngId));
+                              if (specificEng) {
+                                pRates = {
+                                  hourlyRate: specificEng.hourly_rate || 0,
+                                  halfDayRate: specificEng.half_day_rate || 0,
+                                  fullDayRate: specificEng.full_day_rate || 0,
+                                  monthlyRate: specificEng.monthly_rate || 0,
+                                  agreedRate: specificEng.agreed_rate || 0,
+                                  cancellationFee: specificEng.cancellation_fee || 0,
+                                  billingType: specificEng.billing_type || 'Hourly'
+                                };
+                              }
+                            }
+
                             const resP = calculateTicketTotal({
                               startTime: sTime, endTime: eTime, breakTime: brk,
-                              hourlyRate: selectedTicket.engHourlyRate,
-                              halfDayRate: selectedTicket.engHalfDayRate,
-                              fullDayRate: selectedTicket.engFullDayRate,
-                              monthlyRate: selectedTicket.engMonthlyRate,
-                              agreedRate: selectedTicket.engAgreedRate,
-                              cancellationFee: selectedTicket.engCancellationFee,
+                              hourlyRate: pRates.hourlyRate,
+                              halfDayRate: pRates.halfDayRate,
+                              fullDayRate: pRates.fullDayRate,
+                              monthlyRate: pRates.monthlyRate,
+                              agreedRate: pRates.agreedRate,
+                              cancellationFee: pRates.cancellationFee,
                               travelCostPerDay: 0,
                               toolCost: 0,
-                              billingType: selectedTicket.engBillingType,
+                              billingType: pRates.billingType,
                               timezone: selectedTicket.timezone,
                               calcTimezone: 'Ticket Local'
                             });
