@@ -640,7 +640,22 @@ function TicketsPage() {
         inProgress: data.summary?.inProgressTickets || 0,
         resolved: data.summary?.resolvedTickets || 0,
       })
-      setTickets((data.tickets || []).sort((a, b) => b.id - a.id))
+      setTickets((data.tickets || []).map(t => ({
+        ...t,
+        hourlyRate: t.hourlyRate ?? t.hourly_rate ?? 0,
+        halfDayRate: t.halfDayRate ?? t.half_day_rate ?? 0,
+        fullDayRate: t.fullDayRate ?? t.full_day_rate ?? 0,
+        monthlyRate: t.monthlyRate ?? t.monthly_rate ?? 0,
+        agreedRate: t.agreedRate ?? t.agreed_rate ?? '',
+        cancellationFee: t.cancellationFee ?? t.cancellation_fee ?? 0,
+        travelCostPerDay: t.travelCostPerDay ?? t.travel_cost_per_day ?? 0,
+        toolCost: t.toolCost ?? t.tool_cost ?? 0,
+        totalCost: t.totalCost ?? t.total_cost ?? 0,
+        engTotalCost: t.engTotalCost ?? t.eng_total_cost ?? 0,
+        billingType: t.billingType ?? t.billing_type ?? 'Hourly',
+        engBillingType: t.engBillingType ?? t.eng_billing_type ?? 'Hourly',
+        engPayType: t.engPayType ?? t.eng_pay_type ?? 'Default'
+      })).sort((a, b) => b.id - a.id))
 
       // Handle initial filter if coming from dashboard/approvals
       if (location.state?.filterTicketId && !filterTicketIdHandled) {
@@ -1026,15 +1041,30 @@ function TicketsPage() {
       setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
 
       // OPTIMISTIC UPDATE: Update the local state immediately so list view is fresh
-      if (data.ticket) {
-        setTickets(prev => {
-          if (isEditing) {
-            return prev.map(t => t.id === data.ticket.id ? data.ticket : t);
-          } else {
-            return [data.ticket, ...prev];
-          }
-        });
+      const normalizedTicket = {
+        ...data.ticket,
+        hourlyRate: data.ticket.hourlyRate ?? data.ticket.hourly_rate ?? '',
+        halfDayRate: data.ticket.halfDayRate ?? data.ticket.half_day_rate ?? '',
+        fullDayRate: data.ticket.fullDayRate ?? data.ticket.full_day_rate ?? '',
+        monthlyRate: data.ticket.monthlyRate ?? data.ticket.monthly_rate ?? '',
+        agreedRate: data.ticket.agreedRate ?? data.ticket.agreed_rate ?? '',
+        cancellationFee: data.ticket.cancellationFee ?? data.ticket.cancellation_fee ?? '',
+        travelCostPerDay: data.ticket.travelCostPerDay ?? data.ticket.travel_cost_per_day ?? '',
+        toolCost: data.ticket.toolCost ?? data.ticket.tool_cost ?? 0,
+        totalCost: data.ticket.totalCost ?? data.ticket.total_cost ?? 0,
+        engTotalCost: data.ticket.engTotalCost ?? data.ticket.eng_total_cost ?? 0,
+        billingType: data.ticket.billingType ?? data.ticket.billing_type ?? 'Hourly',
+        engBillingType: data.ticket.engBillingType ?? data.ticket.eng_billing_type ?? 'Hourly',
+        engPayType: data.ticket.engPayType ?? data.ticket.eng_pay_type ?? 'Default'
       }
+
+      setTickets(prev => {
+        if (isEditing) {
+          return prev.map(t => t.id === normalizedTicket.id ? normalizedTicket : t);
+        } else {
+          return [normalizedTicket, ...prev];
+        }
+      });
 
       resetForm()
       setViewMode('list')
@@ -1049,48 +1079,46 @@ function TicketsPage() {
 
   const openTicketModal = async (ticketId) => {
     try {
-      // Fetch fresh ticket data from server to ensure we have latest values
       const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        const freshTicket = data.ticket || data;
+        let t = data.ticket || data;
+        
+        // NORMALIZE
+        t = {
+          ...t,
+          hourlyRate: t.hourlyRate ?? t.hourly_rate ?? 0,
+          halfDayRate: t.halfDayRate ?? t.half_day_rate ?? 0,
+          fullDayRate: t.fullDayRate ?? t.full_day_rate ?? 0,
+          monthlyRate: t.monthlyRate ?? t.monthly_rate ?? 0,
+          agreedRate: t.agreedRate ?? t.agreed_rate ?? '',
+          cancellationFee: t.cancellationFee ?? t.cancellation_fee ?? 0,
+          travelCostPerDay: t.travelCostPerDay ?? t.travel_cost_per_day ?? 0,
+          toolCost: t.toolCost ?? t.tool_cost ?? 0,
+          totalCost: t.totalCost ?? t.total_cost ?? 0,
+          engTotalCost: t.engTotalCost ?? t.eng_total_cost ?? 0,
+          billingType: t.billingType ?? t.billing_type ?? 'Hourly',
+          engBillingType: t.engBillingType ?? t.eng_billing_type ?? 'Hourly',
+          eng_pay_type: t.engPayType ?? t.eng_pay_type ?? 'Default'
+        };
 
-        setSelectedTicket(freshTicket)
-        setTimeLogs(freshTicket.time_logs || [])  // Immediately available from backend
-        setIsTicketModalOpen(true)
-        setIsInlineEditing(false)
+        setSelectedTicket(t);
+        setTimeLogs(t.time_logs || []);
+        setIsTicketModalOpen(true);
+        setIsInlineEditing(false);
         if (engineers.length === 0) loadDropdowns(); 
-        fetchTicketExtras(ticketId)  // Also fetch for notes/attachments/expenses
-        setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : (freshTicket.taskStartDate ? formatForInput(freshTicket.taskStartDate) : '')))
-        setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : (freshTicket.taskEndDate ? formatForInput(freshTicket.taskEndDate) : '')))
-        setInlineBreakTime(freshTicket.breakTime ? String(Math.floor(Number(freshTicket.breakTime) / 60)) : (freshTicket.break_time ? String(Math.floor(Number(freshTicket.break_time) / 60)) : '0'))
-        setNewExtendEndDate(freshTicket.taskEndDate ? freshTicket.taskEndDate.split('T')[0] : '')
-      } else {
-        // Fallback to cached data if API fails
-        const t = tickets.find((x) => x.id === ticketId)
-        if (t) {
-          setSelectedTicket(t)
-          setIsTicketModalOpen(true)
-          fetchTicketExtras(ticketId)
-          setInlineStartTime(t.startTime ? formatForInput(t.startTime) : (t.start_time ? formatForInput(t.start_time) : ''))
-          setInlineEndTime(t.endTime ? formatForInput(t.endTime) : (t.end_time ? formatForInput(t.end_time) : ''))
-          setInlineBreakTime(t.breakTime ? Math.floor(Number(t.breakTime) / 60) : (t.break_time ? Math.floor(Number(t.break_time) / 60) : '0'))
-          setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
-        }
+        fetchTicketExtras(ticketId);
+        
+        const start = t.startTime || t.start_time;
+        const end = t.endTime || t.end_time;
+        setInlineStartTime(start ? formatForInput(start) : (t.taskStartDate ? formatForInput(t.taskStartDate) : ''));
+        setInlineEndTime(end ? formatForInput(end) : (t.taskEndDate ? formatForInput(t.taskEndDate) : ''));
+        const bt = t.breakTime !== undefined ? t.breakTime : t.break_time;
+        setInlineBreakTime(bt ? String(Math.floor(Number(bt) / 60)) : '0');
+        setNewExtendEndDate(t.taskEndDate ? String(t.taskEndDate).split('T')[0] : '');
       }
     } catch (err) {
       console.error('Error fetching ticket:', err);
-      // Fallback to cached data
-      const t = tickets.find((x) => x.id === ticketId)
-      if (t) {
-        setSelectedTicket(t)
-        setIsTicketModalOpen(true)
-        fetchTicketExtras(ticketId)
-        setInlineStartTime(t.startTime ? formatForInput(t.startTime) : (t.start_time ? formatForInput(t.start_time) : ''))
-        setInlineEndTime(t.endTime ? formatForInput(t.endTime) : (t.end_time ? formatForInput(t.end_time) : ''))
-        setInlineBreakTime(t.breakTime ? Math.floor(Number(t.breakTime) / 60) : (t.break_time ? Math.floor(Number(t.break_time) / 60) : '0'))
-        setNewExtendEndDate(t.taskEndDate ? t.taskEndDate.split('T')[0] : '')
-      }
     }
   }
 
@@ -1290,95 +1318,99 @@ function TicketsPage() {
   }
 
   const fillFormFromTicket = (ticket) => {
-    setCustomerId(ticket.customerId ? String(ticket.customerId) : '')
-    setLeadId(ticket.leadId ? String(ticket.leadId) : '')
-    setClientName(ticket.clientName || '')
-    setTaskName(ticket.taskName || '')
-    setTaskStartDate(ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '')
-    setTaskEndDate(ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '')
-    setTaskTime(ticket.taskTime || '00:00')
-    setScopeOfWork(ticket.scopeOfWork || '')
-    setTools(ticket.tools || '')
-    setEngineerName(ticket.engineerName || '')
-    setEngineerId(ticket.engineerId ? String(ticket.engineerId) : '')
-    setApartment(ticket.apartment || '')
-    setAddressLine1(ticket.addressLine1 || '')
-    setAddressLine2(ticket.addressLine2 || '')
-    setCity(ticket.city || '')
-    setCountry(ticket.country || '')
-    setZipCode(ticket.zipCode || '')
-    setTimezone(ticket.timezone || '')
-
-    // Populate availableTimezones based on the country when editing
-    if (ticket.country && countriesList.length > 0) {
-      const matchedCountry = countriesList.find((c) => c.name === ticket.country)
-      if (matchedCountry) {
-        setAvailableTimezones(matchedCountry.timezones || [])
-      } else {
-        // Fallback: if existing timezone is set but country not in list, at least show the current one
-        if (ticket.timezone) setAvailableTimezones([ticket.timezone])
-      }
-    } else if (ticket.timezone) {
-      // Emergency fallback if list hasn't loaded yet
-      setAvailableTimezones([ticket.timezone])
+    // Normalize data keys (some might be snake_case from server)
+    const normalized = {
+      ...ticket,
+      hourlyRate: ticket.hourlyRate ?? ticket.hourly_rate ?? '',
+      halfDayRate: ticket.halfDayRate ?? ticket.half_day_rate ?? '',
+      fullDayRate: ticket.fullDayRate ?? ticket.full_day_rate ?? '',
+      monthlyRate: ticket.monthlyRate ?? ticket.monthly_rate ?? '',
+      agreedRate: ticket.agreedRate ?? ticket.agreed_rate ?? '',
+      cancellationFee: ticket.cancellationFee ?? ticket.cancellation_fee ?? '',
+      travelCostPerDay: ticket.travelCostPerDay ?? ticket.travel_cost_per_day ?? '',
+      toolCost: ticket.toolCost ?? ticket.tool_cost ?? 0,
+      billingType: ticket.billingType ?? ticket.billing_type ?? 'Hourly',
+      eng_pay_type: ticket.engPayType ?? ticket.eng_pay_type ?? 'Default',
+      eng_billing_type: ticket.engBillingType ?? ticket.eng_billing_type ?? 'Hourly',
+      eng_currency: ticket.engCurrency ?? ticket.eng_currency ?? 'USD',
+      eng_hourly_rate: ticket.engHourlyRate ?? ticket.eng_hourly_rate ?? '',
+      eng_half_day_rate: ticket.engHalfDayRate ?? ticket.eng_half_day_rate ?? '',
+      eng_full_day_rate: ticket.engFullDayRate ?? ticket.eng_full_day_rate ?? '',
+      eng_monthly_rate: ticket.engMonthlyRate ?? ticket.eng_monthly_rate ?? '',
+      eng_agreed_rate: ticket.engAgreedRate ?? ticket.eng_agreed_rate ?? '',
+      eng_cancellation_fee: ticket.engCancellationFee ?? ticket.eng_cancellation_fee ?? ''
     }
 
-    setPocDetails(ticket.pocDetails || '')
-    setReDetails(ticket.reDetails || '')
-    setCallInvites(ticket.callInvites || '')
-    setDocumentsLabel(ticket.documentsLabel || '')
-    setSignoffLabel(ticket.signoffLabel || '')
+    setCustomerId(normalized.customerId ? String(normalized.customerId) : '')
+    setLeadId(normalized.leadId ? String(normalized.leadId) : '')
+    setClientName(normalized.clientName || '')
+    setTaskName(normalized.taskName || '')
+    setTaskStartDate(normalized.taskStartDate ? String(normalized.taskStartDate).split('T')[0] : '')
+    setTaskEndDate(normalized.taskEndDate ? String(normalized.taskEndDate).split('T')[0] : '')
+    setTaskTime(normalized.taskTime || '00:00')
+    setScopeOfWork(normalized.scopeOfWork || '')
+    setTools(normalized.tools || '')
+    setEngineerName(normalized.engineerName || '')
+    setEngineerId(normalized.engineerId ? String(normalized.engineerId) : '')
+    setApartment(normalized.apartment || '')
+    setAddressLine1(normalized.addressLine1 || '')
+    setAddressLine2(normalized.addressLine2 || '')
+    setCity(normalized.city || '')
+    setCountry(normalized.country || '')
+    setZipCode(normalized.zipCode || '')
+    setTimezone(normalized.timezone || '')
 
-    setEngPayType(ticket.eng_pay_type || 'Default')
-    setEngBillingType(ticket.eng_billing_type || 'Hourly')
-    setEngCurrency(ticket.eng_currency || 'USD')
-    setEngHourlyRate(ticket.eng_hourly_rate || '')
-    setEngHalfDayRate(ticket.eng_half_day_rate || '')
-    setEngFullDayRate(ticket.eng_full_day_rate || '')
-    setEngMonthlyRate(ticket.eng_monthly_rate || '')
-    setEngAgreedRate(ticket.eng_agreed_rate || '')
-    setEngCancellationFee(ticket.eng_cancellation_fee || '')
+    if (normalized.country && countriesList.length > 0) {
+      const matchedCountry = countriesList.find((c) => c.name === normalized.country)
+      if (matchedCountry) setAvailableTimezones(matchedCountry.timezones || [])
+    }
 
-    // Parse existing labels into the list UI
-    if (ticket.documentsLabel) {
-      setDocuments(ticket.documentsLabel.split(', ').map(name => ({ name })))
+    setPocDetails(normalized.pocDetails || '')
+    setReDetails(normalized.reDetails || '')
+    setCallInvites(normalized.callInvites || '')
+    setDocumentsLabel(normalized.documentsLabel || '')
+    setSignoffLabel(normalized.signoffLabel || '')
+
+    setEngPayType(normalized.eng_pay_type)
+    setEngBillingType(normalized.eng_billing_type)
+    setEngCurrency(normalized.eng_currency)
+    setEngHourlyRate(normalized.eng_hourly_rate)
+    setEngHalfDayRate(normalized.eng_half_day_rate)
+    setEngFullDayRate(normalized.eng_full_day_rate)
+    setEngMonthlyRate(normalized.eng_monthly_rate)
+    setEngAgreedRate(normalized.eng_agreed_rate)
+    setEngCancellationFee(normalized.eng_cancellation_fee)
+
+    if (normalized.documentsLabel) {
+      setDocuments(normalized.documentsLabel.split(', ').map(name => ({ name })))
     } else {
       setDocuments([])
     }
 
-    if (ticket.signoffLabel) {
-      setSignoffSheets(ticket.signoffLabel.split(', ').map(name => ({ name })))
+    if (normalized.signoffLabel) {
+      setSignoffSheets(normalized.signoffLabel.split(', ').map(name => ({ name })))
     } else {
       setSignoffSheets([])
     }
 
-    setCurrency(ticket.currency || 'USD')
-    setHourlyRate(ticket.hourlyRate != null ? String(ticket.hourlyRate) : '')
-    setHalfDayRate(ticket.halfDayRate != null ? String(ticket.halfDayRate) : '')
-    setFullDayRate(ticket.fullDayRate != null ? String(ticket.fullDayRate) : '')
-    setMonthlyRate(ticket.monthlyRate != null ? String(ticket.monthlyRate) : '')
-    setAgreedRate(ticket.agreedRate || '')
-    setCancellationFee(ticket.cancellation_fee != null ? String(ticket.cancellation_fee) : '')
-    setTravelCostPerDay(ticket.travelCostPerDay != null ? String(ticket.travelCostPerDay) : '')
-    setToolCostInput(ticket.toolCost != null ? String(ticket.toolCost) : '')
-    setBillingType(ticket.billingType || 'Hourly')
-    setLeadType(ticket.leadType || 'Full time')
-    setStatus(ticket.status || 'Open')
+    setCurrency(normalized.currency || 'USD')
+    setHourlyRate(normalized.hourlyRate != null ? String(normalized.hourlyRate) : '')
+    setHalfDayRate(normalized.halfDayRate != null ? String(normalized.halfDayRate) : '')
+    setFullDayRate(normalized.fullDayRate != null ? String(normalized.fullDayRate) : '')
+    setMonthlyRate(normalized.monthlyRate != null ? String(normalized.monthlyRate) : '')
+    setAgreedRate(normalized.agreedRate || '')
+    setCancellationFee(normalized.cancellationFee != null ? String(normalized.cancellationFee) : '')
+    setTravelCostPerDay(normalized.travelCostPerDay != null ? String(normalized.travelCostPerDay) : '')
+    setToolCostInput(normalized.toolCost != null ? String(normalized.toolCost) : '')
+    setBillingType(normalized.billingType)
+    setLeadType(normalized.leadType || 'Full time')
+    setStatus(normalized.status || 'Open')
 
-    // Time Log Sync
-    if (ticket.startTime) {
-      setStartTime(formatForInput(ticket.startTime));
-    } else if (ticket.start_time) {
-      setStartTime(formatForInput(ticket.start_time));
-    }
-
-    if (ticket.endTime) {
-      setEndTime(formatForInput(ticket.endTime));
-    } else if (ticket.end_time) {
-      setEndTime(formatForInput(ticket.end_time));
-    }
-
-    setBreakTime(ticket.breakTime != null ? String(Math.floor(Number(ticket.breakTime) / 60)) : (ticket.break_time != null ? String(Math.floor(Number(ticket.break_time) / 60)) : '0'));
+    const start = normalized.startTime || normalized.start_time;
+    const end = normalized.endTime || normalized.end_time;
+    if (start) setStartTime(formatForInput(start));
+    if (end) setEndTime(formatForInput(end));
+    setBreakTime(normalized.breakTime != null ? String(Math.floor(Number(normalized.breakTime) / 60)) : (normalized.break_time != null ? String(Math.floor(Number(normalized.break_time) / 60)) : '0'));
   }
 
   const handleViewDocument = (fileUrl) => {
