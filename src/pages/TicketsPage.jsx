@@ -415,11 +415,25 @@ function TicketsPage() {
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
         
-        let sTime, eTime, bMins = 0;
+        // Skip Weekends/Holidays if requested (Manual dispatch typically skips these unless specific logs exist)
+        const dObj = new Date(d);
+        const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
+        const PUBLIC_HOLIDAYS = [
+          '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
+          '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
+          '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
+        ];
+        const isHoliday = PUBLIC_HOLIDAYS.includes(d);
+        const shouldSkip = (isWeekend || isHoliday) && (!existing || !existing.start_time || !existing.end_time);
+        
+        if (shouldSkip) return; // Don't count default weekend/holiday blocks in the grand total estimation
+
+        let sTime, eTime, bMins = 0, specificEngId = null;
         if (existing && existing.start_time && existing.end_time) {
           sTime = existing.start_time;
           eTime = existing.end_time;
           bMins = existing.break_time_mins || 0;
+          specificEngId = existing.engineer_id || existing.engineerId;
         } else {
           const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
           sTime = `${d}T${cleanTime}:00Z`;
@@ -435,11 +449,29 @@ function TicketsPage() {
           travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
         });
 
+        // Determine which engineer's rates to use for payout
+        let pRates = {
+          hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0,
+          monthlyRate: engMonthlyRate || 0, agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
+          billingType: engBillingType
+        };
+
+        if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
+          const eng = engineers.find(e => Number(e.id) === Number(specificEngId));
+          if (eng) {
+            pRates = {
+              hourlyRate: eng.hourly_rate || 0, halfDayRate: eng.half_day_rate || 0, fullDayRate: eng.full_day_rate || 0,
+              monthlyRate: eng.monthly_rate || 0, agreedRate: eng.agreed_rate || 0, cancellationFee: eng.cancellation_fee || 0,
+              billingType: eng.billing_type || 'Hourly'
+            };
+          }
+        }
+
         const payRes = calculateTicketTotal({
           startTime: sTime, endTime: eTime, breakTime: bMins,
-          hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0, monthlyRate: engMonthlyRate || 0,
-          agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
-          travelCostPerDay: 0, toolCost: 0, billingType: engBillingType, timezone, calcTimezone
+          hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
+          monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
+          travelCostPerDay: 0, toolCost: 0, billingType: pRates.billingType, timezone, calcTimezone
         });
 
         if (res) {
@@ -3367,6 +3399,9 @@ function TicketsPage() {
                                     let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
                                     let isEst = false;
                                     if (!ls || !le) {
+                                      // Skip Weekend/Holiday inference (Requested: count naa thau joiae)
+                                      if (log.is_weekend) return <span style={{ color: '#94a3b8' }}>0.00 (Weekend)</span>;
+                                      
                                       if (!logDate) return <span style={{ color: '#94a3b8' }}>--</span>;
                                       const ct = (selectedTicket.taskTime || '08:00').slice(0, 5);
                                       ls = `${logDate}T${ct}:00`;
