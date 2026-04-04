@@ -1092,72 +1092,10 @@ function TicketsPage() {
   const handleUpdateInlineTime = async () => {
     try {
       setIsUpdatingTime(true);
+      const tId = selectedTicket?.id || editingTicketId;
+      if (!tId) return;
 
-      // Helper function to safely format dates to YYYY-MM-DD
-      const formatDateOnly = (dateValue) => {
-        if (!dateValue) return null;
-        try {
-          const dateStr = String(dateValue).split('T')[0];
-          // Validate it's a proper date format
-          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            return dateStr;
-          }
-          return null;
-        } catch (e) {
-          return null;
-        }
-      };
-
-      const ticket = selectedTicket || {};
-      const tId = ticket.id || editingTicketId;
-      if (!tId) {
-        alert('Error: Ticket ID not found.');
-        return;
-      }
-
-      // Send only the required fields for updating
-      const payload = {
-        customerId: ticket.customerId,
-        leadId: ticket.leadId,
-        clientName: ticket.clientName,
-        taskName: ticket.taskName,
-        taskStartDate: inlineStartTime ? inlineStartTime.split('T')[0] : formatDateOnly(ticket.taskStartDate),
-        taskEndDate: inlineEndTime ? inlineEndTime.split('T')[0] : formatDateOnly(ticket.taskEndDate),
-        taskTime: inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : ticket.taskTime,
-        scopeOfWork: ticket.scopeOfWork,
-        tools: ticket.tools,
-        engineerName: ticket.engineerName,
-        engineerId: ticket.engineerId,
-        apartment: ticket.apartment,
-        addressLine1: ticket.addressLine1,
-        addressLine2: ticket.addressLine2,
-        city: ticket.city,
-        country: ticket.country,
-        zipCode: ticket.zipCode,
-        timezone: ticket.timezone,
-        pocDetails: ticket.pocDetails,
-        reDetails: ticket.reDetails,
-        callInvites: ticket.callInvites,
-        documentsLabel: ticket.documentsLabel,
-        signoffLabel: ticket.signoffLabel,
-        currency: ticket.currency,
-        hourlyRate: ticket.hourlyRate,
-        halfDayRate: ticket.halfDayRate,
-        fullDayRate: ticket.fullDayRate,
-        monthlyRate: ticket.monthlyRate,
-        agreedRate: ticket.agreedRate,
-        cancellationFee: ticket.cancellationFee,
-        travelCostPerDay: ticket.travelCostPerDay,
-        toolCost: ticket.toolCost ?? ticket.tool_cost ?? 0, // Dedicated tool cost field
-        billingType: ticket.billingType || ticket.billing_type || 'Hourly',
-        status: ticket.status,
-        leadType: ticket.leadType,
-        // Time fields being updated
-        startTime: inlineStartTime,
-        endTime: inlineEndTime,
-        breakTime: Number(inlineBreakTime) || 0
-      };
-
+      // Calculate new billing status if needed
       const calc = calculateTicketTotal({
         startTime: inlineStartTime,
         endTime: inlineEndTime,
@@ -1176,10 +1114,21 @@ function TicketsPage() {
       });
 
       const hrsVal = parseFloat(calc?.hrs || 0);
-      if (hrsVal > 8 && payload.status !== 'On Hold') {
-        payload.status = 'On Hold';
+      let newStatus = selectedTicket.status;
+      if (hrsVal > 8 && newStatus !== 'On Hold') {
+        newStatus = 'On Hold';
         alert('Shift exceeded 8 hours. Ticket has been automatically placed ON HOLD.');
       }
+
+      const payload = {
+        startTime: inlineStartTime,
+        endTime: inlineEndTime,
+        breakTime: Number(inlineBreakTime) || 0,
+        status: newStatus,
+        taskTime: inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : selectedTicket.taskTime,
+        taskStartDate: inlineStartTime ? inlineStartTime.split('T')[0] : selectedTicket.taskStartDate?.split('T')[0],
+        taskEndDate: inlineEndTime ? inlineEndTime.split('T')[0] : selectedTicket.taskEndDate?.split('T')[0]
+      };
 
       const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
         method: 'PUT',
@@ -1191,20 +1140,9 @@ function TicketsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update time');
 
-      // Use the updated ticket from the response directly
-      const freshTicket = data.ticket;
-
-      if (freshTicket) {
-        setSelectedTicket(freshTicket);
-        setInlineStartTime(freshTicket.startTime ? formatForInput(freshTicket.startTime) : (freshTicket.start_time ? formatForInput(freshTicket.start_time) : ''));
-        setInlineEndTime(freshTicket.endTime ? formatForInput(freshTicket.endTime) : (freshTicket.end_time ? formatForInput(freshTicket.end_time) : ''));
-        const bt = freshTicket.breakTime !== undefined ? freshTicket.breakTime : freshTicket.break_time;
-        setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
-
-        // Update the tickets array for real-time list consistency
-        setTickets(prev => prev.map(t => t.id === freshTicket.id ? freshTicket : t));
-      }
-
+      // Refresh everything to ensure UI is perfectly in sync
+      await openTicketModal(tId); 
+      await loadTickets();
       setIsInlineEditing(false);
     } catch (err) {
       console.error(err);
@@ -1247,10 +1185,8 @@ function TicketsPage() {
 
   const handleUpdateLog = async (logId, data) => {
     const ticketId = selectedTicket?.id || editingTicketId;
-    if (!ticketId) {
-      alert('Error: Ticket ID not found.');
-      return;
-    }
+    if (!ticketId) return;
+
     setIsUpdatingLog(logId);
     try {
       const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, {
@@ -1259,17 +1195,15 @@ function TicketsPage() {
         credentials: 'include',
         body: JSON.stringify(data)
       });
+      
       if (!res.ok) {
-        let errData;
-        try { errData = await res.json(); } catch(e) { errData = {}; }
+        const errData = await res.json().catch(() => ({}));
         throw new Error(errData.message || 'Update failed');
       }
-      const resData = await res.json();
 
-      // Auto-hold logic for Dispatch log updates
-      const updatedLog = data;
-      if (updatedLog.startTime && updatedLog.endTime) {
-        const dur = (new Date(updatedLog.endTime) - new Date(updatedLog.startTime)) / 3600000 - (updatedLog.breakTimeMins / 60);
+      // Auto-hold check
+      if (data.startTime && data.endTime) {
+        const dur = (new Date(data.endTime) - new Date(data.startTime)) / 3600000 - ((data.breakTimeMins || 0) / 60);
         if (dur > 8) {
           await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
             method: 'PUT',
@@ -1281,10 +1215,14 @@ function TicketsPage() {
         }
       }
 
-      fetchTicketExtras(ticketId);
-      loadTickets();
-    } catch (e) { alert(e.message); }
-    setIsUpdatingLog(null);
+      // Refresh full ticket and logs to ensure UI reflects all changes (including potential grand total updates)
+      await openTicketModal(ticketId);
+      await loadTickets();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setIsUpdatingLog(null);
+    }
   }
 
   const handleResolveEarly = async (date) => {
@@ -3091,27 +3029,37 @@ function TicketsPage() {
                       credentials: 'include',
                       body: JSON.stringify({ engineerName: newEng.name, engineerId: newEng.id, status: 'Assigned' })
                     });
+
                     if (res.ok) {
                       // Add a note
                       if (reason?.value) {
-                        await fetch(`${API_BASE_URL}/tickets/${reassignTicketId}/notes`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          credentials: 'include',
-                          body: JSON.stringify({ content: `Re-assigned to ${newEng.name}. ${reason.value}`, authorType: 'admin' })
-                        });
+                        try {
+                          await fetch(`${API_BASE_URL}/tickets/${reassignTicketId}/notes`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ content: `Re-assigned to ${newEng.name}. ${reason.value}`, authorType: 'admin' })
+                          });
+                        } catch (e) {
+                          console.error("Failed to add audit note", e);
+                        }
                       }
+                      
                       setReassignModalOpen(false);
                       setReassignTicketId(null);
-                      if (isTicketModalOpen && selectedTicket?.id === reassignTicketId) {
-                        openTicketModal(reassignTicketId);
-                      }
-                      loadTickets();
+                      
+                      // Refresh everything immediately
+                      await openTicketModal(reassignTicketId);
+                      await loadTickets();
                       alert(`Ticket successfully re-assigned to ${newEng.name}`);
                     } else {
-                      alert('Failed to re-assign. Please try again.');
+                      const errD = await res.json().catch(() => ({}));
+                      alert(`Failed to re-assign: ${errD.message || 'Unknown error'}`);
                     }
-                  } catch (e) { console.error(e); alert('Error during re-assignment.'); }
+                  } catch (e) { 
+                    console.error(e); 
+                    alert('Error during re-assignment: ' + e.message); 
+                  }
                 }}
               >
                 🔄 Confirm Re-assign
