@@ -2328,19 +2328,40 @@ function TicketsPage() {
                                 </td>
                                 <td style={{ padding: '10px' }}>
                                   {editingTicketId ? (
-                                    existingLog.id ? (
-                                      <select
-                                        style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
-                                        value={existingLog.engineer_id || existingLog.engineerId || engineerId}
-                                        onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
-                                      >
-                                        {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                      </select>
-                                    ) : (
-                                      <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>Pending save...</div>
-                                    )
+                                    <select
+                                      style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                      value={existingLog.engineer_id || existingLog.engineerId || engineerId}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        if (existingLog.id) {
+                                          handleUpdateLog(existingLog.id, { engineerId: val });
+                                        } else {
+                                          setTimeLogs(prev => {
+                                            const next = [...prev];
+                                            const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dStr);
+                                            if (lgIdx > -1) {
+                                              next[lgIdx].engineer_id = val;
+                                            } else {
+                                              next.push({ 
+                                                task_date: dStr, 
+                                                engineer_id: val, 
+                                                start_time: `${dStr}T${lStart}:00Z`, 
+                                                end_time: `${dStr}T${lEnd}:00Z`,
+                                                break_time_mins: actualBreak
+                                              });
+                                            }
+                                            return next;
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <option value="">Select Engineer</option>
+                                      {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                    </select>
                                   ) : (
-                                    <span style={{ fontSize: '11px', color: '#64748b' }}>{engineerName || 'Primary Engineer'}</span>
+                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                                      {engineers.find(e => String(e.id) === String(existingLog.engineer_id || existingLog.engineerId || engineerId))?.name || engineerName || 'Primary Engineer'}
+                                    </span>
                                   )}
                                 </td>
                                 <td style={{ padding: '10px' }}>
