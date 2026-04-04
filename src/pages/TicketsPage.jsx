@@ -1116,6 +1116,9 @@ function TicketsPage() {
         if (engineers.length === 0) loadDropdowns(); 
         fetchTicketExtras(ticketId);
         
+        // SYNC MAIN STATES to trigger live calculations even in View mode
+        fillFormFromTicket(t, false); // false = don't switch viewMode to form
+        
         const start = t.startTime || t.start_time;
         const end = t.endTime || t.end_time;
         setInlineStartTime(start ? formatForInput(start) : (t.taskStartDate ? formatForInput(t.taskStartDate) : ''));
@@ -1324,38 +1327,68 @@ function TicketsPage() {
     setAddingNote(false);
   }
 
-  const fillFormFromTicket = (ticket) => {
-    // Normalize data keys (some might be snake_case from server)
+  const fillFormFromTicket = (ticket, switchMode = true) => {
+    if (!ticket) return;
+    
+    const t = ticket;
     const normalized = {
-      ...ticket,
-      hourlyRate: ticket.hourlyRate ?? ticket.hourly_rate ?? '',
-      halfDayRate: ticket.halfDayRate ?? ticket.half_day_rate ?? '',
-      fullDayRate: ticket.fullDayRate ?? ticket.full_day_rate ?? '',
-      monthlyRate: ticket.monthlyRate ?? ticket.monthly_rate ?? '',
-      agreedRate: ticket.agreedRate ?? ticket.agreed_rate ?? '',
-      cancellationFee: ticket.cancellationFee ?? ticket.cancellation_fee ?? '',
-      travelCostPerDay: ticket.travelCostPerDay ?? ticket.travel_cost_per_day ?? '',
-      toolCost: ticket.toolCost ?? ticket.tool_cost ?? 0,
-      billingType: ticket.billingType ?? ticket.billing_type ?? 'Hourly',
-      eng_pay_type: ticket.engPayType ?? ticket.eng_pay_type ?? 'Default',
-      eng_billing_type: ticket.engBillingType ?? ticket.eng_billing_type ?? 'Hourly',
-      eng_currency: ticket.engCurrency ?? ticket.eng_currency ?? 'USD',
-      eng_hourly_rate: ticket.engHourlyRate ?? ticket.eng_hourly_rate ?? '',
-      eng_half_day_rate: ticket.engHalfDayRate ?? ticket.eng_half_day_rate ?? '',
-      eng_full_day_rate: ticket.engFullDayRate ?? ticket.eng_full_day_rate ?? '',
-      eng_monthly_rate: ticket.engMonthlyRate ?? ticket.eng_monthly_rate ?? '',
-      eng_agreed_rate: ticket.engAgreedRate ?? ticket.eng_agreed_rate ?? '',
-      eng_cancellation_fee: ticket.engCancellationFee ?? ticket.eng_cancellation_fee ?? ''
+      customerId: t.customer_id || t.customerId || '',
+      leadId: t.lead_id || t.leadId || '',
+      clientName: t.client_name || t.clientName || '',
+      taskName: t.task_name || t.taskName || '',
+      taskStartDate: t.task_start_date ? t.task_start_date.split('T')[0] : (t.taskStartDate ? t.taskStartDate.split('T')[0] : ''),
+      taskEndDate: t.task_end_date ? t.task_end_date.split('T')[0] : (t.taskEndDate ? t.taskEndDate.split('T')[0] : ''),
+      taskTime: t.task_time || t.taskTime || '00:00',
+      scopeOfWork: t.scope_of_work || t.scopeOfWork || '',
+      tools: t.tools || '',
+      engineerName: t.engineer_name || t.engineerName || '',
+      engineerId: t.engineer_id || t.engineerId || '',
+      apartment: t.apartment || '',
+      addressLine1: t.address_line1 || t.addressLine1 || '',
+      addressLine2: t.address_line2 || t.addressLine2 || '',
+      city: t.city || '',
+      country: t.country || '',
+      zipCode: t.zip_code || t.zipCode || '',
+      timezone: t.timezone || '',
+      pocDetails: t.poc_details || t.pocDetails || '',
+      reDetails: t.re_details || t.reDetails || '',
+      callInvites: t.call_invites || t.callInvites || '',
+      documentsLabel: t.documents_label || t.documentsLabel || '',
+      signoffLabel: t.signoff_label || t.signoffLabel || '',
+      currency: t.currency || 'USD',
+      hourlyRate: t.hourlyRate ?? t.hourly_rate ?? '',
+      halfDayRate: t.halfDayRate ?? t.half_day_rate ?? '',
+      fullDayRate: t.fullDayRate ?? t.full_day_rate ?? '',
+      monthlyRate: t.monthlyRate ?? t.monthly_rate ?? '',
+      agreedRate: t.agreedRate ?? t.agreed_rate ?? '',
+      cancellationFee: t.cancellationFee ?? t.cancellation_fee ?? '',
+      travelCostPerDay: t.travelCostPerDay ?? t.travel_cost_per_day ?? '',
+      toolCost: t.toolCost ?? t.tool_cost ?? '',
+      status: t.status || 'Assigned',
+      billingType: t.billingType ?? t.billing_type ?? 'Hourly',
+      startTime: t.startTime || t.start_time || '',
+      endTime: t.endTime || t.end_time || '',
+      breakTime: t.breakTime !== undefined ? t.breakTime : (t.break_time || 0),
+      leadType: t.leadType || t.lead_type || 'Full time',
+      engPayType: t.engPayType ?? t.eng_pay_type ?? 'Default',
+      engBillingType: t.engBillingType ?? t.eng_billing_type ?? 'Hourly',
+      engCurrency: t.engCurrency ?? t.eng_currency ?? 'USD',
+      engHourlyRate: t.engHourlyRate ?? t.eng_hourly_rate ?? '',
+      engHalfDayRate: t.engHalfDayRate ?? t.eng_half_day_rate ?? '',
+      engFullDayRate: t.engFullDayRate ?? t.eng_full_day_rate ?? '',
+      engMonthlyRate: t.engMonthlyRate ?? t.eng_monthly_rate ?? '',
+      engAgreedRate: t.engAgreedRate ?? t.eng_agreed_rate ?? '',
+      eng_cancellation_fee: t.engCancellationFee ?? t.eng_cancellation_fee ?? ''
     }
     setIsFillingForm(true);
-    setLiveBreakdown(null); // Clear previous to avoid 0.00 show
+    setLiveBreakdown(null); 
     setPayoutLiveBreakdown(null);
     setCustomerId(normalized.customerId ? String(normalized.customerId) : '')
     setLeadId(normalized.leadId ? String(normalized.leadId) : '')
     setClientName(normalized.clientName || '')
     setTaskName(normalized.taskName || '')
-    setTaskStartDate(normalized.taskStartDate ? String(normalized.taskStartDate).split('T')[0] : '')
-    setTaskEndDate(normalized.taskEndDate ? String(normalized.taskEndDate).split('T')[0] : '')
+    setTaskStartDate(normalized.taskStartDate)
+    setTaskEndDate(normalized.taskEndDate)
     setTaskTime(normalized.taskTime || '00:00')
     setScopeOfWork(normalized.scopeOfWork || '')
     setTools(normalized.tools || '')
@@ -1368,61 +1401,42 @@ function TicketsPage() {
     setCountry(normalized.country || '')
     setZipCode(normalized.zipCode || '')
     setTimezone(normalized.timezone || '')
-
-    if (normalized.country && countriesList.length > 0) {
-      const matchedCountry = countriesList.find((c) => c.name === normalized.country)
-      if (matchedCountry) setAvailableTimezones(matchedCountry.timezones || [])
-    }
-
     setPocDetails(normalized.pocDetails || '')
     setReDetails(normalized.reDetails || '')
     setCallInvites(normalized.callInvites || '')
     setDocumentsLabel(normalized.documentsLabel || '')
     setSignoffLabel(normalized.signoffLabel || '')
-
-    setEngPayType(normalized.eng_pay_type)
-    setEngBillingType(normalized.eng_billing_type)
-    setEngCurrency(normalized.eng_currency)
-    setEngHourlyRate(normalized.eng_hourly_rate)
-    setEngHalfDayRate(normalized.eng_half_day_rate)
-    setEngFullDayRate(normalized.eng_full_day_rate)
-    setEngMonthlyRate(normalized.eng_monthly_rate)
-    setEngAgreedRate(normalized.eng_agreed_rate)
-    setEngCancellationFee(normalized.eng_cancellation_fee)
-
-    if (normalized.documentsLabel) {
-      setDocuments(normalized.documentsLabel.split(', ').map(name => ({ name })))
-    } else {
-      setDocuments([])
-    }
-
-    if (normalized.signoffLabel) {
-      setSignoffSheets(normalized.signoffLabel.split(', ').map(name => ({ name })))
-    } else {
-      setSignoffSheets([])
-    }
-
     setCurrency(normalized.currency || 'USD')
-    setHourlyRate(normalized.hourlyRate != null ? String(normalized.hourlyRate) : '')
-    setHalfDayRate(normalized.halfDayRate != null ? String(normalized.halfDayRate) : '')
-    setFullDayRate(normalized.fullDayRate != null ? String(normalized.fullDayRate) : '')
-    setMonthlyRate(normalized.monthlyRate != null ? String(normalized.monthlyRate) : '')
-    setAgreedRate(normalized.agreedRate || '')
-    setCancellationFee(normalized.cancellationFee != null ? String(normalized.cancellationFee) : '')
-    setTravelCostPerDay(normalized.travelCostPerDay != null ? String(normalized.travelCostPerDay) : '')
-    setToolCostInput(normalized.toolCost != null ? String(normalized.toolCost) : '')
+    setHourlyRate(normalized.hourlyRate)
+    setHalfDayRate(normalized.halfDayRate)
+    setFullDayRate(normalized.fullDayRate)
+    setMonthlyRate(normalized.monthlyRate)
+    setAgreedRate(normalized.agreedRate)
+    setTravelCostPerDay(normalized.travelCostPerDay)
+    setToolCostInput(normalized.toolCost)
+    setCancellationFee(normalized.cancellationFee)
+    setStatus(normalized.status)
     setBillingType(normalized.billingType)
-    setLeadType(normalized.leadType || 'Full time')
-    setStatus(normalized.status || 'Open')
-
-    const start = normalized.startTime || normalized.start_time;
-    const end = normalized.endTime || normalized.end_time;
-    if (start) setStartTime(formatForInput(start));
-    if (end) setEndTime(formatForInput(end));
-    setBreakTime(normalized.breakTime != null ? String(Math.floor(Number(normalized.breakTime) / 60)) : (normalized.break_time != null ? String(Math.floor(Number(normalized.break_time) / 60)) : '0'));
+    setStartTime(normalized.startTime ? formatForInput(normalized.startTime) : '')
+    setEndTime(normalized.endTime ? formatForInput(normalized.endTime) : '')
+    setBreakTime(String(Math.floor(Number(normalized.breakTime) / 60)))
+    setLeadType(normalized.leadType)
+    setEngPayType(normalized.engPayType)
+    setEngBillingType(normalized.engBillingType)
+    setEngCurrency(normalized.engCurrency)
+    setEngHourlyRate(normalized.engHourlyRate)
+    setEngHalfDayRate(normalized.engHalfDayRate)
+    setEngFullDayRate(normalized.engFullDayRate)
+    setEngMonthlyRate(normalized.engMonthlyRate)
+    setEngAgreedRate(normalized.engAgreedRate)
+    setEngCancellationFee(normalized.eng_cancellation_fee)
     
-    // Release guard after a short timeout to let states settle
-    setTimeout(() => setIsFillingForm(false), 500);
+    if (switchMode) {
+      setEditingTicketId(normalized.id || ticket.id)
+      setViewMode('form')
+    }
+    
+    setTimeout(() => setIsFillingForm(false), 500)
   }
 
   const handleViewDocument = (fileUrl) => {
@@ -3124,14 +3138,61 @@ function TicketsPage() {
 
       {isTicketModalOpen && selectedTicket && (
         <div className="ticket-modal-backdrop" onClick={handleCloseTicketModal} role="dialog" aria-modal="true">
-          <div className="ticket-modal ticket-modal--details" onClick={e => e.stopPropagation()}>
-            <header className="ticket-modal-header">
-              <div className="ticket-modal-header-info">
-                <h2>Ticket Details</h2>
-                <div className="ticket-badge-id">#AIM-T-{String(selectedTicket.id).padStart(3, '0')}</div>
+          <div className="ticket-modal ticket-modal--details" style={{ maxWidth: '900px' }} onClick={e => e.stopPropagation()}>
+            <header className="ticket-modal-header" style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              padding: '24px',
+              borderBottom: '1px solid #f1f5f9',
+              background: '#fff'
+            }}>
+              <div>
+                <h2 className="ticket-modal-title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#1e293b' }}>
+                  Ticket Details <span style={{ color: '#6366f1', marginLeft: '8px' }}>#AIM-T-{selectedTicket.id}</span>
+                </h2>
+                <p className="ticket-modal-subtitle" style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>{selectedTicket.taskName}</p>
               </div>
-              <p className="ticket-modal-subtitle">{selectedTicket.taskName}</p>
-              <button type="button" className="ticket-modal-close-btn" onClick={handleCloseTicketModal}><FiX /></button>
+              
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <button
+                  className="btn-wow-primary"
+                  style={{ 
+                    padding: '10px 20px', 
+                    fontSize: '13px', 
+                    fontWeight: '700',
+                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onClick={() => {
+                    handleCloseTicketModal();
+                    startEditTicket(selectedTicket.id);
+                  }}
+                >
+                  <FiEdit2 /> Edit Full Ticket
+                </button>
+                <button 
+                  className="ticket-modal-close-btn" 
+                  onClick={handleCloseTicketModal}
+                  style={{ 
+                    background: '#f1f5f9', 
+                    border: 'none', 
+                    padding: '10px', 
+                    borderRadius: '10px', 
+                    color: '#64748b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <FiX size={20} />
+                </button>
+              </div>
             </header>
 
             <div className="ticket-modal-content">
@@ -3302,7 +3363,7 @@ function TicketsPage() {
                           </div>
                           <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534' }}>GRAND TOTAL (PAYOUT)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669' }}>{selectedTicket.eng_currency || selectedTicket.currency} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.engTotalCost || 0).toFixed(2)}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669' }}>{selectedTicket.eng_currency || selectedTicket.currency} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}</div>
                           </div>
                         </div>
                       </div>
