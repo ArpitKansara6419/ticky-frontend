@@ -1348,6 +1348,8 @@ function TicketsPage() {
       eng_cancellation_fee: ticket.engCancellationFee ?? ticket.eng_cancellation_fee ?? ''
     }
     setIsFillingForm(true);
+    setLiveBreakdown(null); // Clear previous to avoid 0.00 show
+    setPayoutLiveBreakdown(null);
     setCustomerId(normalized.customerId ? String(normalized.customerId) : '')
     setLeadId(normalized.leadId ? String(normalized.leadId) : '')
     setClientName(normalized.clientName || '')
@@ -3395,6 +3397,16 @@ function TicketsPage() {
                 <button className="btn-wow-secondary" onClick={handleCloseTicketModal}><FiX /> Close Details</button>
                 <button
                   className="btn-wow-primary"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                  onClick={() => {
+                    handleCloseTicketModal();
+                    startEditTicket(selectedTicket.id);
+                  }}
+                >
+                  <FiEdit2 /> Edit Full Ticket
+                </button>
+                <button
+                  className="btn-wow-secondary"
                   onClick={() => {
                     if (!isInlineEditing) {
                       const actualStart = selectedTicket.startTime || selectedTicket.start_time;
