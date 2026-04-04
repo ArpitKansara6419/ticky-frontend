@@ -8,11 +8,16 @@ import './TicketsPage.css'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDLND9h_AWApPg9gQVYZhhsPmIHMuN-6fg'
 
-const TIMEZONES = [
-  'GB United Kingdom (UTC+00:00)',
-  'EU Europe (UTC+01:00)',
-  'US Eastern (UTC-05:00)',
-]
+const calculateDuration = (start, end, breakMins = 0) => {
+  if (!start || !end) return 0;
+  try {
+    const [h1, m1] = start.split(':').map(Number);
+    const [h2, m2] = end.split(':').map(Number);
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (diff < 0) diff += 1440; // overnight
+    return Math.max(0, (diff - (Number(breakMins) || 0)) / 60);
+  } catch (e) { return 0; }
+};
 
 const formatForInput = (dateStr) => {
   if (!dateStr) return '';
@@ -1373,7 +1378,7 @@ function TicketsPage() {
       setEndTime(formatForInput(ticket.end_time));
     }
 
-    setBreakTime(ticket.breakTime ? String(Math.floor(ticket.breakTime / 60)) : (ticket.break_time ? String(Math.floor(ticket.break_time / 60)) : '0'));
+    setBreakTime(ticket.breakTime != null ? String(Math.floor(Number(ticket.breakTime) / 60)) : (ticket.break_time != null ? String(Math.floor(Number(ticket.break_time) / 60)) : '0'));
   }
 
   const handleViewDocument = (fileUrl) => {
@@ -1418,24 +1423,27 @@ function TicketsPage() {
 
   const startEditTicket = async (ticketId) => {
     try {
-      // Load dropdown options first
-      await loadDropdowns()
+      // First, fetch everything while still in list mode for a smooth transition
+      const ticketRes = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' });
+      if (!ticketRes.ok) throw new Error('Unable to load ticket data');
+      const ticketData = await ticketRes.json();
+      const ticket = ticketData.ticket || ticketData;
 
-      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.message || 'Unable to load ticket')
-      }
-      fillFormFromTicket(data.ticket)
-      setEditingTicketId(ticketId)
+      // Load dropdowns if needed
+      await loadDropdowns();
+
+      // Populate form fields BEFORE showing the form
+      fillFormFromTicket(ticket);
+      setEditingTicketId(ticketId);
       
-      // Fetch extras (like time logs) so the daily shifts table is populated correctly
-      fetchTicketExtras(ticketId)
+      // Fetch fresh extras immediately
+      await fetchTicketExtras(ticketId);
       
-      setViewMode('form')
+      // Finally, switch to form view only after state is ready
+      setViewMode('form');
     } catch (err) {
-      console.error('Edit ticket error', err)
-      setError(err.message || 'Unable to load ticket for edit')
+      console.error('Edit ticket error', err);
+      setError(err.message || 'Unable to load ticket for edit');
     }
   }
 
@@ -2229,42 +2237,42 @@ function TicketsPage() {
                       </thead>
                       <tbody>
                         {(() => {
-                          const dates = getDatesInRange(taskStartDate, taskEndDate);
+                          const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
+                          const cleanTaskTime = (taskTime || '09:00').padStart(5, '0');
+                          
+                          return daysInRange.map((dStr, idx) => {
+                            const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
+                            
+                            // DETERMINISTIC FALLBACKS: Support both snake_case and CamelCase keys from backend
+                            const actualStartStr = existingLog.start_time || existingLog.startTime;
+                            const actualEndStr = existingLog.end_time || existingLog.endTime;
+                            const actualBreak = existingLog.break_time_mins != null ? Number(existingLog.break_time_mins) : (existingLog.breakTime != null ? Number(existingLog.breakTime) : 0);
 
-                          return dates.map((dStr, idx) => {
-                            const existingLog = (timeLogs || []).find(l => l.task_date?.split('T')[0] === dStr) || {};
-                            const dur = (existingLog.start_time && existingLog.end_time)
-                              ? (new Date(existingLog.end_time) - new Date(existingLog.start_time)) / 3600000 - (existingLog.break_time_mins / 60)
-                              : 8;
-
-                            const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
-                            const sTime = `${dStr}T${cleanTime}:00Z`;
-                            const startD = new Date(sTime);
-                            let eTime = '';
-
-                            if (!isNaN(startD.getTime())) {
-                              eTime = new Date(startD.getTime() + (8 * 3600 * 1000)).toISOString();
+                            const lStart = actualStartStr ? actualStartStr.split('T')[1].slice(0,5) : cleanTaskTime;
+                            
+                            let lEnd = '';
+                            if (actualEndStr) {
+                              lEnd = actualEndStr.split('T')[1].slice(0,5);
+                            } else {
+                              // Default to 8-hour shift from scheduled start
+                              const [h, m] = lStart.split(':');
+                              let endH = parseInt(h, 10) + 8;
+                              if (endH >= 24) endH = 23; // cap at midnight for simple default
+                              lEnd = `${String(endH).padStart(2, '0')}:${m}`;
                             }
 
-                            // Use actual log times if available; else default to scheduled 8h shift
-                            const ls = existingLog.start_time || sTime;
-                            const le = existingLog.end_time || eTime;
-                            const lb = existingLog.break_time_mins || 0;
-
+                            const dur = calculateDuration(lStart, lEnd, actualBreak);
                             const dayCostBreakdown = calculateTicketTotal({
-                              startTime: ls,
-                              endTime: le,
-                              breakTime: lb,
-                              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                              travelCostPerDay: travelCostPerDay, 
-                              toolCost: toolCostInput, 
-                              billingType, timezone, calcTimezone
+                              startTime: `${dStr}T${lStart}:00.000Z`, 
+                              endTime: `${dStr}T${lEnd}:00.000Z`, 
+                              breakTime: actualBreak,
+                              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
                             });
 
                             return (
-                              <tr key={dStr} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <tr key={idx} style={{ background: dur > 8 ? 'rgba(239, 68, 68, 0.05)' : (existingLog.id ? 'rgba(99, 102, 241, 0.03)' : undefined) }}>
                                 <td style={{ padding: '10px' }}>
-                                  <b style={{ color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</b>
+                                  <div style={{ fontWeight: '700', color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</div>
                                   <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
                                 </td>
                                 <td style={{ padding: '10px' }}>
@@ -2272,7 +2280,7 @@ function TicketsPage() {
                                     existingLog.id ? (
                                       <select
                                         style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px' }}
-                                        value={existingLog.engineer_id || engineerId}
+                                        value={existingLog.engineer_id || existingLog.engineerId || engineerId}
                                         onChange={(e) => handleUpdateLog(existingLog.id, { engineerId: Number(e.target.value) })}
                                       >
                                         {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
@@ -2289,7 +2297,7 @@ function TicketsPage() {
                                     <input 
                                       type="time" 
                                       id={`fst-${idx}`} 
-                                      value={existingLog.start_time ? existingLog.start_time.split('T')[1].slice(0,5) : (taskTime || "09:00")} 
+                                      value={lStart} 
                                       style={{ padding: '2px', fontSize: '11px' }} 
                                       onChange={(e) => {
                                         const newTime = e.target.value;
@@ -2302,7 +2310,7 @@ function TicketsPage() {
                                     <input 
                                       type="time" 
                                       id={`fet-${idx}`} 
-                                      value={existingLog.end_time ? existingLog.end_time.split('T')[1].slice(0,5) : "18:00"} 
+                                      value={lEnd} 
                                       style={{ padding: '2px', fontSize: '11px' }} 
                                       onChange={(e) => {
                                         const newTime = e.target.value;
@@ -2315,7 +2323,7 @@ function TicketsPage() {
                                       type="number" 
                                       id={`fbr-${idx}`} 
                                       placeholder="Break" 
-                                      value={existingLog.break_time_mins || 0} 
+                                      value={actualBreak} 
                                       style={{ width: '45px', padding: '2px', fontSize: '11px' }} 
                                       onChange={(e) => {
                                         const bMins = parseInt(e.target.value) || 0;
