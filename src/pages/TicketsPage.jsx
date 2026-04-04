@@ -436,9 +436,6 @@ function TicketsPage() {
           '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
         ];
         const isHoliday = PUBLIC_HOLIDAYS.includes(d);
-        const shouldSkip = (isWeekend || isHoliday) && (!existing || !existing.start_time || !existing.end_time);
-        
-        if (shouldSkip) return; // Don't count default weekend/holiday blocks in the grand total estimation
 
         let sTime, eTime, bMins = 0, specificEngId = null;
         if (existing && existing.start_time && existing.end_time) {
