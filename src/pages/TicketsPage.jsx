@@ -376,7 +376,8 @@ function TicketsPage() {
         }
 
       } else if (bil.includes('Monthly')) {
-        base = parseFloat(opts.monthlyRate) || 0;
+        const fullRate = parseFloat(opts.monthlyRate) || 0;
+        base = fullRate / 30; // Pro-rata for 1 day
         if (isWeekend || isHoliday) {
           // Weekend/Holiday: monthly base already covers normal days.
           // Extra special-day premium (2.0x hourly) is charged ON TOP.
