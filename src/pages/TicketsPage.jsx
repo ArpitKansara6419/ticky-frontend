@@ -481,7 +481,7 @@ function TicketsPage() {
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
-          travelCostPerDay: 0, toolCost: 0, billingType: pRates.billingType, timezone, calcTimezone
+          travelCostPerDay, toolCost: toolCostInput, billingType: pRates.billingType, timezone, calcTimezone
         });
 
         if (res) {
