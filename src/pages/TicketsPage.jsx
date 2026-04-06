@@ -282,9 +282,7 @@ function TicketsPage() {
   // Pure calculation function for reuse
   const calculateTicketTotal = (opts) => {
     const {
-      startTime, endTime, breakTime,
-      hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-      travelCostPerDay, toolCost, billingType, timezone, calcTimezone
+      travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country
     } = opts;
 
     if (!startTime || !endTime) return null;
@@ -319,12 +317,13 @@ function TicketsPage() {
       const startInfo = getZonedInfo(s);
       const endInfo = getZonedInfo(e);
 
-      const PUBLIC_HOLIDAYS = [
-        '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
-        '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
-        '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
-      ];
-      const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
+      const HOLIDAYS_BY_COUNTRY = {
+        'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+        'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+        'Other': []
+      };
+      const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+      const isHoliday = activeHols.includes(startInfo.dateStr) || activeHols.includes(endInfo.dateStr);
       // isWeekend: 0=Sunday, 6=Saturday
       const isWeekend = startInfo.day === 0 || startInfo.day === 6;
       const isSpecialDay = isWeekend || isHoliday;
@@ -430,12 +429,13 @@ function TicketsPage() {
         // Skip Weekends/Holidays unless an existing log was manually recorded for that day
         const dObj = new Date(d);
         const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
-        const PUBLIC_HOLIDAYS = [
-          '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
-          '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
-          '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
-        ];
-        const isHoliday = PUBLIC_HOLIDAYS.includes(d);
+        const HOLIDAYS_BY_COUNTRY = {
+          'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+          'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+          'Other': []
+        };
+        const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+        const isHoliday = activeHols.includes(d);
 
         // Only process if it's a weekday AND not a holiday, OR if there's an existing manually added log
         if ((isWeekend || isHoliday) && !existing) {
@@ -460,7 +460,7 @@ function TicketsPage() {
         const res = calculateTicketTotal({
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-          travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
+          travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone, country
         });
 
         // Determine which engineer's rates to use for payout
@@ -2306,12 +2306,13 @@ function TicketsPage() {
                             // Skip Weekends/Holidays unless an existing log exists
                             const dObj = new Date(dStr);
                             const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
-                            const PUBLIC_HOLIDAYS = [
-                              '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
-                              '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
-                              '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
-                            ];
-                            const isHoliday = PUBLIC_HOLIDAYS.includes(dStr);
+                            const HOLIDAYS_BY_COUNTRY = {
+                              'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+                              'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+                              'Other': []
+                            };
+                            const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+                            const isHoliday = activeHols.includes(dStr);
                             if ((isWeekend || isHoliday) && !existingLog.id) return null;
 
                             // DETERMINISTIC FALLBACKS: Support both snake_case and CamelCase keys from backend

@@ -75,8 +75,13 @@ const CustomerReceivablePage = () => {
                 if (logDate) {
                     const dObj = new Date(logDate);
                     const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
-                    const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
-                    const isHoliday = PUBLIC_HOLIDAYS.includes(logDate);
+                    const HOLIDAYS_BY_COUNTRY = {
+                        'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+                        'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+                        'Other': []
+                    };
+                    const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+                    const isHoliday = activeHols.includes(logDate);
                     if ((isWeekend || isHoliday) && !log.start_time) return;
                 }
 
@@ -122,8 +127,13 @@ const CustomerReceivablePage = () => {
         if (ticket.end_time && ticket.end_time.includes('T')) endHr = parseInt(ticket.end_time.split('T')[1].split(':')[0], 10);
 
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
-        const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
-        const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
+        const HOLIDAYS_BY_COUNTRY = {
+            'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+            'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+            'Other': []
+        };
+        const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+        const isH = activeHols.includes(info.dateStr) || activeHols.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
         const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
