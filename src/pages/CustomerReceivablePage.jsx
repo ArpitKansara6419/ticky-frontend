@@ -71,6 +71,15 @@ const CustomerReceivablePage = () => {
         if (logs.length > 0) {
             let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
             logs.forEach(log => {
+                const logDate = (log.task_date || '').split('T')[0];
+                if (logDate) {
+                    const dObj = new Date(logDate);
+                    const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
+                    const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
+                    const isHoliday = PUBLIC_HOLIDAYS.includes(logDate);
+                    if ((isWeekend || isHoliday) && !log.start_time) return;
+                }
+
                 const res = calculateTicketCostFrontend({ ...ticket, ...log, time_logs: [] }, forcedTZ, targetCurrency);
                 totalHrs += parseFloat(res.totalHours || 0);
                 if (bil === 'Hourly' || bil === 'Half Day + Hourly' || bil === 'Full Day + OT' || bil === 'Mixed Mode') {

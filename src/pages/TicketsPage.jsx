@@ -427,7 +427,7 @@ function TicketsPage() {
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
 
-        // Skip Weekends/Holidays if requested (Manual dispatch typically skips these unless specific logs exist)
+        // Skip Weekends/Holidays unless an existing log was manually recorded for that day
         const dObj = new Date(d);
         const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
         const PUBLIC_HOLIDAYS = [
@@ -436,6 +436,11 @@ function TicketsPage() {
           '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
         ];
         const isHoliday = PUBLIC_HOLIDAYS.includes(d);
+
+        // Only process if it's a weekday AND not a holiday, OR if there's an existing manually added log
+        if ((isWeekend || isHoliday) && !existing) {
+          return;
+        }
 
         let sTime, eTime, bMins = 0, specificEngId = null;
         if (existing && existing.start_time && existing.end_time) {
@@ -2297,6 +2302,17 @@ function TicketsPage() {
 
                           return daysInRange.map((dStr, idx) => {
                             const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
+
+                            // Skip Weekends/Holidays unless an existing log exists
+                            const dObj = new Date(dStr);
+                            const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
+                            const PUBLIC_HOLIDAYS = [
+                              '2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14',
+                              '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02',
+                              '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'
+                            ];
+                            const isHoliday = PUBLIC_HOLIDAYS.includes(dStr);
+                            if ((isWeekend || isHoliday) && !existingLog.id) return null;
 
                             // DETERMINISTIC FALLBACKS: Support both snake_case and CamelCase keys from backend
                             const actualStartStr = existingLog.start_time || existingLog.startTime;
