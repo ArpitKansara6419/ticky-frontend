@@ -282,18 +282,24 @@ function TicketsPage() {
   // Pure calculation function for reuse
   const calculateTicketTotal = (opts) => {
     const {
+      startTime: sParam, endTime: eParam, breakTime: bParam,
+      hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
       travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country
     } = opts;
 
-    if (!startTime || !endTime) return null;
+    if (!sParam || !eParam) return null;
 
     try {
+      // Use parameters, fallback to strings if needed
+      const sStr = String(sParam);
+      const eStr = String(eParam);
+
       // Parse as UTC to treat as 'wall-clock' time
-      const s = new Date(startTime.includes('Z') || startTime.includes('+') ? startTime : startTime.replace(' ', 'T') + 'Z');
-      const e = new Date(endTime.includes('Z') || endTime.includes('+') ? endTime : endTime.replace(' ', 'T') + 'Z');
+      const s = new Date(sStr.includes('Z') || sStr.includes('+') ? sStr : sStr.replace(' ', 'T') + 'Z');
+      const e = new Date(eStr.includes('Z') || eStr.includes('+') ? eStr : eStr.replace(' ', 'T') + 'Z');
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
 
-      const brkSec = (parseInt(breakTime) || 0) * 60;
+      const brkSec = (parseInt(bParam) || 0) * 60;
       const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
       const hrs = totSec / 3600;
 
