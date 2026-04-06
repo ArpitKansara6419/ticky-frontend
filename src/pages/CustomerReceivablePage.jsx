@@ -62,33 +62,16 @@ const CustomerReceivablePage = () => {
             } catch (e) { return { dateStr: '', day: date.getDay(), hour: date.getHours() }; }
         };
 
+        const cur = ticket.currency || 'USD';
+        const bil = ticket.billing_type || 'Hourly';
+
         let logs = [];
         try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
 
-        const bil = ticket.billing_type || 'Hourly';
         if (logs.length > 0) {
             let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
             logs.forEach(log => {
-                let sTime = log.start_time;
-                let eTime = log.end_time;
-                let brk = (log.break_time_mins || 0) * 60;
-
-                if (!sTime || !eTime) {
-                    if (!log.task_date) return;
-                    const d = new Date(log.task_date);
-                    if (isNaN(d.getTime())) return;
-                    const dateStr = d.toISOString().split('T')[0];
-                    const ct = String(ticket.task_time || '08:00').slice(0, 5);
-                    const sDT = new Date(`${dateStr}T${ct}:00Z`);
-                    if (isNaN(sDT.getTime())) return;
-                    sTime = sDT.toISOString().slice(0, 19).replace('T', ' ');
-                    const eDT = new Date(sDT.getTime() + 8 * 3600000);
-                    eTime = eDT.toISOString().slice(0, 19).replace('T', ' ');
-                    brk = 0;
-                }
-
-                const res = calculateTicketCostFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [] }, tz, targetCurrency);
-                
+                const res = calculateTicketCostFrontend({ ...ticket, ...log, time_logs: [] }, forcedTZ, targetCurrency);
                 totalHrs += parseFloat(res.totalHours || 0);
                 if (bil === 'Hourly' || bil === 'Half Day + Hourly' || bil === 'Full Day + OT' || bil === 'Mixed Mode') {
                     baseC += parseFloat(res.baseCost || 0);
@@ -99,76 +82,11 @@ const CustomerReceivablePage = () => {
                 travC += parseFloat(res.travelCost || 0);
                 toolC += parseFloat(res.toolCost || 0);
             });
-            
-            if (bil.includes('Monthly') || bil === 'Agreed Rate' || bil === 'Cancellation') {
-                const dummy = calculateTicketCostFrontend({ ...ticket, time_logs: [] }, tz, targetCurrency);
-                baseC = parseFloat(dummy.baseCost);
-            }
-            
-            totalRec = baseC + otP + oohP + spP + travC + toolC;
-
-            return {
-                totalReceivable: totalRec.toFixed(2),
-                baseCost: baseC.toFixed(2), otPremium: otP.toFixed(2), oohPremium: oohP.toFixed(2), specialDayPremium: spP.toFixed(2),
-                totalHours: totalHrs, formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
-                travelCost: travC.toFixed(2),
-                toolCost: toolC.toFixed(2),
-                otHours: totalHrs > 8 ? totalHrs - 8 : 0,
-                ooh: oohP > 0 ? 'Yes' : 'No',
-                ww: spP > 0 ? 'Yes' : 'No',
-                hw: spP > 0 ? 'Yes' : 'No'
-            };
-        }
-
-        const s = new Date(ticket.start_time || ticket.task_start_date);
-        const e = new Date(ticket.end_time || ticket.task_end_date || ticket.start_time);
-        const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
-        const hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
-
-        const info = getZonedInfo(s);
-        const endInfo = getZonedInfo(e);
-
-        // USE VISUAL HOURS FROM ISO STRING TO PREVENT TIMEZONE SHIFT BUGS
-        let startHr = info.hour;
-        let endHr = endInfo.hour;
-        if (ticket.start_time && ticket.start_time.includes('T')) {
-            startHr = parseInt(ticket.start_time.split('T')[1].split(':')[0], 10);
-        }
-        if (ticket.end_time && ticket.end_time.includes('T')) {
-            endHr = parseInt(ticket.end_time.split('T')[1].split(':')[0], 10);
-        }
-
-        const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
-        const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
-        const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
-        const isSpecialDay = isWK || isH;
-
-        // OOH strictly only if hours are OUTSIDE 08:00 - 18:00
-        const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
-
-        const cur = ticket.currency || 'USD';
-        let logs = [];
-        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
-
-        if (logs.length > 0) {
-            let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
-            logs.forEach(log => {
-                const res = calculateTicketCostFrontend({ ...ticket, ...log, time_logs: [] }, forcedTZ, cur);
-                totalHrs += parseFloat(res.totalHours || 0);
-                if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT' || billingType === 'Mixed Mode') {
-                    baseC += parseFloat(res.baseCost || 0);
-                }
-                otP += parseFloat(res.otPremium || 0);
-                oohP += parseFloat(res.oohPremium || 0);
-                spP += parseFloat(res.specialDayPremium || 0);
-                travC += parseFloat(res.travelCost || 0);
-                toolC += parseFloat(res.toolCost || 0);
-            });
-            if (billingType.includes('Monthly')) {
+            if (bil.includes('Monthly')) {
                 const fullRate = parseFloat(ticket.monthly_rate || ticket.monthlyRate) || 0;
                 baseC = (fullRate / 30) * logs.length;
-            } else if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
-                const dummy = calculateTicketCostFrontend({ ...ticket, time_logs: [] }, forcedTZ, cur);
+            } else if (bil === 'Agreed Rate' || bil === 'Cancellation') {
+                const dummy = calculateTicketCostFrontend({ ...ticket, time_logs: [] }, forcedTZ, targetCurrency);
                 baseC = parseFloat(dummy.baseCost || 0);
             }
             totalRec = baseC + otP + oohP + spP + travC + toolC;
@@ -180,6 +98,86 @@ const CustomerReceivablePage = () => {
                 travelCost: travC, toolCost: toolC,
                 isOOH: oohP > 0, isSpecialDay: spP > 0
             };
+        }
+
+        const s = new Date(ticket.start_time || ticket.task_start_date);
+        const e = new Date(ticket.end_time || ticket.task_end_date || ticket.start_time);
+        const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
+        const hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
+
+        const info = getZonedInfo(s);
+        const endInfo = getZonedInfo(e);
+        let startHr = info.hour;
+        let endHr = endInfo.hour;
+        if (ticket.start_time && ticket.start_time.includes('T')) startHr = parseInt(ticket.start_time.split('T')[1].split(':')[0], 10);
+        if (ticket.end_time && ticket.end_time.includes('T')) endHr = parseInt(ticket.end_time.split('T')[1].split(':')[0], 10);
+
+        const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
+        const HOLS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
+        const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
+        const isSpecialDay = isWK || isH;
+        const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
+
+        let base = 0, ot = 0, ooh = 0, sp = 0;
+        let baseBreakdown = "";
+        let otBreakdown = "";
+        let spBreakdown = "";
+        let oohBreakdown = "";
+
+        if (bil === 'Hourly') {
+            const b = Math.max(2, hrs); 
+            base = b * hr; 
+            baseBreakdown = `Billed ${b.toFixed(2)}h @ ${cur} ${hr.toFixed(2)} (Min 2h)`;
+        } else if (bil === 'Half Day + Hourly') {
+            if (hrs <= 4) {
+                base = hd;
+                baseBreakdown = `Fixed Half Day Rate (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
+            } else {
+                const extra = hrs - 4;
+                base = hd + (extra * hr);
+                baseBreakdown = `Half Day Rate (${cur} ${hd.toFixed(2)}) + Extra ${extra.toFixed(2)}h @ ${cur} ${hr.toFixed(2)}`;
+            }
+        } else if (bil === 'Full Day + OT') {
+            base = fd;
+            baseBreakdown = `Fixed Full Day Rate (≤ 8h) = ${cur} ${fd.toFixed(2)}`;
+            if (hrs > 8) {
+                const otHrs = hrs - 8;
+                ot = otHrs * (hr * 1.5);
+                otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
+            }
+        } else if (bil.includes('Monthly')) {
+            base = parseFloat(ticket.monthly_rate || ticket.monthlyRate || 0) / 30;
+            baseBreakdown = `Pro-rata Monthly (1 day) = ${cur} ${base.toFixed(2)}`;
+            if (isSpecialDay) {
+                sp = hrs * (hr * 2.0);
+                spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${cur} ${(hr * 2.0).toFixed(2)} (2.0x)`;
+            } else { 
+                if (hrs > 8) {
+                    const otHrs = hrs - 8;
+                    ot = otHrs * (hr * 1.5); 
+                    otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
+                }
+            }
+        } else if (bil === 'Agreed Rate') { 
+            base = parseFloat(ticket.agreed_rate) || 0;
+            baseBreakdown = `Agreed / Fixed Rate = ${cur} ${base.toFixed(2)}`;
+        } else if (bil === 'Cancellation') { 
+            base = parseFloat(ticket.cancellation_fee) || 0; 
+            baseBreakdown = `Fixed Cancellation Fee = ${cur} ${base.toFixed(2)}`;
+        } else if (bil === 'Mixed Mode') {
+            if (hrs <= 4) {
+                base = hd;
+                baseBreakdown = `Billed as Half Day (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
+            } else if (hrs <= 8) {
+                base = fd;
+                baseBreakdown = `Billed as Full Day (4-8h) = ${cur} ${fd.toFixed(2)}`;
+            } else {
+                base = fd;
+                baseBreakdown = `Full Day Base (8h) = ${cur} ${fd.toFixed(2)}`;
+                const otHrs = hrs - 8;
+                ot = otHrs * (hr * 1.5);
+                otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
+            }
         }
 
         const trav = parseFloat(ticket.travel_cost_per_day || ticket.travelCostPerDay || 0);
@@ -225,7 +223,7 @@ const CustomerReceivablePage = () => {
         try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
 
         if (logs.length > 0) {
-            let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0;
+            let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
             logs.forEach(log => {
                 let sTime = log.start_time;
                 let eTime = log.end_time;
@@ -253,16 +251,22 @@ const CustomerReceivablePage = () => {
                 otP += parseFloat(res.otPremium || 0);
                 oohP += parseFloat(res.oohPremium || 0);
                 spP += parseFloat(res.specialDayPremium || 0);
+                travC += parseFloat(res.travelCost || 0);
+                toolC += parseFloat(res.toolCost || 0);
             });
-            if (billingType.includes('Monthly') || billingType === 'Agreed Rate' || billingType === 'Cancellation') {
+            if (billingType.includes('Monthly')) {
+                const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
+                baseC = (fullRate / 30) * logs.length;
+            } else if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
                 const dummy = calculateEngineerPayoutFrontend({ ...ticket, time_logs: [] }, tz);
                 baseC = parseFloat(dummy.baseCost);
             }
-            totalRec = baseC + otP + oohP + spP;
+            totalRec = baseC + otP + oohP + spP + travC + toolC;
             return {
                 totalPayout: totalRec.toFixed(2),
                 baseCost: baseC.toFixed(2), otPremium: otP.toFixed(2), oohPremium: oohP.toFixed(2), specialDayPremium: spP.toFixed(2),
-                totalHours: totalHrs, otHours: totalHrs > 8 ? totalHrs - 8 : 0
+                totalHours: totalHrs, otHours: totalHrs > 8 ? totalHrs - 8 : 0,
+                travelCost: travC.toFixed(2), toolCost: toolC.toFixed(2)
             };
         }
 
