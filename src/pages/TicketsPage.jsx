@@ -379,8 +379,7 @@ function TicketsPage() {
         const fullRate = parseFloat(opts.monthlyRate) || 0;
         base = fullRate / 30; // Pro-rata for 1 day
         if (isWeekend || isHoliday) {
-          // Weekend/Holiday: monthly base already covers normal days.
-          // Extra special-day premium (2.0x hourly) is charged ON TOP.
+          // Special-day premium (2.0x hourly) is charged ON TOP of the daily pro-rata base.
           special = hrs * (hr * 2.0);
         } else {
           // Normal weekday: count towards monthly total, apply OT if > 8h
