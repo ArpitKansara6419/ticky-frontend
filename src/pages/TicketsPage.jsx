@@ -426,7 +426,7 @@ function TicketsPage() {
 
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
-        
+
         // Skip Weekends/Holidays if requested (Manual dispatch typically skips these unless specific logs exist)
         const dObj = new Date(d);
         const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
@@ -679,7 +679,7 @@ function TicketsPage() {
     if (!editingTicketId && (leadType === 'Dispatch' || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate))) {
       const dates = getDatesInRange(taskStartDate, taskEndDate);
       const ct = (taskTime || '09:00').slice(0, 5);
-      
+
       const newLogs = dates.map(dStr => {
         const existing = timeLogs.find(l => (l.task_date || '').split('T')[0] === dStr);
         if (existing) return existing;
@@ -1087,7 +1087,7 @@ function TicketsPage() {
       if (res.ok) {
         const data = await res.json();
         let t = data.ticket || data;
-        
+
         // NORMALIZE
         t = {
           ...t,
@@ -1110,12 +1110,12 @@ function TicketsPage() {
         setTimeLogs(t.time_logs || []);
         setIsTicketModalOpen(true);
         setIsInlineEditing(false);
-        if (engineers.length === 0) loadDropdowns(); 
+        if (engineers.length === 0) loadDropdowns();
         fetchTicketExtras(ticketId);
-        
+
         // SYNC MAIN STATES to trigger live calculations even in View mode
         fillFormFromTicket(t, false); // false = don't switch viewMode to form
-        
+
         const start = t.startTime || t.start_time;
         const end = t.endTime || t.end_time;
         setInlineStartTime(start ? formatForInput(start) : (t.taskStartDate ? formatForInput(t.taskStartDate) : ''));
@@ -1181,7 +1181,7 @@ function TicketsPage() {
       if (!res.ok) throw new Error(data.message || 'Failed to update time');
 
       // Refresh everything to ensure UI is perfectly in sync
-      await openTicketModal(tId); 
+      await openTicketModal(tId);
       await loadTickets();
       setIsInlineEditing(false);
     } catch (err) {
@@ -1235,7 +1235,7 @@ function TicketsPage() {
         credentials: 'include',
         body: JSON.stringify(data)
       });
-      
+
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.message || 'Update failed');
@@ -1326,7 +1326,7 @@ function TicketsPage() {
 
   const fillFormFromTicket = (ticket, switchMode = true) => {
     if (!ticket) return;
-    
+
     const t = ticket;
     const normalized = {
       customerId: t.customer_id || t.customerId || '',
@@ -1378,7 +1378,7 @@ function TicketsPage() {
       eng_cancellation_fee: t.engCancellationFee ?? t.eng_cancellation_fee ?? ''
     }
     setIsFillingForm(true);
-    setLiveBreakdown(null); 
+    setLiveBreakdown(null);
     setPayoutLiveBreakdown(null);
     setCustomerId(normalized.customerId ? String(normalized.customerId) : '')
     setLeadId(normalized.leadId ? String(normalized.leadId) : '')
@@ -1427,12 +1427,12 @@ function TicketsPage() {
     setEngMonthlyRate(normalized.engMonthlyRate)
     setEngAgreedRate(normalized.engAgreedRate)
     setEngCancellationFee(normalized.eng_cancellation_fee)
-    
+
     if (switchMode) {
       setEditingTicketId(normalized.id || ticket.id)
       setViewMode('form')
     }
-    
+
     setTimeout(() => setIsFillingForm(false), 500)
   }
 
@@ -1490,10 +1490,10 @@ function TicketsPage() {
       // Populate form fields BEFORE showing the form
       fillFormFromTicket(ticket);
       setEditingTicketId(ticketId);
-      
+
       // Fetch fresh extras immediately
       await fetchTicketExtras(ticketId);
-      
+
       // Finally, switch to form view only after state is ready
       setViewMode('form');
     } catch (err) {
@@ -2235,7 +2235,7 @@ function TicketsPage() {
           {/* Conditional Time Adjustment Section */}
           {(() => {
             const isDispatch = (leadType === 'Dispatch') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate);
-            
+
             if (!isDispatch) {
               // Same Day Task
               return (
@@ -2294,10 +2294,10 @@ function TicketsPage() {
                         {(() => {
                           const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
                           const cleanTaskTime = (taskTime || '09:00').padStart(5, '0');
-                          
+
                           return daysInRange.map((dStr, idx) => {
                             const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
-                            
+
                             // DETERMINISTIC FALLBACKS: Support both snake_case and CamelCase keys from backend
                             const actualStartStr = existingLog.start_time || existingLog.startTime;
                             const actualEndStr = existingLog.end_time || existingLog.endTime;
@@ -2306,16 +2306,16 @@ function TicketsPage() {
                             const lStart = safeExtractTime(actualStartStr) || cleanTaskTime;
                             let lEnd = safeExtractTime(actualEndStr);
                             if (!lEnd) {
-                               const [h, m] = (lStart || '09:00').split(':');
-                               let endH = parseInt(h, 10) + 8;
-                               if (endH >= 24) endH = 23;
-                               lEnd = `${String(endH).padStart(2, '0')}:${m || '00'}`;
+                              const [h, m] = (lStart || '09:00').split(':');
+                              let endH = parseInt(h, 10) + 8;
+                              if (endH >= 24) endH = 23;
+                              lEnd = `${String(endH).padStart(2, '0')}:${m || '00'}`;
                             }
 
                             const dur = calculateDuration(lStart, lEnd, actualBreak);
                             const dayCostBreakdown = calculateTicketTotal({
-                              startTime: `${dStr}T${lStart}:00.000Z`, 
-                              endTime: `${dStr}T${lEnd}:00.000Z`, 
+                              startTime: `${dStr}T${lStart}:00.000Z`,
+                              endTime: `${dStr}T${lEnd}:00.000Z`,
                               breakTime: actualBreak,
                               hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
                             });
@@ -2342,10 +2342,10 @@ function TicketsPage() {
                                             if (lgIdx > -1) {
                                               next[lgIdx].engineer_id = val;
                                             } else {
-                                              next.push({ 
-                                                task_date: dStr, 
-                                                engineer_id: val, 
-                                                start_time: `${dStr}T${lStart}:00Z`, 
+                                              next.push({
+                                                task_date: dStr,
+                                                engineer_id: val,
+                                                start_time: `${dStr}T${lStart}:00Z`,
                                                 end_time: `${dStr}T${lEnd}:00Z`,
                                                 break_time_mins: actualBreak
                                               });
@@ -2366,40 +2366,40 @@ function TicketsPage() {
                                 </td>
                                 <td style={{ padding: '10px' }}>
                                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                    <input 
-                                      type="time" 
-                                      id={`fst-${idx}`} 
-                                      value={lStart} 
-                                      style={{ padding: '2px', fontSize: '11px' }} 
+                                    <input
+                                      type="time"
+                                      id={`fst-${idx}`}
+                                      value={lStart}
+                                      style={{ padding: '2px', fontSize: '11px' }}
                                       onChange={(e) => {
                                         const newTime = e.target.value;
-                                        if(!editingTicketId) {
+                                        if (!editingTicketId) {
                                           setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, start_time: `${dStr}T${newTime}:00.000Z` } : l));
                                         }
                                       }}
                                     />
                                     <span>to</span>
-                                    <input 
-                                      type="time" 
-                                      id={`fet-${idx}`} 
-                                      value={lEnd} 
-                                      style={{ padding: '2px', fontSize: '11px' }} 
+                                    <input
+                                      type="time"
+                                      id={`fet-${idx}`}
+                                      value={lEnd}
+                                      style={{ padding: '2px', fontSize: '11px' }}
                                       onChange={(e) => {
                                         const newTime = e.target.value;
-                                        if(!editingTicketId) {
+                                        if (!editingTicketId) {
                                           setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, end_time: `${dStr}T${newTime}:00.000Z` } : l));
                                         }
                                       }}
                                     />
-                                    <input 
-                                      type="number" 
-                                      id={`fbr-${idx}`} 
-                                      placeholder="Break" 
-                                      value={actualBreak} 
-                                      style={{ width: '45px', padding: '2px', fontSize: '11px' }} 
+                                    <input
+                                      type="number"
+                                      id={`fbr-${idx}`}
+                                      placeholder="Break"
+                                      value={actualBreak}
+                                      style={{ width: '45px', padding: '2px', fontSize: '11px' }}
                                       onChange={(e) => {
                                         const bMins = parseInt(e.target.value) || 0;
-                                        if(!editingTicketId) {
+                                        if (!editingTicketId) {
                                           setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, break_time_mins: bMins } : l));
                                         }
                                       }}
@@ -3107,9 +3107,9 @@ function TicketsPage() {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
                       credentials: 'include',
-                      body: JSON.stringify({ 
-                        engineerName: newEng.name, 
-                        engineerId: newEng.id, 
+                      body: JSON.stringify({
+                        engineerName: newEng.name,
+                        engineerId: newEng.id,
                         status: 'Assigned',
                         engPayType: 'Default' // Reset to new engineer's profile rates
                       })
@@ -3129,10 +3129,10 @@ function TicketsPage() {
                           console.error("Failed to add audit note", e);
                         }
                       }
-                      
+
                       setReassignModalOpen(false);
                       setReassignTicketId(null);
-                      
+
                       // Refresh everything immediately
                       await openTicketModal(reassignTicketId);
                       await loadTickets();
@@ -3141,9 +3141,9 @@ function TicketsPage() {
                       const errD = await res.json().catch(() => ({}));
                       alert(`Failed to re-assign: ${errD.message || 'Unknown error'}`);
                     }
-                  } catch (e) { 
-                    console.error(e); 
-                    alert('Error during re-assignment: ' + e.message); 
+                  } catch (e) {
+                    console.error(e);
+                    alert('Error during re-assignment: ' + e.message);
                   }
                 }}
               >
@@ -3157,9 +3157,9 @@ function TicketsPage() {
       {isTicketModalOpen && selectedTicket && (
         <div className="ticket-modal-backdrop" onClick={handleCloseTicketModal} role="dialog" aria-modal="true">
           <div className="ticket-modal ticket-modal--details" style={{ maxWidth: '900px' }} onClick={e => e.stopPropagation()}>
-            <header className="ticket-modal-header" style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <header className="ticket-modal-header" style={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               padding: '24px',
               borderBottom: '1px solid #f1f5f9',
@@ -3171,13 +3171,13 @@ function TicketsPage() {
                 </h2>
                 <p className="ticket-modal-subtitle" style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>{selectedTicket.taskName}</p>
               </div>
-              
+
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <button
                   className="btn-wow-primary"
-                  style={{ 
-                    padding: '10px 20px', 
-                    fontSize: '13px', 
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '13px',
                     fontWeight: '700',
                     background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
                     boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
@@ -3196,14 +3196,14 @@ function TicketsPage() {
                 >
                   <FiEdit2 /> Edit Full Ticket
                 </button>
-                <button 
-                  className="ticket-modal-close-btn" 
+                <button
+                  className="ticket-modal-close-btn"
                   onClick={handleCloseTicketModal}
-                  style={{ 
-                    background: '#f1f5f9', 
-                    border: 'none', 
-                    padding: '10px', 
-                    borderRadius: '10px', 
+                  style={{
+                    background: '#f1f5f9',
+                    border: 'none',
+                    padding: '10px',
+                    borderRadius: '10px',
                     color: '#64748b',
                     cursor: 'pointer'
                   }}
@@ -3246,8 +3246,8 @@ function TicketsPage() {
                   <span className={`status-pill ${selectedTicket.status?.toLowerCase().replace(' ', '-')}`}>{selectedTicket.status}</span>
                 </div>
                 <div className="detail-item">
-                   <label>Scheduled Time</label>
-                   <span style={{ fontWeight: '600' }}>{selectedTicket.taskTime}</span>
+                  <label>Scheduled Time</label>
+                  <span style={{ fontWeight: '600' }}>{selectedTicket.taskTime}</span>
                 </div>
 
                 {/* --- Row 3: Location --- */}

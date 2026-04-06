@@ -147,74 +147,43 @@ const CustomerReceivablePage = () => {
         const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
         const cur = ticket.currency || 'USD';
-        let base = 0, ot = 0, ooh = 0, sp = 0;
-        let baseBreakdown = "";
-        let otBreakdown = "";
-        let spBreakdown = "";
-        let oohBreakdown = "";
+        let logs = [];
+        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
 
-        if (billingType === 'Hourly') {
-            const b = Math.max(2, hrs); 
-            base = b * hr; 
-            baseBreakdown = `Billed ${b.toFixed(2)}h @ ${cur} ${hr.toFixed(2)} (Min 2h)`;
-        } else if (billingType === 'Half Day + Hourly') {
-            if (hrs <= 4) {
-                base = hd;
-                baseBreakdown = `Fixed Half Day Rate (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
-            } else {
-                const extra = hrs - 4;
-                base = hd + (extra * hr);
-                baseBreakdown = `Half Day Rate (${cur} ${hd.toFixed(2)}) + Extra ${extra.toFixed(2)}h @ ${cur} ${hr.toFixed(2)}`;
-            }
-        } else if (billingType === 'Full Day + OT') {
-            base = fd;
-            baseBreakdown = `Fixed Full Day Rate (≤ 8h) = ${cur} ${fd.toFixed(2)}`;
-            if (hrs > 8) {
-                const otHrs = hrs - 8;
-                ot = otHrs * (hr * 1.5);
-                otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
-            }
-        } else if (billingType.includes('Monthly')) {
-            const days = (ticket.time_logs && ticket.time_logs.length > 0) ? ticket.time_logs.length : 1;
-            const fullRate = parseFloat(ticket.monthly_rate || ticket.monthlyRate) || 0;
-            base = (fullRate / 30) * days;
-            baseBreakdown = `Pro-rata Monthly (${days} days) = ${cur} ${base.toFixed(2)} (${fullRate.toFixed(2)}/30 per day)`;
-            if (isSpecialDay) {
-                // For simplified frontend, we just apply the premium once or per day if logs exist
-                sp = hrs * (hr * 2.0);
-                spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${cur} ${(hr * 2.0).toFixed(2)} (2.0x)`;
-            } else { 
-                if (hrs > 8) {
-                    const otHrs = hrs - 8;
-                    ot = otHrs * (hr * 1.5); 
-                    otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
+        if (logs.length > 0) {
+            let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
+            logs.forEach(log => {
+                const res = calculateTicketCostFrontend({ ...ticket, ...log, time_logs: [] }, forcedTZ, cur);
+                totalHrs += parseFloat(res.totalHours || 0);
+                if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT' || billingType === 'Mixed Mode') {
+                    baseC += parseFloat(res.baseCost || 0);
                 }
+                otP += parseFloat(res.otPremium || 0);
+                oohP += parseFloat(res.oohPremium || 0);
+                spP += parseFloat(res.specialDayPremium || 0);
+                travC += parseFloat(res.travelCost || 0);
+                toolC += parseFloat(res.toolCost || 0);
+            });
+            if (billingType.includes('Monthly')) {
+                const fullRate = parseFloat(ticket.monthly_rate || ticket.monthlyRate) || 0;
+                baseC = (fullRate / 30) * logs.length;
+            } else if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
+                const dummy = calculateTicketCostFrontend({ ...ticket, time_logs: [] }, forcedTZ, cur);
+                baseC = parseFloat(dummy.baseCost || 0);
             }
-        } else if (billingType === 'Agreed Rate') { 
-            base = parseFloat(ticket.agreed_rate) || 0;
-            baseBreakdown = `Agreed / Fixed Rate = ${cur} ${base.toFixed(2)}`;
-        } else if (billingType === 'Cancellation') { 
-            base = parseFloat(ticket.cancellation_fee) || 0; 
-            baseBreakdown = `Fixed Cancellation Fee = ${cur} ${base.toFixed(2)}`;
-        } else if (billingType === 'Mixed Mode') {
-            if (hrs <= 4) {
-                base = hd;
-                baseBreakdown = `Billed as Half Day (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
-            } else if (hrs <= 8) {
-                base = fd;
-                baseBreakdown = `Billed as Full Day (4-8h) = ${cur} ${fd.toFixed(2)}`;
-            } else {
-                base = fd;
-                baseBreakdown = `Full Day Base (8h) = ${cur} ${fd.toFixed(2)}`;
-                const otHrs = hrs - 8;
-                ot = otHrs * (hr * 1.5);
-                otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
-            }
+            totalRec = baseC + otP + oohP + spP + travC + toolC;
+            return {
+                totalReceivable: totalRec.toFixed(2),
+                baseCost: baseC.toFixed(2), baseBreakdown: `Aggregate of ${logs.length} days`,
+                otPremium: otP.toFixed(2), oohPremium: oohP.toFixed(2), specialDayPremium: spP.toFixed(2),
+                totalHours: totalHrs, formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
+                travelCost: travC, toolCost: toolC,
+                isOOH: oohP > 0, isSpecialDay: spP > 0
+            };
         }
 
-        const days = (ticket.time_logs && ticket.time_logs.length > 0) ? ticket.time_logs.length : 1;
-        const trav = (parseFloat(ticket.travel_cost_per_day || ticket.travelCostPerDay || 0)) * days;
-        const tool = (parseFloat(ticket.tool_cost || ticket.toolCost || 0)) * days;
+        const trav = parseFloat(ticket.travel_cost_per_day || ticket.travelCostPerDay || 0);
+        const tool = parseFloat(ticket.tool_cost || ticket.toolCost || 0);
         const total = base + ot + ooh + sp + trav + tool;
 
         // Always use live calculation to ensure correctness, especially after fixing the 0.06 bug.
