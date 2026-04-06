@@ -175,9 +175,12 @@ const CustomerReceivablePage = () => {
                 otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
         } else if (billingType.includes('Monthly')) {
-            base = parseFloat(ticket.monthly_rate) || 0;
-            baseBreakdown = `Fixed Monthly Base = ${cur} ${base.toFixed(2)}`;
+            const days = (ticket.time_logs && ticket.time_logs.length > 0) ? ticket.time_logs.length : 1;
+            const fullRate = parseFloat(ticket.monthly_rate || ticket.monthlyRate) || 0;
+            base = (fullRate / 30) * days;
+            baseBreakdown = `Pro-rata Monthly (${days} days) = ${cur} ${base.toFixed(2)} (${fullRate.toFixed(2)}/30 per day)`;
             if (isSpecialDay) {
+                // For simplified frontend, we just apply the premium once or per day if logs exist
                 sp = hrs * (hr * 2.0);
                 spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${cur} ${(hr * 2.0).toFixed(2)} (2.0x)`;
             } else { 
@@ -209,8 +212,9 @@ const CustomerReceivablePage = () => {
             }
         }
 
-        const trav = parseFloat(ticket.travel_cost_per_day || 0);
-        const tool = parseFloat(ticket.tool_cost || 0);
+        const days = (ticket.time_logs && ticket.time_logs.length > 0) ? ticket.time_logs.length : 1;
+        const trav = (parseFloat(ticket.travel_cost_per_day || ticket.travelCostPerDay || 0)) * days;
+        const tool = (parseFloat(ticket.tool_cost || ticket.toolCost || 0)) * days;
         const total = base + ot + ooh + sp + trav + tool;
 
         // Always use live calculation to ensure correctness, especially after fixing the 0.06 bug.

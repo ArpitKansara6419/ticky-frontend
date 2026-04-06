@@ -400,7 +400,8 @@ function LeadsPage() {
           ot = (hrs - 8) * (hr * 1.5);
         }
       } else if (bil.includes('Monthly')) {
-        base = parseFloat(monthlyRate) || 0;
+        const fullRate = parseFloat(monthlyRate) || 0;
+        base = fullRate / 30; // Pro-rata for 1 day in lead estimation
         if (isSpecialDay) {
           special = hrs * (hr * 2.0);
         } else {

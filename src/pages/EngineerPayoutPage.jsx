@@ -196,7 +196,10 @@ const EngineerPayoutPage = () => {
                 travC += parseFloat(res.travelCost || 0);
                 toolC += parseFloat(res.toolCost || 0);
             });
-            if (billingType.includes('Monthly') || billingType === 'Agreed Rate' || billingType === 'Cancellation') {
+            if (billingType.includes('Monthly')) {
+                const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
+                baseC = (fullRate / 30) * logs.length;
+            } else if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
                 const dummy = calculateEngineerPayoutFrontend({ ...ticket, time_logs: [] }, tz);
                 baseC = parseFloat(dummy.baseCost);
             }
@@ -266,8 +269,10 @@ const EngineerPayoutPage = () => {
                 otBreakdown = `${(hrs - 8).toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
         } else if (billingType.includes('Monthly')) {
-            base = parseFloat(ticket.eng_monthly_rate) || 0;
-            baseBreakdown = `Fixed Monthly Base = ${base.toFixed(2)}`;
+            const days = (ticket.time_logs && ticket.time_logs.length > 0) ? (typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs).length : ticket.time_logs.length) : 1;
+            const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
+            base = fullRate / 30; // Pro-rata for 1 day
+            baseBreakdown = `Pro-rata Monthly (1 day) = ${base.toFixed(2)} (${fullRate.toFixed(2)}/30)`;
             if (isSpecialDay) {
                 sp = hrs * (hr * 2.0);
                 spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${(hr * 2.0).toFixed(2)} (2.0x)`;
