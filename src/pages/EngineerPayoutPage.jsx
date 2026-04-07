@@ -231,10 +231,15 @@ const EngineerPayoutPage = () => {
         const eStr = ticket.end_time || ticket.task_end_date || ticket.start_time;
         if (!sStr || !eStr) return {};
 
+        // If it's a date-only string from task_start_date, force a standard 8-hour shift default
         const s = new Date(sStr.includes('T') ? sStr : `${sStr}T09:00:00Z`);
         const e = new Date(eStr.includes('T') ? eStr : `${eStr}T17:00:00Z`);
+        
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
-        const hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
+        
+        // Final protection: if time is not explicitly logged, default to 8 hours max.
+        let hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
+        if (!ticket.start_time && !ticket.end_time && hrs > 8) hrs = 8;
 
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
