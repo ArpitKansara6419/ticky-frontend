@@ -433,8 +433,9 @@ function TicketsPage() {
         const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
 
         // Skip Weekends/Holidays unless an existing log was manually recorded for that day
-        const dObj = new Date(d);
-        const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
+        // FORCE UTC to avoid local timezone shifting "YYYY-MM-DD" to the previous day
+        const dObj = new Date(`${d}T00:00:00Z`);
+        const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
         const HOLIDAYS_BY_COUNTRY = {
           'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
           'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
