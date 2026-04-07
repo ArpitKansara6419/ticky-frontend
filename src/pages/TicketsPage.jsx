@@ -691,7 +691,20 @@ function TicketsPage() {
       const dates = getDatesInRange(taskStartDate, taskEndDate);
       const ct = (taskTime || '09:00').slice(0, 5);
 
-      const newLogs = dates.map(dStr => {
+      const validDates = dates.filter(dStr => {
+        const dObj = new Date(`${dStr}T00:00:00Z`);
+        const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
+        const HOLIDAYS_BY_COUNTRY = {
+          'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+          'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+          'Other': []
+        };
+        const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+        const isHoliday = activeHols.includes(dStr);
+        return !(isWeekend || isHoliday);
+      });
+
+      const newLogs = validDates.map(dStr => {
         const existing = timeLogs.find(l => (l.task_date || '').split('T')[0] === dStr);
         if (existing) return existing;
 
@@ -711,8 +724,8 @@ function TicketsPage() {
       });
 
       // Simple deep equality check or just check length/dates to avoid infinite loops
-      const currentDates = timeLogs.map(l => (l.task_date || '').split('T')[0]).join(',');
-      const targetDates = dates.join(',');
+      const currentDates = timeLogs.filter(l => l.task_date).map(l => l.task_date.split('T')[0]).join(',');
+      const targetDates = validDates.join(',');
       if (currentDates !== targetDates) {
         setTimeLogs(newLogs);
       }
