@@ -169,8 +169,10 @@ const EngineerPayoutPage = () => {
             logs.forEach(log => {
                 const logDate = (log.task_date || '').split('T')[0];
                 if (logDate) {
-                    const dObj = new Date(logDate);
-                    const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
+                    // Skip Weekends/Holidays unless an existing log was manually recorded for that day
+                    // FORCE UTC to avoid local timezone shifting "YYYY-MM-DD" to the previous day
+                    const dObj = new Date(`${logDate}T00:00:00Z`);
+                    const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
                     const HOLIDAYS_BY_COUNTRY = {
                         'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
                         'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
@@ -188,15 +190,13 @@ const EngineerPayoutPage = () => {
 
                 if (!sTime || !eTime) {
                     if (!log.task_date) return;
-                    const d = new Date(log.task_date);
-                    if (isNaN(d.getTime())) return;
-                    const dateStr = d.toISOString().split('T')[0];
-                    const ct = String(ticket.task_time || '08:00').slice(0, 5);
-                    const sDT = new Date(`${dateStr}T${ct}:00Z`);
+                    const dStr = (log.task_date || '').split('T')[0];
+                    const ct = String(ticket.task_time || '09:00').slice(0, 5);
+                    const sDT = new Date(`${dStr}T${ct}:00Z`);
                     if (isNaN(sDT.getTime())) return;
-                    sTime = sDT.toISOString().slice(0, 19).replace('T', ' ');
+                    sTime = sDT.toISOString();
                     const eDT = new Date(sDT.getTime() + 8 * 3600000);
-                    eTime = eDT.toISOString().slice(0, 19).replace('T', ' ');
+                    eTime = eDT.toISOString();
                     brk = 0;
                 }
 
@@ -227,8 +227,12 @@ const EngineerPayoutPage = () => {
             };
         }
 
-        const s = new Date(ticket.start_time || ticket.task_start_date);
-        const e = new Date(ticket.end_time || ticket.task_end_date || ticket.start_time);
+        const sStr = ticket.start_time || ticket.task_start_date;
+        const eStr = ticket.end_time || ticket.task_end_date || ticket.start_time;
+        if (!sStr || !eStr) return {};
+
+        const s = new Date(sStr.includes('T') ? sStr : `${sStr}T09:00:00Z`);
+        const e = new Date(eStr.includes('T') ? eStr : `${eStr}T17:00:00Z`);
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
         const hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
 
@@ -284,18 +288,13 @@ const EngineerPayoutPage = () => {
                 otBreakdown = `${(hrs - 8).toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
         } else if (billingType.includes('Monthly')) {
-            const days = (ticket.time_logs && ticket.time_logs.length > 0) ? (typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs).length : ticket.time_logs.length) : 1;
             const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
             base = fullRate / 30; // Pro-rata for 1 day
             baseBreakdown = `Pro-rata Monthly (1 day) = ${base.toFixed(2)} (${fullRate.toFixed(2)}/30)`;
-            if (isSpecialDay) {
-                sp = hrs * (hr * 2.0);
-                spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${(hr * 2.0).toFixed(2)} (2.0x)`;
-            } else { 
-                if (hrs > 8) { 
-                    ot = (hrs - 8) * (hr * 1.5); 
-                    otBreakdown = `${(hrs - 8).toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
-                }
+            // Non-premium monthly: cover normal hours. Add OT only if > 8h.
+            if (hrs > 8) { 
+                ot = (hrs - 8) * (hr * 1.5); 
+                otBreakdown = `${(hrs - 8).toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
         } else if (billingType === 'Agreed Rate') { 
             base = parseFloat(ticket.eng_agreed_rate) || 0;
