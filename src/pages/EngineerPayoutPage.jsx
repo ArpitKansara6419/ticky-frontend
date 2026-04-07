@@ -525,12 +525,15 @@ const EngineerPayoutPage = () => {
                                             <td><span className="ticket-id">#{ticket.id}</span></td>
                                             <td>{ticket.customer_name}</td>
                                             <td>{ticket.task_name}</td>
-                                            <td>{ticket.total_time ? (ticket.total_time / 3600).toFixed(2) + 'h' : 'N/A'}</td>
+                                            <td>{(() => {
+                                                 const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
+                                                 return pd.totalHours.toFixed(2) + 'h';
+                                             })()}</td>
                                             <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
                                             <td className="amount-cell">${(() => {
-                                                const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
-                                                return parseFloat(ticket.eng_total_cost || pd.totalPayout || 0).toFixed(2);
-                                            })()}</td>
+                                                 const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
+                                                 return parseFloat(pd.totalPayout || ticket.eng_total_cost || 0).toFixed(2);
+                                             })()}</td>
                                             <td>
                                                 <button className="btn-view" onClick={() => handleOpenDetails(ticket)}>
                                                     <FiEye />
@@ -572,7 +575,10 @@ const EngineerPayoutPage = () => {
                                 </div>
                                 <div className="detail-item">
                                     <label>Work Duration</label>
-                                    <p>{(detailTicket.total_time / 3600).toFixed(2)} hours</p>
+                                    <p>{(() => {
+                                         const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
+                                         return pd.totalHours.toFixed(2);
+                                     })()} hours</p>
                                 </div>
                                 <div className="detail-item">
                                     <label>Payout Type</label>
