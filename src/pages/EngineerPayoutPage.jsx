@@ -144,7 +144,7 @@ const EngineerPayoutPage = () => {
 
     // Proper Calculation Logic for Engineers
     const calculateEngineerPayoutFrontend = (ticket, forcedTZ) => {
-        if (!ticket) return {};
+        if (!ticket) return { totalPayout: "0.00", totalHours: 0, base: "0.00", ot: "0.00", sp: "0.00", trav: "0.00", tool: "0.00" };
         const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
         const hr = parseFloat(ticket.eng_hourly_rate || 0);
         const hd = parseFloat(ticket.eng_half_day_rate || 0);
@@ -169,8 +169,6 @@ const EngineerPayoutPage = () => {
             logs.forEach(log => {
                 const logDate = (log.task_date || '').split('T')[0];
                 if (logDate) {
-                    // Skip Weekends/Holidays unless an existing log was manually recorded for that day
-                    // FORCE UTC to avoid local timezone shifting "YYYY-MM-DD" to the previous day
                     const dObj = new Date(`${logDate}T00:00:00Z`);
                     const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
                     const HOLIDAYS_BY_COUNTRY = {
@@ -180,7 +178,6 @@ const EngineerPayoutPage = () => {
                     };
                     const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
                     const isHoliday = activeHols.includes(logDate);
-                    // Skip if weekend/holiday AND no manual times were filled
                     if ((isWeekend || isHoliday) && (!log.start_time || !log.end_time)) return;
                 }
 
@@ -221,23 +218,18 @@ const EngineerPayoutPage = () => {
             totalRec = baseC + otP + oohP + spP + travC + toolC;
             return {
                 totalPayout: totalRec.toFixed(2),
-                baseCost: baseC.toFixed(2), otPremium: otP.toFixed(2), oohPremium: oohP.toFixed(2), specialDayPremium: spP.toFixed(2),
-                totalHours: totalHrs, otHours: totalHrs > 8 ? totalHrs - 8 : 0,
-                travelCost: travC.toFixed(2), toolCost: toolC.toFixed(2)
+                base: baseC.toFixed(2), ot: otP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
+                totalHours: totalHrs, otHours: totalHrs > 8 ? totalHrs - 8 : 0
             };
         }
 
         const sStr = ticket.start_time || ticket.task_start_date;
         const eStr = ticket.end_time || ticket.task_end_date || ticket.start_time;
-        if (!sStr || !eStr) return {};
+        if (!sStr || !eStr) return { totalPayout: "0.00", totalHours: 0, base: "0.00", ot: "0.00", sp: "0.00", trav: "0.00", tool: "0.00" };
 
-        // If it's a date-only string from task_start_date, force a standard 8-hour shift default
         const s = new Date(sStr.includes('T') ? sStr : `${sStr}T09:00:00Z`);
         const e = new Date(eStr.includes('T') ? eStr : `${eStr}T17:00:00Z`);
-        
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
-        
-        // Final protection: if time is not explicitly logged, default to 8 hours max.
         let hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
         if (!ticket.start_time && !ticket.end_time && hrs > 8) hrs = 8;
 
@@ -245,138 +237,85 @@ const EngineerPayoutPage = () => {
         const endInfo = getZonedInfo(e);
         let startHr = info.hour;
         let endHr = endInfo.hour;
-        if (ticket.start_time && ticket.start_time.includes('T')) startHr = parseInt(ticket.start_time.split('T')[1].split(':')[0], 10);
-        if (ticket.end_time && ticket.end_time.includes('T')) endHr = parseInt(ticket.end_time.split('T')[1].split(':')[0], 10);
+        if (sStr.includes('T')) startHr = parseInt(sStr.split('T')[1].split(':')[0], 10);
+        if (eStr.includes('T')) endHr = parseInt(eStr.split('T')[1].split(':')[0], 10);
 
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
         const HOLS = ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
-        const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
-        let base = 0, ot = 0, ooh = 0, sp = 0;
-        let baseBreakdown = "";
-        let otBreakdown = "";
-        let spBreakdown = "";
-        let oohBreakdown = "";
+        let base = 0, ot = 0, sp = 0;
+        let baseBD = "", otBD = "";
 
         if (billingType === 'Hourly') {
             const b = Math.max(2, hrs); 
             base = b * hr; 
-            baseBreakdown = `Billed ${b.toFixed(2)}h @ ${hr.toFixed(2)} (Min 2h)`;
+            baseBD = `Billed ${b.toFixed(2)}h @ ${hr}`;
         } else if (billingType === 'Half Day + Hourly') {
-            if (hrs <= 4) {
-                base = hd;
-                baseBreakdown = `Fixed Half Day Rate (≤ 4h) = ${hd.toFixed(2)}`;
-            } else {
-                base = hd + ((hrs - 4) * hr);
-                baseBreakdown = `Half Day Rate (${hd.toFixed(2)}) + Extra ${(hrs - 4).toFixed(2)}h @ ${hr.toFixed(2)}`;
-            }
+            base = hrs <= 4 ? hd : hd + (hrs - 4) * hr;
+            baseBD = hrs <= 4 ? `Half Day Rate` : `Half Day + Extra Hrs`;
         } else if (billingType === 'Full Day + OT') {
-            base = fd;
-            baseBreakdown = `Fixed Full Day Rate (≤ 8h) = ${fd.toFixed(2)}`;
-            if (hrs > 8) {
-                ot = (hrs - 8) * (hr * 1.5);
-                otBreakdown = `${(hrs - 8).toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
-            }
+            base = fd; baseBD = `Full Day Rate`;
+            if (hrs > 8) { ot = (hrs - 8) * (hr * 1.5); otBD = `OT (1.5x)`; }
         } else if (billingType === 'Mixed Mode') {
-            if (hrs <= 4) {
-                base = hd;
-                baseBreakdown = `Billed as Half Day (≤ 4h) = ${hd.toFixed(2)}`;
-            } else if (hrs <= 8) {
-                base = fd;
-                baseBreakdown = `Billed as Full Day (4-8h) = ${fd.toFixed(2)}`;
-            } else {
-                base = fd;
-                baseBreakdown = `Full Day Base (8h) = ${fd.toFixed(2)}`;
-                ot = (hrs - 8) * (hr * 1.5);
-                otBreakdown = `${(hrs - 8).toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
-            }
+            if (hrs <= 4) base = hd;
+            else if (hrs <= 8) base = fd;
+            else { base = fd; ot = (hrs - 8) * (hr * 1.5); }
         } else if (billingType.includes('Monthly')) {
-            const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
-            base = fullRate / 30; // Pro-rata for 1 day
-            baseBreakdown = `Pro-rata Monthly (1 day) = ${base.toFixed(2)} (${fullRate.toFixed(2)}/30)`;
-            // Non-premium monthly: cover normal hours. Add OT only if > 8h.
-            if (hrs > 8) { 
-                ot = (hrs - 8) * (hr * 1.5); 
-                otBreakdown = `${(hrs - 8).toFixed(2)}h Overtime @ ${(hr * 1.5).toFixed(2)} (1.5x)`;
-            }
-        } else if (billingType === 'Agreed Rate') { 
-            base = parseFloat(ticket.eng_agreed_rate) || 0;
-            baseBreakdown = `Agreed / Fixed Rate = ${base.toFixed(2)}`;
-        } else if (billingType === 'Cancellation') { 
-            base = parseFloat(ticket.eng_cancellation_fee) || 0; 
-            baseBreakdown = `Fixed Cancellation Fee = ${base.toFixed(2)}`;
+            base = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate || 0) / 30;
+            if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+        } else if (billingType === 'Agreed Rate') {
+            base = parseFloat(ticket.eng_agreed_rate || 0);
+        } else if (billingType === 'Cancellation') {
+            base = parseFloat(ticket.eng_cancellation_fee || 0);
         }
 
         const trav = parseFloat(ticket.eng_travel_cost_per_day || ticket.travel_cost_per_day || 0);
         const tool = parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
 
+        const total = base + ot + sp + trav + tool;
         return {
-            totalPayout: (base + ot + ooh + sp + trav + tool).toFixed(2),
-            hrs: hrs.toFixed(2),
-            totalHours: hrs,
-            otHours: (hrs > 8 ? (hrs - 8) : 0).toFixed(1),
-            isOOH: isO,
-            isSpecialDay,
-            base: base.toFixed(2),
-            baseBreakdown,
-            ot: ot.toFixed(2),
-            otBreakdown,
-            ooh: ooh.toFixed(2),
-            oohBreakdown,
-            special: sp.toFixed(2),
-            spBreakdown,
-            travelCost: trav.toFixed(2),
-            toolCost: tool.toFixed(2)
+            totalPayout: total.toFixed(2),
+            base: base.toFixed(2), ot: ot.toFixed(2), sp: sp.toFixed(2), trav: trav.toFixed(2), tool: tool.toFixed(2),
+            baseBreakdown: baseBD, otBreakdown: otBD,
+            totalHours: hrs, otHours: hrs > 8 ? hrs - 8 : 0,
+            isSpecialDay
         };
     };
 
-    // Calculation for selected total (payout)
-    const selectedPayoutTotal = useMemo(() => {
-        return unpaidTickets
-            .filter(t => selectedTicketIds.includes(t.id))
-            .reduce((sum, t) => {
-                const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
-                return sum + parseFloat(pd.totalPayout || 0);
-            }, 0)
-            .toFixed(2);
-    }, [unpaidTickets, selectedTicketIds, calcTimezone]);
-
-    if (loading && engineersList.length === 0) {
-        return (
-            <div className="payout-loading">
-                <div className="spinner"></div>
-                <p>Loading Engineer Payouts...</p>
-            </div>
-        );
-    }
-
     return (
         <div className="payout-page">
-            {/* Header section */}
             <header className="payout-header">
-                <div className="header-left">
-                    <h1 className="header-title">Engineer Payouts</h1>
-                    <p className="header-subtitle">Manage and track payments for your field engineers</p>
+                <div className="header-title">
+                    {selectedEngineerId ? (
+                        <button className="btn-back" onClick={handleBackToEngineers}>
+                            <FiArrowRight style={{ transform: 'rotate(180deg)' }} /> Back to Engineers
+                        </button>
+                    ) : null}
+                    <h1>
+                        {selectedEngineerId 
+                          ? engineersList.find(e => e.id === selectedEngineerId)?.name || 'Engineer Detail'
+                          : 'Engineer Payouts'}
+                    </h1>
+                    <p>{selectedEngineerId ? 'Displaying unpaid tickets for this engineer' : 'Manage and process payments for engineers'}</p>
+                </div>
+                <div className="header-actions">
                     <button 
-                        className="btn-recalculate" 
-                        onClick={async () => {
-                            if (!window.confirm("Recalculate payouts for all old resolved tickets?")) return;
-                            setProcessing(true);
-                            try {
-                                const res = await fetch(`${API_BASE_URL}/payouts/maintenance/recalculate`, { method: 'POST' });
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    alert(data.message);
-                                    fetchEngineersSummary();
-                                }
-                            } catch (e) { console.error(e); }
-                            setProcessing(false);
-                        }}
-                        disabled={processing}
-                        style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', cursor: 'pointer', background: '#fff' }}
+                        className="btn-refresh" 
+                        onClick={selectedEngineerId ? () => fetchEngineerTickets(selectedEngineerId) : fetchEngineersSummary}
+                        disabled={loading}
                     >
+                        <FiRefreshCw className={loading ? 'spin' : ''} />
+                    </button>
+                    <button className="btn-secondary" onClick={async () => {
+                        setProcessing(true);
+                        try {
+                            const res = await fetch(`${API_BASE_URL}/payouts/maintenance/recalculate`, { method: 'POST' });
+                            if (res.ok) alert('All unpaid payouts recalculated.');
+                        } catch (e) { alert('Maintenance failed.'); }
+                        setProcessing(false);
+                    }}>
                         <FiRefreshCw className={processing ? 'spin' : ''} /> Recalculate Old Payouts
                     </button>
                 </div>
@@ -385,7 +324,7 @@ const EngineerPayoutPage = () => {
                         <FiUser className="stat-icon" />
                         <div className="stat-info">
                             <span className="stat-label">Unpaid Engineers</span>
-                            <span className="stat-value">{stats.unpaidCount}</span>
+                            <span className="stat-label">{stats.unpaidCount}</span>
                         </div>
                     </div>
                     <div className="stat-card green">
@@ -449,19 +388,21 @@ const EngineerPayoutPage = () => {
                                             </td>
                                             <td>{eng.city || 'N/A'}</td>
                                             <td>
-                                                <span className="badge-ticket">{eng.ticket_count} Tickets</span>
+                                                <span className="badge-ticket">{eng.ticket_count} tickets</span>
                                             </td>
-                                            <td className="amount-cell">${parseFloat(eng.total_payout_estimated).toFixed(2)}</td>
+                                            <td className="amount-cell">
+                                                {selectedCurrency} {parseFloat(eng.total_payout_estimated).toFixed(2)}
+                                            </td>
                                             <td>
                                                 <button className="btn-action" onClick={() => fetchEngineerTickets(eng.id)}>
-                                                    View Details <FiArrowRight />
+                                                    View Tickets <FiArrowRight />
                                                 </button>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="empty-row">No pending payouts found.</td>
+                                        <td colSpan="6" className="empty-row">No engineers with unpaid tickets found.</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -469,28 +410,24 @@ const EngineerPayoutPage = () => {
                     </div>
                 </main>
             ) : (
-                /* ENGINEER DETAILED TICKETS VIEW */
+                /* ENGINEER TICKETS VIEW */
                 <main className="payout-content">
-                    <div className="detail-header">
-                        <button className="btn-back" onClick={handleBackToEngineers}>
-                            <FiArrowRight style={{ transform: 'rotate(180deg)' }} /> Back to Engineers
-                        </button>
-                        <div className="engineer-summary">
-                            <h2>{engineersList.find(e => e.id === selectedEngineerId)?.name}</h2>
-                            <p>Displaying unpaid tickets for this engineer</p>
-                        </div>
-                    </div>
-
-                    <div className="actions-bar">
+                    <div className="selection-bar">
                         <div className="selection-info">
                             <span className="count">{selectedTicketIds.length} tickets selected</span>
-                            <span className="total-label">Total to Pay:</span>
-                            <span className="total-amount">${selectedPayoutTotal}</span>
+                            <span className="total">Total to Pay: <strong>{selectedCurrency} {
+                                unpaidTickets
+                                    .filter(t => selectedTicketIds.includes(t.id))
+                                    .reduce((sum, t) => {
+                                        const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
+                                        return sum + parseFloat(pd.totalPayout);
+                                    }, 0).toFixed(2)
+                            }</strong></span>
                         </div>
                         <button 
-                            className={`btn-process ${selectedTicketIds.length === 0 ? 'disabled' : ''}`}
-                            onClick={handleProcessPayout}
+                            className="btn-primary" 
                             disabled={selectedTicketIds.length === 0 || processing}
+                            onClick={handleProcessPayout}
                         >
                             {processing ? 'Processing...' : <><FiCheck /> Mark as Paid</>}
                         </button>
@@ -566,73 +503,70 @@ const EngineerPayoutPage = () => {
                         <div className="modal-body">
                             <div className="detail-grid">
                                 <div className="detail-item">
-                                    <label>Task</label>
+                                    <label>TASK</label>
                                     <p>{detailTicket.task_name}</p>
                                 </div>
                                 <div className="detail-item">
-                                    <label>Customer</label>
+                                    <label>CUSTOMER</label>
                                     <p>{detailTicket.customer_name}</p>
                                 </div>
                                 <div className="detail-item">
-                                    <label>Work Duration</label>
+                                    <label>WORK DURATION</label>
                                     <p>{(() => {
                                          const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
                                          return pd.totalHours.toFixed(2);
                                      })()} hours</p>
                                 </div>
                                 <div className="detail-item">
-                                    <label>Payout Type</label>
-                                    <p>{detailTicket.eng_pay_type} ({detailTicket.eng_billing_type})</p>
+                                    <label>PAYOUT TYPE</label>
+                                    <p>{detailTicket.eng_pay_type || 'Default'} ({detailTicket.eng_billing_type || 'Hourly'})</p>
                                 </div>
-                                <div className="detail-item">
-                                    <label>Calculation Breakdown</label>
-                                    {(() => {
-                                        const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
-                                        const cur = detailTicket.eng_currency || 'USD';
-                                        return (
-                                            <div className="payout-breakdown">
-                                           <div className="payout-row highlight-bold">
-                                        <div className="payout-label-col">
-                                            <span>Base Labor Payout</span>
-                                            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>{pd.baseBreakdown}</div>
-                                        </div>
-                                        <span className="payout-amount">{cur} {pd.base}</span>
-                                    </div>
-                                    {parseFloat(pd.ot) > 0 && (
-                                        <div className="payout-row">
-                                            <div className="payout-label-col">
-                                                <span>Overtime Payout (OT)</span>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.otBreakdown}</div>
+                            </div>
+
+                            <div className="calculation-section">
+                                <label>CALCULATION BREAKDOWN</label>
+                                {(() => {
+                                    const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
+                                    const cur = detailTicket.eng_currency || 'USD';
+                                    return (
+                                        <div className="payout-breakdown">
+                                            <div className="payout-row highlight-bold">
+                                                <div className="payout-label-col">
+                                                    <span>Base Labor Payout</span>
+                                                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>{pd.baseBreakdown}</div>
+                                                </div>
+                                                <span className="payout-amount">{cur} {pd.base}</span>
                                             </div>
-                                            <span className="payout-amount">+ {cur} {pd.ot}</span>
-                                        </div>
-                                    )}
-                                    {parseFloat(pd.special) > 0 && (
-                                        <div className="payout-row">
-                                            <div className="payout-label-col">
-                                                <span>Special Day Premium</span>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.spBreakdown}</div>
+                                            {parseFloat(pd.ot) > 0 && (
+                                                <div className="payout-row">
+                                                    <div className="payout-label-col">
+                                                        <span>Overtime Payout (OT)</span>
+                                                        <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.otBreakdown}</div>
+                                                    </div>
+                                                    <span className="payout-amount">{cur} {pd.ot}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(pd.trav) > 0 && (
+                                                <div className="payout-row">
+                                                    <span>Travel Reimbursement</span>
+                                                    <span className="payout-amount">{cur} {pd.trav}</span>
+                                                </div>
+                                            )}
+                                            {parseFloat(pd.tool) > 0 && (
+                                                <div className="payout-row">
+                                                    <span>Tool Charges</span>
+                                                    <span className="payout-amount">{cur} {pd.tool}</span>
+                                                </div>
+                                            )}
+                                            <div className="payout-total-line">
+                                                <div className="total-box">
+                                                    <span className="total-label">Net Payout</span>
+                                                    <span className="total-value">{cur} {pd.totalPayout}</span>
+                                                </div>
                                             </div>
-                                            <span className="payout-amount">+ {cur} {pd.special}</span>
                                         </div>
-                                    )}
-                                    {parseFloat(pd.ooh) > 0 && (
-                                        <div className="payout-row">
-                                            <div className="payout-label-col">
-                                                <span>Out of Hours Payout (OOH)</span>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.oohBreakdown}</div>
-                                            </div>
-                                            <span className="payout-amount">+ {cur} {pd.ooh}</span>
-                                        </div>
-                                    )}
-                                    <div className="payout-total-row" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '2px solid #6366f1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#6366f1' }}>Net Payout</span>
-                                        <span style={{ fontSize: '18px', fontWeight: '800', color: '#6366f1' }}>{cur} {parseFloat(detailTicket.eng_total_cost || pd.totalPayout).toFixed(2)}</span>
-                                    </div>
-                                </div>
-                                        );
-                                    })()}
-                                </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
