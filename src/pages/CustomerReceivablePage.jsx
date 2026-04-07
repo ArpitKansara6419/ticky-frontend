@@ -73,8 +73,10 @@ const CustomerReceivablePage = () => {
             logs.forEach(log => {
                 const logDate = (log.task_date || '').split('T')[0];
                 if (logDate) {
-                    const dObj = new Date(logDate);
-                    const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
+                    // Skip Weekends/Holidays unless an existing log was manually recorded for that day
+                    // FORCE UTC to avoid local timezone shifting "YYYY-MM-DD" to the previous day
+                    const dObj = new Date(`${logDate}T00:00:00Z`);
+                    const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
                     const HOLIDAYS_BY_COUNTRY = {
                         'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
                         'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
@@ -82,7 +84,8 @@ const CustomerReceivablePage = () => {
                     };
                     const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
                     const isHoliday = activeHols.includes(logDate);
-                    if ((isWeekend || isHoliday) && !log.start_time) return;
+                    // Only process if it's a weekday AND not a holiday, OR if there's an existing manually added log
+                    if ((isWeekend || isHoliday) && (!log.start_time || !log.endTime)) return;
                 }
 
                 const res = calculateTicketCostFrontend({ ...ticket, ...log, time_logs: [] }, forcedTZ, targetCurrency);
@@ -167,15 +170,11 @@ const CustomerReceivablePage = () => {
         } else if (bil.includes('Monthly')) {
             base = parseFloat(ticket.monthly_rate || ticket.monthlyRate || 0) / 30;
             baseBreakdown = `Pro-rata Monthly (1 day) = ${cur} ${base.toFixed(2)}`;
-            if (isSpecialDay) {
-                sp = hrs * (hr * 2.0);
-                spBreakdown = `${hrs.toFixed(2)}h Special Day @ ${cur} ${(hr * 2.0).toFixed(2)} (2.0x)`;
-            } else { 
-                if (hrs > 8) {
-                    const otHrs = hrs - 8;
-                    ot = otHrs * (hr * 1.5); 
-                    otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
-                }
+            // Non-premium days covering normal hours + OT > 8
+            if (hrs > 8) {
+                const otHrs = hrs - 8;
+                ot = otHrs * (hr * 1.5); 
+                otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
         } else if (bil === 'Agreed Rate') { 
             base = parseFloat(ticket.agreed_rate) || 0;
