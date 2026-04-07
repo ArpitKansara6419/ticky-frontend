@@ -441,8 +441,8 @@ function TicketsPage() {
         const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
         const isHoliday = activeHols.includes(d);
 
-        // Only process if it's a weekday AND not a holiday, OR if there's an existing manually added log
-        if ((isWeekend || isHoliday) && !existing) {
+        // FORCE skip Weekends and Holidays completely as per user requirement
+        if (isWeekend || isHoliday) {
           return;
         }
 
@@ -2319,7 +2319,8 @@ function TicketsPage() {
                             };
                             const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
                             const isHoliday = activeHols.includes(dStr);
-                            if ((isWeekend || isHoliday) && !existingLog.id) return null;
+                            // FORCE skip Weekends and Holidays completely as per user requirement
+                            if (isWeekend || isHoliday) return null;
 
                             // DETERMINISTIC FALLBACKS: Support both snake_case and CamelCase keys from backend
                             const actualStartStr = existingLog.start_time || existingLog.startTime;
