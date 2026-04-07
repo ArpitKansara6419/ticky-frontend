@@ -423,7 +423,8 @@ function TicketsPage() {
       let totalReceivable = 0;
       let totalPayout = 0;
       let totalHrs = 0;
-      let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: numDays };
+      let validDaysCount = 0;
+      let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: 0 };
 
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
@@ -500,12 +501,14 @@ function TicketsPage() {
           combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
           combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
           combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
+          validDaysCount += 1;
         }
         if (payRes) {
           totalPayout += parseFloat(payRes.grandTotal);
         }
       });
 
+      combinedBreakdown.days = validDaysCount;
       const finalGrandTotal = totalReceivable.toFixed(2);
       setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
       setTotalCost(finalGrandTotal);
