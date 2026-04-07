@@ -187,8 +187,8 @@ const EngineerPayoutPage = () => {
                 let brk = (log.break_time_mins || 0) * 60;
 
                 if (!sTime || !eTime) {
-                    if (!log.task_date) return;
-                    const dStr = (log.task_date || '').split('T')[0];
+                    const dStr = (log.task_date || log.start_time || '').split('T')[0];
+                    if (!dStr) return;
                     const ct = String(ticket.task_time || '09:00').slice(0, 5);
                     const sDT = new Date(`${dStr}T${ct}:00Z`);
                     if (isNaN(sDT.getTime())) return;
