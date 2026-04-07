@@ -178,6 +178,7 @@ const EngineerPayoutPage = () => {
                     };
                     const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
                     const isHoliday = activeHols.includes(logDate);
+                    // Skip if weekend/holiday AND no manual times were filled
                     if ((isWeekend || isHoliday) && (!log.start_time || !log.end_time)) return;
                 }
 
@@ -200,22 +201,21 @@ const EngineerPayoutPage = () => {
                 const res = calculateEngineerPayoutFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [] }, tz);
                 totalHrs += parseFloat(res.totalHours || 0);
                 if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT' || billingType === 'Mixed Mode') {
-                    baseC += parseFloat(res.baseCost || 0);
+                    baseC += parseFloat(res.base || 0);
                 }
-                otP += parseFloat(res.otPremium || 0);
-                oohP += parseFloat(res.oohPremium || 0);
-                spP += parseFloat(res.specialDayPremium || 0);
-                travC += parseFloat(res.travelCost || 0);
-                toolC += parseFloat(res.toolCost || 0);
+                otP += parseFloat(res.ot || 0);
+                spP += parseFloat(res.sp || 0);
+                travC += parseFloat(res.trav || 0);
+                toolC += parseFloat(res.tool || 0);
             });
             if (billingType.includes('Monthly')) {
                 const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
                 baseC = (fullRate / 30) * logs.length;
             } else if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
                 const dummy = calculateEngineerPayoutFrontend({ ...ticket, time_logs: [] }, tz);
-                baseC = parseFloat(dummy.baseCost);
+                baseC = parseFloat(dummy.base);
             }
-            totalRec = baseC + otP + oohP + spP + travC + toolC;
+            totalRec = baseC + otP + spP + travC + toolC;
             return {
                 totalPayout: totalRec.toFixed(2),
                 base: baseC.toFixed(2), ot: otP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
@@ -324,7 +324,7 @@ const EngineerPayoutPage = () => {
                         <FiUser className="stat-icon" />
                         <div className="stat-info">
                             <span className="stat-label">Unpaid Engineers</span>
-                            <span className="stat-label">{stats.unpaidCount}</span>
+                            <span className="stat-value">{stats.unpaidCount}</span>
                         </div>
                     </div>
                     <div className="stat-card green">
