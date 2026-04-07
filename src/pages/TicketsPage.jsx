@@ -330,8 +330,9 @@ function TicketsPage() {
       };
       const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
       const isHoliday = activeHols.includes(startInfo.dateStr) || activeHols.includes(endInfo.dateStr);
-      // isWeekend: 0=Sunday, 6=Saturday
-      const isWeekend = startInfo.day === 0 || startInfo.day === 6;
+      // FORCE UTC check for deterministic weekend logic
+      const dSafe = new Date(`${startInfo.dateStr}T00:00:00Z`);
+      const isWeekend = dSafe.getUTCDay() === 0 || dSafe.getUTCDay() === 6;
       const isSpecialDay = isWeekend || isHoliday;
 
       // --- PROPER LOGIC FIX FOR TIMEZONE SHIFTS ---
@@ -383,13 +384,8 @@ function TicketsPage() {
       } else if (bil.includes('Monthly')) {
         const fullRate = parseFloat(opts.monthlyRate) || 0;
         base = fullRate / 30; // Pro-rata for 1 day
-        if (isWeekend || isHoliday) {
-          // Special-day premium (2.0x hourly) is charged ON TOP of the daily pro-rata base.
-          special = hrs * (hr * 2.0);
-        } else {
-          // Normal weekday: count towards monthly total, apply OT if > 8h
-          if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-        }
+        // Normal weekday/weekend: monthly pro-rata base, apply OT if > 8h
+        if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
 
       } else if (bil === 'Agreed Rate') {
         base = parseFloat(opts.agreedRate) || 0;
