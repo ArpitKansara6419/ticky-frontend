@@ -1581,6 +1581,29 @@ function LeadsPage() {
                     <option key={eng.id} value={eng.id}>{eng.name} ({eng.city || 'No City'})</option>
                   ))}
                 </select>
+
+                {/* --- Real-time Rates Preview --- */}
+                {(() => {
+                  const eng = engineers.find(e => String(e.id) === String(assignEngineerId));
+                  if (!eng) return null;
+                  return (
+                    <div style={{ marginTop: '12px', background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px dashed #cbd5e1', animation: 'fadeIn 0.3s ease' }}>
+                      <p style={{ fontSize: '11px', fontWeight: '800', color: '#6366f1', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        📊 {eng.name}'s Profile Rates
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.billing_type || 'Hourly'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.hourly_rate || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Half Day:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.half_day_rate || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Full Day:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.full_day_rate || '0.00'}</span></div>
+                        {eng.billing_type === 'Monthly + OT + Weekend' && (
+                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Monthly:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.monthly_rate || '0.00'}</span></div>
+                        )}
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancellation:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.cancellation_fee || '0.00'}</span></div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div style={{ marginBottom: '20px' }}>
