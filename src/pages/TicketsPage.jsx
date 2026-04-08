@@ -279,6 +279,34 @@ function TicketsPage() {
     return dates;
   };
 
+  // Returns the count of working days (Mon-Fri, non-holiday) in the month of the given dateStr
+  const getWorkingDaysInMonth = (dateStr, countryName) => {
+    if (!dateStr) return 22; // safe fallback
+    const HOLIDAYS_BY_COUNTRY = {
+      'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+      'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+      'Other': []
+    };
+    const holidays = HOLIDAYS_BY_COUNTRY[countryName] || HOLIDAYS_BY_COUNTRY['India'] || [];
+    const d = new Date(`${dateStr}T00:00:00Z`);
+    const year = d.getUTCFullYear();
+    const month = d.getUTCMonth();
+    // First and last day of month
+    const firstDay = new Date(Date.UTC(year, month, 1));
+    const lastDay  = new Date(Date.UTC(year, month + 1, 0));
+    let workingDays = 0;
+    let cur = new Date(firstDay);
+    while (cur <= lastDay) {
+      const dayOfWeek = cur.getUTCDay();
+      const iso = cur.toISOString().split('T')[0];
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(iso)) {
+        workingDays++;
+      }
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return workingDays || 22;
+  };
+
   // Pure calculation function for reuse
   const calculateTicketTotal = (opts) => {
     const {
@@ -383,9 +411,17 @@ function TicketsPage() {
 
       } else if (bil.includes('Monthly')) {
         const fullRate = parseFloat(opts.monthlyRate) || 0;
-        base = fullRate / 30; // Pro-rata for 1 day
-        // Normal weekday/weekend: monthly pro-rata base, apply OT if > 8h
+        // Divide by working days WITHIN THE TICKET DATE RANGE (not full calendar month)
+        // opts.ticketWorkingDays is pre-computed outside and passed in
+        const divisor = (opts.ticketWorkingDays && opts.ticketWorkingDays > 0)
+          ? opts.ticketWorkingDays
+          : 1;
+        base = fullRate / divisor;
         if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+        // Store for display
+        opts._perDayRate    = base;
+        opts._workingDays   = divisor;
+        opts._monthlyFull   = fullRate;
 
       } else if (bil === 'Agreed Rate') {
         base = parseFloat(opts.agreedRate) || 0;
@@ -408,23 +444,40 @@ function TicketsPage() {
         travel: travelVal.toFixed(2),
         grandTotal: grand.toFixed(2),
         isOOH: workIsOOH,
-        isSpecialDay
+        isSpecialDay,
+        // Monthly-specific display helpers
+        perDayRate:   opts._perDayRate   != null ? parseFloat(opts._perDayRate).toFixed(2)   : null,
+        workingDays:  opts._workingDays  != null ? opts._workingDays                          : null,
+        monthlyFull:  opts._monthlyFull  != null ? parseFloat(opts._monthlyFull).toFixed(2)   : null,
       };
     } catch (err) { return null; }
   };
 
   useEffect(() => {
     if (isFillingForm) return;
-    const isMultiDay = taskStartDate && taskEndDate && taskStartDate !== taskEndDate;
+    // Also treat Monthly billing as multi-day calendar view even if start==end
+    const isMultiDay = (taskStartDate && taskEndDate && taskStartDate !== taskEndDate) || (billingType.includes('Monthly') && taskStartDate && taskEndDate);
     const daysArr = isMultiDay ? getDatesInRange(taskStartDate, taskEndDate) : [];
     const numDays = daysArr.length || 1;
 
     if (isMultiDay) {
+      // Pre-compute working days within ticket date range for Monthly per-day rate
+      const HOLIDAYS_CALC = {
+        'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+        'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+        'Other': []
+      };
+      const calcHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
+      const ticketWorkingDays = daysArr.filter(d => {
+        const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+        return dw !== 0 && dw !== 6 && !calcHols.includes(d);
+      }).length || 1;
+
       let totalReceivable = 0;
       let totalPayout = 0;
       let totalHrs = 0;
       let validDaysCount = 0;
-      let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: 0 };
+      let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: 0, perDayRate: null, workingDays: null, monthlyFull: null };
 
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
@@ -464,7 +517,8 @@ function TicketsPage() {
         const res = calculateTicketTotal({
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-          travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone, country
+          travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone, country,
+          ticketWorkingDays  // pass ticket-range working days for Monthly per-day rate
         });
 
         // Determine which engineer's rates to use for payout
@@ -501,6 +555,12 @@ function TicketsPage() {
           combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
           combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
           combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
+          // Grab Monthly formula info from first valid day calculation
+          if (res.perDayRate != null && combinedBreakdown.perDayRate == null) {
+            combinedBreakdown.perDayRate  = res.perDayRate;
+            combinedBreakdown.workingDays = res.workingDays;
+            combinedBreakdown.monthlyFull = res.monthlyFull;
+          }
           validDaysCount += 1;
         }
         if (payRes) {
@@ -685,9 +745,9 @@ function TicketsPage() {
     }
   }
 
-  // Initialize/Sync Time Logs during CREATE mode for Dispatch tickets
+  // Initialize/Sync Time Logs during CREATE mode for Dispatch or Monthly tickets
   useEffect(() => {
-    if (!editingTicketId && (leadType === 'Dispatch' || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate))) {
+    if (!editingTicketId && (leadType === 'Dispatch' || billingType.includes('Monthly') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate))) {
       const dates = getDatesInRange(taskStartDate, taskEndDate);
       const ct = (taskTime || '09:00').slice(0, 5);
 
@@ -2258,7 +2318,7 @@ function TicketsPage() {
 
           {/* Conditional Time Adjustment Section */}
           {(() => {
-            const isDispatch = (leadType === 'Dispatch') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate);
+            const isDispatch = (leadType === 'Dispatch') || billingType.includes('Monthly') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate);
 
             if (!isDispatch) {
               // Same Day Task
@@ -2298,10 +2358,26 @@ function TicketsPage() {
               // Multi-Day Task
               return (
                 <section className="tickets-card">
-                  <h2 className="tickets-section-title">📅 Daily Shift Logs (Multi-day Dispatch)</h2>
-                  <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '12px', color: '#6366f1' }}>
-                    Assign different engineers or set individual times per day.
-                  </p>
+                  <h2 className="tickets-section-title">
+                    📅 Daily Shift Logs
+                    {billingType.includes('Monthly') &&
+                      <span style={{ marginLeft: '8px', fontSize: '11px', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', color: '#fff', padding: '2px 10px', borderRadius: '30px', fontWeight: '700', verticalAlign: 'middle' }}>Monthly Billing</span>
+                    }
+                  </h2>
+                  {billingType.includes('Monthly') ? (
+                    <div style={{ marginBottom: '14px', padding: '10px 14px', background: 'rgba(99,102,241,0.07)', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.18)', fontSize: '12px', color: '#4f46e5', fontWeight: '600', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                      <span>📊</span>
+                      <span>
+                        <strong>Per Day Rate</strong> = Monthly Rate ({currency} {monthlyRate || '0'}) ÷ Working Days in Month
+                        &nbsp;|&nbsp;
+                        Working days calculated automatically (weekdays only, no holidays)
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '12px', color: '#6366f1' }}>
+                      Assign different engineers or set individual times per day.
+                    </p>
+                  )}
 
                   <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                     <table className="tickets-table" style={{ fontSize: '12px' }}>
@@ -2311,13 +2387,28 @@ function TicketsPage() {
                           <th style={{ padding: '10px' }}>Engineer</th>
                           <th style={{ padding: '10px' }}>Shift (In / Out / Break)</th>
                           <th style={{ padding: '10px', textAlign: 'center' }}>Hrs</th>
-                          <th style={{ padding: '10px', textAlign: 'right' }}>Est. Cost</th>
+                          {billingType.includes('Monthly') && <th style={{ padding: '10px', textAlign: 'right' }}>Per Day Rate</th>}
+                          <th style={{ padding: '10px', textAlign: 'right' }}>Travel</th>
+                          <th style={{ padding: '10px', textAlign: 'right' }}>Tools</th>
+                          <th style={{ padding: '10px', textAlign: 'right' }}>Day Total</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(() => {
                           const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
                           const cleanTaskTime = (taskTime || '09:00').padStart(5, '0');
+
+                          // Pre-compute ticket working days (Mon-Fri, non-holiday) for Monthly per-day rate
+                          const _tblHols = {
+                            'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+                            'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+                            'Other': []
+                          };
+                          const _tblHolsList = _tblHols[country] || _tblHols['India'] || [];
+                          const tableTicketWDays = daysInRange.filter(d => {
+                            const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+                            return dw !== 0 && dw !== 6 && !_tblHolsList.includes(d);
+                          }).length || 1;
 
                           return daysInRange.map((dStr, idx) => {
                             const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
@@ -2354,7 +2445,9 @@ function TicketsPage() {
                               startTime: `${dStr}T${lStart}:00.000Z`,
                               endTime: `${dStr}T${lEnd}:00.000Z`,
                               breakTime: actualBreak,
-                              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
+                              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                              travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
+                              ticketWorkingDays: tableTicketWDays  // ticket range working days for Monthly rate ÷ days
                             });
 
                             return (
@@ -2463,8 +2556,26 @@ function TicketsPage() {
                                   {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
                                   {editingTicketId && dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
                                 </td>
+                                {billingType.includes('Monthly') && (
+                                  <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#6366f1', fontWeight: '700' }}>
+                                    {dayCostBreakdown ? (
+                                      <span title={`${currency}${dayCostBreakdown.monthlyFull} ÷ ${dayCostBreakdown.workingDays} days`}>{currency} {dayCostBreakdown.perDayRate}</span>
+                                    ) : '--'}
+                                  </td>
+                                )}
+                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#0891b2', fontWeight: '600' }}>
+                                  {dayCostBreakdown ? `${currency} ${dayCostBreakdown.travel}` : '--'}
+                                </td>
+                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#7c3aed', fontWeight: '600' }}>
+                                  {dayCostBreakdown ? `${currency} ${dayCostBreakdown.tools}` : '--'}
+                                </td>
                                 <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
                                   {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
+                                  {billingType.includes('Monthly') && dayCostBreakdown && (
+                                    <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>
+                                      base + travel + tools
+                                    </div>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -2687,13 +2798,27 @@ function TicketsPage() {
                 {/* Breakdown Lines */}
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
+                  {/* Monthly Formula Banner */}
+                  {billingType.includes('Monthly') && liveBreakdown.workingDays && (
+                    <div style={{ background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Rate Formula</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '4px' }}>
+                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>📆 Working Days in Month: <strong style={{ color: '#fff' }}>{liveBreakdown.workingDays}</strong></span>
+                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>💰 Monthly Rate: <strong style={{ color: '#fff' }}>{currency} {liveBreakdown.monthlyFull}</strong></span>
+                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>📊 Per Day Rate: <strong style={{ color: '#a5b4fc' }}>{currency} {liveBreakdown.perDayRate}</strong> ({currency}{liveBreakdown.monthlyFull} ÷ {liveBreakdown.workingDays} days)</span>
+                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>🗓 Worked Days: <strong style={{ color: '#fff' }}>{liveBreakdown.days}</strong></span>
+                        <span style={{ fontSize: '12px', color: '#6ee7b7' }}>Base Amount: <strong>{currency} {liveBreakdown.base}</strong> = {currency}{liveBreakdown.perDayRate} × {liveBreakdown.days} days</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Base */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
                       Base ({billingType === 'Hourly' ? `${liveBreakdown.hrs}h × ${currency}${hourlyRate}/hr`
                         : billingType === 'Half Day + Hourly' ? 'Half Day flat'
                           : billingType === 'Full Day + OT' ? 'Full Day flat'
-                            : billingType.includes('Monthly') ? 'Monthly rate'
+                            : billingType.includes('Monthly') ? `${currency}${liveBreakdown.perDayRate}/day × ${liveBreakdown.days} days`
                               : billingType === 'Agreed Rate' ? 'Fixed rate'
                                 : 'Cancellation fee'})
                     </span>
@@ -2730,14 +2855,14 @@ function TicketsPage() {
                     </div>
                   )}
 
-                  {/* Travel Cost */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '6px' }}>
-                    <span>Travel Cost / Day (Total)</span>
-                    <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.travel}</span>
+                  {/* Travel & Tool Costs */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#7dd3fc', fontWeight: '600', marginBottom: '4px' }}>
+                    <span>✈ Travel Cost{liveBreakdown.days > 1 ? ` (${liveBreakdown.days} days × ${currency}${travelCostPerDay || '0'})` : ' / Day'}</span>
+                    <span>+ {currency} {liveBreakdown.travel}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#f1f5f9', opacity: 0.8, marginBottom: '12px' }}>
-                    <span>Tool Cost / Day (Total)</span>
-                    <span style={{ fontWeight: '600' }}>+ {currency} {liveBreakdown.tools}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#c4b5fd', fontWeight: '600', marginBottom: '12px' }}>
+                    <span>🔧 Tool Cost{liveBreakdown.days > 1 ? ` (${liveBreakdown.days} days × ${currency}${toolCostInput || '0'})` : ''}</span>
+                    <span>+ {currency} {liveBreakdown.tools}</span>
                   </div>
 
                   {/* Divider */}
