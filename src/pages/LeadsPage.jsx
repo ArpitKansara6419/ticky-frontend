@@ -312,6 +312,30 @@ function LeadsPage() {
     }
   }, [countriesList])
 
+  const getWorkingDaysInMonth = (dateStr, countryName) => {
+    if (!dateStr) return 22;
+    const date = new Date(dateStr);
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const HOLIDAYS_BY_COUNTRY = {
+      'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+      'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+      'Other': []
+    };
+    const holidays = HOLIDAYS_BY_COUNTRY[countryName] || HOLIDAYS_BY_COUNTRY['India'] || [];
+    let workingDays = 0;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dObj = new Date(year, month, d);
+      const dw = dObj.getDay();
+      const dStr = dObj.toISOString().split('T')[0];
+      if (dw !== 0 && dw !== 6 && !holidays.includes(dStr)) {
+        workingDays++;
+      }
+    }
+    return workingDays || 22;
+  };
+
   const handleCountrySelectChange = (option) => {
     const ctry = option ? option.value : ''
     setCountry(ctry)
@@ -401,7 +425,8 @@ function LeadsPage() {
         }
       } else if (bil.includes('Monthly')) {
         const fullRate = parseFloat(monthlyRate) || 0;
-        base = fullRate / 30; // Pro-rata for 1 day in lead estimation
+        const monthlyDivisor = getWorkingDaysInMonth(startTime.split(' ')[0], data.country || 'India');
+        base = fullRate / monthlyDivisor; 
         if (isSpecialDay) {
           special = hrs * (hr * 2.0);
         } else {
@@ -965,7 +990,7 @@ function LeadsPage() {
               startTime: taskStartDate ? `${taskStartDate} ${taskTime}` : '',
               endTime: taskEndDate ? `${taskEndDate} ${taskTime}` : '',
               hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-              travelCostPerDay, toolCost: toolCost, billingType, timezone
+              travelCostPerDay, toolCost: toolCost, billingType, timezone, country
             });
 
             if (!res.grandTotal || res.grandTotal == 0) return null;

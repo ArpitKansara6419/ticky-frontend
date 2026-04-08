@@ -411,11 +411,10 @@ function TicketsPage() {
 
       } else if (bil.includes('Monthly')) {
         const fullRate = parseFloat(opts.monthlyRate) || 0;
-        // Divide by working days WITHIN THE TICKET DATE RANGE (not full calendar month)
-        // opts.ticketWorkingDays is pre-computed outside and passed in
-        const divisor = (opts.ticketWorkingDays && opts.ticketWorkingDays > 0)
-          ? opts.ticketWorkingDays
-          : 1;
+        // Divisor: TOTAL working days in the month (not just the ticket range)
+        const divisor = (opts.monthlyDivisor && opts.monthlyDivisor > 0)
+          ? opts.monthlyDivisor
+          : 22; 
         base = fullRate / divisor;
         if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
         // Store for display
@@ -468,10 +467,7 @@ function TicketsPage() {
         'Other': []
       };
       const calcHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
-      const ticketWorkingDays = daysArr.filter(d => {
-        const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
-        return dw !== 0 && dw !== 6 && !calcHols.includes(d);
-      }).length || 1;
+      const monthlyDivisor = getWorkingDaysInMonth(taskStartDate, country);
 
       let totalReceivable = 0;
       let totalPayout = 0;
@@ -518,7 +514,7 @@ function TicketsPage() {
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
           travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone, country,
-          ticketWorkingDays  // pass ticket-range working days for Monthly per-day rate
+          monthlyDivisor  // pass full month working days for Monthly per-day rate
         });
 
         // Determine which engineer's rates to use for payout
@@ -2407,11 +2403,8 @@ function TicketsPage() {
                             'Other': []
                           };
                           const _tblHolsList = _tblHols[country] || _tblHols['India'] || [];
-                          const tableTicketWDays = daysInRange.filter(d => {
-                            const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
-                            return dw !== 0 && dw !== 6 && !_tblHolsList.includes(d);
-                          }).length || 1;
-
+                          const monthlyDivisor = getWorkingDaysInMonth(taskStartDate, country);
+                          
                           return daysInRange.map((dStr, idx) => {
                             const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
 
@@ -2449,7 +2442,7 @@ function TicketsPage() {
                               breakTime: actualBreak,
                               hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
                               travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
-                              ticketWorkingDays: tableTicketWDays  // ticket range working days for Monthly rate ÷ days
+                              monthlyDivisor  // pass full month working days for Monthly per-day rate
                             });
 
                             return (
