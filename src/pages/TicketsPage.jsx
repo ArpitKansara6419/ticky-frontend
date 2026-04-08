@@ -3454,44 +3454,111 @@ function TicketsPage() {
 
                 {/* --- Financial Breakdown --- */}
                 {(() => {
-                  const isMulti = selectedTicket.taskStartDate?.split('T')[0] !== selectedTicket.taskEndDate?.split('T')[0];
+                  const stBil = (selectedTicket.billingType || 'Hourly').trim();
+                  const stStart = selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '';
+                  const stEnd   = selectedTicket.taskEndDate   ? String(selectedTicket.taskEndDate).split('T')[0]   : '';
+                  const isMonthly = stBil.includes('Monthly');
+                  const isMulti   = (stStart && stEnd && stStart !== stEnd) || (isMonthly && stStart && stEnd);
+
                   if (isMulti) {
-                    let totalR = 0, totalP = 0;
+                    // Pre-compute ticket working days for Monthly per-day rate
+                    const _vmHols = {
+                      'India':  ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+                      'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+                      'Other':  []
+                    };
+                    const vmHolsList = _vmHols[selectedTicket.country] || _vmHols['India'] || [];
+
+                    // All calendar dates in range
+                    const vmAllDates = getDatesInRange(stStart, stEnd);
+
+                    // Working days in ticket range (for divisor)
+                    const vmTicketWDays = vmAllDates.filter(d => {
+                      const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+                      return dw !== 0 && dw !== 6 && !vmHolsList.includes(d);
+                    }).length || 1;
+
+                    const vmPerDayRate = isMonthly
+                      ? (parseFloat(selectedTicket.monthlyRate) || 0) / vmTicketWDays
+                      : 0;
+
                     const cleanTaskTime = (selectedTicket.taskTime || '08:00').toString().slice(0, 5);
-                    const logs = (timeLogs || []).map((log, i) => {
-                      const logDateStr = String(log.task_date || '').split('T')[0];
-                      let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
-                      if (!ls || !le) {
-                        if (log.is_weekend) return { ...log, rV: 0, pV: 0, dur: 0 };
-                        ls = `${logDateStr}T${cleanTaskTime}:00`;
-                        const ed = new Date(`${ls}Z`); ed.setUTCHours(ed.getUTCHours() + 8); le = ed.toISOString(); lb = 0;
-                      }
-                      const resR = calculateTicketTotal({
-                        startTime: ls, endTime: le, breakTime: lb,
-                        hourlyRate: selectedTicket.hourlyRate, halfDayRate: selectedTicket.halfDayRate,
-                        fullDayRate: selectedTicket.fullDayRate, monthlyRate: selectedTicket.monthlyRate,
-                        agreedRate: selectedTicket.agreedRate, cancellationFee: selectedTicket.cancellationFee,
-                        travelCostPerDay: selectedTicket.travelCostPerDay, toolCost: selectedTicket.toolCost,
-                        billingType: selectedTicket.billingType || 'Hourly', timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local'
+
+                    let totalR = 0, totalP = 0;
+
+                    const logs = (timeLogs || [])
+                      .filter(log => {
+                        const d = String(log.task_date || '').split('T')[0];
+                        const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+                        return dw !== 0 && dw !== 6 && !vmHolsList.includes(d);
+                      })
+                      .map((log, i) => {
+                        const logDateStr = String(log.task_date || '').split('T')[0];
+                        let ls = log.start_time, le = log.end_time, lb = log.break_time_mins || 0;
+                        if (!ls || !le) {
+                          ls = `${logDateStr}T${cleanTaskTime}:00`;
+                          const ed = new Date(`${ls}Z`); ed.setUTCHours(ed.getUTCHours() + 8); le = ed.toISOString(); lb = 0;
+                        }
+                        const resR = calculateTicketTotal({
+                          startTime: ls, endTime: le, breakTime: lb,
+                          hourlyRate: selectedTicket.hourlyRate, halfDayRate: selectedTicket.halfDayRate,
+                          fullDayRate: selectedTicket.fullDayRate, monthlyRate: selectedTicket.monthlyRate,
+                          agreedRate: selectedTicket.agreedRate, cancellationFee: selectedTicket.cancellationFee,
+                          travelCostPerDay: selectedTicket.travelCostPerDay,
+                          toolCost: selectedTicket.toolCost,
+                          billingType: stBil, timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local',
+                          ticketWorkingDays: vmTicketWDays
+                        });
+                        let pRates = { hr: selectedTicket.engHourlyRate || 0, hd: selectedTicket.engHalfDayRate || 0, fd: selectedTicket.engFullDayRate || 0, mr: selectedTicket.engMonthlyRate || 0, bt: selectedTicket.engBillingType || 'Hourly' };
+                        const lEngId = log.engineer_id || log.engineerId;
+                        if (lEngId && Number(lEngId) !== Number(selectedTicket.engineerId)) {
+                          const eng = engineers.find(en => Number(en.id) === Number(lEngId));
+                          if (eng) pRates = { hr: eng.hourly_rate, hd: eng.half_day_rate, fd: eng.full_day_rate, mr: eng.monthly_rate || 0, bt: eng.billing_type };
+                        }
+                        const resP = calculateTicketTotal({
+                          startTime: ls, endTime: le, breakTime: lb,
+                          hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, monthlyRate: pRates.mr,
+                          billingType: pRates.bt, timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local',
+                          travelCostPerDay: selectedTicket.travelCostPerDay, toolCost: selectedTicket.toolCost,
+                          ticketWorkingDays: vmTicketWDays
+                        });
+                        const rV  = parseFloat(resR?.grandTotal || 0);
+                        const pV  = parseFloat(resP?.grandTotal || 0);
+                        const trv = parseFloat(resR?.travel || 0);
+                        const tol = parseFloat(resR?.tools  || 0);
+                        const base= parseFloat(resR?.base   || 0);
+                        totalR += rV; totalP += pV;
+                        return { ...log, rV, pV, trv, tol, base, dur: parseFloat(resR?.hrs || 0), logDateStr };
                       });
-                      let pRates = { hr: selectedTicket.engHourlyRate || 0, hd: selectedTicket.engHalfDayRate || 0, fd: selectedTicket.engFullDayRate || 0, bt: selectedTicket.engBillingType || 'Hourly' };
-                      const lEngId = log.engineer_id || log.engineerId;
-                      if (lEngId && Number(lEngId) !== Number(selectedTicket.engineerId)) {
-                        const eng = engineers.find(en => Number(en.id) === Number(lEngId));
-                        if (eng) pRates = { hr: eng.hourly_rate, hd: eng.half_day_rate, fd: eng.full_day_rate, bt: eng.billing_type };
-                      }
-                      const resP = calculateTicketTotal({
-                        startTime: ls, endTime: le, breakTime: lb,
-                        hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, billingType: pRates.bt,
-                        timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local'
-                      });
-                      const rV = parseFloat(resR?.grandTotal || 0); const pV = parseFloat(resP?.grandTotal || 0);
-                      totalR += rV; totalP += pV;
-                      return { ...log, rV, pV, dur: parseFloat(resR?.hrs || 0) };
-                    });
+
+                    const cur = selectedTicket.currency || 'USD';
 
                     return (
                       <div className="detail-item--full">
+
+                        {/* Monthly Formula banner */}
+                        {isMonthly && (
+                          <div style={{ marginBottom: '14px', padding: '12px 16px', background: 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08))', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '900', color: '#6366f1' }}>📊 Monthly Billing Breakdown</span>
+                            <span style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600' }}>
+                              Monthly Rate: <strong>{cur} {parseFloat(selectedTicket.monthlyRate || 0).toFixed(2)}</strong>
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600' }}>
+                              Working Days in Ticket: <strong>{vmTicketWDays}</strong>
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600' }}>
+                              Per Day Rate: <strong style={{ color: '#6366f1', fontSize: '13px' }}>{cur} {vmPerDayRate.toFixed(2)}</strong>
+                              <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }}>({cur}{parseFloat(selectedTicket.monthlyRate||0).toFixed(0)} ÷ {vmTicketWDays} days)</span>
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#0891b2', fontWeight: '600' }}>
+                              ✈ Travel/day: <strong>{cur} {parseFloat(selectedTicket.travelCostPerDay || 0).toFixed(2)}</strong>
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#7c3aed', fontWeight: '600' }}>
+                              🔧 Tool Cost: <strong>{cur} {parseFloat(selectedTicket.toolCost || 0).toFixed(2)}</strong>
+                            </span>
+                          </div>
+                        )}
+
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                           <label style={{ fontSize: '15px', fontWeight: '800' }}>📅 Daily Shift Logs</label>
                           <div style={{ display: 'flex', gap: '8px' }}>
@@ -3499,66 +3566,114 @@ function TicketsPage() {
                             <button className="btn-wow-secondary" onClick={handleExtendJob} disabled={isExtending} style={{ padding: '4px 12px', fontSize: '11px' }}>{isExtending ? 'Wait...' : '+ Add Day'}</button>
                           </div>
                         </div>
+
                         <div className="dispatch-logs-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                             <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                               <tr>
                                 <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
-                                <th style={{ padding: '10px', textAlign: 'left' }}>Work Details & Engineer</th>
-                                <th style={{ padding: '10px', textAlign: 'right' }}>Receivable</th>
-                                <th style={{ padding: '10px', textAlign: 'right' }}>Payout</th>
+                                <th style={{ padding: '10px', textAlign: 'left' }}>Engineer / Shift</th>
+                                <th style={{ padding: '10px', textAlign: 'center' }}>Hrs</th>
+                                {isMonthly && <th style={{ padding: '10px', textAlign: 'right', color: '#6366f1' }}>Per Day Rate</th>}
+                                <th style={{ padding: '10px', textAlign: 'right', color: '#0891b2' }}>Travel</th>
+                                <th style={{ padding: '10px', textAlign: 'right', color: '#7c3aed' }}>Tools</th>
+                                <th style={{ padding: '10px', textAlign: 'right', color: '#6366f1' }}>Day Total</th>
+                                <th style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>Payout</th>
                               </tr>
                             </thead>
                             <tbody>
                               {logs.map((L, i) => (
-                                <tr key={L.id || i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <tr key={L.id || i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
                                   <td style={{ padding: '10px' }}>
-                                    <div style={{ fontWeight: '700' }}>{new Date(L.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
-                                    <div style={{ fontSize: '10px', color: L.is_weekend ? '#b45309' : '#94a3b8' }}>{L.is_weekend ? 'Weekend' : 'Weekday'}</div>
+                                    <div style={{ fontWeight: '700', color: '#1e293b' }}>
+                                      {new Date(`${L.logDateStr}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
+                                    </div>
+                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>Weekday</div>
                                   </td>
                                   <td style={{ padding: '10px' }}>
                                     <select style={{ width: '100%', padding: '4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '4px' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
                                       {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
                                     </select>
-                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                                       <input type="time" id={`vs-${i}`} defaultValue={safeExtractTime(L.start_time)} style={{ fontSize: '10px', padding: '2px' }} />
+                                      <span style={{ fontSize: '10px', color: '#94a3b8' }}>→</span>
                                       <input type="time" id={`ve-${i}`} defaultValue={safeExtractTime(L.end_time)} style={{ fontSize: '10px', padding: '2px' }} />
-                                      <button className="tickets-primary-btn" style={{ padding: '2px 4px', fontSize: '10px' }} onClick={() => {
+                                      <button className="tickets-primary-btn" style={{ padding: '2px 6px', fontSize: '10px' }} onClick={() => {
                                         const s = document.getElementById(`vs-${i}`).value, e = document.getElementById(`ve-${i}`).value;
-                                        if (s && e) handleUpdateLog(L.id, { startTime: `${L.task_date.split('T')[0]}T${s}:00.000Z`, endTime: `${L.task_date.split('T')[0]}T${e}:00.000Z` });
-                                      }}>OK</button>
+                                        if (s && e) handleUpdateLog(L.id, { startTime: `${L.logDateStr}T${s}:00.000Z`, endTime: `${L.logDateStr}T${e}:00.000Z` });
+                                      }}>Save</button>
                                     </div>
                                   </td>
-                                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#6366f1' }}>{selectedTicket.currency} {L.rV.toFixed(2)}</td>
-                                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>{selectedTicket.eng_currency || selectedTicket.currency} {L.pV.toFixed(2)}</td>
+                                  <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: L.dur > 8 ? '#ef4444' : '#6366f1' }}>
+                                    {L.dur > 0 ? L.dur.toFixed(1) + 'h' : '--'}
+                                  </td>
+                                  {isMonthly && (
+                                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#6366f1' }}>
+                                      {cur} {L.base.toFixed(2)}
+                                      <div style={{ fontSize: '9px', color: '#94a3b8' }}>{cur}{parseFloat(selectedTicket.monthlyRate||0).toFixed(0)}÷{vmTicketWDays}</div>
+                                    </td>
+                                  )}
+                                  <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', fontWeight: '600', color: '#0891b2' }}>
+                                    {cur} {L.trv.toFixed(2)}
+                                  </td>
+                                  <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', fontWeight: '600', color: '#7c3aed' }}>
+                                    {cur} {L.tol.toFixed(2)}
+                                  </td>
+                                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#6366f1', fontSize: '13px' }}>
+                                    {cur} {L.rV.toFixed(2)}
+                                  </td>
+                                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669', fontSize: '13px' }}>
+                                    {selectedTicket.eng_currency || cur} {L.pV.toFixed(2)}
+                                  </td>
                                 </tr>
                               ))}
+                              {/* Totals row */}
+                              <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0', fontWeight: '900' }}>
+                                <td colSpan={isMonthly ? 6 : 5} style={{ padding: '12px 10px', textAlign: 'right', fontSize: '12px', color: '#475569', fontWeight: '800' }}>
+                                  GRAND TOTAL ({logs.length} working days):
+                                </td>
+                                <td style={{ padding: '12px 10px', textAlign: 'right', fontSize: '15px', color: '#6366f1', fontWeight: '900' }}>
+                                  {cur} {totalR > 0 ? totalR.toFixed(2) : parseFloat(selectedTicket.totalCost || 0).toFixed(2)}
+                                </td>
+                                <td style={{ padding: '12px 10px', textAlign: 'right', fontSize: '15px', color: '#059669', fontWeight: '900' }}>
+                                  {selectedTicket.eng_currency || cur} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}
+                                </td>
+                              </tr>
                             </tbody>
                           </table>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b' }}>GRAND TOTAL (RECEIVABLE)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1' }}>{selectedTicket.currency} {totalR > 0 ? totalR.toFixed(2) : parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
+
+                        {/* Summary cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                          <div style={{ background: 'linear-gradient(135deg,#f8fafc,#eef2ff)', padding: '16px', borderRadius: '12px', border: '1px solid #e0e7ff' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total (Receivable)</label>
+                            <div style={{ fontSize: '26px', fontWeight: '900', color: '#6366f1', marginTop: '6px' }}>{cur} {totalR > 0 ? totalR.toFixed(2) : parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
+                            {isMonthly && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{cur}{vmPerDayRate.toFixed(2)}/day × {logs.length} days + travel + tools</div>}
                           </div>
-                          <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534' }}>GRAND TOTAL (PAYOUT)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669' }}>{selectedTicket.eng_currency || selectedTicket.currency} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}</div>
+                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total (Payout)</label>
+                            <div style={{ fontSize: '26px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>{selectedTicket.eng_currency || cur} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}</div>
                           </div>
                         </div>
+
                       </div>
                     );
                   } else {
+                    // Single-day view
+                    const cur = selectedTicket.currency || 'USD';
                     return (
                       <div className="detail-item--full">
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b' }}>TOTAL (RECEIVABLE)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1' }}>{selectedTicket.currency} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
+                          <div style={{ background: 'linear-gradient(135deg,#f8fafc,#eef2ff)', padding: '16px', borderRadius: '12px', border: '1px solid #e0e7ff' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total (Receivable)</label>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1', marginTop: '6px' }}>{cur} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
+                            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                              Travel: {cur} {parseFloat(selectedTicket.travelCostPerDay || 0).toFixed(2)} · Tools: {cur} {parseFloat(selectedTicket.toolCost || 0).toFixed(2)}
+                            </div>
                           </div>
-                          <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534' }}>TOTAL (PAYOUT)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669' }}>{selectedTicket.eng_currency || selectedTicket.currency} {parseFloat(selectedTicket.engTotalCost || 0).toFixed(2)}</div>
+                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total (Payout)</label>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>{selectedTicket.eng_currency || cur} {parseFloat(selectedTicket.engTotalCost || 0).toFixed(2)}</div>
                           </div>
                         </div>
                       </div>
