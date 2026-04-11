@@ -2865,15 +2865,15 @@ function TicketsPage() {
                           return (
                             <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
                               <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '2px' }}>{monthName}</div>
-                              <div style={{ fontSize: '12px', color: '#c7d2fe' }}>
-                                Rate: <strong>{currency} {rec.rate}</strong> ÷ <strong>{rec.divisor}</strong> days = <strong style={{color: '#fff'}}>{currency} {dRate}/day</strong>
+                              <div style={{ fontSize: '12px', color: '#c7d2fe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Rate: <strong>{currency} {rec.rate}</strong> ÷ <strong>{rec.divisor}</strong> days = <strong>{currency} {dRate}/day</strong></span>
+                                <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#fff', fontWeight: '800', fontSize: '11px' }}>
+                                  {currency} {dRate} × {monthWorkDays} days = {currency} {(parseFloat(dRate) * monthWorkDays).toFixed(2)}
+                                </span>
                               </div>
                             </div>
                           );
                         })}
-                      </div>
-                      <div style={{ marginTop: '4px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '12px', color: '#c7d2fe' }}>
-                        🏁 Average Rate over <strong>{liveBreakdown.days}</strong> worked days = <strong>{currency} {(parseFloat(liveBreakdown.base) / liveBreakdown.days).toFixed(2)}/day</strong>
                       </div>
                     </div>
                   )}
@@ -2884,7 +2884,7 @@ function TicketsPage() {
                       Base ({billingType === 'Hourly' ? `${liveBreakdown.hrs}h × ${currency}${hourlyRate}/hr`
                         : billingType === 'Half Day + Hourly' ? 'Half Day flat'
                           : billingType === 'Full Day + OT' ? 'Full Day flat'
-                            : billingType.includes('Monthly') ? `${currency}${liveBreakdown.perDayRate}/day × ${liveBreakdown.days} days`
+                            : billingType.includes('Monthly') ? `Monthly Pro-rata (${liveBreakdown.days} days)`
                               : billingType === 'Agreed Rate' ? 'Fixed rate'
                                 : 'Cancellation fee'})
                     </span>
