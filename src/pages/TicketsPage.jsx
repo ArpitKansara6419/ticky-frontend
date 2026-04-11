@@ -1,5 +1,5 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
@@ -555,13 +555,14 @@ function TicketsPage() {
           combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
           combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
           combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
-          // Grab Monthly formula info from first valid day calculation
-          if (res.perDayRate != null && combinedBreakdown.perDayRate == null) {
-            combinedBreakdown.perDayRate  = res.perDayRate;
-            combinedBreakdown.workingDays = res.workingDays;
-            combinedBreakdown.monthlyFull = res.monthlyFull;
-          }
           validDaysCount += 1;
+          
+          // Track monthly divisors for the summary bar
+          const mKey = d.substring(0, 7);
+          if (!combinedBreakdown.monthlyRecords) combinedBreakdown.monthlyRecords = [];
+          if (!combinedBreakdown.monthlyRecords.find(r => r.month === mKey)) {
+            combinedBreakdown.monthlyRecords.push({ month: mKey, divisor: dayMonthlyDivisor, rate: monthlyRate });
+          }
         }
         if (payRes) {
           totalPayout += parseFloat(payRes.grandTotal);
@@ -582,7 +583,11 @@ function TicketsPage() {
         travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
         monthlyDivisor: singleDayDivisor, country
       });
-      setLiveBreakdown({ ...res, days: 1 });
+      setLiveBreakdown({ 
+        ...res, 
+        days: 1, 
+        monthlyRecords: [{ month: taskStartDate.substring(0, 7), divisor: singleDayDivisor, rate: monthlyRate }] 
+      });
       if (res && res.grandTotal) {
         setTotalCost(res.grandTotal);
       }
@@ -2400,186 +2405,204 @@ function TicketsPage() {
                       <tbody>
                         {(() => {
                           const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
-                          const cleanTaskTime = (taskTime || '09:00').padStart(5, '0');
-
-                          // Pre-compute ticket working days (Mon-Fri, non-holiday) for Monthly per-day rate
-                          const _tblHols = {
-                            'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
-                            'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
-                            'Other': []
-                          };
-                          const _tblHolsList = _tblHols[country] || _tblHols['India'] || [];
-                          const monthlyDivisor = getWorkingDaysInMonth(taskStartDate, country);
                           
-                          return daysInRange.map((dStr, idx) => {
-                            const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
+                          // Group days by month for the accordion-style display
+                          const monthGroups = {};
+                          daysInRange.forEach(d => {
+                            const mKey = d.substring(0, 7);
+                            if (!monthGroups[mKey]) monthGroups[mKey] = [];
+                            monthGroups[mKey].push(d);
+                          });
 
-                            // Skip Weekends/Holidays unless an existing log exists
-                            const dObj = new Date(dStr);
-                            const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
-                            const HOLIDAYS_BY_COUNTRY = {
-                              'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
-                              'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
-                              'Other': []
-                            };
-                            const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
-                            const isHoliday = activeHols.includes(dStr);
-                            // FORCE skip Weekends and Holidays completely as per user requirement
-                            if (isWeekend || isHoliday) return null;
-
-                            // DETERMINISTIC FALLBACKS: Support both snake_case and CamelCase keys from backend
-                            const actualStartStr = existingLog.start_time || existingLog.startTime;
-                            const actualEndStr = existingLog.end_time || existingLog.endTime;
-                            const actualBreak = existingLog.break_time_mins != null ? Number(existingLog.break_time_mins) : (existingLog.breakTime != null ? Number(existingLog.breakTime) : 0);
-
-                            const lStart = safeExtractTime(actualStartStr) || cleanTaskTime;
-                            let lEnd = safeExtractTime(actualEndStr);
-                            if (!lEnd) {
-                              const [h, m] = (lStart || '09:00').split(':');
-                              let endH = parseInt(h, 10) + 8;
-                              if (endH >= 24) endH = 23;
-                              lEnd = `${String(endH).padStart(2, '0')}:${m || '00'}`;
-                            }
-
-                            const dur = calculateDuration(lStart, lEnd, actualBreak);
-                            const dayMonthlyDivisor = getWorkingDaysInMonth(dStr, country);
-                            const dayCostBreakdown = calculateTicketTotal({
-                              startTime: `${dStr}T${lStart}:00.000Z`,
-                              endTime: `${dStr}T${lEnd}:00.000Z`,
-                              breakTime: actualBreak,
-                              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                              travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
-                              monthlyDivisor: dayMonthlyDivisor
-                            });
+                          return Object.keys(monthGroups).sort().map(mKey => {
+                            const monthDays = monthGroups[mKey];
+                            const isMonthCollapsed = collapsedMonths.has(mKey + '-modal'); // unique key for modal collapse
+                            const monthLabel = new Date(mKey + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
                             return (
-                              <tr key={idx} style={{ background: dur > 8 ? 'rgba(239, 68, 68, 0.05)' : (existingLog.id ? 'rgba(99, 102, 241, 0.03)' : undefined) }}>
-                                <td style={{ padding: '10px' }}>
-                                  <div style={{ fontWeight: '700', color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</div>
-                                  <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
-                                </td>
-                                <td style={{ padding: '10px' }}>
-                                  {editingTicketId ? (
-                                    <select
-                                      style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                                      value={existingLog.engineer_id || existingLog.engineerId || engineerId}
-                                      onChange={(e) => {
-                                        const val = Number(e.target.value);
-                                        if (existingLog.id) {
-                                          handleUpdateLog(existingLog.id, { engineerId: val });
-                                        } else {
-                                          setTimeLogs(prev => {
-                                            const next = [...prev];
-                                            const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dStr);
-                                            if (lgIdx > -1) {
-                                              next[lgIdx].engineer_id = val;
-                                            } else {
-                                              next.push({
-                                                task_date: dStr,
-                                                engineer_id: val,
-                                                start_time: `${dStr}T${lStart}:00Z`,
-                                                end_time: `${dStr}T${lEnd}:00Z`,
-                                                break_time_mins: actualBreak
-                                              });
-                                            }
-                                            return next;
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      <option value="">Select Engineer</option>
-                                      {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                    </select>
-                                  ) : (
-                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
-                                      {engineers.find(e => String(e.id) === String(existingLog.engineer_id || existingLog.engineerId || engineerId))?.name || engineerName || 'Primary Engineer'}
-                                    </span>
-                                  )}
-                                </td>
-                                <td style={{ padding: '10px' }}>
-                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                    <input
-                                      type="time"
-                                      id={`fst-${idx}`}
-                                      value={lStart}
-                                      style={{ padding: '2px', fontSize: '11px' }}
-                                      onChange={(e) => {
-                                        const newTime = e.target.value;
-                                        if (!editingTicketId) {
-                                          setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, start_time: `${dStr}T${newTime}:00.000Z` } : l));
-                                        }
-                                      }}
-                                    />
-                                    <span>to</span>
-                                    <input
-                                      type="time"
-                                      id={`fet-${idx}`}
-                                      value={lEnd}
-                                      style={{ padding: '2px', fontSize: '11px' }}
-                                      onChange={(e) => {
-                                        const newTime = e.target.value;
-                                        if (!editingTicketId) {
-                                          setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, end_time: `${dStr}T${newTime}:00.000Z` } : l));
-                                        }
-                                      }}
-                                    />
-                                    <input
-                                      type="number"
-                                      id={`fbr-${idx}`}
-                                      placeholder="Break"
-                                      value={actualBreak}
-                                      style={{ width: '45px', padding: '2px', fontSize: '11px' }}
-                                      onChange={(e) => {
-                                        const bMins = parseInt(e.target.value) || 0;
-                                        if (!editingTicketId) {
-                                          setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, break_time_mins: bMins } : l));
-                                        }
-                                      }}
-                                    />
-                                    {editingTicketId && existingLog.id && (
-                                      <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
-                                        const st = document.getElementById(`fst-${idx}`).value;
-                                        const et = document.getElementById(`fet-${idx}`).value;
-                                        const br = document.getElementById(`fbr-${idx}`).value;
-                                        if (!st || !et) {
-                                          alert('Please provide both Start and End times.');
-                                          return;
-                                        }
-                                        handleUpdateLog(existingLog.id, {
-                                          startTime: `${dStr}T${st}:00.000Z`,
-                                          endTime: `${dStr}T${et}:00.000Z`,
-                                          breakTimeMins: parseInt(br) || 0
-                                        });
-                                      }}>Update</button>
-                                    )}
-                                  </div>
-                                </td>
-                                <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
-                                  {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
-                                  {editingTicketId && dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
-                                </td>
-                                {billingType.includes('Monthly') && (
-                                  <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#6366f1', fontWeight: '700' }}>
-                                    {dayCostBreakdown ? (
-                                      <span title={`${currency}${dayCostBreakdown.monthlyFull} ÷ ${dayCostBreakdown.workingDays} days`}>{currency} {dayCostBreakdown.perDayRate}</span>
-                                    ) : '--'}
+                              <React.Fragment key={mKey}>
+                                {/* Month Section Header */}
+                                <tr 
+                                  onClick={() => {
+                                    setCollapsedMonths(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(mKey + '-modal')) next.delete(mKey + '-modal');
+                                      else next.add(mKey + '-modal');
+                                      return next;
+                                    });
+                                  }}
+                                  style={{ background: '#f1f5f9', cursor: 'pointer', userSelect: 'none' }}
+                                >
+                                  <td colSpan={billingType.includes('Monthly') ? 8 : 7} style={{ padding: '8px 12px', fontWeight: '800', color: '#475569', fontSize: '13px' }}>
+                                    <span style={{ marginRight: '8px' }}>{isMonthCollapsed ? '▶' : '▼'}</span>
+                                    {monthLabel} 
+                                    <span style={{ marginLeft: '8px', fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>({monthDays.length} days)</span>
                                   </td>
-                                )}
-                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#0891b2', fontWeight: '600' }}>
-                                  {dayCostBreakdown ? `${currency} ${dayCostBreakdown.travel}` : '--'}
-                                </td>
-                                <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#7c3aed', fontWeight: '600' }}>
-                                  {dayCostBreakdown ? `${currency} ${dayCostBreakdown.tools}` : '--'}
-                                </td>
-                                <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
-                                  {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
-                                  {billingType.includes('Monthly') && dayCostBreakdown && (
-                                    <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>
-                                      base + travel + tools
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
+                                </tr>
+                                
+                                {!isMonthCollapsed && monthDays.map((dStr, idx) => {
+                                  const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
+                                  const cleanTaskTime = (taskTime || '09:00').padStart(5, '0');
+                                  
+                                  const _tblHolsList = (HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || []);
+                                  
+                                  const dObj = new Date(dStr);
+                                  const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
+                                  const activeHols = (HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || []);
+                                  const isHoliday = activeHols.includes(dStr);
+                                  
+                                  if (isWeekend || isHoliday) return null;
+
+                                  const actualStartStr = existingLog.start_time || existingLog.startTime;
+                                  const actualEndStr = existingLog.end_time || existingLog.endTime;
+                                  const actualBreak = existingLog.break_time_mins != null ? Number(existingLog.break_time_mins) : (existingLog.breakTime != null ? Number(existingLog.breakTime) : 0);
+
+                                  const lStart = safeExtractTime(actualStartStr) || cleanTaskTime;
+                                  let lEnd = safeExtractTime(actualEndStr);
+                                  if (!lEnd) {
+                                    const [h, m] = (lStart || '09:00').split(':');
+                                    let endH = parseInt(h, 10) + 8;
+                                    if (endH >= 24) endH = 23;
+                                    lEnd = `${String(endH).padStart(2, '0')}:${m || '00'}`;
+                                  }
+
+                                  const dur = calculateDuration(lStart, lEnd, actualBreak);
+                                  const dayMonthlyDivisor = getWorkingDaysInMonth(dStr, country);
+                                  const dayCostBreakdown = calculateTicketTotal({
+                                    startTime: `${dStr}T${lStart}:00.000Z`,
+                                    endTime: `${dStr}T${lEnd}:00.000Z`,
+                                    breakTime: actualBreak,
+                                    hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                                    travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
+                                    monthlyDivisor: dayMonthlyDivisor, country
+                                  });
+
+                                  return (
+                                    <tr key={dStr} style={{ background: dur > 8 ? 'rgba(239, 68, 68, 0.05)' : (existingLog.id ? 'rgba(99, 102, 241, 0.03)' : undefined) }}>
+                                      <td style={{ padding: '10px' }}>
+                                        <div style={{ fontWeight: '700', color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</div>
+                                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
+                                      </td>
+                                      <td style={{ padding: '10px' }}>
+                                        {editingTicketId ? (
+                                          <select
+                                            style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                            value={existingLog.engineer_id || existingLog.engineerId || engineerId}
+                                            onChange={(e) => {
+                                              const val = Number(e.target.value);
+                                              if (existingLog.id) {
+                                                handleUpdateLog(existingLog.id, { engineerId: val });
+                                              } else {
+                                                setTimeLogs(prev => {
+                                                  const next = [...prev];
+                                                  const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dStr);
+                                                  if (lgIdx > -1) {
+                                                    next[lgIdx].engineer_id = val;
+                                                  } else {
+                                                    next.push({
+                                                      task_date: dStr,
+                                                      engineer_id: val,
+                                                      start_time: `${dStr}T${lStart}:00Z`,
+                                                      end_time: `${dStr}T${lEnd}:00Z`,
+                                                      break_time_mins: actualBreak
+                                                    });
+                                                  }
+                                                  return next;
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            <option value="">Select Engineer</option>
+                                            {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                          </select>
+                                        ) : (
+                                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                                            {engineers.find(e => String(e.id) === String(existingLog.engineer_id || existingLog.engineerId || engineerId))?.name || engineerName || 'Primary Engineer'}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td style={{ padding: '10px' }}>
+                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                          <input
+                                            type="time"
+                                            id={`fst-${dStr}`}
+                                            value={lStart}
+                                            style={{ padding: '2px', fontSize: '11px' }}
+                                            onChange={(e) => {
+                                              const newTime = e.target.value;
+                                              if (!editingTicketId) {
+                                                setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, start_time: `${dStr}T${newTime}:00.000Z` } : l));
+                                              }
+                                            }}
+                                          />
+                                          <span>to</span>
+                                          <input
+                                            type="time"
+                                            id={`fet-${dStr}`}
+                                            value={lEnd}
+                                            style={{ padding: '2px', fontSize: '11px' }}
+                                            onChange={(e) => {
+                                              const newTime = e.target.value;
+                                              if (!editingTicketId) {
+                                                setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, end_time: `${dStr}T${newTime}:00.000Z` } : l));
+                                              }
+                                            }}
+                                          />
+                                          <input
+                                            type="number"
+                                            id={`fbr-${dStr}`}
+                                            placeholder="Break"
+                                            value={actualBreak}
+                                            style={{ width: '45px', padding: '2px', fontSize: '11px' }}
+                                            onChange={(e) => {
+                                              const bMins = parseInt(e.target.value) || 0;
+                                              if (!editingTicketId) {
+                                                setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, break_time_mins: bMins } : l));
+                                              }
+                                            }}
+                                          />
+                                          {editingTicketId && existingLog.id && (
+                                            <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
+                                              const st = document.getElementById(`fst-${dStr}`).value;
+                                              const et = document.getElementById(`fet-${dStr}`).value;
+                                              const br = document.getElementById(`fbr-${dStr}`).value;
+                                              if (!st || !et) {
+                                                alert('Please provide both Start and End times.');
+                                                return;
+                                              }
+                                              handleUpdateLog(existingLog.id, {
+                                                startTime: `${dStr}T${st}:00.000Z`,
+                                                endTime: `${dStr}T${et}:00.000Z`,
+                                                breakTimeMins: parseInt(br) || 0
+                                              });
+                                            }}>Update</button>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
+                                        {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
+                                        {editingTicketId && dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
+                                      </td>
+                                      {billingType.includes('Monthly') && (
+                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#6366f1', fontWeight: '700' }}>
+                                          {dayCostBreakdown ? (
+                                            <span title={`${currency}${rec.rate} ÷ ${rec.divisor} days`}>{currency} {dayCostBreakdown.perDayRate}</span>
+                                          ) : '--'}
+                                        </td>
+                                      )}
+                                      <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#0891b2', fontWeight: '600' }}>
+                                        {dayCostBreakdown ? `${currency} ${dayCostBreakdown.travel}` : '--'}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#7c3aed', fontWeight: '600' }}>
+                                        {dayCostBreakdown ? `${currency} ${dayCostBreakdown.tools}` : '--'}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
+                                        {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </React.Fragment>
                             );
                           });
                         })()}
@@ -2801,15 +2824,28 @@ function TicketsPage() {
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
                   {/* Monthly Formula Banner */}
-                  {billingType.includes('Monthly') && liveBreakdown.workingDays && (
-                    <div style={{ background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Rate Formula</span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '4px' }}>
-                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>📆 Working Days in Month: <strong style={{ color: '#fff' }}>{liveBreakdown.workingDays}</strong></span>
-                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>💰 Monthly Rate: <strong style={{ color: '#fff' }}>{currency} {liveBreakdown.monthlyFull}</strong></span>
-                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>📊 Per Day Rate: <strong style={{ color: '#a5b4fc' }}>{currency} {liveBreakdown.perDayRate}</strong> ({currency}{liveBreakdown.monthlyFull} ÷ {liveBreakdown.workingDays} days)</span>
-                        <span style={{ fontSize: '12px', color: '#c7d2fe' }}>🗓 Worked Days: <strong style={{ color: '#fff' }}>{liveBreakdown.days}</strong></span>
-                        <span style={{ fontSize: '12px', color: '#6ee7b7' }}>Base Amount: <strong>{currency} {liveBreakdown.base}</strong> = {currency}{liveBreakdown.perDayRate} × {liveBreakdown.days} days</span>
+                  {billingType.includes('Monthly') && liveBreakdown.monthlyRecords && (
+                    <div style={{ background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Rate Formula Breakdown</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
+                        {liveBreakdown.monthlyRecords.map((rec, i) => {
+                          const monthName = new Date(rec.month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+                          const dRate = (parseFloat(rec.rate) / rec.divisor).toFixed(2);
+                          // Calculate worked days for this specific month in the current ticket
+                          const monthWorkDays = daysInRange.filter(d => d.substring(0,7) === rec.month).length;
+                          
+                          return (
+                            <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                              <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '2px' }}>{monthName}</div>
+                              <div style={{ fontSize: '12px', color: '#c7d2fe' }}>
+                                Rate: <strong>{currency} {rec.rate}</strong> ÷ <strong>{rec.divisor}</strong> days = <strong style={{color: '#fff'}}>{currency} {dRate}/day</strong>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ marginTop: '4px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '12px', color: '#c7d2fe' }}>
+                        🏁 Average Rate over <strong>{liveBreakdown.days}</strong> worked days = <strong>{currency} {(parseFloat(liveBreakdown.base) / liveBreakdown.days).toFixed(2)}/day</strong>
                       </div>
                     </div>
                   )}
