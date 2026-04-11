@@ -1859,6 +1859,8 @@ function TicketsPage() {
   }, [])
 
   if (viewMode === 'form') {
+    const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
+
     return (
       <section className="tickets-page">
         <header className="tickets-header">
@@ -2612,7 +2614,7 @@ function TicketsPage() {
                                       {billingType.includes('Monthly') && (
                                         <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#6366f1', fontWeight: '700' }}>
                                           {dayCostBreakdown ? (
-                                            <span title={`${currency}${rec.rate} ÷ ${rec.divisor} days`}>{currency} {dayCostBreakdown.perDayRate}</span>
+                                            <span title={`${currency}${monthlyRate} ÷ ${dayMonthlyDivisor} days`}>{currency} {dayCostBreakdown.perDayRate}</span>
                                           ) : '--'}
                                         </td>
                                       )}
