@@ -586,9 +586,12 @@ function TicketsPage() {
           // Track monthly divisors for the summary bar
           const mKey = d.substring(0, 7);
           if (!combinedBreakdown.monthlyRecords) combinedBreakdown.monthlyRecords = [];
-          if (!combinedBreakdown.monthlyRecords.find(r => r.month === mKey)) {
-            combinedBreakdown.monthlyRecords.push({ month: mKey, divisor: dayMonthlyDivisor, rate: monthlyRate });
+          let mRec = combinedBreakdown.monthlyRecords.find(r => r.month === mKey);
+          if (!mRec) {
+            mRec = { month: mKey, divisor: dayMonthlyDivisor, rate: monthlyRate, workedDaysCount: 0 };
+            combinedBreakdown.monthlyRecords.push(mRec);
           }
+          mRec.workedDaysCount += 1;
         }
         if (payRes) {
           totalPayout += parseFloat(payRes.grandTotal);
@@ -2859,8 +2862,6 @@ function TicketsPage() {
                         {liveBreakdown.monthlyRecords.map((rec, i) => {
                           const monthName = new Date(rec.month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
                           const dRate = (parseFloat(rec.rate) / rec.divisor).toFixed(2);
-                          // Calculate worked days for this specific month in the current ticket
-                          const monthWorkDays = daysInRange.filter(d => d.substring(0,7) === rec.month).length;
                           
                           return (
                             <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
@@ -2868,7 +2869,7 @@ function TicketsPage() {
                               <div style={{ fontSize: '12px', color: '#c7d2fe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>Rate: <strong>{currency} {rec.rate}</strong> ÷ <strong>{rec.divisor}</strong> days = <strong>{currency} {dRate}/day</strong></span>
                                 <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#fff', fontWeight: '800', fontSize: '11px' }}>
-                                  {currency} {dRate} × {monthWorkDays} days = {currency} {(parseFloat(dRate) * monthWorkDays).toFixed(2)}
+                                  {currency} {dRate} × {rec.workedDaysCount} days = {currency} {(parseFloat(dRate) * rec.workedDaysCount).toFixed(2)}
                                 </span>
                               </div>
                             </div>
