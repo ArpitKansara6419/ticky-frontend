@@ -210,6 +210,7 @@ function TicketsPage() {
   const [expandedTicketRows, setExpandedTicketRows] = useState(new Set()); // for multi-day expandable rows
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
   const [reassignTicketId, setReassignTicketId] = useState(null);
+  const [collapsedMonths, setCollapsedMonths] = useState(new Set()); // Month keys like "2026-04" that are COLLAPSED
 
   // Smart Auto-Sync for Start & End Time based on Task Details
   // TIMEZONE-SAFE: builds wall-clock strings directly without new Date() to avoid local TZ shifts
@@ -541,7 +542,8 @@ function TicketsPage() {
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
-          travelCostPerDay, toolCost: toolCostInput, billingType: pRates.billingType, timezone, calcTimezone
+          travelCostPerDay, toolCost: toolCostInput, billingType: pRates.billingType, timezone, calcTimezone,
+          monthlyDivisor: dayMonthlyDivisor, country
         });
 
         if (res) {
@@ -573,10 +575,12 @@ function TicketsPage() {
       setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2) });
 
     } else {
+      const singleDayDivisor = getWorkingDaysInMonth(taskStartDate, country);
       const res = calculateTicketTotal({
         startTime, endTime, breakTime,
         hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-        travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone
+        travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
+        monthlyDivisor: singleDayDivisor, country
       });
       setLiveBreakdown({ ...res, days: 1 });
       if (res && res.grandTotal) {
@@ -2997,211 +3001,243 @@ function TicketsPage() {
 
         {error && <div className="tickets-message tickets-message--error tickets-message--inline">{error}</div>}
 
-        {/* Pagination Logic */}
+        {/* Monthly Grouped Accordion List */}
         {(() => {
-          const totalPages = Math.ceil(filteredTickets.length / itemsPerPage)
-          const paginatedTickets = filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+          if (loading) return <div style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>Syncing ticket database...</div>
+          if (filteredTickets.length === 0) return <div style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>No tickets found matching your search.</div>
+
+          // Group the current page of tickets by month
+          const paginatedTickets = filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+          
+          const groups = {};
+          paginatedTickets.forEach(t => {
+            const d = t.taskStartDate ? String(t.taskStartDate).split('T')[0] : 'Unknown';
+            const mKey = d === 'Unknown' ? 'Unknown' : d.substring(0, 7); // "YYYY-MM"
+            if (!groups[mKey]) groups[mKey] = [];
+            groups[mKey].push(t);
+          });
+
+          // Sort months descending
+          const sortedMonthKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
           return (
-            <>
-              <div className="tickets-table-wrapper">
-                <table className="tickets-table">
-                  <thead>
-                    <tr>
-                      <th>Ticket Information</th>
-                      <th>Customer</th>
-                      <th>Service Date</th>
-                      <th>Status</th>
-                      <th>Reference</th>
-                      <th>Location</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr><td colSpan={7} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>Syncing ticket database...</td></tr>
-                    ) : paginatedTickets.length === 0 ? (
-                      <tr><td colSpan={7} style={{ padding: '80px', textAlign: 'center', color: '#94a3b8' }}>No tickets found matching your search.</td></tr>
-                    ) : (
-                      paginatedTickets.flatMap((ticket) => {
-                        // Parse time_logs for multi-day Dispatch tickets
-                        let parsedLogs = [];
-                        try {
-                          if (ticket.time_logs) {
-                            parsedLogs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : ticket.time_logs;
-                          }
-                        } catch (e) { parsedLogs = []; }
+            <div className="tickets-monthly-groups">
+              {sortedMonthKeys.map(mKey => {
+                const ticketsInMonth = groups[mKey];
+                const isCollapsed = collapsedMonths.has(mKey);
+                
+                const formatMonthLabel = (key) => {
+                  if (key === 'Unknown') return 'Unscheduled Tickets';
+                  const [y, m] = key.split('-');
+                  const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+                  return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+                };
 
-                        const isDispatch = (ticket.leadType === 'Dispatch') || (parsedLogs.length > 0);
-                        const isExpanded = expandedTicketRows.has(ticket.id);
-
-                        // Check if any single day exceeds 8hrs (8hr shift exceeded indicator)
-                        const hasExceeded8h = parsedLogs.some(log => {
-                          if (!log.start_time || !log.end_time) return false;
-                          const hrs = (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60);
-                          return hrs > 8;
+                return (
+                  <div key={mKey} className="month-accordion-block" style={{ marginBottom: '16px', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                    <header 
+                      className="month-accordion-header" 
+                      onClick={() => {
+                        setCollapsedMonths(prev => {
+                          const next = new Set(prev);
+                          if (next.has(mKey)) next.delete(mKey);
+                          else next.add(mKey);
+                          return next;
                         });
+                      }}
+                      style={{ 
+                        padding: '16px 24px', 
+                        background: isCollapsed ? '#fff' : '#f8fafc',
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        borderBottom: isCollapsed ? 'none' : '1px solid #e2e8f0'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>{formatMonthLabel(mKey)}</span>
+                        <span style={{ background: '#6366f1', color: '#fff', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>
+                          {ticketsInMonth.length} {ticketsInMonth.length === 1 ? 'Ticket' : 'Tickets'}
+                        </span>
+                      </div>
+                      <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '700', transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>▼</div>
+                    </header>
 
-                        const mainRow = (
-                          <tr key={ticket.id} style={{ background: isExpanded ? 'rgba(99,102,241,0.04)' : undefined }}>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                {isDispatch && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setExpandedTicketRows(prev => {
-                                        const next = new Set(prev);
-                                        if (next.has(ticket.id)) next.delete(ticket.id);
-                                        else next.add(ticket.id);
-                                        return next;
-                                      });
-                                    }}
-                                    style={{ flexShrink: 0, marginTop: '3px', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', padding: '2px 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', lineHeight: 1.4 }}
-                                    title={isExpanded ? 'Collapse days' : 'Expand days'}
-                                  >
-                                    {isExpanded ? '▲' : '▼'} {parsedLogs.length}d
-                                  </button>
-                                )}
-                                <div>
-                                  <div className="leads-name-main">{ticket.taskName}</div>
-                                  <div className="leads-name-sub">#AIM-T-{String(ticket.id).padStart(3, '0')}</div>
-                                  {hasExceeded8h && (
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '3px', background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a', borderRadius: '5px', padding: '2px 7px', fontSize: '10px', fontWeight: '700' }}>
-                                      ⏱ 8hr Shift Exceeded
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <div style={{ fontWeight: '600', fontSize: '13px' }}>{ticket.customerName}</div>
-                              {ticket.engineerName && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>👷 {ticket.engineerName}</div>}
-                            </td>
-                            <td>
-                              <div style={{ color: '#15803d', fontWeight: '600' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.7, marginBottom: '2px', letterSpacing: '0.05em' }}>Confirmed For</div>
-                                {(() => {
-                                  const formatDate = (ds) => {
-                                    if (!ds) return '';
-                                    const d = new Date(ds);
-                                    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                                  };
-                                  const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
-                                  const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
-                                  if (!e || s === e) return formatDate(s);
-                                  return `${formatDate(s)} - ${formatDate(e)}`;
-                                })()}
-                              </div>
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                <button
-                                  type="button"
-                                  className={`status-badge status-badge--${(ticket.status || 'open').toLowerCase().replace(' ', '-')}`}
-                                >
-                                  <span className="status-dot"></span>
-                                  {ticket.status}
-                                </button>
-                                {ticket.status === 'On Hold' && (
-                                  <div style={{ fontSize: '10px', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', padding: '2px 6px', fontWeight: '600' }}>
-                                    🔒 Resume next day
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td>
-                              <button
-                                className="leads-create-ticket-btn"
-                                style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}
-                                onClick={() => openTicketModal(ticket.id)}
-                              >
-                                <FiEye /> View Ticket
-                              </button>
-                            </td>
-                            <td>
-                              <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
-                                {ticket.city}, {ticket.country}
-                              </div>
-                            </td>
-                            <td>
-                              <div className="action-icons">
-                                <button className="action-btn view" onClick={() => openTicketModal(ticket.id)} title="View Detail"><FiEye /></button>
-                                <button className="action-btn edit" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
-                                {(ticket.status === 'On Hold' || ticket.status === 'Assigned' || ticket.status === 'Open') && (
-                                  <button
-                                    className="action-btn"
-                                    title="Re-assign Engineer"
-                                    style={{ color: '#f59e0b', borderColor: '#fde68a', background: '#fffbeb', fontSize: '14px' }}
-                                    onClick={() => { setReassignTicketId(ticket.id); setReassignModalOpen(true); }}
-                                  >
-                                    🔄
-                                  </button>
-                                )}
-                                <button className="action-btn delete" onClick={() => handleDeleteTicket(ticket.id)} title="Delete"><FiTrash2 /></button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-
-                        // Sub-rows for each day's time log (expanded only for Dispatch tickets)
-                        const subRows = isExpanded ? parsedLogs.map((log, idx) => {
-                          const logDate = log.task_date
-                            ? new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
-                            : `Day ${idx + 1}`;
-                          const rawHrs = (log.start_time && log.end_time)
-                            ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60)
-                            : null;
-                          const hrs = rawHrs !== null ? rawHrs.toFixed(2) : '--';
-                          const exceeded = rawHrs !== null && rawHrs > 8;
-                          const isWeekend = log.task_date ? [0, 6].includes(new Date(log.task_date).getDay()) : false;
-                          return (
-                            <tr key={`${ticket.id}-log-${log.id || idx}`}
-                              style={{ background: exceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}
-                            >
-                              <td style={{ paddingLeft: '36px', fontSize: '12px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ color: '#6366f1', fontWeight: '700' }}>↳</span>
-                                  <span style={{ fontWeight: '600', color: '#374151' }}>{logDate}</span>
-                                  {isWeekend && <span style={{ background: '#fde68a', color: '#92400e', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>WKND</span>}
-                                  {log.is_holiday && <span style={{ background: '#fce7f3', color: '#9d174d', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>HOLIDAY</span>}
-                                  {exceeded && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>⏱ {hrs}h</span>}
-                                </div>
-                              </td>
-                              <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
-                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                  <span>In: <strong>{(() => {
-                                    if (!log.start_time) return '--';
-                                    const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
-                                    return match ? `${match[1]}:${match[2]}` : '--';
-                                  })()}</strong></span>
-                                  <span>Out: <strong>{(() => {
-                                    if (!log.end_time) return '--';
-                                    const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
-                                    return match ? `${match[1]}:${match[2]}` : '--';
-                                  })()}</strong></span>
-                                  <span style={{ color: '#94a3b8' }}>Break: {log.break_time_mins || 0}m</span>
-                                </div>
-                              </td>
-                              <td colSpan={4}>
-                                <span style={{ fontSize: '12px', fontWeight: '700', color: exceeded ? '#b45309' : '#059669' }}>
-                                  {hrs !== '--' ? `${hrs}h` : '--'}
-                                  {exceeded ? ' ⚠ Exceeds 8h — Hold auto-applies' : ''}
-                                </span>
-                              </td>
+                    {!isCollapsed && (
+                      <div className="tickets-table-wrapper" style={{ border: 'none', background: '#fff', padding: '0' }}>
+                        <table className="tickets-table">
+                          <thead>
+                            <tr>
+                              <th style={{ paddingLeft: '24px' }}>Ticket Information</th>
+                              <th>Customer</th>
+                              <th>Service Date</th>
+                              <th>Status</th>
+                              <th>Reference</th>
+                              <th>Location</th>
+                              <th style={{ paddingRight: '24px' }}>Actions</th>
                             </tr>
-                          );
-                        }) : [];
+                          </thead>
+                          <tbody>
+                            {ticketsInMonth.flatMap(ticket => {
+                              // Parse time_logs for multi-day Dispatch tickets
+                              let parsedLogs = [];
+                              try {
+                                if (ticket.time_logs) {
+                                  parsedLogs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : ticket.time_logs;
+                                }
+                              } catch (e) { parsedLogs = []; }
 
-                        return [mainRow, ...subRows];
-                      })
+                              const isDispatch = (ticket.leadType === 'Dispatch') || (parsedLogs.length > 0);
+                              const isExpanded = expandedTicketRows.has(ticket.id);
+
+                              // Check if any single day exceeds 8hrs
+                              const hasExceeded8h = parsedLogs.some(log => {
+                                if (!log.start_time || !log.end_time) return false;
+                                const hrs = (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60);
+                                return hrs > 8;
+                              });
+
+                              const mainRow = (
+                                <tr key={ticket.id} style={{ background: isExpanded ? 'rgba(99,102,241,0.04)' : undefined }}>
+                                  <td style={{ paddingLeft: '24px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                      {isDispatch && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setExpandedTicketRows(prev => {
+                                              const next = new Set(prev);
+                                              if (next.has(ticket.id)) next.delete(ticket.id);
+                                              else next.add(ticket.id);
+                                              return next;
+                                            });
+                                          }}
+                                          style={{ flexShrink: 0, marginTop: '3px', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', padding: '2px 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', lineHeight: 1.4 }}
+                                          title={isExpanded ? 'Collapse days' : 'Expand days'}
+                                        >
+                                          {isExpanded ? '▲' : '▼'} {parsedLogs.length}d
+                                        </button>
+                                      )}
+                                      <div>
+                                        <div className="leads-name-main">{ticket.taskName}</div>
+                                        <div className="leads-name-sub">#AIM-T-{String(ticket.id).padStart(3, '0')}</div>
+                                        {hasExceeded8h && (
+                                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '3px', background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a', borderRadius: '5px', padding: '2px 7px', fontSize: '10px', fontWeight: '700' }}>
+                                            ⏱ 8hr Shift Exceeded
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div style={{ fontWeight: '600', fontSize: '13px' }}>{ticket.customerName}</div>
+                                    {ticket.engineerName && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>👷 {ticket.engineerName}</div>}
+                                  </td>
+                                  <td>
+                                    <div style={{ color: '#15803d', fontWeight: '600' }}>
+                                      <div style={{ fontSize: '10px', textTransform: 'uppercase', opacity: 0.7, marginBottom: '2px', letterSpacing: '0.05em' }}>Confirmed For</div>
+                                      {(() => {
+                                        const formatDate = (ds) => {
+                                          if (!ds) return '';
+                                          const d = new Date(ds);
+                                          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                        };
+                                        const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
+                                        const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
+                                        if (!e || s === e) return formatDate(s);
+                                        return `${formatDate(s)} - ${formatDate(e)}`;
+                                      })()}
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                      <button type="button" className={`status-badge status-badge--${(ticket.status || 'open').toLowerCase().replace(' ', '-')}`}>
+                                        <span className="status-dot"></span>
+                                        {ticket.status}
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="leads-create-ticket-btn"
+                                      style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}
+                                      onClick={() => openTicketModal(ticket.id)}
+                                    >
+                                      <FiEye /> View Detail
+                                    </button>
+                                  </td>
+                                  <td>
+                                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                                      {ticket.city}, {ticket.country}
+                                    </div>
+                                  </td>
+                                  <td style={{ paddingRight: '24px' }}>
+                                    <div className="action-icons">
+                                      <button className="action-btn view" onClick={() => openTicketModal(ticket.id)} title="View Detail"><FiEye /></button>
+                                      <button className="action-btn edit" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
+                                      <button className="action-btn delete" onClick={() => handleDeleteTicket(ticket.id)} title="Delete"><FiTrash2 /></button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+
+                              // Sub-rows
+                              const subRows = isExpanded ? parsedLogs.map((log, sidx) => {
+                                const logDate = log.task_date
+                                  ? new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+                                  : `Day ${sidx + 1}`;
+                                const rawHrs = (log.start_time && log.end_time)
+                                  ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60)
+                                  : null;
+                                const hrs = rawHrs !== null ? rawHrs.toFixed(2) : '--';
+                                const exceeded = rawHrs !== null && rawHrs > 8;
+                                const isWeekend = log.task_date ? [0, 6].includes(new Date(log.task_date).getDay()) : false;
+                                return (
+                                  <tr key={`${ticket.id}-log-${log.id || sidx}`} style={{ background: exceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
+                                    <td style={{ paddingLeft: '36px', fontSize: '12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ color: '#6366f1', fontWeight: '700' }}>↳</span>
+                                        <span style={{ fontWeight: '600', color: '#374151' }}>{logDate}</span>
+                                        {isWeekend && <span style={{ background: '#fde68a', color: '#92400e', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>WKND</span>}
+                                        {hrs !== '--' && exceeded && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>⏱ {hrs}h</span>}
+                                      </div>
+                                    </td>
+                                    <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
+                                      <div style={{ display: 'flex', gap: '12px' }}>
+                                        <span>In: <strong>{(() => {
+                                          if (!log.start_time) return '--';
+                                          const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
+                                          return match ? `${match[1]}:${match[2]}` : '--';
+                                        })()}</strong></span>
+                                        <span>Out: <strong>{(() => {
+                                          if (!log.end_time) return '--';
+                                          const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
+                                          return match ? `${match[1]}:${match[2]}` : '--';
+                                        })()}</strong></span>
+                                      </div>
+                                    </td>
+                                    <td colSpan={4}></td>
+                                  </tr>
+                                );
+                              }) : [];
+
+                              return [mainRow, ...subRows];
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
-                  </tbody>
-                </table>
+                  </div>
+                );
+              })}
+              
+              <div style={{ marginTop: '24px' }}>
+                <Pagination total={Math.ceil(filteredTickets.length / itemsPerPage)} current={currentPage} onChange={setCurrentPage} />
               </div>
-              <Pagination total={totalPages} current={currentPage} onChange={setCurrentPage} />
-            </>
-          )
+            </div>
+          );
         })()}
       </section >
 
