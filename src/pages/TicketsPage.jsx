@@ -3248,18 +3248,36 @@ function TicketsPage() {
                                 </tr>
                               );
 
-                              // Sub-rows
-                              const subRows = isExpanded ? parsedLogs.map((log, sidx) => {
-                                const rawDate = log.task_date || log.taskDate || (log.start_time || log.startTime || '').split('T')[0];
-                                const logDate = rawDate
-                                  ? new Date(rawDate).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+                              // NEW: Smart Date Logic for List View (Matching Modal)
+                              let displayLogs = [];
+                              if (isExpanded) {
+                                const hols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
+                                const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
+                                const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
+                                if (s && e) {
+                                  const allDates = getDatesInRange(s, e);
+                                  displayLogs = allDates.filter(d => {
+                                    const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+                                    return dw !== 0 && dw !== 6 && !hols.includes(d);
+                                  }).map((dStr, sidx) => {
+                                    const existing = parsedLogs.find(l => (l.task_date || '').split('T')[0] === dStr) || {};
+                                    return { ...existing, logDateStr: dStr };
+                                  });
+                                } else {
+                                  displayLogs = parsedLogs.map((l, sidx) => ({ ...l, logDateStr: (l.task_date || '').split('T')[0] }));
+                                }
+                              }
+
+                              const subRows = isExpanded ? displayLogs.map((log, sidx) => {
+                                const logDate = log.logDateStr
+                                  ? new Date(log.logDateStr).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
                                   : `Day ${sidx + 1}`;
                                 const rawHrs = (log.start_time && log.end_time)
                                   ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60)
                                   : null;
                                 const hrs = rawHrs !== null ? rawHrs.toFixed(2) : '--';
                                 const exceeded = rawHrs !== null && rawHrs > 8;
-                                const isWeekend = log.task_date ? [0, 6].includes(new Date(log.task_date).getDay()) : false;
+                                const isWeekend = log.logDateStr ? [0, 6].includes(new Date(log.logDateStr).getDay()) : false;
                                 return (
                                   <tr key={`${ticket.id}-log-${log.id || sidx}`} style={{ background: exceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
                                     <td style={{ paddingLeft: '36px', fontSize: '12px' }}>
