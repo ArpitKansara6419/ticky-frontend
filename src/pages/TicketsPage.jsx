@@ -510,11 +510,13 @@ function TicketsPage() {
           eTime = eTimeDate.toISOString().replace('Z', '');
         }
 
+        const dayMonthlyDivisor = getWorkingDaysInMonth(d, country);
+
         const res = calculateTicketTotal({
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
           travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone, country,
-          monthlyDivisor  // pass full month working days for Monthly per-day rate
+          monthlyDivisor: dayMonthlyDivisor 
         });
 
         // Determine which engineer's rates to use for payout
@@ -2436,13 +2438,14 @@ function TicketsPage() {
                             }
 
                             const dur = calculateDuration(lStart, lEnd, actualBreak);
+                            const dayMonthlyDivisor = getWorkingDaysInMonth(dStr, country);
                             const dayCostBreakdown = calculateTicketTotal({
                               startTime: `${dStr}T${lStart}:00.000Z`,
                               endTime: `${dStr}T${lEnd}:00.000Z`,
                               breakTime: actualBreak,
                               hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
                               travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
-                              monthlyDivisor  // pass full month working days for Monthly per-day rate
+                              monthlyDivisor: dayMonthlyDivisor
                             });
 
                             return (
