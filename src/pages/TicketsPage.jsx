@@ -3251,7 +3251,7 @@ function TicketsPage() {
                               // Sub-rows
                               const subRows = isExpanded ? parsedLogs.map((log, sidx) => {
                                 const logDate = log.task_date
-                                  ? new Date(log.task_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+                                  ? new Date(log.task_date).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
                                   : `Day ${sidx + 1}`;
                                 const rawHrs = (log.start_time && log.end_time)
                                   ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60)
