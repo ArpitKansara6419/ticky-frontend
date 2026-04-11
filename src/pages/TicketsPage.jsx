@@ -83,6 +83,42 @@ const CURRENCIES = [
   { value: 'INR', label: 'Rupee (INR)' },
 ]
 
+const HOLIDAYS_CALC = {
+  'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+  'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+  'Other': []
+};
+
+const getWorkingDaysInMonth = (dateStr, countryName) => {
+  if (!dateStr) return 22;
+  const date = new Date(dateStr);
+  const month = date.getMonth();
+  const year = date.getFullYear();
+  const holidays = HOLIDAYS_CALC[countryName] || HOLIDAYS_CALC['India'] || [];
+  let workingDays = 0;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dObj = new Date(year, month, d);
+    const dw = dObj.getDay();
+    const dStr = dObj.toISOString().split('T')[0];
+    if (dw !== 0 && dw !== 6 && !holidays.includes(dStr)) {
+      workingDays++;
+    }
+  }
+  return workingDays || 22;
+};
+
+const getDatesInRange = (startDate, endDate) => {
+  const dates = [];
+  let curr = new Date(startDate);
+  const end = new Date(endDate);
+  while (curr <= end) {
+    dates.push(curr.toISOString().split('T')[0]);
+    curr.setDate(curr.getDate() + 1);
+  }
+  return dates;
+};
+
 const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break']
 
 const GOOGLE_AUTOCOMPLETE_OPTIONS = {
@@ -462,11 +498,6 @@ function TicketsPage() {
 
     if (isMultiDay) {
       // Pre-compute working days within ticket date range for Monthly per-day rate
-      const HOLIDAYS_CALC = {
-        'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
-        'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
-        'Other': []
-      };
       const calcHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
       const monthlyDivisor = getWorkingDaysInMonth(taskStartDate, country);
 
@@ -483,12 +514,7 @@ function TicketsPage() {
         // FORCE UTC to avoid local timezone shifting "YYYY-MM-DD" to the previous day
         const dObj = new Date(`${d}T00:00:00Z`);
         const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
-        const HOLIDAYS_BY_COUNTRY = {
-          'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
-          'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
-          'Other': []
-        };
-        const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+        const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
 
         // FORCE skip Weekends and Holidays completely as per user requirement
