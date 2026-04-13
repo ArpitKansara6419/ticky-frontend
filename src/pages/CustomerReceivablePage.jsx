@@ -30,6 +30,29 @@ const MONTHS = [
 ];
 
 const YEARS = ["All Years", "2024", "2025", "2026"];
+const HOLIDAYS_CALC = {
+    'India':  ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+    'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+    'Other':  []
+};
+const getWorkingDaysInMonth = (dateStr, country = 'India') => {
+    if (!dateStr) return 22;
+    const d = new Date(dateStr);
+    const yr = d.getFullYear();
+    const mo = d.getMonth();
+    const totalDays = new Date(yr, mo + 1, 0).getDate();
+    const holidays = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
+    let count = 0;
+    for (let i = 1; i <= totalDays; i++) {
+        const checkStr = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const checkDate = new Date(`${checkStr}T00:00:00Z`);
+        const day = checkDate.getUTCDay();
+        if (day !== 0 && day !== 6 && !holidays.includes(checkStr)) {
+            count++;
+        }
+    }
+    return count || 22;
+};
 
 const CustomerReceivablePage = () => {
     const [stats, setStats] = useState({ unbilled: 0, unpaid: 0, overdue: 0 });
@@ -75,12 +98,7 @@ const CustomerReceivablePage = () => {
                 if (logDate) {
                     const dObj = new Date(`${logDate}T00:00:00Z`);
                     const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
-                    const HOLIDAYS_BY_COUNTRY = {
-                        'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
-                        'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
-                        'Other': []
-                    };
-                    const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
+                    const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
                     const isHoliday = activeHols.includes(logDate);
                     if ((isWeekend || isHoliday) && (!log.start_time || !log.endTime)) return;
                 }
@@ -114,7 +132,14 @@ const CustomerReceivablePage = () => {
             });
             if (bil.includes('Monthly')) {
                 const fullRate = parseFloat(ticket.monthly_rate || ticket.monthlyRate) || 0;
-                baseC = (fullRate / 30) * logs.length;
+                baseC = 0;
+                logs.forEach(l => {
+                    const lDate = (l.task_date || l.start_time || '').split('T')[0];
+                    if (lDate) {
+                        const divisor = getWorkingDaysInMonth(lDate, ticket.country);
+                        baseC += fullRate / divisor;
+                    }
+                });
             } else if (bil === 'Agreed Rate' || bil === 'Cancellation') {
                 const dummy = calculateTicketCostFrontend({ ...ticket, time_logs: [], is_recursive_call: true }, forcedTZ, targetCurrency);
                 baseC = parseFloat(dummy.baseCost || 0);
@@ -151,13 +176,8 @@ const CustomerReceivablePage = () => {
         if (eStr.includes('T')) endHr = parseInt(eStr.split('T')[1].split(':')[0], 10);
 
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
-        const HOLIDAYS_BY_COUNTRY = {
-            'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
-            'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
-            'Other': []
-        };
-        const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
-        const isH = HOLIDAYS_BY_COUNTRY['India'].includes(info.dateStr) || HOLIDAYS_BY_COUNTRY['India'].includes(endInfo.dateStr);
+        const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
+        const isH = activeHols.includes(info.dateStr) || activeHols.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
         const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
@@ -189,8 +209,9 @@ const CustomerReceivablePage = () => {
                 otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
         } else if (bil.includes('Monthly')) {
-            base = parseFloat(ticket.monthly_rate || ticket.monthlyRate || 0) / 30;
-            baseBreakdown = `Pro-rata Monthly (1 day) = ${cur} ${base.toFixed(2)}`;
+            const divisor = getWorkingDaysInMonth(sStr, ticket.country);
+            base = parseFloat(ticket.monthly_rate || ticket.monthlyRate || 0) / divisor;
+            baseBreakdown = `Pro-rata Monthly (1 day) = ${cur} ${base.toFixed(2)} (Divisor: ${divisor})`;
             // Non-premium days covering normal hours + OT > 8
             if (hrs > 8) {
                 const otHrs = hrs - 8;
@@ -280,8 +301,8 @@ const CustomerReceivablePage = () => {
                 if (logDate) {
                     const dObj = new Date(`${logDate}T00:00:00Z`);
                     const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
-                    const HOLS = ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'];
-                    const isHoliday = HOLS.includes(logDate);
+                    const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
+                    const isHoliday = activeHols.includes(logDate);
                     if ((isWeekend || isHoliday) && (!log.start_time || !log.endTime)) return;
                 }
 
@@ -314,7 +335,14 @@ const CustomerReceivablePage = () => {
             });
             if (billingType.includes('Monthly')) {
                 const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
-                baseC = (fullRate / 30) * logs.length;
+                baseC = 0;
+                logs.forEach(l => {
+                    const lDate = (l.task_date || l.start_time || '').split('T')[0];
+                    if (lDate) {
+                        const divisor = getWorkingDaysInMonth(lDate, ticket.country);
+                        baseC += fullRate / divisor;
+                    }
+                });
             } else if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
                 const dummy = calculateEngineerPayoutFrontend({ ...ticket, time_logs: [], is_recursive_call: true }, tz);
                 baseC = parseFloat(dummy.baseCost);
@@ -368,7 +396,8 @@ const CustomerReceivablePage = () => {
                 base = fd;
             }
         } else if (billingType.includes('Monthly')) {
-            base = parseFloat(ticket.eng_monthly_rate || 0) / 30;
+            const divisor = getWorkingDaysInMonth(sStr, ticket.country);
+            base = parseFloat(ticket.eng_monthly_rate || 0) / divisor;
             // Removed special premium for Monthly per request
             if (hrs > 8) { 
                 ot = (hrs - 8) * (hr * 1.5); 
