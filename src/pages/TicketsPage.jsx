@@ -3777,7 +3777,7 @@ function TicketsPage() {
                           <div style={{ background: 'linear-gradient(135deg,#f8fafc,#eef2ff)', padding: '16px', borderRadius: '12px', border: '1px solid #e0e7ff' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total (Receivable)</label>
                             <div style={{ fontSize: '26px', fontWeight: '900', color: '#6366f1', marginTop: '6px' }}>{cur} {totalR > 0 ? totalR.toFixed(2) : parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
-                            {isMonthly && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{cur}{vmPerDayRate.toFixed(2)}/day × {logs.length} days + travel + tools</div>}
+                            {isMonthly && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Combined monthly pro-rata + travel + tools</div>}
                           </div>
                           <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total (Payout)</label>
