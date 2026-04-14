@@ -3599,12 +3599,6 @@ function TicketsPage() {
                       const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
                       return dw !== 0 && dw !== 6 && !vmHolsList.includes(d);
                     });
-                    const vmTicketWDays = vmWorkingDates.length || 1;
-
-                    const vmPerDayRate = isMonthly
-                      ? (parseFloat(selectedTicket.monthlyRate) || 0) / vmTicketWDays
-                      : 0;
-
                     const cleanTaskTime = (selectedTicket.taskTime || '08:00').toString().slice(0, 5);
                     let totalR = 0, totalP = 0;
 
@@ -3624,6 +3618,8 @@ function TicketsPage() {
                         lb = 0;
                       }
 
+                      const dayMonthlyDivisor = getWorkingDaysInMonth(logDateStr, selectedTicket.country);
+
                       const resR = calculateTicketTotal({
                         startTime: ls, endTime: le, breakTime: lb,
                         hourlyRate: selectedTicket.hourlyRate, halfDayRate: selectedTicket.halfDayRate,
@@ -3632,7 +3628,7 @@ function TicketsPage() {
                         travelCostPerDay: selectedTicket.travelCostPerDay,
                         toolCost: selectedTicket.toolCost,
                         billingType: stBil, timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local',
-                        ticketWorkingDays: vmTicketWDays
+                        monthlyDivisor: dayMonthlyDivisor
                       });
 
                       let pRates = {
@@ -3654,7 +3650,7 @@ function TicketsPage() {
                         hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, monthlyRate: pRates.mr,
                         billingType: pRates.bt, timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local',
                         travelCostPerDay: selectedTicket.travelCostPerDay, toolCost: selectedTicket.toolCost,
-                        ticketWorkingDays: vmTicketWDays
+                        monthlyDivisor: dayMonthlyDivisor
                       });
 
                       const rV  = parseFloat(resR?.grandTotal || 0);
@@ -3680,12 +3676,9 @@ function TicketsPage() {
                               Monthly Rate: <strong>{cur} {parseFloat(selectedTicket.monthlyRate || 0).toFixed(2)}</strong>
                             </span>
                             <span style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600' }}>
-                              Working Days in Ticket: <strong>{vmTicketWDays}</strong>
+                              Working Days Summary: <strong>{vmWorkingDates.length} days</strong>
                             </span>
-                            <span style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600' }}>
-                              Per Day Rate: <strong style={{ color: '#6366f1', fontSize: '13px' }}>{cur} {vmPerDayRate.toFixed(2)}</strong>
-                              <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }}>({cur}{parseFloat(selectedTicket.monthlyRate||0).toFixed(0)} ÷ {vmTicketWDays} days)</span>
-                            </span>
+                            <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }}>Calculated using month-specific divisors (approx {cur}{(parseFloat(selectedTicket.monthlyRate||0)/22).toFixed(2)}/day)</span>
                             <span style={{ fontSize: '12px', color: '#0891b2', fontWeight: '600' }}>
                               ✈ Travel/day: <strong>{cur} {parseFloat(selectedTicket.travelCostPerDay || 0).toFixed(2)}</strong>
                             </span>
@@ -3746,7 +3739,7 @@ function TicketsPage() {
                                   {isMonthly && (
                                     <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', color: '#6366f1', whiteSpace: 'nowrap' }}>
                                       <div>{cur} {L.base.toFixed(2)}</div>
-                                      <div style={{ fontSize: '9px', color: '#94a3b8' }}>{cur}{parseFloat(selectedTicket.monthlyRate||0).toFixed(0)}÷{vmTicketWDays}</div>
+                                      <div style={{ fontSize: '9px', color: '#94a3b8' }}>Divisor: {getWorkingDaysInMonth(L.logDateStr, selectedTicket.country)}</div>
                                     </td>
                                   )}
                                   <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#0891b2', whiteSpace: 'nowrap' }}>
