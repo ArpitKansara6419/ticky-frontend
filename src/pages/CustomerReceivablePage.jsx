@@ -433,8 +433,8 @@ const CustomerReceivablePage = () => {
 
     // Table Filters & Pagination
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
-    const [selectedYear, setSelectedYear] = useState('All Years');
-    const [selectedMonth, setSelectedMonth] = useState('All Months');
+    const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+    const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth() + 1]);
     const [filterCustomer, setFilterCustomer] = useState('All Customers');
     const [filterEngineer, setFilterEngineer] = useState('All Engineers');
     const [currentPage, setCurrentPage] = useState(1);
