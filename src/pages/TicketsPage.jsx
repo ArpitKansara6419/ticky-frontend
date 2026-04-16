@@ -3711,51 +3711,111 @@ function TicketsPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {logs.map((L, i) => (
-                                <tr key={L.id || i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                  <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                                    <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '11px' }}>
-                                      {new Date(`${L.logDateStr}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
-                                    </div>
-                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>Weekday</div>
-                                  </td>
-                                  <td style={{ padding: '8px 10px', minWidth: '180px' }}>
-                                    <select style={{ width: '100%', padding: '3px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '3px' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
-                                      {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                    </select>
-                                    <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                                      <input type="time" id={`vs-${i}`} defaultValue={safeExtractTime(L.start_time)} style={{ fontSize: '10px', padding: '2px', width: '80px' }} />
-                                      <span style={{ fontSize: '9px', color: '#94a3b8' }}>→</span>
-                                      <input type="time" id={`ve-${i}`} defaultValue={safeExtractTime(L.end_time)} style={{ fontSize: '10px', padding: '2px', width: '80px' }} />
-                                      <button className="tickets-primary-btn" style={{ padding: '2px 5px', fontSize: '9px' }} onClick={() => {
-                                        const s = document.getElementById(`vs-${i}`).value, e = document.getElementById(`ve-${i}`).value;
-                                        if (s && e) handleUpdateLog(L.id, { startTime: `${L.logDateStr}T${s}:00.000Z`, endTime: `${L.logDateStr}T${e}:00.000Z` });
-                                      }}>💾</button>
-                                    </div>
-                                  </td>
-                                  <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '700', color: L.dur > 8 ? '#ef4444' : '#6366f1', whiteSpace: 'nowrap' }}>
-                                    {L.dur > 0 ? L.dur.toFixed(1) + 'h' : '--'}
-                                  </td>
-                                  {isMonthly && (
-                                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', color: '#6366f1', whiteSpace: 'nowrap' }}>
-                                      <div>{cur} {L.base.toFixed(2)}</div>
-                                      <div style={{ fontSize: '9px', color: '#94a3b8' }}>Divisor: {getWorkingDaysInMonth(L.logDateStr, selectedTicket.country)}</div>
-                                    </td>
-                                  )}
-                                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#0891b2', whiteSpace: 'nowrap' }}>
-                                    {cur} {L.trv.toFixed(2)}
-                                  </td>
-                                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#7c3aed', whiteSpace: 'nowrap' }}>
-                                    {cur} {L.tol.toFixed(2)}
-                                  </td>
-                                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800', color: '#1e293b', fontSize: '12px', whiteSpace: 'nowrap', background: 'rgba(99,102,241,0.04)' }}>
-                                    {cur} {L.rV.toFixed(2)}
-                                  </td>
-                                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800', color: '#059669', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                    {selectedTicket.eng_currency || cur} {L.pV.toFixed(2)}
-                                  </td>
-                                </tr>
-                              ))}
+                              {(() => {
+                                // Group logs by month for accordion display
+                                const monthGroups = {};
+                                logs.forEach((L, i) => {
+                                  const mKey = L.logDateStr.substring(0, 7); // "2026-04"
+                                  if (!monthGroups[mKey]) monthGroups[mKey] = [];
+                                  monthGroups[mKey].push({ ...L, _origIdx: i });
+                                });
+
+                                const totalColSpan = isMonthly ? 8 : 7;
+
+                                return Object.keys(monthGroups).sort().map(mKey => {
+                                  const monthLogs = monthGroups[mKey];
+                                  const collapseKey = mKey + '-view';
+                                  const isCollapsed = collapsedMonths.has(collapseKey);
+                                  const monthLabel = new Date(mKey + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+                                  
+                                  // Calculate month subtotals
+                                  const mTotalR = monthLogs.reduce((s, l) => s + l.rV, 0);
+                                  const mTotalP = monthLogs.reduce((s, l) => s + l.pV, 0);
+                                  const mTotalHrs = monthLogs.reduce((s, l) => s + l.dur, 0);
+
+                                  return (
+                                    <React.Fragment key={mKey}>
+                                      {/* Month Accordion Header */}
+                                      <tr
+                                        onClick={() => {
+                                          setCollapsedMonths(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(collapseKey)) next.delete(collapseKey);
+                                            else next.add(collapseKey);
+                                            return next;
+                                          });
+                                        }}
+                                        style={{ background: 'linear-gradient(135deg, #f1f5f9, #eef2ff)', cursor: 'pointer', userSelect: 'none', borderBottom: '2px solid #c7d2fe' }}
+                                      >
+                                        <td colSpan={totalColSpan} style={{ padding: '10px 12px' }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <span style={{ fontSize: '14px', color: '#6366f1', fontWeight: '900', transition: 'transform 0.2s', display: 'inline-block', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                                              <span style={{ fontWeight: '800', color: '#1e293b', fontSize: '13px' }}>{monthLabel}</span>
+                                              <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600', background: '#e2e8f0', padding: '2px 8px', borderRadius: '20px' }}>{monthLogs.length} days</span>
+                                              <span style={{ fontSize: '10px', color: '#6366f1', fontWeight: '600', background: 'rgba(99,102,241,0.08)', padding: '2px 8px', borderRadius: '20px' }}>{mTotalHrs.toFixed(1)}h</span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#6366f1' }}>{cur} {mTotalR.toFixed(2)}</span>
+                                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669' }}>{selectedTicket.eng_currency || cur} {mTotalP.toFixed(2)}</span>
+                                            </div>
+                                          </div>
+                                        </td>
+                                      </tr>
+
+                                      {/* Month Rows (visible when expanded) */}
+                                      {!isCollapsed && monthLogs.map((L, mIdx) => {
+                                        const i = L._origIdx;
+                                        return (
+                                          <tr key={L.id || i} style={{ borderBottom: '1px solid #f1f5f9', background: mIdx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                            <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                                              <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '11px' }}>
+                                                {new Date(`${L.logDateStr}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
+                                              </div>
+                                              <div style={{ fontSize: '10px', color: '#94a3b8' }}>Weekday</div>
+                                            </td>
+                                            <td style={{ padding: '8px 10px', minWidth: '180px' }}>
+                                              <select style={{ width: '100%', padding: '3px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '3px' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
+                                                {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                              </select>
+                                              <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                                <input type="time" id={`vs-${i}`} defaultValue={safeExtractTime(L.start_time)} style={{ fontSize: '10px', padding: '2px', width: '80px' }} />
+                                                <span style={{ fontSize: '9px', color: '#94a3b8' }}>→</span>
+                                                <input type="time" id={`ve-${i}`} defaultValue={safeExtractTime(L.end_time)} style={{ fontSize: '10px', padding: '2px', width: '80px' }} />
+                                                <button className="tickets-primary-btn" style={{ padding: '2px 5px', fontSize: '9px' }} onClick={() => {
+                                                  const s = document.getElementById(`vs-${i}`).value, e = document.getElementById(`ve-${i}`).value;
+                                                  if (s && e) handleUpdateLog(L.id, { startTime: `${L.logDateStr}T${s}:00.000Z`, endTime: `${L.logDateStr}T${e}:00.000Z` });
+                                                }}>💾</button>
+                                              </div>
+                                            </td>
+                                            <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '700', color: L.dur > 8 ? '#ef4444' : '#6366f1', whiteSpace: 'nowrap' }}>
+                                              {L.dur > 0 ? L.dur.toFixed(1) + 'h' : '--'}
+                                            </td>
+                                            {isMonthly && (
+                                              <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', color: '#6366f1', whiteSpace: 'nowrap' }}>
+                                                <div>{cur} {L.base.toFixed(2)}</div>
+                                                <div style={{ fontSize: '9px', color: '#94a3b8' }}>Divisor: {getWorkingDaysInMonth(L.logDateStr, selectedTicket.country)}</div>
+                                              </td>
+                                            )}
+                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#0891b2', whiteSpace: 'nowrap' }}>
+                                              {cur} {L.trv.toFixed(2)}
+                                            </td>
+                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#7c3aed', whiteSpace: 'nowrap' }}>
+                                              {cur} {L.tol.toFixed(2)}
+                                            </td>
+                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800', color: '#1e293b', fontSize: '12px', whiteSpace: 'nowrap', background: 'rgba(99,102,241,0.04)' }}>
+                                              {cur} {L.rV.toFixed(2)}
+                                            </td>
+                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800', color: '#059669', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                              {selectedTicket.eng_currency || cur} {L.pV.toFixed(2)}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </React.Fragment>
+                                  );
+                                });
+                              })()}
                               {/* Totals row: colspan = total_cols - 2 (Day Total + Payout shown separately) */}
                               <tr style={{ background: 'linear-gradient(135deg,#f8fafc,#eef2ff)', borderTop: '2px solid #c7d2fe' }}>
                                 <td colSpan={isMonthly ? 6 : 5} style={{ padding: '12px 10px', textAlign: 'right', fontSize: '12px', color: '#6366f1', fontWeight: '900', letterSpacing: '0.04em' }}>
