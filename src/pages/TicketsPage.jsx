@@ -506,6 +506,7 @@ function TicketsPage() {
       let totalHrs = 0;
       let validDaysCount = 0;
       let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: 0, perDayRate: null, workingDays: null, monthlyFull: null };
+      let engSummaryMap = {};
 
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
@@ -594,7 +595,13 @@ function TicketsPage() {
           mRec.workedDaysCount += 1;
         }
         if (payRes) {
-          totalPayout += parseFloat(payRes.grandTotal);
+          const pVal = parseFloat(payRes.grandTotal);
+          totalPayout += pVal;
+          const currentEngId = specificEngId || engineerId;
+          const currentEng = engineers.find(e => Number(e.id) === Number(currentEngId));
+          const eName = currentEng ? currentEng.name : (engineerId ? 'Lead Engineer' : 'Unknown');
+          if (!engSummaryMap[currentEngId]) engSummaryMap[currentEngId] = { name: eName, total: 0 };
+          engSummaryMap[currentEngId].total += pVal;
         }
       });
 
@@ -602,7 +609,7 @@ function TicketsPage() {
       const finalGrandTotal = totalReceivable.toFixed(2);
       setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
       setTotalCost(finalGrandTotal);
-      setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2) });
+      setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2), engSummary: Object.values(engSummaryMap) });
 
     } else {
       const singleDayDivisor = getWorkingDaysInMonth(taskStartDate, country);
@@ -2604,36 +2611,63 @@ function TicketsPage() {
                                       </td>
                                       <td style={{ padding: '10px' }}>
                                         {editingTicketId ? (
-                                          <select
-                                            style={{ padding: '4px', fontSize: '11px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                                            value={existingLog.engineer_id || existingLog.engineerId || engineerId}
-                                            onChange={(e) => {
-                                              const val = Number(e.target.value);
-                                              if (existingLog.id) {
-                                                handleUpdateLog(existingLog.id, { engineerId: val });
-                                              } else {
-                                                setTimeLogs(prev => {
-                                                  const next = [...prev];
-                                                  const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dStr);
-                                                  if (lgIdx > -1) {
-                                                    next[lgIdx].engineer_id = val;
+                                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                              <select
+                                                style={{ padding: '4px', fontSize: '11px', flex: 1, borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                                value={existingLog.engineer_id || existingLog.engineerId || engineerId}
+                                                onChange={(e) => {
+                                                  const val = Number(e.target.value);
+                                                  if (existingLog.id) {
+                                                    handleUpdateLog(existingLog.id, { engineerId: val });
                                                   } else {
-                                                    next.push({
-                                                      task_date: dStr,
-                                                      engineer_id: val,
-                                                      start_time: `${dStr}T${lStart}:00Z`,
-                                                      end_time: `${dStr}T${lEnd}:00Z`,
-                                                      break_time_mins: actualBreak
+                                                    setTimeLogs(prev => {
+                                                      const next = [...prev];
+                                                      const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dStr);
+                                                      if (lgIdx > -1) {
+                                                        next[lgIdx].engineer_id = val;
+                                                      } else {
+                                                        next.push({
+                                                          task_date: dStr,
+                                                          engineer_id: val,
+                                                          start_time: `${dStr}T${lStart}:00Z`,
+                                                          end_time: `${dStr}T${lEnd}:00Z`,
+                                                          break_time_mins: actualBreak
+                                                        });
+                                                      }
+                                                      return next;
                                                     });
                                                   }
-                                                  return next;
-                                                });
-                                              }
-                                            }}
-                                          >
-                                            <option value="">Select Engineer</option>
-                                            {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                          </select>
+                                                }}
+                                              >
+                                                <option value="">Select Engineer</option>
+                                                {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                              </select>
+                                              
+                                              {/* Rates Preview Tooltip */}
+                                              {(() => {
+                                                const hoverEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
+                                                const hEng = engineers.find(e => Number(e.id) === Number(hoverEngId));
+                                                return hEng ? (
+                                                  <div className="rate-preview-trigger" style={{ cursor: 'help', position: 'relative', display: 'flex' }}>
+                                                    <span style={{ fontSize: '14px', color: '#6366f1' }}>ⓘ</span>
+                                                    <div className="rate-preview-card" style={{ 
+                                                      position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', 
+                                                      marginLeft: '10px', width: '160px', background: 'white', border: '1px solid #e2e8f0', 
+                                                      borderRadius: '8px', padding: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
+                                                      zIndex: 100, visibility: 'hidden', opacity: 0 
+                                                    }}>
+                                                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', marginBottom: '6px' }}>Rates: {hEng.name}</div>
+                                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '9px' }}>
+                                                        <span style={{ color: '#64748b' }}>Hourly:</span> <span style={{ fontWeight: '700' }}>{hEng.hourly_rate || 0}</span>
+                                                        <span style={{ color: '#64748b' }}>Half:</span> <span style={{ fontWeight: '700' }}>{hEng.half_day_rate || 0}</span>
+                                                        <span style={{ color: '#64748b' }}>Full:</span> <span style={{ fontWeight: '700' }}>{hEng.full_day_rate || 0}</span>
+                                                        <span style={{ color: '#64748b' }}>Month:</span> <span style={{ fontWeight: '700' }}>{hEng.monthly_rate || 0}</span>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                ) : null;
+                                              })()}
+                                            </div>
                                         ) : (
                                           <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
                                             {engineers.find(e => String(e.id) === String(existingLog.engineer_id || existingLog.engineerId || engineerId))?.name || engineerName || 'Primary Engineer'}
@@ -3037,7 +3071,20 @@ function TicketsPage() {
                           <span style={{ display: 'block', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>Engineer Payout Estimation</span>
                           <span style={{ fontSize: '9px', color: '#94a3b8' }}>Based on {engBillingType || 'Profile'} Rates (+ Travel & Tool)</span>
                         </div>
-                        <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
+                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
+                        </div>
+
+                        {/* NEW: Live Engineer Breakdown */}
+                        {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.length > 1 && (
+                          <div style={{ borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '8px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {payoutLiveBreakdown.engSummary.map((es, idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#ecfdf5' }}>
+                                <span style={{ fontWeight: '600', opacity: 0.9 }}>{es.name}</span>
+                                <span style={{ fontWeight: '800' }}>{engCurrency || currency} {es.total.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
