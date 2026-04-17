@@ -512,8 +512,8 @@ function TicketsPage() {
         const existing = (timeLogs || []).find(l => {
           const rawDate = l.task_date || l.taskDate || '';
           if (!rawDate) return false;
-          // Robustly compare just the date part (YYYY-MM-DD)
-          const dateOnly = rawDate.toString().split('T')[0].split(' ')[0];
+          // Clean the date strings to ensure perfect matching (YYYY-MM-DD)
+          const dateOnly = rawDate.toString().split('T')[0].split(' ')[0].trim();
           return dateOnly === d;
         });
 
@@ -606,10 +606,11 @@ function TicketsPage() {
           totalPayout += pVal;
           // Use specificEngId from the log, fallback to the main ticket engineer
           const currentEngId = Number(specificEngId || engineerId);
+          if (!currentEngId) return; // Skip if no engineer identified
+
           const currentEng = engineers.find(e => Number(e.id) === currentEngId);
           
-          // Debug fallback name identification
-          let eName = 'Unknown Engineer';
+          let eName = 'Substitute Engineer';
           if (currentEng) {
             eName = currentEng.name;
           } else if (currentEngId === Number(engineerId) && engineerName) {
@@ -617,7 +618,7 @@ function TicketsPage() {
           } else if (existing && (existing.engineer_name || existing.engineerName)) {
             eName = existing.engineer_name || existing.engineerName;
           } else {
-            eName = `Engineer ID: ${currentEngId}`;
+            eName = `Engineer (ID: ${currentEngId})`;
           }
           
           if (!engSummaryMap[currentEngId]) {
