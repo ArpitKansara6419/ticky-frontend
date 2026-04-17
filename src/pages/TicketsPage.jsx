@@ -510,8 +510,11 @@ function TicketsPage() {
 
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => {
-          const lDate = (l.task_date || l.taskDate || '').toString().substring(0, 10);
-          return lDate === d;
+          const rawDate = l.task_date || l.taskDate || '';
+          if (!rawDate) return false;
+          // Robustly compare just the date part (YYYY-MM-DD)
+          const dateOnly = rawDate.toString().split('T')[0].split(' ')[0];
+          return dateOnly === d;
         });
 
         // Skip Weekends/Holidays unless an existing log was manually recorded for that day
@@ -601,7 +604,21 @@ function TicketsPage() {
         if (payRes) {
           const pVal = parseFloat(payRes.grandTotal);
           totalPayout += pVal;
-          const eName = currentEng ? currentEng.name : (currentEngId === Number(engineerId) && engineerName ? engineerName : 'Lead Engineer');
+          // Use specificEngId from the log, fallback to the main ticket engineer
+          const currentEngId = Number(specificEngId || engineerId);
+          const currentEng = engineers.find(e => Number(e.id) === currentEngId);
+          
+          // Debug fallback name identification
+          let eName = 'Unknown Engineer';
+          if (currentEng) {
+            eName = currentEng.name;
+          } else if (currentEngId === Number(engineerId) && engineerName) {
+            eName = engineerName;
+          } else if (existing && (existing.engineer_name || existing.engineerName)) {
+            eName = existing.engineer_name || existing.engineerName;
+          } else {
+            eName = `Engineer ID: ${currentEngId}`;
+          }
           
           if (!engSummaryMap[currentEngId]) {
             engSummaryMap[currentEngId] = { name: eName, total: 0 };
