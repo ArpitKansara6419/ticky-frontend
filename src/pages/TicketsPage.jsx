@@ -3728,7 +3728,7 @@ function TicketsPage() {
                         bt: selectedTicket.engBillingType || 'Hourly'
                       };
 
-                      const lEngId = existingLog.engineer_id || existingLog.engineerId;
+                      const lEngId = existingLog.engineer_id || existingLog.engineerId || selectedTicket.engineerId;
                       if (lEngId && Number(lEngId) !== Number(selectedTicket.engineerId)) {
                         const eng = engineers.find(en => Number(en.id) === Number(lEngId));
                         if (eng) pRates = { hr: eng.hourly_rate, hd: eng.half_day_rate, fd: eng.full_day_rate, mr: eng.monthly_rate || 0, bt: eng.billing_type };
@@ -3750,7 +3750,6 @@ function TicketsPage() {
                       totalR += rV; totalP += pV;
 
                       // Engineer tracking
-                      const lEngId = existingLog.engineer_id || existingLog.engineerId || selectedTicket.engineerId;
                       const currentEngineer = engineers.find(en => Number(en.id) === Number(lEngId));
                       const eName = currentEngineer ? currentEngineer.name : (selectedTicket.engineerName || 'Assigned Eng');
                       if (!engSummaryMap[lEngId]) engSummaryMap[lEngId] = { name: eName, total: 0, hours: 0 };
