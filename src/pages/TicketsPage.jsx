@@ -3687,6 +3687,7 @@ function TicketsPage() {
                       const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
                       return dw !== 0 && dw !== 6 && !vmHolsList.includes(d);
                     });
+                    const engSummaryMap = {};
                     const cleanTaskTime = (selectedTicket.taskTime || '08:00').toString().slice(0, 5);
                     let totalR = 0, totalP = 0;
 
@@ -3748,8 +3749,18 @@ function TicketsPage() {
                       const base= parseFloat(resR?.base   || 0);
                       totalR += rV; totalP += pV;
 
+                      // Engineer tracking
+                      const lEngId = existingLog.engineer_id || existingLog.engineerId || selectedTicket.engineerId;
+                      const currentEngineer = engineers.find(en => Number(en.id) === Number(lEngId));
+                      const eName = currentEngineer ? currentEngineer.name : (selectedTicket.engineerName || 'Assigned Eng');
+                      if (!engSummaryMap[lEngId]) engSummaryMap[lEngId] = { name: eName, total: 0, hours: 0 };
+                      engSummaryMap[lEngId].total += pV;
+                      engSummaryMap[lEngId].hours += parseFloat(resP?.hrs || 0);
+
                       return { ...existingLog, rV, pV, trv, tol, base, dur: parseFloat(resR?.hrs || 0), logDateStr };
                     });
+
+                    const engSummary = Object.values(engSummaryMap);
 
                     const cur = selectedTicket.currency || 'USD';
 
@@ -3919,6 +3930,31 @@ function TicketsPage() {
                             </tbody>
                           </table>
                         </div>
+
+                        {/* NEW: Engineer-wise Breakdown */}
+                        {engSummary.length > 1 && (
+                          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '12px' }}>👷 Engineer-wise Breakdown (Payout)</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                              {engSummary.map((es, idx) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800' }}>
+                                      {es.name.charAt(0)}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{es.name}</span>
+                                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>{es.hours.toFixed(2)} hours logged</span>
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#059669' }}>
+                                    {selectedTicket.eng_currency || cur} {es.total.toFixed(2)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Summary cards */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
