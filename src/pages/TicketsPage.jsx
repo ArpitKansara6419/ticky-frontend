@@ -599,7 +599,7 @@ function TicketsPage() {
           totalPayout += pVal;
           const currentEngId = specificEngId || engineerId;
           const currentEng = engineers.find(e => Number(e.id) === Number(currentEngId));
-          const eName = currentEng ? currentEng.name : (engineerId ? 'Lead Engineer' : 'Unknown');
+          const eName = currentEng ? currentEng.name : (engineerName && Number(currentEngId) === Number(engineerId) ? engineerName : 'Lead Engineer');
           if (!engSummaryMap[currentEngId]) engSummaryMap[currentEngId] = { name: eName, total: 0 };
           engSummaryMap[currentEngId].total += pVal;
         }
@@ -638,8 +638,14 @@ function TicketsPage() {
         cancellationFee: engCancellationFee || 0,
         travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
       });
+
       if (payRes) {
-        setPayoutLiveBreakdown({ grandTotal: payRes.grandTotal });
+        const eng = engineers.find(e => Number(e.id) === Number(engineerId));
+        const eName = eng ? eng.name : (engineerName || 'Lead Engineer');
+        setPayoutLiveBreakdown({ 
+          grandTotal: payRes.grandTotal, 
+          engSummary: [{ name: eName, total: parseFloat(payRes.grandTotal) }] 
+        });
       }
     }
   }, [
@@ -3075,7 +3081,7 @@ function TicketsPage() {
                         </div>
 
                         {/* NEW: Live Engineer Breakdown */}
-                        {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.length > 1 && (
+                        {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.length > 0 && (
                           <div style={{ borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '8px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {payoutLiveBreakdown.engSummary.map((es, idx) => (
                               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#ecfdf5' }}>
