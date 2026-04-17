@@ -509,7 +509,10 @@ function TicketsPage() {
       let engSummaryMap = {};
 
       daysArr.forEach((d) => {
-        const existing = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d);
+        const existing = (timeLogs || []).find(l => {
+          const lDate = (l.task_date || l.taskDate || '').toString().substring(0, 10);
+          return lDate === d;
+        });
 
         // Skip Weekends/Holidays unless an existing log was manually recorded for that day
         // FORCE UTC to avoid local timezone shifting "YYYY-MM-DD" to the previous day
@@ -524,10 +527,10 @@ function TicketsPage() {
         }
 
         let sTime, eTime, bMins = 0, specificEngId = null;
-        if (existing && existing.start_time && existing.end_time) {
-          sTime = existing.start_time;
-          eTime = existing.end_time;
-          bMins = existing.break_time_mins || 0;
+        if (existing && (existing.start_time || existing.startTime)) {
+          sTime = existing.start_time || existing.startTime;
+          eTime = existing.end_time || existing.endTime;
+          bMins = existing.break_time_mins || existing.breakTime || 0;
           specificEngId = existing.engineer_id || existing.engineerId;
         } else {
           const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
@@ -547,7 +550,9 @@ function TicketsPage() {
           monthlyDivisor: dayMonthlyDivisor 
         });
 
-        // Determine which engineer's rates to use for payout
+        const currentEngId = Number(specificEngId || engineerId);
+        const currentEng = engineers.find(e => Number(e.id) === currentEngId);
+
         let pRates = {
           hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0,
           monthlyRate: engMonthlyRate || 0, agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
@@ -555,12 +560,11 @@ function TicketsPage() {
         };
 
         if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
-          const eng = engineers.find(e => Number(e.id) === Number(specificEngId));
-          if (eng) {
+          if (currentEng) {
             pRates = {
-              hourlyRate: eng.hourly_rate || 0, halfDayRate: eng.half_day_rate || 0, fullDayRate: eng.full_day_rate || 0,
-              monthlyRate: eng.monthly_rate || 0, agreedRate: eng.agreed_rate || 0, cancellationFee: eng.cancellation_fee || 0,
-              billingType: eng.billing_type || 'Hourly'
+              hourlyRate: currentEng.hourly_rate || 0, halfDayRate: currentEng.half_day_rate || 0, fullDayRate: currentEng.full_day_rate || 0,
+              monthlyRate: currentEng.monthly_rate || 0, agreedRate: currentEng.agreed_rate || 0, cancellationFee: currentEng.cancellation_fee || 0,
+              billingType: currentEng.billing_type || 'Hourly'
             };
           }
         }
@@ -597,10 +601,11 @@ function TicketsPage() {
         if (payRes) {
           const pVal = parseFloat(payRes.grandTotal);
           totalPayout += pVal;
-          const currentEngId = specificEngId || engineerId;
-          const currentEng = engineers.find(e => Number(e.id) === Number(currentEngId));
-          const eName = currentEng ? currentEng.name : (engineerName && Number(currentEngId) === Number(engineerId) ? engineerName : 'Lead Engineer');
-          if (!engSummaryMap[currentEngId]) engSummaryMap[currentEngId] = { name: eName, total: 0 };
+          const eName = currentEng ? currentEng.name : (currentEngId === Number(engineerId) && engineerName ? engineerName : 'Lead Engineer');
+          
+          if (!engSummaryMap[currentEngId]) {
+            engSummaryMap[currentEngId] = { name: eName, total: 0 };
+          }
           engSummaryMap[currentEngId].total += pVal;
         }
       });
@@ -2616,7 +2621,8 @@ function TicketsPage() {
                                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
                                       </td>
                                       <td style={{ padding: '10px' }}>
-                                        {editingTicketId ? (
+                                        {/* Always show select if in create/edit form */}
+                                        {isFillingForm ? (
                                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                               <select
                                                 style={{ padding: '4px', fontSize: '11px', flex: 1, borderRadius: '6px', border: '1px solid #cbd5e1' }}
