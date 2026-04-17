@@ -3086,7 +3086,6 @@ function TicketsPage() {
                           </div>
                         )}
                       </div>
-                    </div>
                   )}
                 </div>
 
