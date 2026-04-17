@@ -727,13 +727,38 @@ const CustomerReceivablePage = () => {
         return ['All Engineers', ...Array.from(engs).sort()];
     }, [unbilledList]);
 
+    // Filtered logic for Invoices
+    const filteredInvoices = useMemo(() => {
+        const search = searchTerm.toLowerCase().trim();
+        return invoiceList.filter(inv => {
+            // 1. Search filter
+            const custName = (inv.customer_name || '').toLowerCase();
+            const invNum = (inv.invoice_number || '').toLowerCase();
+            const matchesSearch = !search || custName.includes(search) || invNum.includes(search);
+            if (!matchesSearch) return false;
+
+            // 2. Customer filter
+            const matchesCustFilter = filterCustomer === 'All Customers' || (inv.customer_name === filterCustomer);
+            if (!matchesCustFilter) return false;
+
+            // 3. Date filter (Year/Month)
+            const date = new Date(inv.created_at);
+            const y = date.getFullYear().toString();
+            const m = MONTHS[date.getMonth() + 1];
+            const matchesYear = (selectedYear === 'All Years' || y === selectedYear);
+            const matchesMonth = (selectedMonth === 'All Months' || m === selectedMonth);
+
+            return matchesYear && matchesMonth;
+        });
+    }, [invoiceList, searchTerm, filterCustomer, selectedYear, selectedMonth]);
+
     // Pagination Logic for Unbilled
     const totalUnbilledPages = Math.ceil(filteredUnbilled.length / itemsPerPage);
     const displayedUnbilled = filteredUnbilled.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     // Pagination Logic for Invoices
-    const totalInvoicePages = Math.ceil(invoiceList.length / itemsPerPage);
-    const displayedInvoices = invoiceList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalInvoicePages = Math.ceil(filteredInvoices.length / itemsPerPage);
+    const displayedInvoices = filteredInvoices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const Pagination = ({ total, current, onChange }) => {
         if (total <= 1) return null;

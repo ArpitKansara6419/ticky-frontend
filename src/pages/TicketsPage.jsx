@@ -768,6 +768,21 @@ function TicketsPage() {
         engPayType: t.engPayType ?? t.eng_pay_type ?? 'Default'
       })).sort((a, b) => b.id - a.id))
 
+      // COLLAPSE ALL MONTHS BY DEFAULT on load
+      if (data.tickets && data.tickets.length > 0) {
+        const initialCollapsed = new Set();
+        data.tickets.forEach(t => {
+          const d = t.task_start_date || t.taskStartDate;
+          const key = d ? String(d).substring(0, 7) : 'Unknown';
+          initialCollapsed.add(key);
+        });
+        setCollapsedMonths(prev => {
+          const next = new Set(prev);
+          initialCollapsed.forEach(k => next.add(k));
+          return next;
+        });
+      }
+
       // Handle initial filter if coming from dashboard/approvals
       if (location.state?.filterTicketId && !filterTicketIdHandled) {
         setFilterTicketIdHandled(true)
@@ -1235,6 +1250,28 @@ function TicketsPage() {
         if (engineers.length === 0) loadDropdowns();
         fetchTicketExtras(ticketId);
 
+        // Pre-collapse all month accordions in View modal so they start closed
+        try {
+          const stStart = t.taskStartDate ? String(t.taskStartDate).split('T')[0] : '';
+          const stEnd = t.taskEndDate ? String(t.taskEndDate).split('T')[0] : '';
+          if (stStart && stEnd && stStart !== stEnd) {
+            const viewKeys = new Set();
+            let cur = new Date(stStart + 'T00:00:00Z');
+            const end = new Date(stEnd + 'T00:00:00Z');
+            while (cur <= end) {
+              const mKey = cur.toISOString().substring(0, 7) + '-view';
+              viewKeys.add(mKey);
+              cur.setUTCMonth(cur.getUTCMonth() + 1);
+              cur.setUTCDate(1);
+            }
+            setCollapsedMonths(prev => {
+              const next = new Set(prev);
+              viewKeys.forEach(k => next.add(k));
+              return next;
+            });
+          }
+        } catch (e) { /* ignore date parsing errors */ }
+
         // SYNC MAIN STATES to trigger live calculations even in View mode
         fillFormFromTicket(t, false); // false = don't switch viewMode to form
 
@@ -1450,6 +1487,32 @@ function TicketsPage() {
     if (!ticket) return;
 
     const t = ticket;
+    // Pre-collapse month groups for the Edit modal as well
+    try {
+      const s = t.task_start_date || t.taskStartDate;
+      const e = t.task_end_date || t.taskEndDate;
+      if (s && e) {
+        const sStr = String(s).split('T')[0];
+        const eStr = String(e).split('T')[0];
+        if (sStr !== eStr) {
+          const modalKeys = new Set();
+          let cur = new Date(sStr + 'T00:00:00Z');
+          const end = new Date(eStr + 'T00:00:00Z');
+          while (cur <= end) {
+            const mKey = cur.toISOString().substring(0, 7) + '-modal';
+            modalKeys.add(mKey);
+            cur.setUTCMonth(cur.getUTCMonth() + 1);
+            cur.setUTCDate(1);
+          }
+          setCollapsedMonths(prev => {
+            const next = new Set(prev);
+            modalKeys.forEach(k => next.add(k));
+            return next;
+          });
+        }
+      }
+    } catch (err) { /* ignore */ }
+
     const normalized = {
       customerId: t.customer_id || t.customerId || '',
       leadId: t.lead_id || t.leadId || '',
@@ -2499,11 +2562,36 @@ function TicketsPage() {
 
                                   const dur = calculateDuration(lStart, lEnd, actualBreak);
                                   const dayMonthlyDivisor = getWorkingDaysInMonth(dStr, country);
+                                  // AUTOMATIC SUBSTITUTE ENGINEER RATES
+                                  const curEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
+                                  let effectiveRates = {
+                                    hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, ar: agreedRate, cf: cancellationFee
+                                  };
+
+                                  if (curEngId && String(curEngId) !== String(engineerId)) {
+                                    const subEng = engineers.find(en => String(en.id) === String(curEngId));
+                                    if (subEng) {
+                                      effectiveRates = {
+                                        hr: subEng.hourly_rate || 0,
+                                        hd: subEng.half_day_rate || 0,
+                                        fd: subEng.full_day_rate || 0,
+                                        mr: subEng.monthly_rate || 0,
+                                        ar: subEng.agreed_rate || '',
+                                        cf: subEng.cancellation_fee || 0
+                                      };
+                                    }
+                                  }
+
                                   const dayCostBreakdown = calculateTicketTotal({
                                     startTime: `${dStr}T${lStart}:00.000Z`,
                                     endTime: `${dStr}T${lEnd}:00.000Z`,
                                     breakTime: actualBreak,
-                                    hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                                    hourlyRate: effectiveRates.hr, 
+                                    halfDayRate: effectiveRates.hd, 
+                                    fullDayRate: effectiveRates.fd, 
+                                    monthlyRate: effectiveRates.mr, 
+                                    agreedRate: effectiveRates.ar, 
+                                    cancellationFee: effectiveRates.cf,
                                     travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
                                     monthlyDivisor: dayMonthlyDivisor, country
                                   });
