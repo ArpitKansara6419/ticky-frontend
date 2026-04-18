@@ -4058,8 +4058,8 @@ function TicketsPage() {
                           </table>
                         </div>
 
-                        {/* NEW: Engineer-wise Breakdown */}
-                        {engSummary.filter(s => !s.isNoEng).length > 1 && (
+                        {/* UPGRADED: Always show Engineer-wise Breakdown */}
+                        {engSummary.filter(s => !s.isNoEng).length > 0 && (
                           <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '12px' }}>👷 Engineer-wise Breakdown (Payout)</label>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
@@ -4108,12 +4108,28 @@ function TicketsPage() {
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total (Receivable)</label>
                             <div style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1', marginTop: '6px' }}>{cur} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
                             <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-                              Travel: {cur} {parseFloat(selectedTicket.travelCostPerDay || 0).toFixed(2)} · Tools: {cur} {parseFloat(selectedTicket.toolCost || 0).toFixed(2)}
+                              Travel: {cur} {parseFloat(selectedTicket.travel_cost_per_day || selectedTicket.travelCostPerDay || 0).toFixed(2)} · Tools: {cur} {parseFloat(selectedTicket.tool_cost || selectedTicket.toolCost || 0).toFixed(2)}
                             </div>
                           </div>
                           <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total (Payout)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>{selectedTicket.eng_currency || cur} {parseFloat(selectedTicket.engTotalCost || 0).toFixed(2)}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>{selectedTicket.eng_currency || cur} {parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}</div>
+                          </div>
+                        </div>
+
+                        {/* Professional Engineer Card for Single Day */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '800' }}>
+                              {(selectedTicket.engineerName || 'E').charAt(0)}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>{selectedTicket.engineerName || 'Assigned Engineer'}</span>
+                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>Main Assignee</span>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '18px', fontWeight: '900', color: '#059669' }}>
+                            {selectedTicket.eng_currency || cur} {parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}
                           </div>
                         </div>
                       </div>
