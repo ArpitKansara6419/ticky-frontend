@@ -3156,6 +3156,12 @@ function TicketsPage() {
                             ))}
                           </div>
                         )}
+                        
+                        {/* Summary Total for Payout (All Engineers Combined) */}
+                        <div style={{ borderTop: '1.5px dashed rgba(16,185,129,0.3)', marginTop: '20px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Combined Engineer Payout</span>
+                          <span style={{ fontSize: '20px', fontWeight: '900', color: '#fff' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
+                        </div>
                       </div>
                   )}
                 </div>
@@ -4079,6 +4085,12 @@ function TicketsPage() {
                                   </div>
                                 </div>
                               ))}
+                            </div>
+
+                            {/* View Modal Combined Payout Summary */}
+                            <div style={{ borderTop: '1.5px dashed rgba(16,185,129,0.3)', marginTop: '20px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Combined Engineer Payout</span>
+                              <span style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>{selectedTicket.eng_currency || cur} {totalP.toFixed(2)}</span>
                             </div>
                           </div>
                         )}
