@@ -3135,13 +3135,23 @@ function TicketsPage() {
                           <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
                         </div>
 
-                        {/* NEW: Live Engineer Breakdown */}
-                        {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.length > 0 && (
-                          <div style={{ borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '8px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {payoutLiveBreakdown.engSummary.map((es, idx) => (
-                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#ecfdf5' }}>
-                                <span style={{ fontWeight: '600', opacity: 0.9 }}>{es.name}</span>
-                                <span style={{ fontWeight: '800' }}>{engCurrency || currency} {es.total.toFixed(2)}</span>
+                        {/* UPGRADED: Professional Engineer Cards in Edit Page */}
+                        {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.filter(s => !s.isNoEng).length > 0 && (
+                          <div style={{ borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '16px', marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                            {payoutLiveBreakdown.engSummary.filter(es => !es.isNoEng).map((es, idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(16,185,129,0.1)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
+                                    {es.name.charAt(0)}
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#ecfdf5' }}>{es.name}</span>
+                                    <span style={{ fontSize: '10px', color: '#64748b' }}>Individual Payout</span>
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#10b981' }}>
+                                  {engCurrency || currency} {es.total.toFixed(2)}
+                                </div>
                               </div>
                             ))}
                           </div>
