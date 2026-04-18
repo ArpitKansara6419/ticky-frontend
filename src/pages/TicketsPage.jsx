@@ -2669,12 +2669,12 @@ function TicketsPage() {
                                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
                                       </td>
                                       <td style={{ padding: '10px' }}>
-                                        {/* Always show select if in create/edit form */}
-                                        {isFillingForm ? (
-                                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        {/* Dropdowns for BOTH Create and Edit modes */}
+                                        {(isFillingForm || editingTicketId) ? (
+                                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                               <select
-                                                style={{ padding: '4px', fontSize: '11px', flex: 1, borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                                                value={existingLog.engineer_id || existingLog.engineerId || engineerId}
+                                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '11px', background: '#fff', minWidth: '120px' }}
+                                                value={curEngId}
                                                 onChange={(e) => {
                                                   const val = Number(e.target.value);
                                                   if (existingLog.id) {
@@ -2689,8 +2689,8 @@ function TicketsPage() {
                                                         next.push({
                                                           task_date: dStr,
                                                           engineer_id: val,
-                                                          start_time: `${dStr}T${lStart}:00Z`,
-                                                          end_time: `${dStr}T${lEnd}:00Z`,
+                                                          start_time: `${dStr}T${lStart}:00.000Z`,
+                                                          end_time: `${dStr}T${lEnd}:00.000Z`,
                                                           break_time_mins: actualBreak
                                                         });
                                                       }
@@ -2707,22 +2707,14 @@ function TicketsPage() {
                                                 </optgroup>
                                               </select>
 
-                                              {/* Rates Preview Tooltip Icon */}
+                                              {/* Premium Rates Tooltip */}
                                               {(() => {
                                                 const selectedEng = engineers.find(e => Number(e.id) === Number(curEngId));
                                                 if (!selectedEng) return null;
-                                                const tooltipContent = `
-Rates for ${selectedEng.name}:
-• Hourly: ${currency} ${selectedEng.hourly_rate || 0}
-• Half Day: ${currency} ${selectedEng.half_day_rate || 0}
-• Full Day: ${currency} ${selectedEng.full_day_rate || 0}
-• Monthly: ${currency} ${selectedEng.monthly_rate || 0}
-• Agreed: ${currency} ${selectedEng.agreed_rate || 0}
-• Cancellation: ${currency} ${selectedEng.cancellation_fee || 0}
-                                                `.trim();
+                                                const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${currency} ${selectedEng.hourly_rate || 0}\n• Half Day: ${currency} ${selectedEng.half_day_rate || 0}\n• Full Day: ${currency} ${selectedEng.full_day_rate || 0}\n• Monthly: ${currency} ${selectedEng.monthly_rate || 0}\n• Agreed: ${currency} ${selectedEng.agreed_rate || 0}\n• Cancellation: ${currency} ${selectedEng.cancellation_fee || 0}`;
 
                                                 return (
-                                                  <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block', marginLeft: '6px' }}>
+                                                  <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block' }}>
                                                     <span style={{ fontSize: '14px', cursor: 'help', color: '#6366f1' }}>ℹ️</span>
                                                     <div className="tooltip-text" style={{
                                                       visibility: 'hidden', width: '200px', backgroundColor: '#1e293b', color: '#fff', textAlign: 'left',
@@ -2739,37 +2731,7 @@ Rates for ${selectedEng.name}:
                                                   </div>
                                                 );
                                               })()}
-                                              
-                                              {/* CSS for hover effect */}
-                                              <style>{`
-                                                .tooltip-container:hover .tooltip-text {
-                                                  visibility: visible !important;
-                                                  opacity: 1 !important;
-                                                }
-                                              `}</style>
-                                              {(() => {
-                                                const hoverEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
-                                                const hEng = engineers.find(e => Number(e.id) === Number(hoverEngId));
-                                                return hEng ? (
-                                                  <div className="rate-preview-trigger" style={{ cursor: 'help', position: 'relative', display: 'flex' }}>
-                                                    <span style={{ fontSize: '14px', color: '#6366f1' }}>ⓘ</span>
-                                                    <div className="rate-preview-card" style={{ 
-                                                      position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', 
-                                                      marginLeft: '10px', width: '160px', background: 'white', border: '1px solid #e2e8f0', 
-                                                      borderRadius: '8px', padding: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
-                                                      zIndex: 100, visibility: 'hidden', opacity: 0 
-                                                    }}>
-                                                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', marginBottom: '6px' }}>Rates: {hEng.name}</div>
-                                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '9px' }}>
-                                                        <span style={{ color: '#64748b' }}>Hourly:</span> <span style={{ fontWeight: '700' }}>{hEng.hourly_rate || 0}</span>
-                                                        <span style={{ color: '#64748b' }}>Half:</span> <span style={{ fontWeight: '700' }}>{hEng.half_day_rate || 0}</span>
-                                                        <span style={{ color: '#64748b' }}>Full:</span> <span style={{ fontWeight: '700' }}>{hEng.full_day_rate || 0}</span>
-                                                        <span style={{ color: '#64748b' }}>Month:</span> <span style={{ fontWeight: '700' }}>{hEng.monthly_rate || 0}</span>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                ) : null;
-                                              })()}
+                                              <style>{`.tooltip-container:hover .tooltip-text { visibility: visible !important; opacity: 1 !important; }`}</style>
                                             </div>
                                         ) : (
                                           <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
