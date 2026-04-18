@@ -1426,6 +1426,23 @@ function TicketsPage() {
     const ticketId = selectedTicket?.id || editingTicketId;
     if (!ticketId) return;
 
+    // IF EDITING MAIN FORM: Update local state ONLY. Do not call API.
+    if (isFillingForm) {
+      if (logId) {
+        setTimeLogs(prev => prev.map(l => l.id === logId ? { ...l, ...data } : l));
+      } else {
+        // Handle potential new log if logId is missing (though table usually has a match)
+        setTimeLogs(prev => {
+          const next = [...prev];
+          const lgIdx = next.findIndex(l => (l.task_date || l.taskDate || '').split('T')[0] === data.taskDate?.split('T')[0]);
+          if (lgIdx > -1) next[lgIdx] = { ...next[lgIdx], ...data };
+          else next.push({ ...data });
+          return next;
+        });
+      }
+      return; // Stop here for main form.
+    }
+
     setIsUpdatingLog(logId);
     try {
       const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, {
