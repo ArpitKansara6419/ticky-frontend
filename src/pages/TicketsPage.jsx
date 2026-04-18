@@ -605,26 +605,29 @@ function TicketsPage() {
           const pVal = parseFloat(payRes.grandTotal);
           totalPayout += pVal;
           // Use specificEngId from the log, fallback to the main ticket engineer
-          const currentEngId = Number(specificEngId || engineerId);
-          if (!currentEngId) return; // Skip if no engineer identified
-
-          const currentEng = engineers.find(e => Number(e.id) === currentEngId);
+          const currentEngId = (specificEngId !== null && specificEngId !== undefined) ? Number(specificEngId) : Number(engineerId);
           
-          let eName = 'Substitute Engineer';
-          if (currentEng) {
-            eName = currentEng.name;
-          } else if (currentEngId === Number(engineerId) && engineerName) {
-            eName = engineerName;
-          } else if (existing && (existing.engineer_name || existing.engineerName)) {
-            eName = existing.engineer_name || existing.engineerName;
-          } else {
-            eName = `Engineer (ID: ${currentEngId})`;
+          if (!isNaN(currentEngId)) {
+            const currentEng = engineers.find(e => Number(e.id) === currentEngId);
+            
+            let eName = 'Substitute Engineer';
+            if (currentEng) {
+              eName = currentEng.name;
+            } else if (currentEngId === Number(engineerId) && engineerName) {
+              eName = engineerName;
+            } else if (existing && (existing.engineer_name || existing.engineerName)) {
+              eName = existing.engineer_name || existing.engineerName;
+            } else if (currentEngId === 0) {
+              eName = 'No Engineer / Absent';
+            } else {
+              eName = `Engineer (ID: ${currentEngId})`;
+            }
+            
+            if (!engSummaryMap[currentEngId]) {
+              engSummaryMap[currentEngId] = { name: eName, total: 0, isNoEng: currentEngId === 0 };
+            }
+            engSummaryMap[currentEngId].total += pVal;
           }
-          
-          if (!engSummaryMap[currentEngId]) {
-            engSummaryMap[currentEngId] = { name: eName, total: 0 };
-          }
-          engSummaryMap[currentEngId].total += pVal;
         }
       });
 
@@ -1435,6 +1438,9 @@ function TicketsPage() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.message || 'Update failed');
       }
+
+      // OPTIMISTIC LOCAL UPDATE for immediate live calculation refresh
+      setTimeLogs(prev => prev.map(l => l.id === logId ? { ...l, ...data } : l));
 
       // Auto-hold check
       if (data.startTime && data.endTime) {
