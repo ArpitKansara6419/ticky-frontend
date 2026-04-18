@@ -1036,3 +1036,24 @@
   border-bottom: 6px solid transparent;
   border-right: 6px solid #e2e8f0;
 }
+
+/* No Engineer Absence Styling */
+.row-no-engineer {
+  opacity: 0.6;
+  background-color: #f1f5f9 !important;
+  transition: all 0.3s ease;
+}
+
+.row-no-engineer td {
+  text-decoration: line-through dashed #ef4444 2px;
+  color: #94a3b8 !important;
+}
+
+.row-no-engineer td select,
+.row-no-engineer td input {
+  text-decoration: none !important;
+}
+
+.row-no-engineer:hover {
+  opacity: 0.8;
+}

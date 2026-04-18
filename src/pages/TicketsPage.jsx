@@ -3805,7 +3805,9 @@ function TicketsPage() {
                       };
 
                       const lEngId = existingLog.engineer_id || existingLog.engineerId || selectedTicket.engineerId;
-                      if (lEngId && Number(lEngId) !== Number(selectedTicket.engineerId)) {
+                      if (Number(lEngId) === 0) {
+                        pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
+                      } else if (lEngId && Number(lEngId) !== Number(selectedTicket.engineerId)) {
                         const eng = engineers.find(en => Number(en.id) === Number(lEngId));
                         if (eng) pRates = { hr: eng.hourly_rate, hd: eng.half_day_rate, fd: eng.full_day_rate, mr: eng.monthly_rate || 0, bt: eng.billing_type };
                       }
@@ -3827,10 +3829,13 @@ function TicketsPage() {
 
                       // Engineer tracking
                       const currentEngineer = engineers.find(en => Number(en.id) === Number(lEngId));
-                      const eName = currentEngineer ? currentEngineer.name : (selectedTicket.engineerName || 'Assigned Eng');
-                      if (!engSummaryMap[lEngId]) engSummaryMap[lEngId] = { name: eName, total: 0, hours: 0 };
-                      engSummaryMap[lEngId].total += pV;
-                      engSummaryMap[lEngId].hours += parseFloat(resP?.hrs || 0);
+                      const isNoEng = Number(lEngId) === 0;
+                      const eName = isNoEng ? 'No Engineer Assigned' : (currentEngineer ? currentEngineer.name : (selectedTicket.engineerName || 'Assigned Eng'));
+                      if (!engSummaryMap[lEngId]) engSummaryMap[lEngId] = { name: eName, total: 0, hours: 0, isNoEng };
+                      if (!isNoEng) {
+                        engSummaryMap[lEngId].total += pV;
+                        engSummaryMap[lEngId].hours += parseFloat(resP?.hrs || 0);
+                      }
 
                       return { ...existingLog, rV, pV, trv, tol, base, dur: parseFloat(resR?.hrs || 0), logDateStr };
                     });
@@ -3938,10 +3943,10 @@ function TicketsPage() {
                                       </tr>
 
                                       {/* Month Rows (visible when expanded) */}
-                                      {!isCollapsed && monthLogs.map((L, mIdx) => {
                                         const i = L._origIdx;
+                                        const isNoEngRow = Number(L.engineer_id || selectedTicket.engineerId) === 0;
                                         return (
-                                          <tr key={L.id || i} style={{ borderBottom: '1px solid #f1f5f9', background: mIdx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                          <tr key={L.id || i} className={isNoEngRow ? 'row-no-engineer' : ''} style={{ borderBottom: '1px solid #f1f5f9', background: mIdx % 2 === 0 ? '#fff' : '#fafafa', position: 'relative' }}>
                                             <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
                                               <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '11px' }}>
                                                 {new Date(`${L.logDateStr}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
@@ -3949,8 +3954,13 @@ function TicketsPage() {
                                               <div style={{ fontSize: '10px', color: '#94a3b8' }}>Weekday</div>
                                             </td>
                                             <td style={{ padding: '8px 10px', minWidth: '180px' }}>
-                                              <select style={{ width: '100%', padding: '3px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '3px' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
-                                                {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                              <select style={{ width: '100%', padding: '3px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '3px', fontWeight: isNoEngRow ? '800' : '500', color: isNoEngRow ? '#ef4444' : 'inherit' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
+                                                <optgroup label="Core Team">
+                                                  {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                                </optgroup>
+                                                <optgroup label="Special Cases">
+                                                  <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
+                                                </optgroup>
                                               </select>
                                               <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
                                                 <input type="time" id={`vs-${i}`} defaultValue={safeExtractTime(L.start_time)} style={{ fontSize: '10px', padding: '2px', width: '80px' }} />
@@ -4007,7 +4017,7 @@ function TicketsPage() {
                         </div>
 
                         {/* NEW: Engineer-wise Breakdown */}
-                        {engSummary.length > 1 && (
+                        {engSummary.filter(s => !s.isNoEng).length > 1 && (
                           <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
                             <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '12px' }}>👷 Engineer-wise Breakdown (Payout)</label>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
