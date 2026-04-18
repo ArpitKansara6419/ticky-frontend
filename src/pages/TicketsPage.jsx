@@ -3950,6 +3950,7 @@ function TicketsPage() {
                                       </tr>
 
                                       {/* Month Rows (visible when expanded) */}
+                                      {!isCollapsed && monthLogs.map((L, mIdx) => {
                                         const i = L._origIdx;
                                         const isNoEngRow = Number(L.engineer_id || selectedTicket.engineerId) === 0;
                                         return (
