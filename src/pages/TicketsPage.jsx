@@ -490,7 +490,8 @@ function TicketsPage() {
   };
 
   useEffect(() => {
-    if (isFillingForm) return;
+    // Enable live calculations for both view mode AND creation/editing mode
+    // if (isFillingForm) return; <--- REMOVED TO ALLOW LIVE SUMMARIES WHILE FILLING FORM
     // Also treat Monthly billing as multi-day calendar view even if start==end
     const isMultiDay = (taskStartDate && taskEndDate && taskStartDate !== taskEndDate) || (billingType.includes('Monthly') && taskStartDate && taskEndDate);
     const daysArr = isMultiDay ? getDatesInRange(taskStartDate, taskEndDate) : [];
