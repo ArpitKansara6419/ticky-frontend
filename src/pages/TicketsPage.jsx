@@ -531,11 +531,14 @@ function TicketsPage() {
         }
 
         let sTime, eTime, bMins = 0, specificEngId = null;
+        if (existing) {
+          specificEngId = existing.engineer_id || existing.engineerId || null;
+        }
+
         if (existing && (existing.start_time || existing.startTime)) {
           sTime = existing.start_time || existing.startTime;
           eTime = existing.end_time || existing.endTime;
           bMins = existing.break_time_mins || existing.breakTime || 0;
-          specificEngId = existing.engineer_id || existing.engineerId;
         } else {
           const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
           sTime = `${d}T${cleanTime}:00Z`;
