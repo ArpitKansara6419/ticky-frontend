@@ -2706,8 +2706,47 @@ function TicketsPage() {
                                                   <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
                                                 </optgroup>
                                               </select>
+
+                                              {/* Rates Preview Tooltip Icon */}
+                                              {(() => {
+                                                const selectedEng = engineers.find(e => Number(e.id) === Number(curEngId));
+                                                if (!selectedEng) return null;
+                                                const tooltipContent = `
+Rates for ${selectedEng.name}:
+• Hourly: ${currency} ${selectedEng.hourly_rate || 0}
+• Half Day: ${currency} ${selectedEng.half_day_rate || 0}
+• Full Day: ${currency} ${selectedEng.full_day_rate || 0}
+• Monthly: ${currency} ${selectedEng.monthly_rate || 0}
+• Agreed: ${currency} ${selectedEng.agreed_rate || 0}
+• Cancellation: ${currency} ${selectedEng.cancellation_fee || 0}
+                                                `.trim();
+
+                                                return (
+                                                  <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block', marginLeft: '6px' }}>
+                                                    <span style={{ fontSize: '14px', cursor: 'help', color: '#6366f1' }}>ℹ️</span>
+                                                    <div className="tooltip-text" style={{
+                                                      visibility: 'hidden', width: '200px', backgroundColor: '#1e293b', color: '#fff', textAlign: 'left',
+                                                      borderRadius: '8px', padding: '10px', position: 'absolute', zIndex: 9999, bottom: '125%', left: '50%',
+                                                      marginLeft: '-100px', opacity: 0, transition: 'opacity 0.3s', fontSize: '11px', lineHeight: '1.5',
+                                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.3)', pointerEvents: 'none', whiteSpace: 'pre-line'
+                                                    }}>
+                                                      {tooltipContent}
+                                                      <div style={{
+                                                        position: 'absolute', top: '100%', left: '50%', marginLeft: '-5px',
+                                                        borderWidth: '5px', borderStyle: 'solid', borderColor: '#1e293b transparent transparent transparent'
+                                                      }}></div>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })()}
                                               
-                                              {/* Rates Preview Tooltip */}
+                                              {/* CSS for hover effect */}
+                                              <style>{`
+                                                .tooltip-container:hover .tooltip-text {
+                                                  visibility: visible !important;
+                                                  opacity: 1 !important;
+                                                }
+                                              `}</style>
                                               {(() => {
                                                 const hoverEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
                                                 const hEng = engineers.find(e => Number(e.id) === Number(hoverEngId));
