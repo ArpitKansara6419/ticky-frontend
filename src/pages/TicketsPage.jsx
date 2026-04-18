@@ -2600,11 +2600,14 @@ function TicketsPage() {
                                   const dayMonthlyDivisor = getWorkingDaysInMonth(dStr, country);
                                   // AUTOMATIC SUBSTITUTE ENGINEER RATES
                                   const curEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
+                                  const isNoEng = Number(curEngId) === 0;
                                   let effectiveRates = {
                                     hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, ar: agreedRate, cf: cancellationFee
                                   };
 
-                                  if (curEngId && String(curEngId) !== String(engineerId)) {
+                                  if (isNoEng) {
+                                    effectiveRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0 };
+                                  } else if (curEngId && String(curEngId) !== String(engineerId)) {
                                     const subEng = engineers.find(en => String(en.id) === String(curEngId));
                                     if (subEng) {
                                       effectiveRates = {
@@ -2633,7 +2636,7 @@ function TicketsPage() {
                                   });
 
                                   return (
-                                    <tr key={dStr} style={{ background: dur > 8 ? 'rgba(239, 68, 68, 0.05)' : (existingLog.id ? 'rgba(99, 102, 241, 0.03)' : undefined) }}>
+                                    <tr key={dStr} className={isNoEng ? 'row-no-engineer' : ''} style={{ background: dur > 8 ? 'rgba(239, 68, 68, 0.05)' : (existingLog.id ? 'rgba(99, 102, 241, 0.03)' : undefined) }}>
                                       <td style={{ padding: '10px' }}>
                                         <div style={{ fontWeight: '700', color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</div>
                                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
@@ -2669,8 +2672,12 @@ function TicketsPage() {
                                                   }
                                                 }}
                                               >
-                                                <option value="">Select Engineer</option>
-                                                {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                                <optgroup label="Core Team">
+                                                  {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                                </optgroup>
+                                                <optgroup label="Special Cases">
+                                                  <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
+                                                </optgroup>
                                               </select>
                                               
                                               {/* Rates Preview Tooltip */}
