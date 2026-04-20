@@ -1232,8 +1232,8 @@ function TicketsPage() {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-              startDate: payload.taskStartDate,
-              endDate: payload.taskEndDate
+              taskStartDate: payload.taskStartDate,
+              taskEndDate: payload.taskEndDate
             })
           });
           console.log("Lead dates synchronized successfully.");
