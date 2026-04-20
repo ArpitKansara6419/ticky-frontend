@@ -3,8 +3,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
     FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
-    FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload
+    FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload, FiLayout, FiFile
 } from 'react-icons/fi';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import './CustomerReceivablePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -450,6 +453,143 @@ const CustomerReceivablePage = () => {
     });
 
     const [detailTicket, setDetailTicket] = useState(null);
+    const [isInvoiceOptionsModalOpen, setIsInvoiceOptionsModalOpen] = useState(false);
+    const [invoicePoNumber, setInvoicePoNumber] = useState('');
+    const [invoiceServiceNumber, setInvoiceServiceNumber] = useState('');
+    const [selectedFormat, setSelectedFormat] = useState('pdf');
+
+    const handleOpenInvoiceOptions = (ticket) => {
+        setInvoicePoNumber('');
+        setInvoiceServiceNumber('');
+        setIsInvoiceOptionsModalOpen(true);
+    };
+
+    const generateProfessionalPDF = (ticket, bd) => {
+        const doc = new jsPDF();
+        const cur = ticket.currency || 'USD';
+
+        // Header Background
+        doc.setFillColor(79, 70, 229);
+        doc.rect(0, 0, 210, 40, 'F');
+
+        // Branding
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Awokta.', 20, 25);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('PROFESSIONAL SERVICE INVOICE', 140, 25);
+
+        // Ticket Header Info
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Invoice for Ticket #${ticket.id}`, 20, 55);
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Task: ${ticket.task_name}`, 20, 62);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 160, 55);
+        if (invoicePoNumber) doc.text(`PO Number: ${invoicePoNumber}`, 160, 62);
+        if (invoiceServiceNumber) doc.text(`Service Number: ${invoiceServiceNumber}`, 160, 67);
+
+        // Client & Project Info
+        doc.autoTable({
+            startY: 75,
+            head: [['Client Details', 'Project Details']],
+            body: [[
+                `Customer: ${ticket.customer_name}\nLocation: ${ticket.city || '-'}, ${ticket.country || '-'}`,
+                `Engineer: ${ticket.engineer_name}\nBilling Model: ${ticket.billing_type}`
+            ]],
+            theme: 'striped',
+            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
+            bodyStyles: { textColor: [30, 41, 59] }
+        });
+
+        // Financial Breakdown
+        const breakdownRows = [
+            ['Labor & Service Base', bd.baseBreakdown || 'Standard Shift', `${cur} ${parseFloat(bd.baseCost).toFixed(2)}`],
+        ];
+
+        if (parseFloat(bd.otPremium) > 0) breakdownRows.push(['Overtime Premium', bd.otBreakdown || 'OT Rates Applied', `+ ${cur} ${parseFloat(bd.otPremium).toFixed(2)}`]);
+        if (parseFloat(bd.oohPremium) > 0) breakdownRows.push(['OOH Premium', bd.oohBreakdown || 'Outside regular hours', `+ ${cur} ${parseFloat(bd.oohPremium).toFixed(2)}`]);
+        if (parseFloat(bd.specialDayPremium) > 0) breakdownRows.push(['Special Day Premium', bd.spBreakdown || 'Weekend/Holiday rate', `+ ${cur} ${parseFloat(bd.specialDayPremium).toFixed(2)}`]);
+        if (parseFloat(bd.travelCost) > 0) breakdownRows.push(['Travel & Logistics', 'Per day travel allowance', `+ ${cur} ${parseFloat(bd.travelCost).toFixed(2)}`]);
+        if (parseFloat(bd.toolCost) > 0) breakdownRows.push(['Tools & Materials', 'Total equipment usage', `+ ${cur} ${parseFloat(bd.toolCost).toFixed(2)}`]);
+
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 15,
+            head: [['Description', 'Notes', 'Amount']],
+            body: breakdownRows,
+            theme: 'grid',
+            headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
+            columnStyles: {
+                2: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+
+        // Summary Total Box
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFillColor(248, 250, 252);
+        doc.rect(130, finalY, 60, 20, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(130, finalY, 60, 20);
+
+        doc.setTextColor(79, 70, 229);
+        doc.setFontSize(10);
+        doc.text('NET PAYABLE', 135, finalY + 8);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${cur} ${bd.totalReceivable}`, 135, finalY + 16);
+
+        // Footer
+        doc.setFontSize(9);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Thank you for your business. Please process payment within 30 days.', 20, 280);
+        doc.text('Automated Invoice generated via Awokta Financial Suite.', 130, 280);
+
+        doc.save(`Invoice_Ticket_${ticket.id}.pdf`);
+    };
+
+    const generateExcelReport = (ticket, bd) => {
+        const cur = ticket.currency || 'USD';
+        const data = [
+            ["Awokta Professional Invoice"],
+            ["Ticket ID", `#${ticket.id}`],
+            ["Customer", ticket.customer_name],
+            ["Engineer", ticket.engineer_name],
+            ["Date Generated", new Date().toLocaleDateString()],
+            ["PO Number", invoicePoNumber || 'N/A'],
+            ["Service Number", invoiceServiceNumber || 'N/A'],
+            [],
+            ["Description", "Details", "Amount"],
+            ["Base Labor", bd.baseBreakdown || 'Standard Shift', parseFloat(bd.baseCost)],
+            ["OT Premium", bd.otBreakdown || '', parseFloat(bd.otPremium)],
+            ["OOH Premium", bd.oohBreakdown || '', parseFloat(bd.oohPremium)],
+            ["Special Day Premium", bd.spBreakdown || '', parseFloat(bd.specialDayPremium)],
+            ["Travel Cost", "", parseFloat(bd.travelCost)],
+            ["Tool Cost", "", parseFloat(bd.toolCost)],
+            [],
+            ["NET RECEIVABLE", "", parseFloat(bd.totalReceivable), cur]
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Invoice Breakdown");
+        XLSX.writeFile(wb, `Invoice_Ticket_${ticket.id}.xlsx`);
+    };
+
+    const handleDownloadInvoice = () => {
+        const bd = calculateTicketCostFrontend(detailTicket, calcTimezone, selectedCurrency);
+        if (selectedFormat === 'pdf') {
+            generateProfessionalPDF(detailTicket, bd);
+        } else {
+            generateExcelReport(detailTicket, bd);
+        }
+        setIsInvoiceOptionsModalOpen(false);
+    };
 
     const handleOpenDetails = (ticket) => {
         setDetailTicket(ticket);
@@ -1289,12 +1429,101 @@ const CustomerReceivablePage = () => {
                             </div>
                             <div className="modal-footer-premium" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px' }}>
                                 <button className="btn-secondary" style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
+                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => handleOpenInvoiceOptions(detailTicket)}>
+                                    <FiFileText style={{ marginRight: '6px' }} /> Create Invoice & Customer Breakdown
+                                </button>
                                 <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)' }} onClick={handleUpdateTicketRates}>Update Costs & Rates</button>
                             </div>
                         </div>
                     </div>
                 );
             })()}
+
+            {/* --- Invoice Options Modal --- */}
+            {isInvoiceOptionsModalOpen && (
+                <div className="modal-overlay-premium" style={{ zIndex: 3000 }}>
+                    <div className="modal-content-premium" style={{ maxWidth: '450px' }}>
+                        <div className="modal-header-premium" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: 'white' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <FiFileText size={20} />
+                                <h3 style={{ margin: 0 }}>Invoice Generation</h3>
+                            </div>
+                            <button className="close-btn-premium" style={{ color: 'white' }} onClick={() => setIsInvoiceOptionsModalOpen(false)}><FiX size={18} /></button>
+                        </div>
+                        
+                        <div className="modal-body-premium" style={{ padding: '24px' }}>
+                            <div className="invoice-option-field" style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>
+                                    <FiHash style={{ marginRight: '6px' }} /> Purchase Order (PO) Number
+                                </label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Enter PO number (if available)..."
+                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', transition: 'all 0.2s' }}
+                                    className="premium-input-sh"
+                                    value={invoicePoNumber}
+                                    onChange={e => setInvoicePoNumber(e.target.value)}
+                                />
+                                <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>Do you have a Purchase Order Number for this ticket?</p>
+                            </div>
+
+                            <div className="invoice-option-field" style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>
+                                    <FiBriefcase style={{ marginRight: '6px' }} /> Service Number
+                                </label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Enter Service number (if available)..."
+                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
+                                    className="premium-input-sh"
+                                    value={invoiceServiceNumber}
+                                    onChange={e => setInvoiceServiceNumber(e.target.value)}
+                                />
+                                <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>Internal reference or unique service identifier.</p>
+                            </div>
+
+                            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', marginBottom: '12px' }}>
+                                    Download Format
+                                </label>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button 
+                                        className={`format-toggle-btn ${selectedFormat === 'pdf' ? 'active' : ''}`} 
+                                        onClick={() => setSelectedFormat('pdf')}
+                                        style={{ 
+                                            flex: 1, padding: '12px', borderRadius: '10px', border: selectedFormat === 'pdf' ? '2px solid #6366f1' : '1px solid #e2e8f0', 
+                                            background: selectedFormat === 'pdf' ? '#eef2ff' : 'white', cursor: 'pointer', transition: 'all 0.2s',
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+                                        }}
+                                    >
+                                        <FiFile size={18} color={selectedFormat === 'pdf' ? '#6366f1' : '#94a3b8'} />
+                                        <span style={{ fontSize: '12px', fontWeight: '700', color: selectedFormat === 'pdf' ? '#6366f1' : '#64748b' }}>PDF Document</span>
+                                    </button>
+                                    <button 
+                                        className={`format-toggle-btn ${selectedFormat === 'excel' ? 'active' : ''}`} 
+                                        onClick={() => setSelectedFormat('excel')}
+                                        style={{ 
+                                            flex: 1, padding: '12px', borderRadius: '10px', border: selectedFormat === 'excel' ? '2px solid #059669' : '1px solid #e2e8f0', 
+                                            background: selectedFormat === 'excel' ? '#ecfdf5' : 'white', cursor: 'pointer', transition: 'all 0.2s',
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+                                        }}
+                                    >
+                                        <FiLayout size={18} color={selectedFormat === 'excel' ? '#059669' : '#94a3b8'} />
+                                        <span style={{ fontSize: '12px', fontWeight: '700', color: selectedFormat === 'excel' ? '#059669' : '#64748b' }}>Excel Spreadsheet</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer-premium" style={{ display: 'flex', gap: '12px', padding: '16px' }}>
+                            <button className="btn-wow-secondary" style={{ flex: 1 }} onClick={() => setIsInvoiceOptionsModalOpen(false)}>Cancel</button>
+                            <button className="btn-generate-premium" style={{ flex: 2 }} onClick={handleDownloadInvoice}>
+                                <FiDownload style={{ marginRight: '6px' }} /> Download Invoice
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

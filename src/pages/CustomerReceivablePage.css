@@ -792,3 +792,56 @@
 .hover-breakdown-tooltip .breakdown-row span {
     font-size: 12px;
 }
+
+/* --- Invoice Generation Modal Styles --- */
+.premium-input-sh {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-input-sh:focus {
+    border-color: var(--crm-primary) !important;
+    box-shadow: 0 0 0 4px var(--crm-primary-soft) !important;
+    transform: translateY(-1px);
+}
+
+.format-toggle-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.format-toggle-btn.active {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
+}
+
+.format-toggle-btn:hover:not(.active) {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+
+.modal-content-premium.invoice-modal {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
+.status-badge.unpaid {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.status-badge.paid {
+    background: #ecfdf5;
+    color: #10b981;
+}
+
+.status-badge.overdue {
+    background: #fffbeb;
+    color: #f59e0b;
+}
