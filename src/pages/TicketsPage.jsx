@@ -1224,6 +1224,24 @@ function TicketsPage() {
 
       setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
 
+      // LEAD SYNC: If this ticket is linked to a lead, update the lead's dates too
+      if (payload.leadId) {
+        try {
+          await fetch(`${API_BASE_URL}/leads/${payload.leadId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              startDate: payload.taskStartDate,
+              endDate: payload.taskEndDate
+            })
+          });
+          console.log("Lead dates synchronized successfully.");
+        } catch (leadSyncErr) {
+          console.error("Failed to sync dates to lead:", leadSyncErr);
+        }
+      }
+
       // OPTIMISTIC UPDATE: Update the local state immediately so list view is fresh
       const normalizedTicket = {
         ...data.ticket,
