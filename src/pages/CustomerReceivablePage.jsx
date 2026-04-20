@@ -6,7 +6,7 @@ import {
     FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload, FiLayout, FiFile
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import './CustomerReceivablePage.css';
 
@@ -496,7 +496,7 @@ const CustomerReceivablePage = () => {
         if (invoiceServiceNumber) doc.text(`Service Number: ${invoiceServiceNumber}`, 160, 67);
 
         // Client & Project Info
-        doc.autoTable({
+        autoTable(doc, {
             startY: 75,
             head: [['Client Details', 'Project Details']],
             body: [[
@@ -519,7 +519,7 @@ const CustomerReceivablePage = () => {
         if (parseFloat(bd.travelCost) > 0) breakdownRows.push(['Travel & Logistics', 'Per day travel allowance', `+ ${cur} ${parseFloat(bd.travelCost).toFixed(2)}`]);
         if (parseFloat(bd.toolCost) > 0) breakdownRows.push(['Tools & Materials', 'Total equipment usage', `+ ${cur} ${parseFloat(bd.toolCost).toFixed(2)}`]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 15,
             head: [['Description', 'Notes', 'Amount']],
             body: breakdownRows,
