@@ -1232,11 +1232,25 @@ function TicketsPage() {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
+              customerId: payload.customerId,
+              taskName: payload.taskName,
+              leadType: payload.leadType,
               taskStartDate: payload.taskStartDate,
-              taskEndDate: payload.taskEndDate
+              taskEndDate: payload.taskEndDate,
+              taskTime: payload.taskTime,
+              scopeOfWork: payload.scopeOfWork,
+              addressLine1: payload.addressLine1,
+              city: payload.city,
+              country: payload.country,
+              zipCode: payload.zipCode,
+              timezone: payload.timezone,
+              currency: payload.currency,
+              hourlyRate: payload.hourlyRate,
+              billingType: payload.billingType,
+              status: payload.status // Keep it in sync
             })
           });
-          console.log("Lead dates synchronized successfully.");
+          console.log("Lead fully synchronized successfully.");
         } catch (leadSyncErr) {
           console.error("Failed to sync dates to lead:", leadSyncErr);
         }
