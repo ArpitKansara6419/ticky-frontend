@@ -1227,7 +1227,7 @@ function TicketsPage() {
       // LEAD SYNC: If this ticket is linked to a lead, update the lead's dates too
       if (payload.leadId) {
         try {
-          await fetch(`${API_BASE_URL}/leads/${payload.leadId}`, {
+          const leadSyncRes = await fetch(`${API_BASE_URL}/leads/${payload.leadId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1235,24 +1235,50 @@ function TicketsPage() {
               customerId: payload.customerId,
               taskName: payload.taskName,
               leadType: payload.leadType,
+              clientTicketNumber: payload.clientTicketNumber || '',
               taskStartDate: payload.taskStartDate,
               taskEndDate: payload.taskEndDate,
               taskTime: payload.taskTime,
               scopeOfWork: payload.scopeOfWork,
+              apartment: payload.apartment || '',
               addressLine1: payload.addressLine1,
+              addressLine2: payload.addressLine2 || '',
               city: payload.city,
               country: payload.country,
               zipCode: payload.zipCode,
               timezone: payload.timezone,
               currency: payload.currency,
               hourlyRate: payload.hourlyRate,
+              halfDayRate: payload.halfDayRate,
+              fullDayRate: payload.fullDayRate,
+              monthlyRate: payload.monthlyRate,
+              toolsRequired: payload.tools || '',
+              agreedRate: payload.agreedRate || 0,
+              travelCostPerDay: payload.travelCostPerDay,
+              toolCost: payload.toolCost || 0,
+              totalCost: payload.totalCost || 0,
+              status: payload.status,
+              isRecurring: 'No',
+              recurringStartDate: null,
+              recurringEndDate: null,
+              totalWeeks: null,
+              recurringDays: '',
               billingType: payload.billingType,
-              status: payload.status // Keep it in sync
+              latitude: payload.latitude,
+              longitude: payload.longitude,
+              followUpDate: null,
+              statusChangeReason: null,
+              followUpHistory: null
             })
           });
+
+          if (!leadSyncRes.ok) {
+            const lErr = await leadSyncRes.json();
+            throw new Error(lErr.message || "Lead sync failed");
+          }
           console.log("Lead fully synchronized successfully.");
         } catch (leadSyncErr) {
-          console.error("Failed to sync dates to lead:", leadSyncErr);
+          console.error("Failed to sync dates to lead:", leadSyncErr.message);
         }
       }
 
