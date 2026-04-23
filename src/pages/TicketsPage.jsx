@@ -2072,9 +2072,16 @@ function TicketsPage() {
           >
             ← Back
           </button>
-          <div>
-            <h1 className="tickets-title">{editingTicketId ? 'Edit Ticket' : 'Create Ticket'}</h1>
-            <p className="tickets-subtitle">{editingTicketId ? 'Update the details of the ticket.' : 'Generate a support ticket from a lead.'}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.3)' }}>{editingTicketId ? '⚒️' : '🆕'}</div>
+            <div>
+              <h1 className="tickets-title" style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.02em' }}>
+                {editingTicketId ? 'Edit Ticket' : 'Create Ticket'}
+              </h1>
+              <p className="tickets-subtitle" style={{ margin: '2px 0 0 0', color: '#64748b', fontSize: '0.95rem', fontWeight: '500' }}>
+                {editingTicketId ? `Refining details for #AIM-T-${editingTicketId}` : 'Initiate a new support session'}
+              </p>
+            </div>
           </div>
         </header>
 
@@ -2593,26 +2600,18 @@ function TicketsPage() {
               // Multi-Day Task
               return (
                 <section className="tickets-card">
-                  <h2 className="tickets-section-title">
-                    📅 Daily Shift Logs
-                    {billingType.includes('Monthly') &&
-                      <span style={{ marginLeft: '8px', fontSize: '11px', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', color: '#fff', padding: '2px 10px', borderRadius: '30px', fontWeight: '700', verticalAlign: 'middle' }}>Monthly Billing</span>
-                    }
-                  </h2>
-                  {billingType.includes('Monthly') ? (
-                    <div style={{ marginBottom: '14px', padding: '10px 14px', background: 'rgba(99,102,241,0.07)', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.18)', fontSize: '12px', color: '#4f46e5', fontWeight: '600', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                      <span>📊</span>
-                      <span>
-                        <strong>Per Day Rate</strong> = Monthly Rate ({currency} {monthlyRate || '0'}) ÷ Working Days in Month
-                        &nbsp;|&nbsp;
-                        Working days calculated automatically (weekdays only, no holidays)
-                      </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📅</span>
+                        Daily Shift Logs
+                        {billingType.includes('Monthly') && (
+                          <span style={{ fontSize: '10px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(99, 102, 241, 0.2)', fontWeight: '700' }}>MONTHLY MODE</span>
+                        )}
+                      </h2>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Manage engineer assignments and shift timings per day</p>
                     </div>
-                  ) : (
-                    <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '12px', color: '#6366f1' }}>
-                      Assign different engineers or set individual times per day.
-                    </p>
-                  )}
+                  </div>
 
                   <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                     <table className="tickets-table" style={{ fontSize: '12px' }}>
@@ -2786,15 +2785,17 @@ function TicketsPage() {
                                                   <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block' }}>
                                                     <span style={{ fontSize: '14px', cursor: 'help', color: '#6366f1' }}>ℹ️</span>
                                                     <div className="tooltip-text" style={{
-                                                      visibility: 'hidden', width: '200px', backgroundColor: '#1e293b', color: '#fff', textAlign: 'left',
-                                                      borderRadius: '8px', padding: '10px', position: 'absolute', zIndex: 9999, bottom: '125%', left: '50%',
-                                                      marginLeft: '-100px', opacity: 0, transition: 'opacity 0.3s', fontSize: '11px', lineHeight: '1.5',
-                                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.3)', pointerEvents: 'none', whiteSpace: 'pre-line'
+                                                      visibility: 'hidden', width: '220px', backgroundColor: '#1e293b', color: '#fff', textAlign: 'left',
+                                                      borderRadius: '12px', padding: '14px', position: 'absolute', zIndex: 9999, top: '-20px', right: '35px',
+                                                      opacity: 0, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', fontSize: '11px', lineHeight: '1.6',
+                                                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2)', pointerEvents: 'none', whiteSpace: 'pre-line',
+                                                      border: '1px solid rgba(255,255,255,0.1)'
                                                     }}>
-                                                      {tooltipContent}
+                                                      <div style={{ fontWeight: '800', color: '#818cf8', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>Rate Card: {selectedEng.name}</div>
+                                                      {tooltipContent.split('\n').slice(1).join('\n')}
                                                       <div style={{
-                                                        position: 'absolute', top: '100%', left: '50%', marginLeft: '-5px',
-                                                        borderWidth: '5px', borderStyle: 'solid', borderColor: '#1e293b transparent transparent transparent'
+                                                        position: 'absolute', top: '24px', left: '100%',
+                                                        borderWidth: '6px', borderStyle: 'solid', borderColor: 'transparent transparent transparent #1e293b'
                                                       }}></div>
                                                     </div>
                                                   </div>
@@ -3718,11 +3719,14 @@ function TicketsPage() {
               borderBottom: '1px solid #f1f5f9',
               background: '#fff'
             }}>
-              <div>
-                <h2 className="ticket-modal-title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#1e293b' }}>
-                  Ticket Details <span style={{ color: '#6366f1', marginLeft: '8px' }}>#AIM-T-{selectedTicket.id}</span>
-                </h2>
-                <p className="ticket-modal-subtitle" style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>{selectedTicket.taskName}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.3)' }}>🎟️</div>
+                <div>
+                  <h2 className="ticket-modal-title" style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.02em' }}>
+                    Ticket <span style={{ color: '#6366f1' }}>#AIM-T-{selectedTicket.id}</span>
+                  </h2>
+                  <p className="ticket-modal-subtitle" style={{ margin: '2px 0 0 0', color: '#64748b', fontSize: '0.95rem', fontWeight: '500' }}>{selectedTicket.taskName}</p>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -3976,8 +3980,30 @@ function TicketsPage() {
                           </div>
                         )}
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                          <label style={{ fontSize: '15px', fontWeight: '800' }}>📅 Daily Shift Logs</label>
+                        {/* Premium Summary Cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                          <div style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', padding: '16px', borderRadius: '16px', color: 'white', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)' }}>
+                            <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>Revenue (Receivable)</div>
+                            <div style={{ fontSize: '24px', fontWeight: '900' }}>{cur} {totalR.toFixed(2)}</div>
+                          </div>
+                          <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '16px', borderRadius: '16px', color: 'white', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' }}>
+                            <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>Engineer Payout</div>
+                            <div style={{ fontSize: '24px', fontWeight: '900' }}>{selectedTicket.eng_currency || cur} {totalP.toFixed(2)}</div>
+                          </div>
+                          <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>Estimated Margin</div>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: (totalR - totalP) >= 0 ? '#059669' : '#ef4444' }}>
+                              {cur} {(totalR - totalP).toFixed(2)}
+                              <span style={{ fontSize: '14px', marginLeft: '8px', opacity: 0.6 }}>({totalR > 0 ? (((totalR - totalP) / totalR) * 100).toFixed(0) : 0}%)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>📅</span>
+                            Shift History & Logs
+                          </h3>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <input type="date" value={newExtendEndDate} onChange={e => setNewExtendEndDate(e.target.value)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
                             <button className="btn-wow-secondary" onClick={handleExtendJob} disabled={isExtending} style={{ padding: '4px 12px', fontSize: '11px' }}>{isExtending ? 'Wait...' : '+ Add Day'}</button>
@@ -4064,14 +4090,42 @@ function TicketsPage() {
                                               <div style={{ fontSize: '10px', color: '#94a3b8' }}>Weekday</div>
                                             </td>
                                             <td style={{ padding: '8px 10px', minWidth: '180px' }}>
-                                              <select style={{ width: '100%', padding: '3px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '3px', fontWeight: isNoEngRow ? '800' : '500', color: isNoEngRow ? '#ef4444' : 'inherit' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
-                                                <optgroup label="Core Team">
-                                                  {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                                </optgroup>
-                                                <optgroup label="Special Cases">
-                                                  <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
-                                                </optgroup>
-                                              </select>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <select style={{ width: '100%', padding: '3px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', fontWeight: isNoEngRow ? '800' : '500', color: isNoEngRow ? '#ef4444' : 'inherit' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
+                                                  <optgroup label="Core Team">
+                                                    {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                                  </optgroup>
+                                                  <optgroup label="Special Cases">
+                                                    <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
+                                                  </optgroup>
+                                                </select>
+                                                {(() => {
+                                                  const engId = L.engineer_id || selectedTicket.engineerId;
+                                                  const selectedEng = engineers.find(e => Number(e.id) === Number(engId));
+                                                  if (!selectedEng) return null;
+                                                  const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${cur} ${selectedEng.hourly_rate || 0}\n• Half Day: ${cur} ${selectedEng.half_day_rate || 0}\n• Full Day: ${cur} ${selectedEng.full_day_rate || 0}\n• Monthly: ${cur} ${selectedEng.monthly_rate || 0}`;
+
+                                                  return (
+                                                    <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block' }}>
+                                                      <span style={{ fontSize: '13px', cursor: 'help', color: '#6366f1' }}>ℹ️</span>
+                                                      <div className="tooltip-text" style={{
+                                                        visibility: 'hidden', width: '220px', backgroundColor: '#1e293b', color: '#fff', textAlign: 'left',
+                                                        borderRadius: '12px', padding: '14px', position: 'absolute', zIndex: 9999, top: '-20px', right: '35px',
+                                                        opacity: 0, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', fontSize: '11px', lineHeight: '1.6',
+                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2)', pointerEvents: 'none', whiteSpace: 'pre-line',
+                                                        border: '1px solid rgba(255,255,255,0.1)'
+                                                      }}>
+                                                        <div style={{ fontWeight: '800', color: '#818cf8', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>Rate Card: {selectedEng.name}</div>
+                                                        {tooltipContent.split('\n').slice(1).join('\n')}
+                                                        <div style={{
+                                                          position: 'absolute', top: '24px', left: '100%',
+                                                          borderWidth: '6px', borderStyle: 'solid', borderColor: 'transparent transparent transparent #1e293b'
+                                                        }}></div>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })()}
+                                              </div>
                                                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
                                                   <input 
                                                     type="time" 
