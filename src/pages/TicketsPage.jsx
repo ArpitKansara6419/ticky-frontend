@@ -1487,70 +1487,120 @@ function TicketsPage() {
     const ticketId = selectedTicket?.id || editingTicketId;
     if (!ticketId) return;
 
-    // 1. Optimistic Local Update (prevents UI flicker and focus loss)
-    const updateMap = prev => (prev || []).map(l => l.id === logId ? { ...l, ...data } : l);
-    setTimeLogs(updateMap);
-    
+    // ── NORMALISE PATCH ─────────────────────────────────────────────────────
+    // The DB stores snake_case; the UI sends camelCase. We must mirror BOTH
+    // directions so that every renderer (Edit form, View modal) updates instantly.
+    const patch = { ...data };
+    if ('engineerId'    in data) patch.engineer_id      = Number(data.engineerId);
+    if ('startTime'     in data) patch.start_time       = data.startTime;
+    if ('endTime'       in data) patch.end_time         = data.endTime;
+    if ('breakTimeMins' in data) patch.break_time_mins  = Number(data.breakTimeMins);
+    if ('taskDate'      in data) patch.task_date        = data.taskDate;
+
+    // ── OPTIMISTIC LOCAL UPDATE ──────────────────────────────────────────────
+    // Apply normalised patch immediately so the UI reflects the change with
+    // no flicker and no focus loss.
+    const applyPatch = prev =>
+      (prev || []).map(l => l.id === logId ? { ...l, ...patch } : l);
+
+    setTimeLogs(applyPatch);
+
+    // Mirror into selectedTicket so View Details modal stays in sync
     if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
       setSelectedTicket(prev => ({
         ...prev,
-        time_logs: updateMap(prev.time_logs || [])
+        time_logs: applyPatch(prev.time_logs || [])
       }));
     }
 
-    // 2. Logic for Create vs Edit mode
+    // ── CREATE MODE — no DB call ─────────────────────────────────────────────
     if (isFillingForm && !editingTicketId) {
-      // CREATE MODE: Just local update if logId is missing (date match)
       if (!logId) {
         setTimeLogs(prev => {
           const next = [...prev];
-          const dMatch = data.task_date || data.taskDate;
+          const dMatch = patch.task_date;
           if (!dMatch) return prev;
-          const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dMatch.split('T')[0]);
-          if (lgIdx > -1) next[lgIdx] = { ...next[lgIdx], ...data };
-          else next.push({ ...data });
+          const idx = next.findIndex(l =>
+            (l.task_date || '').split('T')[0] === dMatch.split('T')[0]
+          );
+          if (idx > -1) next[idx] = { ...next[idx], ...patch };
+          else next.push({ ...patch });
           return next;
         });
       }
-      return; 
+      return;
     }
 
-    // 3. PERSISTENT UPDATE: If we have an existing log, save to DB
+    // ── EDIT MODE — persist to server ────────────────────────────────────────
     if (!logId) return;
 
     setIsUpdatingLog(logId);
     try {
-      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data)
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(data)   // send original camelCase to API
+        }
+      );
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.message || 'Server update failed');
       }
 
-      // Auto-hold check (Silent)
+      // ── RE-FETCH & NORMALISE ─────────────────────────────────────────────
+      // After a successful save, pull fresh logs from the server so that
+      // engineer rates, times, etc. are perfectly up-to-date in BOTH the
+      // Edit form AND the View Details modal.
+      const refreshRes = await fetch(
+        `${API_BASE_URL}/tickets/${ticketId}/time-logs`,
+        { credentials: 'include' }
+      );
+      if (refreshRes.ok) {
+        const raw = await refreshRes.json();
+        const freshLogs = Array.isArray(raw)
+          ? raw
+          : (raw.timeLogs || raw.logs || []);
+
+        const normalized = freshLogs.map(l => ({
+          ...l,
+          // Guarantee both snake_case and camelCase exist for every renderer
+          engineer_id:     l.engineer_id     != null ? Number(l.engineer_id)     : (l.engineerId != null ? Number(l.engineerId) : null),
+          start_time:      l.start_time      ?? l.startTime      ?? null,
+          end_time:        l.end_time        ?? l.endTime        ?? null,
+          break_time_mins: l.break_time_mins ?? l.breakTimeMins  ?? l.breakTime  ?? 0,
+          task_date:       l.task_date       ?? l.taskDate       ?? null,
+        }));
+
+        setTimeLogs(normalized);
+
+        // Sync into View Details modal if it is open
+        if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
+          setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
+        }
+      }
+
+      // Auto-hold: silently flag ticket if shift > 8 h
       if (data.startTime && data.endTime) {
-        const s = new Date(data.startTime), e = new Date(data.endTime);
-        const dur = (e - s) / 3600000 - ((data.breakTimeMins || 0) / 60);
-        if (dur > 8) {
-           fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
+        const hrs =
+          (new Date(data.endTime) - new Date(data.startTime)) / 3_600_000
+          - ((data.breakTimeMins || 0) / 60);
+        if (hrs > 8) {
+          fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ status: 'On Hold' })
           });
-          // We don't alert here to avoid focus disruption during continuous typing
         }
       }
 
-      // Background refresh only, NO full modal re-fetch
-      loadTickets();
+      loadTickets(); // background list refresh (non-blocking)
     } catch (e) {
-      console.error("Log sync error:", e);
+      console.error('Log sync error:', e);
     } finally {
       setIsUpdatingLog(null);
     }
@@ -2751,7 +2801,7 @@ function TicketsPage() {
                                   const dur = calculateDuration(lStart, lEnd, actualBreak);
                                   const dayMonthlyDivisor = getWorkingDaysInMonth(dStr, country);
                                   // AUTOMATIC SUBSTITUTE ENGINEER RATES
-                                  const curEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
+                                  const curEngId = Number(existingLog.engineer_id ?? existingLog.engineerId ?? engineerId);
                                   const isNoEng = Number(curEngId) === 0;
                                   let effectiveRates = {
                                     hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, ar: agreedRate, cf: cancellationFee
@@ -2759,8 +2809,8 @@ function TicketsPage() {
 
                                   if (isNoEng) {
                                     effectiveRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0 };
-                                  } else if (curEngId && String(curEngId) !== String(engineerId)) {
-                                    const subEng = engineers.find(en => String(en.id) === String(curEngId));
+                                  } else if (curEngId && curEngId !== Number(engineerId)) {
+                                    const subEng = engineers.find(en => Number(en.id) === curEngId);
                                     if (subEng) {
                                       effectiveRates = {
                                         hr: subEng.hourly_rate || 0,
@@ -2913,7 +2963,19 @@ function TicketsPage() {
                                             }}
                                           />
                                           {editingTicketId && existingLog.id && (
-                                            <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>✓ Auto-saved</span>
+                                            <span style={{
+                                              fontSize: '10px',
+                                              fontWeight: '700',
+                                              padding: '2px 8px',
+                                              borderRadius: '20px',
+                                              color: isUpdatingLog === existingLog.id ? '#f59e0b' : '#10b981',
+                                              background: isUpdatingLog === existingLog.id ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
+                                              border: `1px solid ${isUpdatingLog === existingLog.id ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                                              transition: 'all 0.3s ease',
+                                              whiteSpace: 'nowrap'
+                                            }}>
+                                              {isUpdatingLog === existingLog.id ? '⏳ Saving…' : '✓ Saved'}
+                                            </span>
                                           )}
                                         </div>
                                       </td>
@@ -2941,9 +3003,9 @@ function TicketsPage() {
                                            };
                                            if (Number(lEngId) === 0) {
                                              pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
-                                           } else if (lEngId && String(lEngId) !== String(engineerId)) {
-                                             const eng = engineers.find(en => String(en.id) === String(lEngId));
-                                             if (eng) pRates = { hr: eng.hourly_rate || 0, hd: eng.half_day_rate || 0, fd: eng.full_day_rate || 0, mr: eng.monthly_rate || 0, bt: eng.billing_type || 'Hourly' };
+                                           } else if (lEngId && Number(lEngId) !== Number(engineerId)) {
+                                             const eng = engineers.find(en => Number(en.id) === lEngId);
+                                             if (eng) pRates = { hr: eng.hourly_rate || 0, hd: eng.half_day_rate || 0, fd: eng.full_day_rate || 0, mr: eng.monthly_rate || 0, bt: eng.billing_type || billingType };
                                            }
                                            const engCalc = calculateTicketTotal({
                                              startTime: `${dStr}T${lStart}:00.000Z`,
@@ -3998,7 +4060,9 @@ function TicketsPage() {
                         bt: selectedTicket.engBillingType || 'Hourly'
                       };
 
-                      const lEngId = existingLog.engineer_id || existingLog.engineerId || selectedTicket.engineerId;
+                      const lEngId = Number(
+                        existingLog.engineer_id ?? existingLog.engineerId ?? selectedTicket.engineerId
+                      );
                       if (Number(lEngId) === 0) {
                         pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
                       } else if (lEngId && Number(lEngId) !== Number(selectedTicket.engineerId)) {
@@ -4161,7 +4225,8 @@ function TicketsPage() {
                                       {/* Month Rows (visible when expanded) */}
                                       {!isCollapsed && monthLogs.map((L, mIdx) => {
                                         const i = L._origIdx;
-                                        const isNoEngRow = Number(L.engineer_id || selectedTicket.engineerId) === 0;
+                                        const viewEngId = Number(L.engineer_id ?? L.engineerId ?? selectedTicket.engineerId);
+                                        const isNoEngRow = viewEngId === 0;
                                         return (
                                           <tr key={L.id || i} className={isNoEngRow ? 'row-no-engineer' : ''} style={{ borderBottom: '1px solid #f1f5f9', background: mIdx % 2 === 0 ? '#fff' : '#fafafa', position: 'relative' }}>
                                             <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
@@ -4172,7 +4237,11 @@ function TicketsPage() {
                                             </td>
                                             <td style={{ padding: '8px 10px', minWidth: '180px' }}>
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <select style={{ width: '100%', padding: '3px', fontSize: '11px', borderRadius: '4px', border: '1px solid #e2e8f0', fontWeight: isNoEngRow ? '800' : '500', color: isNoEngRow ? '#ef4444' : 'inherit' }} value={L.engineer_id || selectedTicket.engineerId} onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}>
+                                                <select
+                                                  style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '6px', border: '1px solid #e2e8f0', fontWeight: isNoEngRow ? '800' : '500', color: isNoEngRow ? '#ef4444' : 'inherit', background: 'white' }}
+                                                  value={viewEngId}
+                                                  onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}
+                                                >
                                                   <optgroup label="Core Team">
                                                     {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
                                                   </optgroup>
@@ -4181,36 +4250,27 @@ function TicketsPage() {
                                                   </optgroup>
                                                 </select>
 
-                                                {/* Bulk Assign Feature */}
+                                                {/* Bulk Assign: set this engineer for ALL days on this ticket */}
                                                 <button
                                                   type="button"
-                                                  title="Apply this engineer to all other days"
-                                                  style={{ padding: '4px', background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                                  title={`Assign ${engineers.find(e => Number(e.id) === viewEngId)?.name || 'this engineer'} to all days`}
+                                                  style={{ padding: '4px 6px', background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap', fontWeight: '700' }}
                                                   onClick={() => {
-                                                    const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
-                                                    const val = Number(curEngId);
-                                                    setTimeLogs(prev => {
-                                                      const next = [...prev];
-                                                      daysInRange.forEach(d => {
-                                                        const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
-                                                        if (dw === 0 || dw === 6) return; // Skip weekends
-                                                        const idx = next.findIndex(l => (l.task_date || '').split('T')[0] === d);
-                                                        if (idx > -1) next[idx].engineer_id = val;
-                                                        else next.push({ task_date: d, engineer_id: val, start_time: `${d}T08:00:00.000Z`, end_time: `${d}T16:00:00.000Z`, break_time_mins: 0 });
-                                                      });
-                                                      return next;
-                                                    });
-                                                    // Sync existing logs to DB
+                                                    const tStart = selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '';
+                                                    const tEnd   = selectedTicket.taskEndDate   ? String(selectedTicket.taskEndDate).split('T')[0]   : '';
+                                                    const allDays = getDatesInRange(tStart, tEnd);
+                                                    const newEngId = viewEngId;
+                                                    // Update all existing logs (those with an id) for this ticket
                                                     (timeLogs || []).forEach(l => {
-                                                      if (l.id) handleUpdateLog(l.id, { engineerId: val });
+                                                      if (l.id) handleUpdateLog(l.id, { engineerId: newEngId });
                                                     });
                                                   }}
                                                 >
-                                                  🚀
+                                                  🚀 All Days
                                                 </button>
+                                                {/* Rate Card Tooltip */}
                                                 {(() => {
-                                                  const engId = L.engineer_id || selectedTicket.engineerId;
-                                                  const selectedEng = engineers.find(e => Number(e.id) === Number(engId));
+                                                  const selectedEng = engineers.find(e => Number(e.id) === viewEngId);
                                                   if (!selectedEng) return null;
                                                   const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${cur} ${selectedEng.hourly_rate || 0}\n• Half Day: ${cur} ${selectedEng.half_day_rate || 0}\n• Full Day: ${cur} ${selectedEng.full_day_rate || 0}\n• Monthly: ${cur} ${selectedEng.monthly_rate || 0}`;
 
@@ -4234,26 +4294,30 @@ function TicketsPage() {
                                                     </div>
                                                   );
                                                 })()}
-                                              </div>
-                                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                                                  <input 
-                                                    type="time" 
-                                                    value={safeExtractTime(L.start_time)} 
-                                                    style={{ fontSize: '10px', padding: '2px', width: '75px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
+                                                </div>
+                                               <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '4px' }}>
+                                                  <input
+                                                    type="time"
+                                                    value={safeExtractTime(L.start_time)}
+                                                    style={{ fontSize: '10px', padding: '3px 4px', width: '76px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
                                                     onChange={(e) => handleUpdateLog(L.id, { startTime: `${L.logDateStr}T${e.target.value}:00.000Z` })}
                                                   />
-                                                  <span style={{ fontSize: '9px', color: '#94a3b8' }}>→</span>
-                                                  <input 
-                                                    type="time" 
-                                                    value={safeExtractTime(L.end_time)} 
-                                                    style={{ fontSize: '10px', padding: '2px', width: '75px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
+                                                  <span style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '700' }}>→</span>
+                                                  <input
+                                                    type="time"
+                                                    value={safeExtractTime(L.end_time)}
+                                                    style={{ fontSize: '10px', padding: '3px 4px', width: '76px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
                                                     onChange={(e) => handleUpdateLog(L.id, { endTime: `${L.logDateStr}T${e.target.value}:00.000Z` })}
                                                   />
-                                                  {isUpdatingLog === L.id ? (
-                                                    <span style={{ fontSize: '10px', color: '#6366f1' }}>...</span>
-                                                  ) : (
-                                                    <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '800' }}>✓</span>
-                                                  )}
+                                                  <span style={{
+                                                    fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '20px', whiteSpace: 'nowrap',
+                                                    color: isUpdatingLog === L.id ? '#f59e0b' : '#10b981',
+                                                    background: isUpdatingLog === L.id ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
+                                                    border: `1px solid ${isUpdatingLog === L.id ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                                                    transition: 'all 0.3s ease'
+                                                  }}>
+                                                    {isUpdatingLog === L.id ? '⏳ Saving…' : '✓ Saved'}
+                                                  </span>
                                                 </div>
                                             </td>
                                             <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '700', color: L.dur > 8 ? '#ef4444' : '#6366f1', whiteSpace: 'nowrap' }}>
