@@ -2613,6 +2613,62 @@ function TicketsPage() {
                     </div>
                   </div>
 
+                  {/* Edit Mode Live Summary Banner */}
+                  {editingTicketId && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                      <div style={{ padding: '12px 16px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '12px' }}>
+                        <div style={{ fontSize: '10px', color: '#6366f1', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Est. Revenue</div>
+                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>
+                          {currency} {(() => {
+                            let total = 0;
+                            const days = getDatesInRange(taskStartDate, taskEndDate);
+                            days.forEach(d => {
+                              const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+                              if (dw === 0 || dw === 6) return;
+                              const lg = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d) || {};
+                              const calc = calculateTicketTotal({
+                                startTime: lg.start_time || `${d}T08:00:00Z`, endTime: lg.end_time || `${d}T16:00:00Z`, breakTime: Number(lg.break_time_mins || 0),
+                                hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCost,
+                                billingType, timezone, calcTimezone, monthlyDivisor: getWorkingDaysInMonth(d, country), country
+                              });
+                              total += parseFloat(calc?.grandTotal || 0);
+                            });
+                            return total.toFixed(2);
+                          })()}
+                        </div>
+                      </div>
+                      <div style={{ padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+                        <div style={{ fontSize: '10px', color: '#16a34a', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Est. Payout</div>
+                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>
+                          {currency} {(() => {
+                            let total = 0;
+                            const days = getDatesInRange(taskStartDate, taskEndDate);
+                            days.forEach(d => {
+                              const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+                              if (dw === 0 || dw === 6) return;
+                              const lg = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d) || {};
+                              const lEngId = lg.engineer_id || lg.engineerId || engineerId;
+                              let pRates = { hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, bt: billingType };
+                              if (Number(lEngId) === 0) pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
+                              else if (lEngId && String(lEngId) !== String(engineerId)) {
+                                const eng = engineers.find(en => String(en.id) === String(lEngId));
+                                if (eng) pRates = { hr: eng.hourly_rate || 0, hd: eng.half_day_rate || 0, fd: eng.full_day_rate || 0, mr: eng.monthly_rate || 0, bt: eng.billing_type || 'Hourly' };
+                              }
+                              const calc = calculateTicketTotal({
+                                startTime: lg.start_time || `${d}T08:00:00Z`, endTime: lg.end_time || `${d}T16:00:00Z`, breakTime: Number(lg.break_time_mins || 0),
+                                hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, monthlyRate: pRates.mr,
+                                billingType: pRates.bt, timezone, calcTimezone, travelCostPerDay: 0, toolCost: 0,
+                                monthlyDivisor: getWorkingDaysInMonth(d, country), country
+                              });
+                              total += parseFloat(calc?.grandTotal || 0);
+                            });
+                            return total.toFixed(2);
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                     <table className="tickets-table" style={{ fontSize: '12px' }}>
                       <thead>
@@ -2624,7 +2680,8 @@ function TicketsPage() {
                           {billingType.includes('Monthly') && <th style={{ padding: '10px', textAlign: 'right' }}>Per Day Rate</th>}
                           <th style={{ padding: '10px', textAlign: 'right' }}>Travel</th>
                           <th style={{ padding: '10px', textAlign: 'right' }}>Tools</th>
-                          <th style={{ padding: '10px', textAlign: 'right' }}>Day Total</th>
+                          <th style={{ padding: '10px', textAlign: 'right', color: '#6366f1' }}>Day Total (Cust)</th>
+                          <th style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>Payout (Eng)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2873,8 +2930,32 @@ function TicketsPage() {
                                       <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#7c3aed', fontWeight: '600' }}>
                                         {dayCostBreakdown ? `${currency} ${dayCostBreakdown.tools}` : '--'}
                                       </td>
-                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669' }}>
+                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#1e293b' }}>
                                         {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
+                                      </td>
+                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669', background: 'rgba(5, 150, 105, 0.04)' }}>
+                                        {currency} {(() => {
+                                           const lEngId = curEngId;
+                                           let pRates = {
+                                             hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, bt: billingType
+                                           };
+                                           if (Number(lEngId) === 0) {
+                                             pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
+                                           } else if (lEngId && String(lEngId) !== String(engineerId)) {
+                                             const eng = engineers.find(en => String(en.id) === String(lEngId));
+                                             if (eng) pRates = { hr: eng.hourly_rate || 0, hd: eng.half_day_rate || 0, fd: eng.full_day_rate || 0, mr: eng.monthly_rate || 0, bt: eng.billing_type || 'Hourly' };
+                                           }
+                                           const engCalc = calculateTicketTotal({
+                                             startTime: `${dStr}T${lStart}:00.000Z`,
+                                             endTime: `${dStr}T${lEnd}:00.000Z`,
+                                             breakTime: actualBreak,
+                                             hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, monthlyRate: pRates.mr,
+                                             billingType: pRates.bt, timezone, calcTimezone,
+                                             travelCostPerDay: 0, toolCost: 0, // Payout usually excludes client-charged travel/tools unless specified
+                                             monthlyDivisor: dayMonthlyDivisor, country
+                                           });
+                                           return engCalc ? engCalc.grandTotal : '0.00';
+                                        })()}
                                       </td>
                                     </tr>
                                   );
@@ -4099,6 +4180,34 @@ function TicketsPage() {
                                                     <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
                                                   </optgroup>
                                                 </select>
+
+                                                {/* Bulk Assign Feature */}
+                                                <button
+                                                  type="button"
+                                                  title="Apply this engineer to all other days"
+                                                  style={{ padding: '4px', background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                                  onClick={() => {
+                                                    const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
+                                                    const val = Number(curEngId);
+                                                    setTimeLogs(prev => {
+                                                      const next = [...prev];
+                                                      daysInRange.forEach(d => {
+                                                        const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+                                                        if (dw === 0 || dw === 6) return; // Skip weekends
+                                                        const idx = next.findIndex(l => (l.task_date || '').split('T')[0] === d);
+                                                        if (idx > -1) next[idx].engineer_id = val;
+                                                        else next.push({ task_date: d, engineer_id: val, start_time: `${d}T08:00:00.000Z`, end_time: `${d}T16:00:00.000Z`, break_time_mins: 0 });
+                                                      });
+                                                      return next;
+                                                    });
+                                                    // Sync existing logs to DB
+                                                    (timeLogs || []).forEach(l => {
+                                                      if (l.id) handleUpdateLog(l.id, { engineerId: val });
+                                                    });
+                                                  }}
+                                                >
+                                                  🚀
+                                                </button>
                                                 {(() => {
                                                   const engId = L.engineer_id || selectedTicket.engineerId;
                                                   const selectedEng = engineers.find(e => Number(e.id) === Number(engId));
