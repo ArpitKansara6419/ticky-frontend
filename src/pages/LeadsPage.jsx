@@ -402,7 +402,7 @@ function LeadsPage() {
       const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
-      
+
       const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
@@ -426,7 +426,7 @@ function LeadsPage() {
       } else if (bil.includes('Monthly')) {
         const fullRate = parseFloat(monthlyRate) || 0;
         const monthlyDivisor = getWorkingDaysInMonth(startTime.split(' ')[0], data.country || 'India');
-        base = fullRate / monthlyDivisor; 
+        base = fullRate / monthlyDivisor;
         if (isSpecialDay) {
           special = hrs * (hr * 2.0);
         } else {
@@ -640,10 +640,10 @@ function LeadsPage() {
           halfDayRate: halfDayRate !== '' ? Number(halfDayRate) : null,
           fullDayRate: fullDayRate !== '' ? Number(fullDayRate) : null,
           monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : null,
-          toolsRequired, 
+          toolsRequired,
           agreedRate: agreedRate !== '' && agreedRate !== null ? Number(agreedRate) : 0,
           travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
-          toolCost: (toolCost !== '' && toolCost !== null) ? Number(toolCost) : 0, 
+          toolCost: (toolCost !== '' && toolCost !== null) ? Number(toolCost) : 0,
           billingType,
           status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(','),
@@ -918,8 +918,8 @@ function LeadsPage() {
               <label className="leads-field" style={{ gridColumn: 'span 3' }}>
                 <span>Billing Type *</span>
                 <select value={billingType} onChange={(e) => {
-                    setBillingType(e.target.value);
-                  }} required>
+                  setBillingType(e.target.value);
+                }} required>
                   <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
                   <option value="Half Day + Hourly">2) Half Day + Hourly</option>
                   <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
@@ -996,8 +996,8 @@ function LeadsPage() {
             if (!res.grandTotal || res.grandTotal == 0) return null;
 
             return (
-              <div className="preview-box-premium" style={{ 
-                marginBottom: '24px', 
+              <div className="preview-box-premium" style={{
+                marginBottom: '24px',
                 background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
                 border: '1px solid #10b981',
                 borderRadius: '16px',
@@ -1011,10 +1011,10 @@ function LeadsPage() {
                     </div>
                   </div>
                 </div>
-                
-                <div style={{ 
-                  marginTop: '12px', 
-                  paddingTop: '16px', 
+
+                <div style={{
+                  marginTop: '12px',
+                  paddingTop: '16px',
                   borderTop: '1.5px dashed rgba(16, 185, 129, 0.2)',
                   display: 'grid',
                   gridTemplateColumns: 'repeat(4, 1fr)',
@@ -1313,9 +1313,9 @@ function LeadsPage() {
             <header className="lead-modal-header">
               <h2>Update Lead Status</h2>
               <p>Change the current progress of: <strong>{statusChangeData.leadName}</strong></p>
-              <button 
-                type="button" 
-                className="lead-modal-close-btn" 
+              <button
+                type="button"
+                className="lead-modal-close-btn"
                 onClick={() => setIsStatusModalOpen(false)}
                 title="Close"
               >
@@ -1394,9 +1394,9 @@ function LeadsPage() {
                   <div className="lead-badge-id">#{String(selectedLead.id).padStart(3, '0')}</div>
                 </div>
                 <p className="lead-modal-subtitle">{selectedLead.taskName}</p>
-                <button 
-                  type="button" 
-                  className="lead-modal-close-btn" 
+                <button
+                  type="button"
+                  className="lead-modal-close-btn"
                   onClick={() => setIsLeadModalOpen(false)}
                   title="Close"
                 >
@@ -1419,7 +1419,7 @@ function LeadsPage() {
                       {(() => {
                         const s = selectedLead.taskStartDate?.split('T')[0];
                         const e = selectedLead.taskEndDate?.split('T')[0];
-                        
+
                         const formatDate = (ds) => {
                           if (!ds) return '';
                           const d = new Date(ds);
