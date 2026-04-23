@@ -2628,7 +2628,7 @@ function TicketsPage() {
                               const lg = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d) || {};
                               const calc = calculateTicketTotal({
                                 startTime: lg.start_time || `${d}T08:00:00Z`, endTime: lg.end_time || `${d}T16:00:00Z`, breakTime: Number(lg.break_time_mins || 0),
-                                hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCost,
+                                hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCost: toolCostInput,
                                 billingType, timezone, calcTimezone, monthlyDivisor: getWorkingDaysInMonth(d, country), country
                               });
                               total += parseFloat(calc?.grandTotal || 0);
