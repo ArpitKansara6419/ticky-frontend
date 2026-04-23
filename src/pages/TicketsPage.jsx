@@ -1487,22 +1487,36 @@ function TicketsPage() {
     const ticketId = selectedTicket?.id || editingTicketId;
     if (!ticketId) return;
 
-    // IF EDITING MAIN FORM: Update local state ONLY. Do not call API.
-    if (isFillingForm) {
-      if (logId) {
-        setTimeLogs(prev => prev.map(l => l.id === logId ? { ...l, ...data } : l));
-      } else {
-        // Handle potential new log if logId is missing (though table usually has a match)
+    // 1. Optimistic Local Update (prevents UI flicker and focus loss)
+    const updateMap = prev => (prev || []).map(l => l.id === logId ? { ...l, ...data } : l);
+    setTimeLogs(updateMap);
+    
+    if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
+      setSelectedTicket(prev => ({
+        ...prev,
+        time_logs: updateMap(prev.time_logs || [])
+      }));
+    }
+
+    // 2. Logic for Create vs Edit mode
+    if (isFillingForm && !editingTicketId) {
+      // CREATE MODE: Just local update if logId is missing (date match)
+      if (!logId) {
         setTimeLogs(prev => {
           const next = [...prev];
-          const lgIdx = next.findIndex(l => (l.task_date || l.taskDate || '').split('T')[0] === data.taskDate?.split('T')[0]);
+          const dMatch = data.task_date || data.taskDate;
+          if (!dMatch) return prev;
+          const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dMatch.split('T')[0]);
           if (lgIdx > -1) next[lgIdx] = { ...next[lgIdx], ...data };
           else next.push({ ...data });
           return next;
         });
       }
-      return; // Stop here for main form.
+      return; 
     }
+
+    // 3. PERSISTENT UPDATE: If we have an existing log, save to DB
+    if (!logId) return;
 
     setIsUpdatingLog(logId);
     try {
@@ -1515,31 +1529,28 @@ function TicketsPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'Update failed');
+        throw new Error(errData.message || 'Server update failed');
       }
 
-      // OPTIMISTIC LOCAL UPDATE for immediate live calculation refresh
-      setTimeLogs(prev => prev.map(l => l.id === logId ? { ...l, ...data } : l));
-
-      // Auto-hold check
+      // Auto-hold check (Silent)
       if (data.startTime && data.endTime) {
-        const dur = (new Date(data.endTime) - new Date(data.startTime)) / 3600000 - ((data.breakTimeMins || 0) / 60);
+        const s = new Date(data.startTime), e = new Date(data.endTime);
+        const dur = (e - s) / 3600000 - ((data.breakTimeMins || 0) / 60);
         if (dur > 8) {
-          await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
+           fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ status: 'On Hold' })
           });
-          alert('Day shift exceeded 8 hours. Ticket status updated to ON HOLD.');
+          // We don't alert here to avoid focus disruption during continuous typing
         }
       }
 
-      // Refresh full ticket and logs to ensure UI reflects all changes (including potential grand total updates)
-      await openTicketModal(ticketId);
-      await loadTickets();
+      // Background refresh only, NO full modal re-fetch
+      loadTickets();
     } catch (e) {
-      alert(e.message);
+      console.error("Log sync error:", e);
     } finally {
       setIsUpdatingLog(null);
     }
@@ -2805,9 +2816,11 @@ function TicketsPage() {
                                             value={lStart}
                                             style={{ padding: '2px', fontSize: '11px' }}
                                             onChange={(e) => {
-                                              const newTime = e.target.value;
-                                              if (!editingTicketId) {
-                                                setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, start_time: `${dStr}T${newTime}:00.000Z` } : l));
+                                              const nt = e.target.value;
+                                              if (editingTicketId && existingLog.id) {
+                                                handleUpdateLog(existingLog.id, { startTime: `${dStr}T${nt}:00.000Z` });
+                                              } else {
+                                                setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, start_time: `${dStr}T${nt}:00.000Z` } : l));
                                               }
                                             }}
                                           />
@@ -2818,9 +2831,11 @@ function TicketsPage() {
                                             value={lEnd}
                                             style={{ padding: '2px', fontSize: '11px' }}
                                             onChange={(e) => {
-                                              const newTime = e.target.value;
-                                              if (!editingTicketId) {
-                                                setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, end_time: `${dStr}T${newTime}:00.000Z` } : l));
+                                              const nt = e.target.value;
+                                              if (editingTicketId && existingLog.id) {
+                                                handleUpdateLog(existingLog.id, { endTime: `${dStr}T${nt}:00.000Z` });
+                                              } else {
+                                                setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, end_time: `${dStr}T${nt}:00.000Z` } : l));
                                               }
                                             }}
                                           />
@@ -2831,33 +2846,17 @@ function TicketsPage() {
                                             value={actualBreak}
                                             style={{ width: '45px', padding: '2px', fontSize: '11px' }}
                                             onChange={(e) => {
-                                              const bMins = parseInt(e.target.value) || 0;
-                                              if (!editingTicketId) {
-                                                setTimeLogs(prev => prev.map(l => l.task_date === dStr ? { ...l, break_time_mins: bMins } : l));
+                                              const brVal = parseInt(e.target.value) || 0;
+                                              if (editingTicketId && existingLog.id) {
+                                                handleUpdateLog(existingLog.id, { breakTimeMins: brVal });
+                                              } else {
+                                                setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, break_time_mins: brVal } : l));
                                               }
                                             }}
                                           />
                                           {editingTicketId && existingLog.id && (
-                                            <button className="tickets-primary-btn" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => {
-                                              const st = document.getElementById(`fst-${dStr}`).value;
-                                              const et = document.getElementById(`fet-${dStr}`).value;
-                                              const br = document.getElementById(`fbr-${dStr}`).value;
-                                              if (!st || !et) {
-                                                alert('Please provide both Start and End times.');
-                                                return;
-                                              }
-                                              handleUpdateLog(existingLog.id, {
-                                                startTime: `${dStr}T${st}:00.000Z`,
-                                                endTime: `${dStr}T${et}:00.000Z`,
-                                                breakTimeMins: parseInt(br) || 0
-                                              });
-                                            }}>Update</button>
+                                            <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>✓ Auto-saved</span>
                                           )}
-                                        </div>
-                                      </td>
-                                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: dur > 8 ? '#ef4444' : '#6366f1' }}>
-                                        {dur > 0 ? dur.toFixed(2) + 'h' : '--'}
-                                        {editingTicketId && dur > 8 && <div style={{ fontSize: '9px' }}>⚠ Auto-Hold</div>}
                                       </td>
                                       {billingType.includes('Monthly') && (
                                         <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#6366f1', fontWeight: '700' }}>
@@ -4072,15 +4071,26 @@ function TicketsPage() {
                                                   <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
                                                 </optgroup>
                                               </select>
-                                              <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                                                <input type="time" id={`vs-${i}`} defaultValue={safeExtractTime(L.start_time)} style={{ fontSize: '10px', padding: '2px', width: '80px' }} />
-                                                <span style={{ fontSize: '9px', color: '#94a3b8' }}>→</span>
-                                                <input type="time" id={`ve-${i}`} defaultValue={safeExtractTime(L.end_time)} style={{ fontSize: '10px', padding: '2px', width: '80px' }} />
-                                                <button className="tickets-primary-btn" style={{ padding: '2px 5px', fontSize: '9px' }} onClick={() => {
-                                                  const s = document.getElementById(`vs-${i}`).value, e = document.getElementById(`ve-${i}`).value;
-                                                  if (s && e) handleUpdateLog(L.id, { startTime: `${L.logDateStr}T${s}:00.000Z`, endTime: `${L.logDateStr}T${e}:00.000Z` });
-                                                }}>💾</button>
-                                              </div>
+                                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                                  <input 
+                                                    type="time" 
+                                                    value={safeExtractTime(L.start_time)} 
+                                                    style={{ fontSize: '10px', padding: '2px', width: '75px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
+                                                    onChange={(e) => handleUpdateLog(L.id, { startTime: `${L.logDateStr}T${e.target.value}:00.000Z` })}
+                                                  />
+                                                  <span style={{ fontSize: '9px', color: '#94a3b8' }}>→</span>
+                                                  <input 
+                                                    type="time" 
+                                                    value={safeExtractTime(L.end_time)} 
+                                                    style={{ fontSize: '10px', padding: '2px', width: '75px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
+                                                    onChange={(e) => handleUpdateLog(L.id, { endTime: `${L.logDateStr}T${e.target.value}:00.000Z` })}
+                                                  />
+                                                  {isUpdatingLog === L.id ? (
+                                                    <span style={{ fontSize: '10px', color: '#6366f1' }}>...</span>
+                                                  ) : (
+                                                    <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '800' }}>✓</span>
+                                                  )}
+                                                </div>
                                             </td>
                                             <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '700', color: L.dur > 8 ? '#ef4444' : '#6366f1', whiteSpace: 'nowrap' }}>
                                               {L.dur > 0 ? L.dur.toFixed(1) + 'h' : '--'}
