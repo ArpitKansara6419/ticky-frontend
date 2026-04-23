@@ -804,23 +804,172 @@
     transform: translateY(-1px);
 }
 
-.format-toggle-btn {
-    position: relative;
-    overflow: hidden;
-}
-
-.format-toggle-btn.active {
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
-    transform: translateY(-2px);
-}
-
-.format-toggle-btn:hover:not(.active) {
-    background: #f8fafc !important;
-    border-color: #cbd5e1 !important;
-}
-
 .modal-content-premium.invoice-modal {
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 500px !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+    padding: 0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+}
+
+.invoice-modal-header {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    padding: 24px 30px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.invoice-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.invoice-modal-header .close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.invoice-modal-header .close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.invoice-modal-body {
+    padding: 30px;
+}
+
+.premium-input-group {
+    margin-bottom: 24px;
+}
+
+.premium-input-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.premium-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.premium-input-wrapper svg {
+    position: absolute;
+    left: 14px;
+    color: #94a3b8;
+    font-size: 18px;
+}
+
+.premium-input-sh {
+    width: 100%;
+    padding: 12px 14px 12px 42px !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    font-size: 15px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #f8fafc !important;
+}
+
+.premium-input-sh:focus {
+    background: white !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 8px 20px -6px rgba(99, 102, 241, 0.15) !important;
+    transform: translateY(-1px);
+}
+
+.format-selector-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+/* Segmented Control Styles */
+.segmented-control {
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 16px;
+    display: flex;
+    gap: 4px;
+    margin-bottom: 30px;
+}
+
+.segmented-control-option {
+    flex: 1;
+    padding: 10px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.segmented-control-option.active {
+    background: white;
+    color: #6366f1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.segmented-control-option:hover:not(.active) {
+    background: rgba(0,0,0,0.03);
+}
+
+.premium-download-btn {
+    width: 100%;
+    padding: 16px !important;
+    border-radius: 16px !important;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: none !important;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.3) !important;
+}
+
+.premium-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px -8px rgba(99, 102, 241, 0.4) !important;
+}
+
+.premium-download-btn:active {
+    transform: translateY(0);
 }
 
 .status-badge {

@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
     FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
-    FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload, FiLayout, FiFile
+    FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload, FiLayout, FiFile,
+    FiTag, FiGrid
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -1442,83 +1443,59 @@ const CustomerReceivablePage = () => {
             {/* --- Invoice Options Modal --- */}
             {isInvoiceOptionsModalOpen && (
                 <div className="modal-overlay-premium" style={{ zIndex: 3000 }}>
-                    <div className="modal-content-premium" style={{ maxWidth: '450px' }}>
-                        <div className="modal-header-premium" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: 'white' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <FiFileText size={20} />
-                                <h3 style={{ margin: 0 }}>Invoice Generation</h3>
-                            </div>
-                            <button className="close-btn-premium" style={{ color: 'white' }} onClick={() => setIsInvoiceOptionsModalOpen(false)}><FiX size={18} /></button>
+                    <div className="modal-content-premium invoice-modal">
+                        <div className="invoice-modal-header">
+                            <h3><FiFileText /> Invoice Generation</h3>
+                            <button className="close-btn" onClick={() => setIsInvoiceOptionsModalOpen(false)}>
+                                <FiX size={18} />
+                            </button>
                         </div>
                         
-                        <div className="modal-body-premium" style={{ padding: '24px' }}>
-                            <div className="invoice-option-field" style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>
-                                    <FiHash style={{ marginRight: '6px' }} /> Purchase Order (PO) Number
-                                </label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Enter PO number (if available)..."
-                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', transition: 'all 0.2s' }}
-                                    className="premium-input-sh"
-                                    value={invoicePoNumber}
-                                    onChange={e => setInvoicePoNumber(e.target.value)}
-                                />
-                                <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>Do you have a Purchase Order Number for this ticket?</p>
-                            </div>
-
-                            <div className="invoice-option-field" style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>
-                                    <FiBriefcase style={{ marginRight: '6px' }} /> Service Number
-                                </label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Enter Service number (if available)..."
-                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
-                                    className="premium-input-sh"
-                                    value={invoiceServiceNumber}
-                                    onChange={e => setInvoiceServiceNumber(e.target.value)}
-                                />
-                                <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>Internal reference or unique service identifier.</p>
-                            </div>
-
-                            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', marginBottom: '12px' }}>
-                                    Download Format
-                                </label>
-                                <div style={{ display: 'flex', gap: '12px' }}>
-                                    <button 
-                                        className={`format-toggle-btn ${selectedFormat === 'pdf' ? 'active' : ''}`} 
-                                        onClick={() => setSelectedFormat('pdf')}
-                                        style={{ 
-                                            flex: 1, padding: '12px', borderRadius: '10px', border: selectedFormat === 'pdf' ? '2px solid #6366f1' : '1px solid #e2e8f0', 
-                                            background: selectedFormat === 'pdf' ? '#eef2ff' : 'white', cursor: 'pointer', transition: 'all 0.2s',
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
-                                        }}
-                                    >
-                                        <FiFile size={18} color={selectedFormat === 'pdf' ? '#6366f1' : '#94a3b8'} />
-                                        <span style={{ fontSize: '12px', fontWeight: '700', color: selectedFormat === 'pdf' ? '#6366f1' : '#64748b' }}>PDF Document</span>
-                                    </button>
-                                    <button 
-                                        className={`format-toggle-btn ${selectedFormat === 'excel' ? 'active' : ''}`} 
-                                        onClick={() => setSelectedFormat('excel')}
-                                        style={{ 
-                                            flex: 1, padding: '12px', borderRadius: '10px', border: selectedFormat === 'excel' ? '2px solid #059669' : '1px solid #e2e8f0', 
-                                            background: selectedFormat === 'excel' ? '#ecfdf5' : 'white', cursor: 'pointer', transition: 'all 0.2s',
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
-                                        }}
-                                    >
-                                        <FiLayout size={18} color={selectedFormat === 'excel' ? '#059669' : '#94a3b8'} />
-                                        <span style={{ fontSize: '12px', fontWeight: '700', color: selectedFormat === 'excel' ? '#059669' : '#64748b' }}>Excel Spreadsheet</span>
-                                    </button>
+                        <div className="invoice-modal-body">
+                            <div className="premium-input-group">
+                                <label>PO Number</label>
+                                <div className="premium-input-wrapper">
+                                    <FiHash />
+                                    <input 
+                                        className="premium-input-sh"
+                                        placeholder="Purchase Order (PO) Number..."
+                                        value={invoicePoNumber}
+                                        onChange={(e) => setInvoicePoNumber(e.target.value)}
+                                    />
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="modal-footer-premium" style={{ display: 'flex', gap: '12px', padding: '16px' }}>
-                            <button className="btn-wow-secondary" style={{ flex: 1 }} onClick={() => setIsInvoiceOptionsModalOpen(false)}>Cancel</button>
-                            <button className="btn-generate-premium" style={{ flex: 2 }} onClick={handleDownloadInvoice}>
-                                <FiDownload style={{ marginRight: '6px' }} /> Download Invoice
+                            <div className="premium-input-group">
+                                <label>Service Number</label>
+                                <div className="premium-input-wrapper">
+                                    <FiTag />
+                                    <input 
+                                        className="premium-input-sh"
+                                        placeholder="Service or Reference Number..."
+                                        value={invoiceServiceNumber}
+                                        onChange={(e) => setInvoiceServiceNumber(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="format-selector-title">CHOOSE DOCUMENT FORMAT</div>
+                            <div className="segmented-control">
+                                <button 
+                                    className={`segmented-control-option ${selectedFormat === 'pdf' ? 'active' : ''}`}
+                                    onClick={() => setSelectedFormat('pdf')}
+                                >
+                                    <FiFile /> PDF Document
+                                </button>
+                                <button 
+                                    className={`segmented-control-option ${selectedFormat === 'excel' ? 'active' : ''}`}
+                                    onClick={() => setSelectedFormat('excel')}
+                                >
+                                    <FiGrid /> Excel Sheet
+                                </button>
+                            </div>
+
+                            <button className="premium-download-btn" onClick={handleDownloadInvoice}>
+                                <FiDownload /> Generate & Download Invoice
                             </button>
                         </div>
                     </div>
