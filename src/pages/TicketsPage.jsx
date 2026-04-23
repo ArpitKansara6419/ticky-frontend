@@ -2857,6 +2857,7 @@ function TicketsPage() {
                                           {editingTicketId && existingLog.id && (
                                             <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>✓ Auto-saved</span>
                                           )}
+                                        </div>
                                       </td>
                                       {billingType.includes('Monthly') && (
                                         <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#6366f1', fontWeight: '700' }}>
