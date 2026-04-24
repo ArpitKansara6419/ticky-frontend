@@ -198,9 +198,9 @@ const EngineerPayoutPage = () => {
                     brk = 0;
                 }
 
-                const res = calculateEngineerPayoutFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [] }, tz);
+                const res = calculateEngineerPayoutFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [], _is_log_aggregation: true }, tz);
                 totalHrs += parseFloat(res.totalHours || 0);
-                if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT' || billingType === 'Mixed Mode') {
+                if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT' || billingType === 'Mixed Mode' || billingType.includes('Monthly')) {
                     baseC += parseFloat(res.base || 0);
                 }
                 otP += parseFloat(res.ot || 0);
@@ -208,13 +208,17 @@ const EngineerPayoutPage = () => {
                 travC += parseFloat(res.trav || 0);
                 toolC += parseFloat(res.tool || 0);
             });
-            if (billingType.includes('Monthly')) {
-                const fullRate = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate) || 0;
-                baseC = (fullRate / 30) * logs.length;
-            } else if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
-                const dummy = calculateEngineerPayoutFrontend({ ...ticket, time_logs: [] }, tz);
-                baseC = parseFloat(dummy.base);
+
+            if (billingType === 'Agreed Rate') {
+                baseC = parseFloat(ticket.eng_agreed_rate || 0);
+            } else if (billingType === 'Cancellation') {
+                baseC = parseFloat(ticket.eng_cancellation_fee || 0);
             }
+            
+            // Add tool cost once
+            const tOneTime = parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
+            toolC = tOneTime;
+
             totalRec = baseC + otP + spP + travC + toolC;
             return {
                 totalPayout: totalRec.toFixed(2),
@@ -248,6 +252,11 @@ const EngineerPayoutPage = () => {
         let base = 0, ot = 0, sp = 0;
         let baseBD = "", otBD = "";
 
+        // Custom Rates
+        const customOTRate = parseFloat(ticket.eng_overtime_rate) || (hr * 1.5);
+        const customWeekendRate = parseFloat(ticket.eng_weekend_rate) || (hr * 2.0);
+        const customHolidayRate = parseFloat(ticket.eng_holiday_rate) || (hr * 2.0);
+
         if (billingType === 'Hourly') {
             const b = Math.max(2, hrs); 
             base = b * hr; 
@@ -257,22 +266,28 @@ const EngineerPayoutPage = () => {
             baseBD = hrs <= 4 ? `Half Day Rate` : `Half Day + Extra Hrs`;
         } else if (billingType === 'Full Day + OT') {
             base = fd; baseBD = `Full Day Rate`;
-            if (hrs > 8) { ot = (hrs - 8) * (hr * 1.5); otBD = `OT (1.5x)`; }
+            if (hrs > 8) { ot = (hrs - 8) * customOTRate; otBD = `OT`; }
         } else if (billingType === 'Mixed Mode') {
             if (hrs <= 4) base = hd;
             else if (hrs <= 8) base = fd;
-            else { base = fd; ot = (hrs - 8) * (hr * 1.5); }
+            else { base = fd; ot = (hrs - 8) * customOTRate; }
         } else if (billingType.includes('Monthly')) {
-            base = parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate || 0) / 30;
-            if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
+            base = (parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate || 0)) / 30;
+            if (hrs > 8) ot = (hrs - 8) * customOTRate;
         } else if (billingType === 'Agreed Rate') {
-            base = parseFloat(ticket.eng_agreed_rate || 0);
+            base = ticket._is_log_aggregation ? 0 : parseFloat(ticket.eng_agreed_rate || 0);
         } else if (billingType === 'Cancellation') {
-            base = parseFloat(ticket.eng_cancellation_fee || 0);
+            base = ticket._is_log_aggregation ? 0 : parseFloat(ticket.eng_cancellation_fee || 0);
+        }
+
+        if (isH) {
+            sp = customHolidayRate;
+        } else if (isWK) {
+            sp = customWeekendRate;
         }
 
         const trav = parseFloat(ticket.eng_travel_cost_per_day || ticket.travel_cost_per_day || 0);
-        const tool = parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
+        const tool = ticket._is_log_aggregation ? 0 : parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
 
         const total = base + ot + sp + trav + tool;
         return {

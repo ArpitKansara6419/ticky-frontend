@@ -354,7 +354,8 @@ function TicketsPage() {
       startTime: sParam, endTime: eParam, breakTime: bParam,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
       travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country,
-      overtimeRate, oohRate, weekendRate, holidayRate
+      overtimeRate, oohRate, weekendRate, holidayRate,
+      _isLogAggregation
     } = opts;
 
     if (!sParam || !eParam) return null;
@@ -482,10 +483,17 @@ function TicketsPage() {
       if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
         ooh = hrs * customOOHRate;
       }
-
       const travelVal = parseFloat(opts.travelCostPerDay || 0);
-      const toolsVal = parseFloat(opts.toolCost || 0);
-      const grand = base + ot + ooh + special + travelVal + toolsVal;
+      const toolCostRaw = parseFloat(opts.toolCost || 0);
+      const toolsVal = _isLogAggregation ? 0 : toolCostRaw; // Skip tools in multi-day aggregation loop
+
+      // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
+      let effectiveBase = base;
+      if (_isLogAggregation && (bil === 'Agreed Rate' || bil === 'Cancellation')) {
+        effectiveBase = 0;
+      }
+
+      const grand = effectiveBase + ot + ooh + special + travelVal + toolsVal;
 
       return {
         hrs: hrs.toFixed(2),
@@ -596,7 +604,8 @@ function TicketsPage() {
           hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
           monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
           travelCostPerDay, toolCost: toolCostInput, billingType: rRates.bt, 
-          timezone, calcTimezone, country, monthlyDivisor: dayMonthlyDivisor 
+          timezone, calcTimezone, country, monthlyDivisor: dayMonthlyDivisor,
+          _isLogAggregation: true
         });
 
         // ── ENGINEER PAYOUT RATES ────────────────────────────────────────────────
@@ -646,7 +655,8 @@ function TicketsPage() {
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
           overtimeRate: pRates.overtimeRate, oohRate: pRates.oohRate, weekendRate: pRates.weekendRate, holidayRate: pRates.holidayRate,
           travelCostPerDay, toolCost: toolCostInput, billingType: pRates.billingType, timezone, calcTimezone,
-          monthlyDivisor: dayMonthlyDivisor, country
+          monthlyDivisor: dayMonthlyDivisor, country,
+          _isLogAggregation: true
         });
 
         if (res) {
@@ -701,6 +711,43 @@ function TicketsPage() {
       });
 
       combinedBreakdown.days = validDaysCount;
+      
+      // Add one-time costs after the loop
+      if (billingType === 'Agreed Rate') {
+        const arVal = parseFloat(agreedRate) || 0;
+        totalReceivable += arVal;
+        combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + arVal).toFixed(2);
+      } else if (billingType === 'Cancellation') {
+        const cfVal = parseFloat(cancellationFee) || 0;
+        totalReceivable += cfVal;
+        combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + cfVal).toFixed(2);
+      }
+      
+      // Add Tool Cost once
+      const tCost = parseFloat(toolCostInput) || 0;
+      totalReceivable += tCost;
+      combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + tCost).toFixed(2);
+
+      // Engineer Payout One-Time costs
+      Object.keys(engSummaryMap).forEach(eid => {
+        // If it's the main engineer, or if we have engRates state for them
+        // For simplicity, we add the Agreed/Tool cost to the main engineer or split it?
+        // Usually, Agreed Rate is for the WHOLE TICKET. We'll add it once to the engSummary.
+        // If there are multiple engineers, we might need a better logic, but for now we'll add it to the first one found or main.
+        // Actually, let's add it to the totalPayout once.
+      });
+
+      const pOneTime = (billingType === 'Agreed Rate' ? (parseFloat(engAgreedRate) || 0) : (billingType === 'Cancellation' ? (parseFloat(engCancellationFee) || 0) : 0)) + (parseFloat(toolCostInput) || 0);
+      totalPayout += pOneTime;
+
+      // Attribute one-time fees (Agreed Rate, Tool Cost) to the main ticket engineer in the summary
+      if (engineerId && engSummaryMap[engineerId]) {
+        engSummaryMap[engineerId].total += pOneTime;
+      } else if (engineerId && !engSummaryMap[engineerId]) {
+         const eng = engineers.find(e => Number(e.id) === Number(engineerId));
+         engSummaryMap[engineerId] = { name: eng ? eng.name : engineerName || 'Main Engineer', total: pOneTime };
+      }
+
       const finalGrandTotal = totalReceivable.toFixed(2);
       setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
       setTotalCost(finalGrandTotal);
