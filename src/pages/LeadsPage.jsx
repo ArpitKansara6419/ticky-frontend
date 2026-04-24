@@ -97,6 +97,28 @@ function LeadsPage() {
       }
     }
   }, [followUpDate, statusChangeEndDate])
+
+  // AUTO SYNC Engineer Payout details when selecting an engineer in the assignment modal
+  useEffect(() => {
+    if (assignEngineerId && assignPayType === 'Default') {
+      const eng = engineers.find(e => String(e.id) === String(assignEngineerId));
+      if (eng) {
+        setAssignEngBillingType(eng.billing_type || 'Hourly');
+        setAssignEngCurrency(eng.currency || 'USD');
+        setAssignEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '');
+        setAssignEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '');
+        setAssignEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '');
+        setAssignEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '');
+        setAssignEngAgreedRate(eng.agreed_rate || '');
+        setAssignEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '');
+        setAssignEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '');
+        setAssignEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '');
+        setAssignEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '');
+        setAssignEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '');
+      }
+    }
+  }, [assignEngineerId, assignPayType, engineers]);
+
   const [engineers, setEngineers] = useState([])
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [selectedLeadForAssign, setSelectedLeadForAssign] = useState(null)
@@ -109,6 +131,10 @@ function LeadsPage() {
   const [assignEngFullDayRate, setAssignEngFullDayRate] = useState('')
   const [assignEngAgreedRate, setAssignEngAgreedRate] = useState('')
   const [assignEngCancellationFee, setAssignEngCancellationFee] = useState('')
+  const [assignEngOvertimeRate, setAssignEngOvertimeRate] = useState('')
+  const [assignEngOohRate, setAssignEngOohRate] = useState('')
+  const [assignEngWeekendRate, setAssignEngWeekendRate] = useState('')
+  const [assignEngHolidayRate, setAssignEngHolidayRate] = useState('')
   const [assignEngCurrency, setAssignEngCurrency] = useState('USD')
 
   // Form Fields
@@ -1619,12 +1645,11 @@ function LeadsPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                         <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.billing_type || 'Hourly'}</span></div>
                         <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.hourly_rate || '0.00'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Half Day:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.half_day_rate || '0.00'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Full Day:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.full_day_rate || '0.00'}</span></div>
-                        {eng.billing_type === 'Monthly + OT + Weekend' && (
-                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Monthly:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.monthly_rate || '0.00'}</span></div>
-                        )}
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancellation:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.cancellation_fee || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OT:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.overtime_rate || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OOH:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.ooh_rate || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>W-End:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.weekend_rate || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Holiday:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.holiday_rate || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancel:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.cancellation_fee || '0.00'}</span></div>
                       </div>
                     </div>
                   );
@@ -1706,6 +1731,45 @@ function LeadsPage() {
                       />
                     </div>
                     <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Overtime Rate</label>
+                      <input
+                        type="number"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={assignEngOvertimeRate}
+                        onChange={(e) => setAssignEngOvertimeRate(e.target.value)}
+                        placeholder="Rate x 1.5"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>OOH Rate</label>
+                      <input
+                        type="number"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={assignEngOohRate}
+                        onChange={(e) => setAssignEngOohRate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Weekend Premium</label>
+                      <input
+                        type="number"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={assignEngWeekendRate}
+                        onChange={(e) => setAssignEngWeekendRate(e.target.value)}
+                        placeholder="Rate x 2.0"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Holiday Premium</label>
+                      <input
+                        type="number"
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                        value={assignEngHolidayRate}
+                        onChange={(e) => setAssignEngHolidayRate(e.target.value)}
+                        placeholder="Rate x 2.0"
+                      />
+                    </div>
+                    <div>
                       <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'block', marginBottom: '6px' }}>Agreed Rate</label>
                       <input
                         type="number"
@@ -1737,6 +1801,10 @@ function LeadsPage() {
                     engFullDayRate: assignEngFullDayRate,
                     engAgreedRate: assignEngAgreedRate,
                     engCancellationFee: assignEngCancellationFee,
+                    engOvertimeRate: selectedEng?.overtime_rate || 0,
+                    engOohRate: selectedEng?.ooh_rate || 0,
+                    engWeekendRate: selectedEng?.weekend_rate || 0,
+                    engHolidayRate: selectedEng?.holiday_rate || 0,
                     engCurrency: assignEngCurrency
                   };
                   localStorage.setItem('selectedLeadForTicket', JSON.stringify(payload))

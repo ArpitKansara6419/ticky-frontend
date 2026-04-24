@@ -216,6 +216,10 @@ function TicketsPage() {
   const [engMonthlyRate, setEngMonthlyRate] = useState('')
   const [engAgreedRate, setEngAgreedRate] = useState('')
   const [engCancellationFee, setEngCancellationFee] = useState('')
+  const [engOvertimeRate, setEngOvertimeRate] = useState('')
+  const [engOohRate, setEngOohRate] = useState('')
+  const [engWeekendRate, setEngWeekendRate] = useState('')
+  const [engHolidayRate, setEngHolidayRate] = useState('')
 
   const [status, setStatus] = useState('Assigned')
   const [billingType, setBillingType] = useState('Hourly')
@@ -349,7 +353,8 @@ function TicketsPage() {
     const {
       startTime: sParam, endTime: eParam, breakTime: bParam,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-      travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country
+      travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country,
+      overtimeRate, oohRate, weekendRate, holidayRate
     } = opts;
 
     if (!sParam || !eParam) return null;
@@ -398,9 +403,8 @@ function TicketsPage() {
       // FORCE UTC check for deterministic weekend logic
       const dSafe = new Date(`${startInfo.dateStr}T00:00:00Z`);
       const isWeekend = dSafe.getUTCDay() === 0 || dSafe.getUTCDay() === 6;
-      const isSpecialDay = isWeekend || isHoliday;
-
-      // --- PROPER LOGIC FIX FOR TIMEZONE SHIFTS ---
+      
+      // Visual hours check for OOH
       let startHr = startInfo.hour;
       let endHr = endInfo.hour;
       if (opts.startTime && opts.startTime.includes('T')) {
@@ -409,8 +413,6 @@ function TicketsPage() {
       if (opts.endTime && opts.endTime.includes('T')) {
         endHr = parseInt(opts.endTime.split('T')[1].split(':')[0], 10);
       }
-
-      // OOH strictly only if visual hours are OUTSIDE 08:00 - 18:00
       const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
@@ -418,6 +420,12 @@ function TicketsPage() {
       const hd = parseFloat(opts.halfDayRate) || 0;
       const fd = parseFloat(opts.fullDayRate) || 0;
       const bil = opts.billingType;
+
+      // Rate Overrides from Engineer Profile if provided
+      const customOTRate = parseFloat(overtimeRate) || (hr * 1.5);
+      const customOOHRate = parseFloat(oohRate) || (hr * 1.5);
+      const customWeekendRate = parseFloat(weekendRate) || (hr * 2.0);
+      const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
 
       if (bil === 'Hourly') {
         const b = Math.max(2, hrs);
@@ -433,7 +441,7 @@ function TicketsPage() {
       } else if (bil === 'Full Day + OT') {
         base = fd;
         if (hrs > 8) {
-          ot = (hrs - 8) * (hr * 1.5);
+          ot = (hrs - 8) * customOTRate;
         }
 
       } else if (bil === 'Mixed Mode') {
@@ -443,18 +451,15 @@ function TicketsPage() {
           base = fd;
         } else {
           base = fd;
-          ot = (hrs - 8) * (hr * 1.5);
+          ot = (hrs - 8) * customOTRate;
         }
 
       } else if (bil.includes('Monthly')) {
         const fullRate = parseFloat(opts.monthlyRate) || 0;
-        // Divisor: TOTAL working days in the month (not just the ticket range)
-        const divisor = (opts.monthlyDivisor && opts.monthlyDivisor > 0)
-          ? opts.monthlyDivisor
-          : 22; 
+        const divisor = (opts.monthlyDivisor && opts.monthlyDivisor > 0) ? opts.monthlyDivisor : 22; 
         base = fullRate / divisor;
-        if (hrs > 8) ot = (hrs - 8) * (hr * 1.5);
-        // Store for display
+        if (hrs > 8) ot = (hrs - 8) * customOTRate;
+        
         opts._perDayRate    = base;
         opts._workingDays   = divisor;
         opts._monthlyFull   = fullRate;
@@ -464,6 +469,18 @@ function TicketsPage() {
 
       } else if (bil === 'Cancellation') {
         base = parseFloat(opts.cancellationFee) || 0;
+      }
+
+      // Add Special Day premium if applicable
+      if (isWeekend) {
+        special = customWeekendRate;
+      } else if (isHoliday) {
+        special = customHolidayRate;
+      }
+
+      // Add OOH premium if applicable
+      if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
+        ooh = hrs * customOOHRate;
       }
 
       const travelVal = parseFloat(opts.travelCostPerDay || 0);
@@ -480,8 +497,7 @@ function TicketsPage() {
         travel: travelVal.toFixed(2),
         grandTotal: grand.toFixed(2),
         isOOH: workIsOOH,
-        isSpecialDay,
-        // Monthly-specific display helpers
+        isSpecialDay: isWeekend || isHoliday,
         perDayRate:   opts._perDayRate   != null ? parseFloat(opts._perDayRate).toFixed(2)   : null,
         workingDays:  opts._workingDays  != null ? opts._workingDays                          : null,
         monthlyFull:  opts._monthlyFull  != null ? parseFloat(opts._monthlyFull).toFixed(2)   : null,
@@ -550,28 +566,76 @@ function TicketsPage() {
 
         const dayMonthlyDivisor = getWorkingDaysInMonth(d, country);
 
+        const currentEngId = Number(specificEngId || engineerId);
+        const isNoEngDay = currentEngId === 0;
+
+        // ── CUSTOMER RECEIVABLE RATES ─────────────────────────────────────────────
+        let rRates = {
+          hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate,
+          ar: agreedRate, cf: cancellationFee, bt: billingType
+        };
+        if (isNoEngDay) {
+          rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
+        } else if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
+          const subEng = engineers.find(en => Number(en.id) === currentEngId);
+          if (subEng) {
+            rRates = {
+              hr: subEng.hourly_rate   || 0,
+              hd: subEng.half_day_rate || 0,
+              fd: subEng.full_day_rate || 0,
+              mr: subEng.monthly_rate  || 0,
+              ar: subEng.agreed_rate   || 0,
+              cf: subEng.cancellation_fee || 0,
+              bt: subEng.billing_type  || billingType
+            };
+          }
+        }
+
         const res = calculateTicketTotal({
           startTime: sTime, endTime: eTime, breakTime: bMins,
-          hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-          travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone, country,
-          monthlyDivisor: dayMonthlyDivisor 
+          hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
+          monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
+          travelCostPerDay, toolCost: toolCostInput, billingType: rRates.bt, 
+          timezone, calcTimezone, country, monthlyDivisor: dayMonthlyDivisor 
         });
 
-        const currentEngId = Number(specificEngId || engineerId);
-        const currentEng = engineers.find(e => Number(e.id) === currentEngId);
-
+        // ── ENGINEER PAYOUT RATES ────────────────────────────────────────────────
         let pRates = {
           hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0,
           monthlyRate: engMonthlyRate || 0, agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
-          billingType: engBillingType
+          billingType: engBillingType,
+          overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0
         };
+        
+        // Find rates for the main engineer if using Default or Custom
+        if (engPayType === 'Custom') {
+           pRates.overtimeRate = engOvertimeRate || 0;
+           pRates.oohRate      = engOohRate      || 0;
+           pRates.weekendRate  = engWeekendRate  || 0;
+           pRates.holidayRate  = engHolidayRate  || 0;
+        } else {
+           const mainEng = engineers.find(e => Number(e.id) === Number(engineerId));
+           if (mainEng) {
+             pRates.overtimeRate = mainEng.overtime_rate || 0;
+             pRates.oohRate      = mainEng.ooh_rate      || 0;
+             pRates.weekendRate  = mainEng.weekend_rate  || 0;
+             pRates.holidayRate  = mainEng.holiday_rate  || 0;
+           }
+        }
 
-        if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
+        if (isNoEngDay) {
+          pRates = { hourlyRate: 0, halfDayRate: 0, fullDayRate: 0, monthlyRate: 0, agreedRate: 0, cancellationFee: 0, billingType: 'Hourly', overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0 };
+        } else if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
+          const currentEng = engineers.find(e => Number(e.id) === currentEngId);
           if (currentEng) {
             pRates = {
               hourlyRate: currentEng.hourly_rate || 0, halfDayRate: currentEng.half_day_rate || 0, fullDayRate: currentEng.full_day_rate || 0,
               monthlyRate: currentEng.monthly_rate || 0, agreedRate: currentEng.agreed_rate || 0, cancellationFee: currentEng.cancellation_fee || 0,
-              billingType: currentEng.billing_type || 'Hourly'
+              billingType: currentEng.billing_type || 'Hourly',
+              overtimeRate: currentEng.overtime_rate || 0,
+              oohRate:      currentEng.ooh_rate      || 0,
+              weekendRate:  currentEng.weekend_rate  || 0,
+              holidayRate:  currentEng.holiday_rate  || 0
             };
           }
         }
@@ -580,6 +644,7 @@ function TicketsPage() {
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
+          overtimeRate: pRates.overtimeRate, oohRate: pRates.oohRate, weekendRate: pRates.weekendRate, holidayRate: pRates.holidayRate,
           travelCostPerDay, toolCost: toolCostInput, billingType: pRates.billingType, timezone, calcTimezone,
           monthlyDivisor: dayMonthlyDivisor, country
         });
@@ -658,6 +723,23 @@ function TicketsPage() {
         setTotalCost(res.grandTotal);
       }
 
+      // Find rates for the main engineer if using Default or Custom
+      let pRates = { ot: 0, ooh: 0, we: 0, hol: 0 };
+      if (engPayType === 'Custom') {
+        pRates.ot = engOvertimeRate || 0;
+        pRates.ooh = engOohRate || 0;
+        pRates.we = engWeekendRate || 0;
+        pRates.hol = engHolidayRate || 0;
+      } else {
+         const mainE = engineers.find(e => Number(e.id) === Number(engineerId));
+         if (mainE) {
+           pRates.ot = mainE.overtime_rate || 0;
+           pRates.ooh = mainE.ooh_rate || 0;
+           pRates.we = mainE.weekend_rate || 0;
+           pRates.hol = mainE.holiday_rate || 0;
+         }
+      }
+
       const payRes = calculateTicketTotal({
         startTime, endTime, breakTime,
         hourlyRate: engHourlyRate || 0,
@@ -666,7 +748,9 @@ function TicketsPage() {
         monthlyRate: engMonthlyRate || 0,
         agreedRate: engAgreedRate || 0,
         cancellationFee: engCancellationFee || 0,
-        travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone
+        overtimeRate: pRates.ot, oohRate: pRates.ooh, weekendRate: pRates.we, holidayRate: pRates.hol,
+        travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone,
+        country // country added here
       });
 
       if (payRes) {
@@ -682,7 +766,8 @@ function TicketsPage() {
     startTime, endTime, breakTime, taskStartDate, taskEndDate, taskTime,
     hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
     engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee,
-    travelCostPerDay, toolCostInput, billingType, engBillingType, timezone, calcTimezone, timeLogs, isFillingForm, country
+    engOvertimeRate, engOohRate, engWeekendRate, engHolidayRate,
+    travelCostPerDay, toolCostInput, billingType, engBillingType, engPayType, timezone, calcTimezone, timeLogs, isFillingForm, country
   ]);
 
   // Sync Task Dates with Manual Time Log
@@ -1395,6 +1480,18 @@ function TicketsPage() {
       const tId = selectedTicket?.id || editingTicketId;
       if (!tId) return;
 
+      // Determine payout rates for recalculation
+      let pRates = { ot: 0, ooh: 0, we: 0, hol: 0 };
+      if (selectedTicket.engPayType === 'Default' || selectedTicket.eng_pay_type === 'Default') {
+         const eng = engineers.find(e => Number(e.id) === Number(selectedTicket.engineerId));
+         if (eng) {
+           pRates.ot = eng.overtime_rate || 0;
+           pRates.ooh = eng.ooh_rate || 0;
+           pRates.we = eng.weekend_rate || 0;
+           pRates.hol = eng.holiday_rate || 0;
+         }
+      }
+
       // Calculate new billing status if needed
       const calc = calculateTicketTotal({
         startTime: inlineStartTime,
@@ -1406,11 +1503,13 @@ function TicketsPage() {
         monthlyRate: selectedTicket.monthlyRate,
         agreedRate: selectedTicket.agreedRate,
         cancellationFee: selectedTicket.cancellationFee,
+        overtimeRate: pRates.ot, oohRate: pRates.ooh, weekendRate: pRates.we, holidayRate: pRates.hol,
         travelCostPerDay: selectedTicket.travelCostPerDay,
         toolCost: selectedTicket.toolCost,
         billingType: selectedTicket.billingType,
         timezone: selectedTicket.timezone,
-        calcTimezone: 'Ticket Local'
+        calcTimezone: 'Ticket Local',
+        country: selectedTicket.country
       });
 
       const hrsVal = parseFloat(calc?.hrs || 0);
@@ -1972,6 +2071,10 @@ function TicketsPage() {
         setEngFullDayRate(parsedLead.engFullDayRate || '')
         setEngAgreedRate(parsedLead.engAgreedRate || '')
         setEngCancellationFee(parsedLead.engCancellationFee || '')
+        setEngOvertimeRate(parsedLead.engOvertimeRate != null ? String(parsedLead.engOvertimeRate) : '')
+        setEngOohRate(parsedLead.engOohRate != null ? String(parsedLead.engOohRate) : '')
+        setEngWeekendRate(parsedLead.engWeekendRate != null ? String(parsedLead.engWeekendRate) : '')
+        setEngHolidayRate(parsedLead.engHolidayRate != null ? String(parsedLead.engHolidayRate) : '')
         setEngCurrency(parsedLead.engCurrency || 'USD')
 
         // AUTO SYNC TIME: Automatically populate the manual override times from the scheduled lead details
@@ -2312,6 +2415,10 @@ function TicketsPage() {
                         setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
                         setEngAgreedRate(eng.agreed_rate || '')
                         setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
+                        setEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '')
+                        setEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '')
+                        setEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '')
+                        setEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '')
                         setEngCurrency(eng.currency || 'USD')
                       }
                     }
@@ -2345,6 +2452,10 @@ function TicketsPage() {
                         setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
                         setEngAgreedRate(eng.agreed_rate || '')
                         setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
+                        setEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '')
+                        setEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '')
+                        setEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '')
+                        setEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '')
                         setEngCurrency(eng.currency || 'USD')
                       }
                     }}>
@@ -2406,6 +2517,22 @@ function TicketsPage() {
                                 <input type="number" value={engMonthlyRate} onChange={(e) => setEngMonthlyRate(e.target.value)} placeholder="0.00" />
                               </label>
                             )}
+                            <label className="tickets-field">
+                              <span>Overtime Rate</span>
+                              <input type="number" value={engOvertimeRate} onChange={(e) => setEngOvertimeRate(e.target.value)} placeholder="Default (Rate × 1.5)" />
+                            </label>
+                            <label className="tickets-field">
+                              <span>OOH Rate (Per Hr)</span>
+                              <input type="number" value={engOohRate} onChange={(e) => setEngOohRate(e.target.value)} placeholder="0.00" />
+                            </label>
+                            <label className="tickets-field">
+                              <span>Weekend Premium</span>
+                              <input type="number" value={engWeekendRate} onChange={(e) => setEngWeekendRate(e.target.value)} placeholder="Default (Rate × 2.0)" />
+                            </label>
+                            <label className="tickets-field">
+                              <span>Holiday Premium</span>
+                              <input type="number" value={engHolidayRate} onChange={(e) => setEngHolidayRate(e.target.value)} placeholder="Default (Rate × 2.0)" />
+                            </label>
                           </>
                         )}
                         {engBillingType === 'Agreed Rate' && (
@@ -2437,6 +2564,10 @@ function TicketsPage() {
                           <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Monthly:</b><br /> {engCurrency} {engMonthlyRate || '0.00'}</div>
                         )}
                         <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancellation:</b><br /> {engCurrency} {engCancellationFee || '0.00'}</div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OT:</b><br /> {engCurrency} {engOvertimeRate || '0.00'}</div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OOH:</b><br /> {engCurrency} {engOohRate || '0.00'}</div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>W-End:</b><br /> {engCurrency} {engWeekendRate || '0.00'}</div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Holiday:</b><br /> {engCurrency} {engHolidayRate || '0.00'}</div>
                       </div>
                       <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '10px', fontStyle: 'italic' }}>
                         These rates are pulled from the engineer's profile. Switch to "Custom Ticket Rates" above to override.
@@ -4095,10 +4226,23 @@ function TicketsPage() {
                         hd: selectedTicket.engHalfDayRate || 0,
                         fd: selectedTicket.engFullDayRate || 0,
                         mr: selectedTicket.engMonthlyRate || 0,
-                        bt: selectedTicket.engBillingType || 'Hourly'
+                        bt: selectedTicket.engBillingType || 'Hourly',
+                        ot: 0, ooh: 0, we: 0, hol: 0
                       };
+                      
+                      // If Default pay type, pull rates from MAIN engineer's profile
+                      if (selectedTicket.eng_pay_type === 'Default') {
+                         const mainE = engineers.find(e => Number(e.id) === Number(selectedTicket.engineerId));
+                         if (mainE) {
+                           pRates.ot = mainE.overtime_rate || 0;
+                           pRates.ooh = mainE.ooh_rate || 0;
+                           pRates.we = mainE.weekend_rate || 0;
+                           pRates.hol = mainE.holiday_rate || 0;
+                         }
+                      }
+
                       if (isNoEngDay) {
-                        pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
+                        pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly', ot: 0, ooh: 0, we: 0, hol: 0 };
                       } else if (lEngId && lEngId !== Number(selectedTicket.engineerId)) {
                         const eng = engineers.find(en => Number(en.id) === lEngId);
                         if (eng) {
@@ -4107,7 +4251,11 @@ function TicketsPage() {
                             hd: eng.half_day_rate || 0,
                             fd: eng.full_day_rate || 0,
                             mr: eng.monthly_rate  || 0,
-                            bt: eng.billing_type  || 'Hourly'
+                            bt: eng.billing_type  || 'Hourly',
+                            ot: eng.overtime_rate || 0,
+                            ooh: eng.ooh_rate || 0,
+                            we: eng.weekend_rate || 0,
+                            hol: eng.holiday_rate || 0
                           };
                         }
                       }
@@ -4116,6 +4264,8 @@ function TicketsPage() {
                         startTime: ls, endTime: le, breakTime: lb,
                         hourlyRate: pRates.hr, halfDayRate: pRates.hd,
                         fullDayRate: pRates.fd, monthlyRate: pRates.mr,
+                        overtimeRate: pRates.ot, oohRate: pRates.ooh,
+                        weekendRate: pRates.we, holidayRate: pRates.hol,
                         billingType: pRates.bt, timezone: selectedTicket.timezone,
                         calcTimezone: 'Ticket Local',
                         travelCostPerDay: selectedTicket.travelCostPerDay,
