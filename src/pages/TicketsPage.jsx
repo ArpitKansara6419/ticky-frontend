@@ -4041,40 +4041,85 @@ function TicketsPage() {
 
                       const dayMonthlyDivisor = getWorkingDaysInMonth(logDateStr, selectedTicket.country);
 
+                      // ── Determine which engineer is on this day ──────────────────────────
+                      // lEngId is the actual engineer assigned to THIS specific day's log.
+                      // We MUST resolve this BEFORE calculating any rates.
+                      const lEngId = Number(
+                        existingLog.engineer_id ?? existingLog.engineerId ?? selectedTicket.engineerId
+                      );
+                      const isNoEngDay = lEngId === 0;
+
+                      // ── Build CUSTOMER RECEIVABLE rates for this day ─────────────────────
+                      // Default to ticket rates; override with the assigned engineer's own
+                      // rate card if it's a substitute (different engineer than primary).
+                      let rRates = {
+                        hr: selectedTicket.hourlyRate,
+                        hd: selectedTicket.halfDayRate,
+                        fd: selectedTicket.fullDayRate,
+                        mr: selectedTicket.monthlyRate,
+                        ar: selectedTicket.agreedRate,
+                        cf: selectedTicket.cancellationFee,
+                        bt: stBil
+                      };
+                      if (isNoEngDay) {
+                        rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
+                      } else if (lEngId && lEngId !== Number(selectedTicket.engineerId)) {
+                        const subEng = engineers.find(en => Number(en.id) === lEngId);
+                        if (subEng) {
+                          rRates = {
+                            hr: subEng.hourly_rate   || 0,
+                            hd: subEng.half_day_rate || 0,
+                            fd: subEng.full_day_rate || 0,
+                            mr: subEng.monthly_rate  || 0,
+                            ar: subEng.agreed_rate   || 0,
+                            cf: subEng.cancellation_fee || 0,
+                            bt: subEng.billing_type  || stBil
+                          };
+                        }
+                      }
+
                       const resR = calculateTicketTotal({
                         startTime: ls, endTime: le, breakTime: lb,
-                        hourlyRate: selectedTicket.hourlyRate, halfDayRate: selectedTicket.halfDayRate,
-                        fullDayRate: selectedTicket.fullDayRate, monthlyRate: selectedTicket.monthlyRate,
-                        agreedRate: selectedTicket.agreedRate, cancellationFee: selectedTicket.cancellationFee,
+                        hourlyRate:      rRates.hr, halfDayRate:     rRates.hd,
+                        fullDayRate:     rRates.fd, monthlyRate:     rRates.mr,
+                        agreedRate:      rRates.ar, cancellationFee: rRates.cf,
                         travelCostPerDay: selectedTicket.travelCostPerDay,
-                        toolCost: selectedTicket.toolCost,
-                        billingType: stBil, timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local',
-                        monthlyDivisor: dayMonthlyDivisor
+                        toolCost:         selectedTicket.toolCost,
+                        billingType: rRates.bt, timezone: selectedTicket.timezone,
+                        calcTimezone: 'Ticket Local', monthlyDivisor: dayMonthlyDivisor
                       });
 
+                      // ── Build ENGINEER PAYOUT rates for this day ─────────────────────────
                       let pRates = {
-                        hr: selectedTicket.engHourlyRate || 0,
+                        hr: selectedTicket.engHourlyRate  || 0,
                         hd: selectedTicket.engHalfDayRate || 0,
                         fd: selectedTicket.engFullDayRate || 0,
                         mr: selectedTicket.engMonthlyRate || 0,
                         bt: selectedTicket.engBillingType || 'Hourly'
                       };
-
-                      const lEngId = Number(
-                        existingLog.engineer_id ?? existingLog.engineerId ?? selectedTicket.engineerId
-                      );
-                      if (Number(lEngId) === 0) {
+                      if (isNoEngDay) {
                         pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
-                      } else if (lEngId && Number(lEngId) !== Number(selectedTicket.engineerId)) {
-                        const eng = engineers.find(en => Number(en.id) === Number(lEngId));
-                        if (eng) pRates = { hr: eng.hourly_rate, hd: eng.half_day_rate, fd: eng.full_day_rate, mr: eng.monthly_rate || 0, bt: eng.billing_type };
+                      } else if (lEngId && lEngId !== Number(selectedTicket.engineerId)) {
+                        const eng = engineers.find(en => Number(en.id) === lEngId);
+                        if (eng) {
+                          pRates = {
+                            hr: eng.hourly_rate   || 0,
+                            hd: eng.half_day_rate || 0,
+                            fd: eng.full_day_rate || 0,
+                            mr: eng.monthly_rate  || 0,
+                            bt: eng.billing_type  || 'Hourly'
+                          };
+                        }
                       }
 
                       const resP = calculateTicketTotal({
                         startTime: ls, endTime: le, breakTime: lb,
-                        hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, monthlyRate: pRates.mr,
-                        billingType: pRates.bt, timezone: selectedTicket.timezone, calcTimezone: 'Ticket Local',
-                        travelCostPerDay: selectedTicket.travelCostPerDay, toolCost: selectedTicket.toolCost,
+                        hourlyRate: pRates.hr, halfDayRate: pRates.hd,
+                        fullDayRate: pRates.fd, monthlyRate: pRates.mr,
+                        billingType: pRates.bt, timezone: selectedTicket.timezone,
+                        calcTimezone: 'Ticket Local',
+                        travelCostPerDay: selectedTicket.travelCostPerDay,
+                        toolCost: selectedTicket.toolCost,
                         monthlyDivisor: dayMonthlyDivisor
                       });
 
