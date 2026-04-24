@@ -98,27 +98,6 @@ function LeadsPage() {
     }
   }, [followUpDate, statusChangeEndDate])
 
-  // AUTO SYNC Engineer Payout details when selecting an engineer in the assignment modal
-  useEffect(() => {
-    if (assignEngineerId && assignPayType === 'Default') {
-      const eng = engineers.find(e => String(e.id) === String(assignEngineerId));
-      if (eng) {
-        setAssignEngBillingType(eng.billing_type || 'Hourly');
-        setAssignEngCurrency(eng.currency || 'USD');
-        setAssignEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '');
-        setAssignEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '');
-        setAssignEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '');
-        setAssignEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '');
-        setAssignEngAgreedRate(eng.agreed_rate || '');
-        setAssignEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '');
-        setAssignEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '');
-        setAssignEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '');
-        setAssignEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '');
-        setAssignEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '');
-      }
-    }
-  }, [assignEngineerId, assignPayType, engineers]);
-
   const [engineers, setEngineers] = useState([])
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [selectedLeadForAssign, setSelectedLeadForAssign] = useState(null)
@@ -188,6 +167,27 @@ function LeadsPage() {
   // Map / LatLng states
   const [latitude, setLatitude] = useState(null)
   const [longitude, setLongitude] = useState(null)
+ 
+  // AUTO SYNC Engineer Payout details when selecting an engineer in the assignment modal
+  useEffect(() => {
+    if (assignEngineerId && assignPayType === 'Default') {
+      const eng = engineers.find(e => String(e.id) === String(assignEngineerId));
+      if (eng) {
+        setAssignEngBillingType(eng.billing_type || 'Hourly');
+        setAssignEngCurrency(eng.currency || 'USD');
+        setAssignEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '');
+        setAssignEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '');
+        setAssignEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '');
+        setAssignEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '');
+        setAssignEngAgreedRate(eng.agreed_rate || '');
+        setAssignEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '');
+        setAssignEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '');
+        setAssignEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '');
+        setAssignEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '');
+        setAssignEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '');
+      }
+    }
+  }, [assignEngineerId, assignPayType, engineers]);
 
   const resetForm = () => {
     setTaskName('')
