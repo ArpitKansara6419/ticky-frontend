@@ -125,7 +125,9 @@ const CustomerReceivablePage = () => {
 
                 const res = calculateTicketCostFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [], is_recursive_call: true }, forcedTZ, targetCurrency);
                 totalHrs += parseFloat(res.totalHours || 0);
-                if (bil === 'Hourly' || bil === 'Half Day + Hourly' || bil === 'Full Day + OT' || bil === 'Mixed Mode') {
+                
+                const bType = bil.toLowerCase();
+                if (bType.includes('hourly') || bType.includes('half') || bType.includes('full') || bType.includes('mixed') || bType.includes('monthly')) {
                     baseC += parseFloat(res.baseCost || 0);
                 }
                 otP += parseFloat(res.otPremium || 0);
@@ -134,7 +136,7 @@ const CustomerReceivablePage = () => {
                 travC += parseFloat(res.travelCost || 0);
                 toolC += parseFloat(res.toolCost || 0);
             });
-            if (bil.includes('Monthly')) {
+            if (bil.toLowerCase().includes('monthly')) {
                 const fullRate = parseFloat(ticket.monthly_rate || ticket.monthlyRate) || 0;
                 baseC = 0;
                 logs.forEach(l => {
@@ -144,7 +146,7 @@ const CustomerReceivablePage = () => {
                         baseC += fullRate / divisor;
                     }
                 });
-            } else if (bil === 'Agreed Rate' || bil === 'Cancellation') {
+            } else if (bil.toLowerCase().includes('agreed') || bil.toLowerCase().includes('cancellation')) {
                 const dummy = calculateTicketCostFrontend({ ...ticket, time_logs: [], is_recursive_call: true }, forcedTZ, targetCurrency);
                 baseC = parseFloat(dummy.baseCost || 0);
             }
@@ -191,11 +193,12 @@ const CustomerReceivablePage = () => {
         let spBreakdown = "";
         let oohBreakdown = "";
 
-        if (bil === 'Hourly') {
+        const bType = bil.toLowerCase();
+        if (bType.includes('hourly') && !bType.includes('half') && !bType.includes('full')) {
             const b = Math.max(2, hrs); 
             base = b * hr; 
             baseBreakdown = `Billed ${b.toFixed(2)}h @ ${cur} ${hr.toFixed(2)} (Min 2h)`;
-        } else if (bil === 'Half Day + Hourly') {
+        } else if (bType.includes('half') && bType.includes('hourly')) {
             if (hrs <= 4) {
                 base = hd;
                 baseBreakdown = `Fixed Half Day Rate (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
@@ -204,7 +207,7 @@ const CustomerReceivablePage = () => {
                 base = hd + (extra * hr);
                 baseBreakdown = `Half Day Rate (${cur} ${hd.toFixed(2)}) + Extra ${extra.toFixed(2)}h @ ${cur} ${hr.toFixed(2)}`;
             }
-        } else if (bil === 'Full Day + OT') {
+        } else if (bType.includes('full') && bType.includes('ot')) {
             base = fd;
             baseBreakdown = `Fixed Full Day Rate (≤ 8h) = ${cur} ${fd.toFixed(2)}`;
             if (hrs > 8) {
@@ -212,7 +215,7 @@ const CustomerReceivablePage = () => {
                 ot = otHrs * (hr * 1.5);
                 otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
-        } else if (bil.includes('Monthly')) {
+        } else if (bType.includes('monthly')) {
             const divisor = getWorkingDaysInMonth(sStr, ticket.country);
             base = parseFloat(ticket.monthly_rate || ticket.monthlyRate || 0) / divisor;
             baseBreakdown = `Pro-rata Monthly (1 day) = ${cur} ${base.toFixed(2)} (Divisor: ${divisor})`;
@@ -222,13 +225,13 @@ const CustomerReceivablePage = () => {
                 ot = otHrs * (hr * 1.5); 
                 otBreakdown = `${otHrs.toFixed(2)}h Overtime @ ${cur} ${(hr * 1.5).toFixed(2)} (1.5x)`;
             }
-        } else if (bil === 'Agreed Rate') { 
+        } else if (bType.includes('agreed')) { 
             base = parseFloat(ticket.agreed_rate) || 0;
             baseBreakdown = `Agreed / Fixed Rate = ${cur} ${base.toFixed(2)}`;
-        } else if (bil === 'Cancellation') { 
+        } else if (bType.includes('cancellation')) { 
             base = parseFloat(ticket.cancellation_fee) || 0; 
             baseBreakdown = `Fixed Cancellation Fee = ${cur} ${base.toFixed(2)}`;
-        } else if (bil === 'Mixed Mode') {
+        } else if (bType.includes('mixed')) {
             if (hrs <= 4) {
                 base = hd;
                 baseBreakdown = `Billed as Half Day (≤ 4h) = ${cur} ${hd.toFixed(2)}`;
