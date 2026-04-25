@@ -166,7 +166,17 @@ const EngineerPayoutPage = () => {
 
         if (logs.length > 0) {
             let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
+            
+            // Resolve the current target engineer ID. 
+            // In the list view loops, we use the selectedEngineerId from state.
+            const targetEngId = Number(selectedEngineerId);
+
             logs.forEach(log => {
+                const logEngId = Number(log.engineer_id || log.engineerId || ticket.engineer_id || ticket.engineerId);
+                
+                // CRITICAL: Only process logs that belong to THIS engineer
+                if (logEngId !== targetEngId) return;
+
                 const logDate = (log.task_date || '').split('T')[0];
                 if (logDate) {
                     const dObj = new Date(`${logDate}T00:00:00Z`);
@@ -178,7 +188,6 @@ const EngineerPayoutPage = () => {
                     };
                     const activeHols = HOLIDAYS_BY_COUNTRY[ticket.country] || HOLIDAYS_BY_COUNTRY['India'] || [];
                     const isHoliday = activeHols.includes(logDate);
-                    // Skip if weekend/holiday AND no manual times were filled
                     if ((isWeekend || isHoliday) && (!log.start_time || !log.end_time)) return;
                 }
 
@@ -206,18 +215,29 @@ const EngineerPayoutPage = () => {
                 otP += parseFloat(res.ot || 0);
                 spP += parseFloat(res.sp || 0);
                 travC += parseFloat(res.trav || 0);
-                toolC += parseFloat(res.tool || 0);
+                // Note: Tools are added once per ticket to primary, so we skip here and add at end
             });
 
-            if (billingType === 'Agreed Rate') {
-                baseC = parseFloat(ticket.eng_agreed_rate || 0);
-            } else if (billingType === 'Cancellation') {
-                baseC = parseFloat(ticket.eng_cancellation_fee || 0);
+            // ── One-Time Fees Attribution ──────────────────────────────────
+            // Only add Agreed Rate / Tool Cost if this is the PRIMARY engineer
+            const primaryEngId = Number(ticket.engineer_id || ticket.engineerId);
+            const isPrimary = targetEngId === primaryEngId;
+
+            if (isPrimary) {
+               if (billingType === 'Agreed Rate') {
+                   baseC = parseFloat(ticket.eng_agreed_rate || 0);
+               } else if (billingType === 'Cancellation') {
+                   baseC = parseFloat(ticket.eng_cancellation_fee || 0);
+               }
+               const tOneTime = parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
+               toolC = tOneTime;
+            } else {
+               // Subsidary engineers on Fixed/Agreed tickets don't get the fixed fee by default
+               // unless they worked logs, but the baseC for logs is already summed.
+               if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
+                   // They get 0 fixed base
+               }
             }
-            
-            // Add tool cost once
-            const tOneTime = parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
-            toolC = tOneTime;
 
             totalRec = baseC + otP + spP + travC + toolC;
             return {
