@@ -225,7 +225,10 @@ const EngineerPayoutPage = () => {
                 const res = calculateEngineerPayoutFrontend({ ...ticket, start_time: sTime, end_time: eTime, break_time: brk, time_logs: [], _is_log_aggregation: true }, tz);
                 
                 totalHrs += parseFloat(res.totalHours || 0);
-                if (billingType === 'Hourly' || billingType === 'Half Day + Hourly' || billingType === 'Full Day + OT' || billingType === 'Mixed Mode' || billingType.includes('Monthly')) {
+                
+                // Flexible matching for billing types
+                const bType = billingType.toLowerCase();
+                if (bType.includes('hourly') || bType.includes('half') || bType.includes('full') || bType.includes('mixed') || bType.includes('monthly')) {
                     baseC += parseFloat(res.base || 0);
                     if (res.baseBreakdown) combinedBaseBD += (combinedBaseBD ? " + " : "") + res.baseBreakdown;
                 }
@@ -295,26 +298,27 @@ const EngineerPayoutPage = () => {
         const customWeekendRate = parseFloat(ticket.eng_weekend_rate) || (hr * 2.0);
         const customHolidayRate = parseFloat(ticket.eng_holiday_rate) || (hr * 2.0);
 
-        if (billingType === 'Hourly') {
+        const bType = billingType.toLowerCase();
+        if (bType.includes('hourly') && !bType.includes('half') && !bType.includes('full')) {
             const b = Math.max(2, hrs); 
             base = b * hr; 
-            baseBD = `Billed ${b.toFixed(2)}h @ ${hr}`;
-        } else if (billingType === 'Half Day + Hourly') {
+            baseBD = `${b.toFixed(2)}h @ ${hr}`;
+        } else if (bType.includes('half') && bType.includes('hourly')) {
             base = hrs <= 4 ? hd : hd + (hrs - 4) * hr;
-            baseBD = hrs <= 4 ? `Half Day Rate` : `Half Day + Extra Hrs`;
-        } else if (billingType === 'Full Day + OT') {
-            base = fd; baseBD = `Full Day Rate`;
+            baseBD = hrs <= 4 ? `Half Day` : `Half Day + Extra`;
+        } else if (bType.includes('full') && bType.includes('ot')) {
+            base = fd; baseBD = `Full Day`;
             if (hrs > 8) { ot = (hrs - 8) * customOTRate; otBD = `OT`; }
-        } else if (billingType === 'Mixed Mode') {
+        } else if (bType.includes('mixed')) {
             if (hrs <= 4) base = hd;
             else if (hrs <= 8) base = fd;
             else { base = fd; ot = (hrs - 8) * customOTRate; }
-        } else if (billingType.includes('Monthly')) {
+        } else if (bType.includes('monthly')) {
             base = (parseFloat(ticket.eng_monthly_rate || ticket.monthly_rate || 0)) / 30;
             if (hrs > 8) ot = (hrs - 8) * customOTRate;
-        } else if (billingType === 'Agreed Rate') {
+        } else if (bType.includes('agreed')) {
             base = ticket._is_log_aggregation ? 0 : parseFloat(ticket.eng_agreed_rate || 0);
-        } else if (billingType === 'Cancellation') {
+        } else if (bType.includes('cancellation')) {
             base = ticket._is_log_aggregation ? 0 : parseFloat(ticket.eng_cancellation_fee || 0);
         }
 
