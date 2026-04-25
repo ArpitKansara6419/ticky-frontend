@@ -146,10 +146,23 @@ const EngineerPayoutPage = () => {
     const calculateEngineerPayoutFrontend = (ticket, forcedTZ) => {
         if (!ticket) return { totalPayout: "0.00", totalHours: 0, base: "0.00", ot: "0.00", sp: "0.00", trav: "0.00", tool: "0.00" };
         const tz = (forcedTZ && forcedTZ !== 'Ticket Local') ? forcedTZ : (ticket.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-        const hr = parseFloat(ticket.eng_hourly_rate || 0);
-        const hd = parseFloat(ticket.eng_half_day_rate || 0);
-        const fd = parseFloat(ticket.eng_full_day_rate || 0);
-        const billingType = ticket.eng_billing_type || 'Hourly';
+        
+        // Resolve the target engineer ID (this is the engineer being viewed/calculated)
+        const targetEngId = Number(selectedEngineerId);
+        const engProfile = engineersList.find(e => Number(e.id) === targetEngId);
+
+        let hr = parseFloat(ticket.eng_hourly_rate || 0);
+        let hd = parseFloat(ticket.eng_half_day_rate || 0);
+        let fd = parseFloat(ticket.eng_full_day_rate || 0);
+        let billingType = ticket.eng_billing_type || 'Hourly';
+
+        // FALLBACK: If pay type is DEFAULT, pull rates from the engineer's master profile
+        if ((ticket.eng_pay_type === 'Default' || !ticket.eng_pay_type) && engProfile) {
+            hr = parseFloat(engProfile.hourly_rate || 0);
+            hd = parseFloat(engProfile.half_day_rate || 0);
+            fd = parseFloat(engProfile.full_day_rate || 0);
+            billingType = engProfile.billing_type || 'Hourly';
+        }
 
         const getZonedInfo = (date) => {
             try {
