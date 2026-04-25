@@ -4264,7 +4264,8 @@ function TicketsPage() {
                         travelCostPerDay: selectedTicket.travelCostPerDay,
                         toolCost:         selectedTicket.toolCost,
                         billingType: rRates.bt, timezone: selectedTicket.timezone,
-                        calcTimezone: 'Ticket Local', monthlyDivisor: dayMonthlyDivisor
+                        calcTimezone: 'Ticket Local', monthlyDivisor: dayMonthlyDivisor,
+                        _isLogAggregation: true
                       });
 
                       // ── Build ENGINEER PAYOUT rates for this day ─────────────────────────
@@ -4317,7 +4318,8 @@ function TicketsPage() {
                         calcTimezone: 'Ticket Local',
                         travelCostPerDay: selectedTicket.travelCostPerDay,
                         toolCost: selectedTicket.toolCost,
-                        monthlyDivisor: dayMonthlyDivisor
+                        monthlyDivisor: dayMonthlyDivisor,
+                        _isLogAggregation: true
                       });
 
                       const rV  = parseFloat(resR?.grandTotal || 0);
@@ -4339,6 +4341,34 @@ function TicketsPage() {
 
                       return { ...existingLog, rV, pV, trv, tol, base, dur: parseFloat(resR?.hrs || 0), logDateStr };
                     });
+
+                    // ── Attribute One-Time Fees to Primary Engineer ──────────────────────
+                    const primaryId = Number(selectedTicket.engineerId);
+                    const otBil = (selectedTicket.billingType || 'Hourly').trim();
+                    let oneTimeR = 0, oneTimeP = 0;
+                    
+                    if (otBil === 'Agreed Rate') {
+                      oneTimeR += (parseFloat(selectedTicket.agreedRate) || 0);
+                      oneTimeP += (parseFloat(selectedTicket.engAgreedRate) || 0);
+                    } else if (otBil === 'Cancellation') {
+                      oneTimeR += (parseFloat(selectedTicket.cancellationFee) || 0);
+                      oneTimeP += (parseFloat(selectedTicket.engCancellationFee) || 0);
+                    }
+                    
+                    // Add Tool Cost once
+                    const tc = (parseFloat(selectedTicket.toolCost || 0));
+                    oneTimeR += tc;
+                    oneTimeP += tc;
+
+                    totalR += oneTimeR;
+                    totalP += oneTimeP;
+
+                    if (primaryId && engSummaryMap[primaryId]) {
+                      engSummaryMap[primaryId].total += oneTimeP;
+                    } else if (primaryId && !engSummaryMap[primaryId]) {
+                      const eng = engineers.find(e => Number(e.id) === primaryId);
+                      engSummaryMap[primaryId] = { name: eng ? eng.name : (selectedTicket.engineerName || 'Primary'), total: oneTimeP, hours: 0 };
+                    }
 
                     const engSummary = Object.values(engSummaryMap);
 
