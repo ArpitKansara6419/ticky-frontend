@@ -4278,10 +4278,15 @@ function TicketsPage() {
                         ot: 0, ooh: 0, we: 0, hol: 0
                       };
                       
-                      // If Default pay type, pull rates from MAIN engineer's profile
+                      // If Default pay type, pull ALL rates from MAIN engineer's profile
                       if (selectedTicket.eng_pay_type === 'Default') {
                          const mainE = engineers.find(e => Number(e.id) === Number(selectedTicket.engineerId));
                          if (mainE) {
+                           pRates.hr = mainE.hourly_rate || 0;
+                           pRates.hd = mainE.half_day_rate || 0;
+                           pRates.fd = mainE.full_day_rate || 0;
+                           pRates.mr = mainE.monthly_rate || 0;
+                           pRates.bt = mainE.billing_type || 'Hourly';
                            pRates.ot = mainE.overtime_rate || 0;
                            pRates.ooh = mainE.ooh_rate || 0;
                            pRates.we = mainE.weekend_rate || 0;
