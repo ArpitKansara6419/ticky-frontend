@@ -654,7 +654,7 @@ function TicketsPage() {
           hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
           overtimeRate: pRates.overtimeRate, oohRate: pRates.oohRate, weekendRate: pRates.weekendRate, holidayRate: pRates.holidayRate,
-          travelCostPerDay, toolCost: toolCostInput, billingType: pRates.billingType, timezone, calcTimezone,
+          travelCostPerDay: 0, toolCost: 0, billingType: pRates.billingType, timezone, calcTimezone,
           monthlyDivisor: dayMonthlyDivisor, country,
           _isLogAggregation: true
         });
@@ -738,7 +738,8 @@ function TicketsPage() {
         // Actually, let's add it to the totalPayout once.
       });
 
-      const pOneTime = (billingType === 'Agreed Rate' ? (parseFloat(engAgreedRate) || 0) : (billingType === 'Cancellation' ? (parseFloat(engCancellationFee) || 0) : 0)) + (parseFloat(toolCostInput) || 0) * validDaysCount;
+      // Tool Cost & Travel Cost are customer-side charges — excluded from engineer payout
+      const pOneTime = (billingType === 'Agreed Rate' ? (parseFloat(engAgreedRate) || 0) : (billingType === 'Cancellation' ? (parseFloat(engCancellationFee) || 0) : 0));
       totalPayout += pOneTime;
 
       // Attribute one-time fees (Agreed Rate, Tool Cost) to the main ticket engineer in the summary
@@ -797,8 +798,8 @@ function TicketsPage() {
         agreedRate: engAgreedRate || 0,
         cancellationFee: engCancellationFee || 0,
         overtimeRate: pRates.ot, oohRate: pRates.ooh, weekendRate: pRates.we, holidayRate: pRates.hol,
-        travelCostPerDay, toolCost: toolCostInput, billingType: engBillingType, timezone, calcTimezone,
-        country // country added here
+        travelCostPerDay: 0, toolCost: 0, billingType: engBillingType, timezone, calcTimezone,
+        country // Travel & Tool Cost excluded from engineer payout
       });
 
       if (payRes) {
