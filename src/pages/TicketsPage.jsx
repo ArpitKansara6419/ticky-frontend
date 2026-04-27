@@ -723,10 +723,11 @@ function TicketsPage() {
         combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + cfVal).toFixed(2);
       }
       
-      // Add Tool Cost once
+      // Add Tool Cost per working day
       const tCost = parseFloat(toolCostInput) || 0;
-      totalReceivable += tCost;
-      combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + tCost).toFixed(2);
+      const totalToolCost = tCost * validDaysCount;
+      totalReceivable += totalToolCost;
+      combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + totalToolCost).toFixed(2);
 
       // Engineer Payout One-Time costs
       Object.keys(engSummaryMap).forEach(eid => {
@@ -737,7 +738,7 @@ function TicketsPage() {
         // Actually, let's add it to the totalPayout once.
       });
 
-      const pOneTime = (billingType === 'Agreed Rate' ? (parseFloat(engAgreedRate) || 0) : (billingType === 'Cancellation' ? (parseFloat(engCancellationFee) || 0) : 0)) + (parseFloat(toolCostInput) || 0);
+      const pOneTime = (billingType === 'Agreed Rate' ? (parseFloat(engAgreedRate) || 0) : (billingType === 'Cancellation' ? (parseFloat(engCancellationFee) || 0) : 0)) + (parseFloat(toolCostInput) || 0) * validDaysCount;
       totalPayout += pOneTime;
 
       // Attribute one-time fees (Agreed Rate, Tool Cost) to the main ticket engineer in the summary
