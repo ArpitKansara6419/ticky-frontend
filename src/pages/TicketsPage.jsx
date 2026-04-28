@@ -3379,7 +3379,7 @@ function TicketsPage() {
               <label className="tickets-field">
                 <span>Status</span>
                 <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  {TICKET_STATUSES.map((s) => (
+                  {TICKET_STATUSES.filter(s => s !== 'Approval Pending').map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
