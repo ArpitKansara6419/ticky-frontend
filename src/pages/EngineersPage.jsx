@@ -168,6 +168,8 @@ function EngineersPage() {
     const [engTickets, setEngTickets] = useState([]);
     const [loadingTickets, setLoadingTickets] = useState(false);
     const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
+    const [chargeHistory, setChargeHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
 
     // Charges Form State
     const [chargesForm, setChargesForm] = useState({
@@ -259,6 +261,7 @@ function EngineersPage() {
                 const data = await res.json();
                 const eng = data.engineer;
                 setSelectedEngineer(eng);
+                fetchChargeHistory(id);
 
                 // Populate Form
                 setChargesForm({
@@ -282,6 +285,20 @@ function EngineersPage() {
                 });
             }
         } catch (e) { console.error(e); }
+    };
+
+    const fetchChargeHistory = async (id) => {
+        setLoadingHistory(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/engineers/${id}/charge-history`, { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                setChargeHistory(data.history || []);
+            }
+        } catch (e) {
+            console.error('History fetch error:', e);
+        }
+        setLoadingHistory(false);
     };
 
     const fetchEngineerTickets = async (id) => {
@@ -1017,6 +1034,90 @@ function EngineersPage() {
                                         {savingCharges ? 'Saving...' : 'Save Changes'}
                                     </button>
                                 </div>
+
+                                {/* CHARGE HISTORY SECTION */}
+                                <div className="divider-line" style={{ margin: '40px 0' }}></div>
+                                <h4 className="section-head" style={{ color: '#2563eb', marginBottom: '20px' }}>Charges History</h4>
+
+                                {loadingHistory ? (
+                                    <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>Loading history...</div>
+                                ) : chargeHistory.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '12px', color: '#64748b', border: '1px dashed #cbd5e1' }}>
+                                        No historical charge changes found.
+                                    </div>
+                                ) : (
+                                    <div className="charge-history-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                        {chargeHistory.map((h, idx) => {
+                                            const oldR = typeof h.old_rates === 'string' ? JSON.parse(h.old_rates) : h.old_rates;
+                                            const newR = typeof h.new_rates === 'string' ? JSON.parse(h.new_rates) : h.new_rates;
+                                            const date = new Date(h.change_date).toLocaleString();
+
+                                            const getCurrencySymbol = (c) => {
+                                                if (c === 'EUR') return '€';
+                                                if (c === 'GBP') return '£';
+                                                if (c === 'INR') return '₹';
+                                                return '$';
+                                            };
+
+                                            const symOld = getCurrencySymbol(oldR.currency);
+                                            const symNew = getCurrencySymbol(newR.currency);
+
+                                            return (
+                                                <div key={h.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                                    <div style={{ background: '#f8fafc', padding: '10px 15px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>Change Request #{chargeHistory.length - idx}</span>
+                                                        <span style={{ color: '#64748b', fontSize: '12px' }}>{date}</span>
+                                                    </div>
+                                                    <div style={{ padding: '15px' }}>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '20px', alignItems: 'center' }}>
+                                                            {/* Old Charges */}
+                                                            <div style={{ background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+                                                                <div style={{ fontSize: '11px', color: '#b91c1c', fontWeight: '700', marginBottom: '8px', textTransform: 'uppercase' }}>Previous Charges</div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
+                                                                    <div><strong>Billing:</strong> {oldR.billingType}</div>
+                                                                    <div><strong>Hourly:</strong> {symOld}{oldR.hourlyRate}</div>
+                                                                    <div><strong>Half Day:</strong> {symOld}{oldR.halfDayRate}</div>
+                                                                    <div><strong>Full Day:</strong> {symOld}{oldR.fullDayRate}</div>
+                                                                    {oldR.monthlyRate > 0 && <div><strong>Monthly:</strong> {symOld}{oldR.monthlyRate}</div>}
+                                                                    {oldR.overtimeRate > 0 && <div><strong>OT:</strong> {symOld}{oldR.overtimeRate}</div>}
+                                                                </div>
+                                                            </div>
+
+                                                            <div style={{ color: '#94a3b8' }}>→</div>
+
+                                                            {/* New Charges */}
+                                                            <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #dcfce7' }}>
+                                                                <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', marginBottom: '8px', textTransform: 'uppercase' }}>New Charges</div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
+                                                                    <div><strong>Billing:</strong> {newR.billingType}</div>
+                                                                    <div style={{ color: oldR.hourlyRate !== newR.hourlyRate ? '#059669' : 'inherit', fontWeight: oldR.hourlyRate !== newR.hourlyRate ? 'bold' : 'normal' }}>
+                                                                        <strong>Hourly:</strong> {symNew}{newR.hourlyRate}
+                                                                    </div>
+                                                                    <div style={{ color: oldR.halfDayRate !== newR.halfDayRate ? '#059669' : 'inherit', fontWeight: oldR.halfDayRate !== newR.halfDayRate ? 'bold' : 'normal' }}>
+                                                                        <strong>Half Day:</strong> {symNew}{newR.halfDayRate}
+                                                                    </div>
+                                                                    <div style={{ color: oldR.fullDayRate !== newR.fullDayRate ? '#059669' : 'inherit', fontWeight: oldR.fullDayRate !== newR.fullDayRate ? 'bold' : 'normal' }}>
+                                                                        <strong>Full Day:</strong> {symNew}{newR.fullDayRate}
+                                                                    </div>
+                                                                    {newR.monthlyRate > 0 && (
+                                                                        <div style={{ color: oldR.monthlyRate !== newR.monthlyRate ? '#059669' : 'inherit', fontWeight: oldR.monthlyRate !== newR.monthlyRate ? 'bold' : 'normal' }}>
+                                                                            <strong>Monthly:</strong> {symNew}{newR.monthlyRate}
+                                                                        </div>
+                                                                    )}
+                                                                    {newR.overtimeRate > 0 && (
+                                                                        <div style={{ color: oldR.overtimeRate !== newR.overtimeRate ? '#059669' : 'inherit', fontWeight: oldR.overtimeRate !== newR.overtimeRate ? 'bold' : 'normal' }}>
+                                                                            <strong>OT:</strong> {symNew}{newR.overtimeRate}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         )
                     }
