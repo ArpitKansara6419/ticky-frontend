@@ -130,6 +130,11 @@ function LeadsPage() {
   const [taskStartDate, setTaskStartDate] = useState('')
   const [taskEndDate, setTaskEndDate] = useState('')
   const [taskTime, setTaskTime] = useState('09:00')
+
+  // Date restriction constants for current month
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
   const [scopeOfWork, setScopeOfWork] = useState('')
 
 
@@ -531,6 +536,10 @@ function LeadsPage() {
         if (currentStartDate === followUpDate && currentEndDate === statusChangeEndDate) {
           return alert('The new dates must be different from the current service dates.')
         }
+
+        if (followUpDate > lastDayOfCurrentMonth) {
+          return alert(`The start date must be within the current month (${now.toLocaleString('default', { month: 'long' })}).`);
+        }
       }
 
       const res = await fetch(`${API_BASE_URL}/leads/${leadId}/status`, {
@@ -656,6 +665,13 @@ function LeadsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setFormError('')
+
+    if (taskStartDate > lastDayOfCurrentMonth) {
+      setFormError(`Start date must be within the current month (${now.toLocaleString('default', { month: 'long' })}).`);
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch(editingLeadId ? `${API_BASE_URL}/leads/${editingLeadId}` : `${API_BASE_URL}/leads`, {
         method: editingLeadId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -825,7 +841,8 @@ function LeadsPage() {
                   type="date"
                   value={taskStartDate}
                   onChange={e => setTaskStartDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={todayStr}
+                  max={lastDayOfCurrentMonth}
                   required
                 />
               </label>
@@ -1375,7 +1392,8 @@ function LeadsPage() {
                     <input
                       type="date"
                       value={followUpDate}
-                      min={statusChangeData.newStatus === 'Reschedule' ? new Date().toISOString().split('T')[0] : undefined}
+                      min={todayStr}
+                      max={lastDayOfCurrentMonth}
                       onChange={e => setFollowUpDate(e.target.value)}
                     />
                   </div>
