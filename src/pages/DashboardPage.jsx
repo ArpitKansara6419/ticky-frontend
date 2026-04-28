@@ -59,6 +59,7 @@ const MAIN_MENU_ITEMS = [
   { id: 'leads', label: 'Leads', icon: FiTarget },
   { id: 'customerReceivable', label: 'Customer Receivable', icon: FiFileText },
   { id: 'engineerPayout', label: 'Engineer Payout', icon: FiCreditCard },
+  { id: 'approvals', label: 'Approvals', icon: FiShield },
   { id: 'tickets', label: 'Tickets', icon: FiTag },
   { id: 'assetManagement', label: 'Asset Management', icon: FiBox },
   { id: 'projectManagement', label: 'Project Management', icon: FiBriefcase },
@@ -561,6 +562,10 @@ const PAGE_COPY = {
   tickets: {
     title: 'Tickets',
     subtitle: 'View, assign and resolve support tickets.',
+  },
+  approvals: {
+    title: 'Approvals',
+    subtitle: 'Review and process engineer requests.',
   },
   assetManagement: {
     title: 'Asset Management',
@@ -1066,6 +1071,13 @@ function DashboardPage() {
 
     if (activePage === 'attendance') {
       return <AttendancePage user={profileForm} />
+    }
+
+    if (activePage === 'approvals') {
+      return <ApprovalsPage onViewTicket={(id) => {
+        // Find ticket and open details? For now just switch to tickets page with state
+        navigate('/dashboard', { state: { openTickets: true, ticketId: id } })
+      }} />
     }
 
 
