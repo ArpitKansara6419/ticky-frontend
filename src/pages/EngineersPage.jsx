@@ -1055,6 +1055,7 @@ function EngineersPage() {
                                                     <th>Hourly</th>
                                                     <th>Half Day</th>
                                                     <th>Full Day</th>
+                                                    <th>Agreed Rate</th>
                                                     <th>Monthly</th>
                                                     <th>OT Rate</th>
                                                     <th>Currency</th>
@@ -1084,6 +1085,7 @@ function EngineersPage() {
                                                             <td>{renderCell(oldR.hourlyRate, newR.hourlyRate)}</td>
                                                             <td>{renderCell(oldR.halfDayRate, newR.halfDayRate)}</td>
                                                             <td>{renderCell(oldR.fullDayRate, newR.fullDayRate)}</td>
+                                                            <td>{renderCell(oldR.agreedRate, newR.agreedRate)}</td>
                                                             <td>{renderCell(oldR.monthlyRate, newR.monthlyRate)}</td>
                                                             <td>{renderCell(oldR.overtimeRate, newR.overtimeRate)}</td>
                                                             <td>{renderCell(oldR.currency, newR.currency)}</td>
