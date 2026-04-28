@@ -119,7 +119,7 @@ const getDatesInRange = (startDate, endDate) => {
   return dates;
 };
 
-const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break']
+const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break', 'Approval Pending']
 
 const GOOGLE_AUTOCOMPLETE_OPTIONS = {
   types: ['address'],
@@ -1252,7 +1252,6 @@ function TicketsPage() {
 
     try {
       setSaving(true)
-      setError('')
       setSuccess('')
 
       // BACKFILL: If activity times are empty, sync them with scheduled details before sending
@@ -1316,7 +1315,7 @@ function TicketsPage() {
         billingType,
         leadType,
         cancellationFee: cancellationFee !== '' && cancellationFee !== null ? Number(cancellationFee) : 0,
-        status,
+        status: status,
         taskStartDate: finalTaskStartDate ? String(finalTaskStartDate).split('T')[0] : null,
         taskEndDate: finalTaskEndDate ? String(finalTaskEndDate).split('T')[0] : null,
         startTime: finalStartTime,
@@ -1337,6 +1336,26 @@ function TicketsPage() {
         totalCost: Number(totalCost) || 0,
         engTotalCost: Number(payoutLiveBreakdown?.grandTotal) || 0,
         timeLogs: (leadType === 'Dispatch' || (taskStartDate && taskEndDate && (taskStartDate !== taskEndDate || billingType.includes('Monthly')))) ? timeLogs : []
+      }
+
+      // --- EARLY RESOLVE APPROVAL LOGIC ---
+      // If user tries to manually set status to 'Resolved' but the task end date is in the future
+      if (status === 'Resolved' && taskEndDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const scheduledEnd = new Date(taskEndDate);
+        scheduledEnd.setHours(0, 0, 0, 0);
+
+        if (scheduledEnd > today) {
+          const reason = window.prompt("You are resolving this ticket earlier than the scheduled end date. Please provide a reason for the approval request:", "Job completed early");
+          if (reason === null) {
+            setSaving(false);
+            return; // User cancelled
+          }
+          payload.status = 'Approval Pending';
+          payload.reason = reason;
+          payload.resolveDate = today.toISOString().split('T')[0];
+        }
       }
 
       const isEditing = Boolean(editingTicketId)
@@ -1764,9 +1783,11 @@ function TicketsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ resolveDate: date })
+        body: JSON.stringify({ resolveDate: date, reason: "Manual early closure request via logs" })
       });
       if (!res.ok) throw new Error('Action failed');
+      const data = await res.json();
+      alert(data.message || 'Request submitted');
       handleCloseTicketModal();
       loadTickets();
     } catch (e) { alert(e.message); }
@@ -4431,6 +4452,14 @@ function TicketsPage() {
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <input type="date" value={newExtendEndDate} onChange={e => setNewExtendEndDate(e.target.value)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
                             <button className="btn-wow-secondary" onClick={handleExtendJob} disabled={isExtending} style={{ padding: '4px 12px', fontSize: '11px' }}>{isExtending ? 'Wait...' : '+ Add Day'}</button>
+                            <button 
+                              className="btn-wow-secondary" 
+                              onClick={() => handleResolveEarly(newExtendEndDate)} 
+                              disabled={isResolvingEarly || !newExtendEndDate} 
+                              style={{ padding: '4px 12px', fontSize: '11px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                            >
+                              {isResolvingEarly ? 'Wait...' : 'Resolve Early'}
+                            </button>
                           </div>
                         </div>
 
