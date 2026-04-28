@@ -2224,8 +2224,25 @@ function TicketsPage() {
     }
   }, [taskStartDate, taskEndDate, leadType])
 
+  // Track the initial engineer ID for the current editing session to prevent auto-syncing over historical rates
+  const initialEngIdRef = useRef(null);
+
+  useEffect(() => {
+    if (editingTicketId) {
+      initialEngIdRef.current = engineerId;
+    } else {
+      initialEngIdRef.current = null;
+    }
+  }, [editingTicketId]);
+
   const syncProfileRates = useCallback(() => {
-    if (engineerId && engineers.length > 0 && engPayType === 'Default') {
+    // Only auto-sync if:
+    // 1. It's a new ticket (editingTicketId is null)
+    // 2. The engineer was changed manually (engineerId !== initialEngIdRef.current)
+    const isNewTicket = !editingTicketId;
+    const isEngChanged = initialEngIdRef.current !== null && String(engineerId) !== String(initialEngIdRef.current);
+
+    if (engineerId && engineers.length > 0 && engPayType === 'Default' && (isNewTicket || isEngChanged)) {
       const eng = engineers.find(e => String(e.id) === String(engineerId));
       if (eng) {
         console.log(`[SYNC] Auto-populating profile rates for ${eng.name}`);
@@ -2237,9 +2254,12 @@ function TicketsPage() {
         setEngAgreedRate(String(eng.agreed_rate || '0.00'));
         setEngCancellationFee(String(eng.cancellation_fee != null ? eng.cancellation_fee : '0.00'));
         setEngCurrency(eng.currency || 'USD');
+        
+        // Update the ref to the new engineer so we don't keep syncing if other fields change
+        if (isEngChanged) initialEngIdRef.current = engineerId;
       }
     }
-  }, [engineerId, engineers, engPayType]);
+  }, [engineerId, engineers, engPayType, editingTicketId]);
 
   // Effect to AUTO-POPULATE Engineer Profile Rates
   useEffect(() => {
