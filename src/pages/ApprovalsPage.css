@@ -362,6 +362,117 @@
     }
 }
 
+/* History Table Styling */
+.history-table-container {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.history-table th {
+    background: #f8fafc;
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #edf2f7;
+}
+
+.history-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.history-row {
+    transition: background 0.15s;
+    cursor: pointer;
+}
+
+.history-row:hover {
+    background: #f8fafc;
+}
+
+.history-row:last-child td {
+    border-bottom: none;
+}
+
+.cell-date {
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.cell-name {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.table-ticket-id {
+    color: #3b82f6;
+    font-weight: 700;
+    background: #eff6ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.table-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.table-date-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.date-strikethrough {
+    color: #94a3b8;
+    text-decoration: line-through;
+}
+
+.date-new {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.status-approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .approvals-error-msg {
     background: #fff5f5;
     color: #c53030;

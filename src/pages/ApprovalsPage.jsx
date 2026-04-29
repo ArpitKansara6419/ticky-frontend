@@ -75,6 +75,56 @@ function ApprovalsPage({ onViewTicket }) {
         </div>
     )
 
+    const renderHistoryTable = () => (
+        <div className="history-table-container">
+            <table className="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Ticket</th>
+                        <th>Engineer</th>
+                        <th>Customer</th>
+                        <th>Resolution</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {history.map(item => (
+                        <tr key={item.id} className="history-row" onClick={() => onViewTicket && onViewTicket(item.ticketId)}>
+                            <td className="cell-date">
+                                {new Date(item.requestedAt).toLocaleDateString()}
+                            </td>
+                            <td>
+                                <span className={`table-badge type-${item.approvalType?.toLowerCase().replace(' ', '-')}`}>
+                                    {item.approvalType}
+                                </span>
+                            </td>
+                            <td><span className="table-ticket-id">#{item.ticketId}</span></td>
+                            <td className="cell-name">{item.engineerName}</td>
+                            <td className="cell-name">{item.customerName}</td>
+                            <td className="cell-dates">
+                                {item.approvalType === 'Early Closure' ? (
+                                    <div className="table-date-flow">
+                                        <span className="date-strikethrough">{item.currentEndDate ? new Date(item.currentEndDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '-'}</span>
+                                        <span className="date-arrow">→</span>
+                                        <span className="date-new">{item.newDate ? new Date(item.newDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Today'}</span>
+                                    </div>
+                                ) : '-'}
+                            </td>
+                            <td>
+                                <span className={`status-badge status-${item.requestStatus?.toLowerCase()}`}>
+                                    {item.requestStatus === 'Approved' ? <FiCheck /> : <FiX />}
+                                    {item.requestStatus}
+                                </span>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    )
+
     const renderCard = (approval) => (
         <div key={approval.id}
             className={`approval-card ${approval.requestStatus?.toLowerCase()} clickable`}
@@ -204,7 +254,9 @@ function ApprovalsPage({ onViewTicket }) {
                     <div className="approvals-list">
                         {(activeTab === 'pending' ? approvals : history).length === 0
                             ? renderEmptyState()
-                            : (activeTab === 'pending' ? approvals : history).map(renderCard)
+                            : activeTab === 'pending' 
+                                ? approvals.map(renderCard)
+                                : renderHistoryTable()
                         }
                     </div>
                 )}
