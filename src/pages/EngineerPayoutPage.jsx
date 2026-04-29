@@ -158,10 +158,10 @@ const EngineerPayoutPage = () => {
 
         // FALLBACK: If pay type is DEFAULT, pull rates from the engineer's master profile
         if ((ticket.eng_pay_type === 'Default' || !ticket.eng_pay_type) && engProfile) {
-            hr = parseFloat(engProfile.hourly_rate || 0);
-            hd = parseFloat(engProfile.half_day_rate || 0);
-            fd = parseFloat(engProfile.full_day_rate || 0);
-            billingType = engProfile.billing_type || 'Hourly';
+            hr = parseFloat(engProfile.hourly_rate ?? engProfile.hourlyRate ?? 0);
+            hd = parseFloat(engProfile.half_day_rate ?? engProfile.halfDayRate ?? 0);
+            fd = parseFloat(engProfile.full_day_rate ?? engProfile.fullDayRate ?? 0);
+            billingType = engProfile.billing_type ?? engProfile.billingType ?? 'Hourly';
         }
 
         const getZonedInfo = (date) => {
