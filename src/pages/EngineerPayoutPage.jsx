@@ -328,8 +328,9 @@ const EngineerPayoutPage = () => {
             sp = customWeekendRate;
         }
 
-        const trav = parseFloat(ticket.eng_travel_cost_per_day || ticket.travel_cost_per_day || 0);
-        const tool = ticket._is_log_aggregation ? 0 : parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
+        // Engineer payouts should EXCLUDE travel and tool costs as per user requirement
+        const trav = 0;
+        const tool = 0;
 
         const total = base + ot + sp + trav + tool;
         return {
