@@ -1910,9 +1910,26 @@ function TicketsPage() {
       engAgreedRate: t.engAgreedRate ?? t.eng_agreed_rate ?? '',
       eng_cancellation_fee: t.engCancellationFee ?? t.eng_cancellation_fee ?? ''
     }
+    const isDefaultNoRates = normalized.engPayType === 'Default' && (!normalized.engHourlyRate || normalized.engHourlyRate === '0.00' || normalized.engHourlyRate === 0);
+    
     setIsFillingForm(true);
     setLiveBreakdown(null);
     setPayoutLiveBreakdown(null);
+    
+    // If it's Default and has no rates, we might want to sync immediately if engineers are loaded
+    if (isDefaultNoRates && engineers.length > 0) {
+      const eng = engineers.find(e => String(e.id) === String(normalized.engineerId));
+      if (eng) {
+        normalized.engBillingType = eng.billingType ?? eng.billing_type ?? normalized.engBillingType;
+        normalized.engHourlyRate = eng.hourlyRate ?? eng.hourly_rate ?? normalized.engHourlyRate;
+        normalized.engHalfDayRate = eng.halfDayRate ?? eng.half_day_rate ?? normalized.engHalfDayRate;
+        normalized.engFullDayRate = eng.fullDayRate ?? eng.full_day_rate ?? normalized.engFullDayRate;
+        normalized.engMonthlyRate = eng.monthlyRate ?? eng.monthly_rate ?? normalized.engMonthlyRate;
+        normalized.engAgreedRate = eng.agreedRate ?? eng.agreed_rate ?? normalized.engAgreedRate;
+        normalized.eng_cancellation_fee = eng.cancellationFee ?? eng.cancellation_fee ?? normalized.eng_cancellation_fee;
+        normalized.engCurrency = eng.currency ?? normalized.engCurrency;
+      }
+    }
     setCustomerId(normalized.customerId ? String(normalized.customerId) : '')
     setLeadId(normalized.leadId ? String(normalized.leadId) : '')
     setClientName(normalized.clientName || '')
@@ -2238,8 +2255,9 @@ function TicketsPage() {
     // 2. The engineer was changed manually (engineerId !== initialEngIdRef.current)
     const isNewTicket = !editingTicketId;
     const isEngChanged = initialEngIdRef.current !== null && String(engineerId) !== String(initialEngIdRef.current);
+    const hasNoRates = !engHourlyRate || engHourlyRate === '0.00' || engHourlyRate === '';
 
-    if (engineerId && engineers.length > 0 && engPayType === 'Default' && (isNewTicket || isEngChanged)) {
+    if (engineerId && engineers.length > 0 && engPayType === 'Default' && (isNewTicket || isEngChanged || hasNoRates)) {
       const eng = engineers.find(e => String(e.id) === String(engineerId));
       if (eng) {
         console.log(`[SYNC] Auto-populating profile rates for ${eng.name}`);
