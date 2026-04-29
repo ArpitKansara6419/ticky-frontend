@@ -588,13 +588,13 @@ function TicketsPage() {
           const subEng = engineers.find(en => Number(en.id) === currentEngId);
           if (subEng) {
             rRates = {
-              hr: subEng.hourly_rate   || 0,
-              hd: subEng.half_day_rate || 0,
-              fd: subEng.full_day_rate || 0,
-              mr: subEng.monthly_rate  || 0,
-              ar: subEng.agreed_rate   || 0,
-              cf: subEng.cancellation_fee || 0,
-              bt: subEng.billing_type  || billingType
+              hr: subEng.hourlyRate   ?? subEng.hourly_rate   ?? 0,
+              hd: subEng.halfDayRate  ?? subEng.half_day_rate ?? 0,
+              fd: subEng.fullDayRate  ?? subEng.full_day_rate ?? 0,
+              mr: subEng.monthlyRate  ?? subEng.monthly_rate  ?? 0,
+              ar: subEng.agreedRate   ?? subEng.agreed_rate   ?? 0,
+              cf: subEng.cancellationFee ?? subEng.cancellation_fee ?? 0,
+              bt: subEng.billingType  ?? subEng.billing_type  ?? billingType
             };
           }
         }
@@ -616,37 +616,34 @@ function TicketsPage() {
           overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0
         };
         
-        // Find rates for the main engineer if using Default or Custom
-        if (engPayType === 'Custom') {
+        // Find rates for the specific engineer of this log (if different from main)
+        if (engPayType === 'Custom' && (!specificEngId || Number(specificEngId) === Number(engineerId))) {
            pRates.overtimeRate = engOvertimeRate || 0;
            pRates.oohRate      = engOohRate      || 0;
            pRates.weekendRate  = engWeekendRate  || 0;
            pRates.holidayRate  = engHolidayRate  || 0;
         } else {
-           const mainEng = engineers.find(e => Number(e.id) === Number(engineerId));
-           if (mainEng) {
-             pRates.overtimeRate = mainEng.overtime_rate || 0;
-             pRates.oohRate      = mainEng.ooh_rate      || 0;
-             pRates.weekendRate  = mainEng.weekend_rate  || 0;
-             pRates.holidayRate  = mainEng.holiday_rate  || 0;
+           const logEngId = Number(specificEngId || engineerId);
+           const currentEng = engineers.find(e => Number(e.id) === logEngId);
+           if (currentEng) {
+             pRates = {
+               hourlyRate:      currentEng.hourlyRate   ?? currentEng.hourly_rate   ?? 0,
+               halfDayRate:     currentEng.halfDayRate  ?? currentEng.half_day_rate ?? 0,
+               fullDayRate:     currentEng.fullDayRate  ?? currentEng.full_day_rate ?? 0,
+               monthlyRate:     currentEng.monthlyRate  ?? currentEng.monthly_rate  ?? 0,
+               agreedRate:      currentEng.agreedRate   ?? currentEng.agreed_rate   ?? 0,
+               cancellationFee: currentEng.cancellationFee ?? currentEng.cancellation_fee ?? 0,
+               billingType:     currentEng.billingType  ?? currentEng.billing_type  ?? engBillingType,
+               overtimeRate:    currentEng.overtimeRate ?? currentEng.overtime_rate ?? 0,
+               oohRate:         currentEng.oohRate      ?? currentEng.ooh_rate      ?? 0,
+               weekendRate:     currentEng.weekendRate  ?? currentEng.weekend_rate  ?? 0,
+               holidayRate:     currentEng.holidayRate  ?? currentEng.holiday_rate  ?? 0
+             };
            }
         }
 
         if (isNoEngDay) {
           pRates = { hourlyRate: 0, halfDayRate: 0, fullDayRate: 0, monthlyRate: 0, agreedRate: 0, cancellationFee: 0, billingType: 'Hourly', overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0 };
-        } else if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
-          const currentEng = engineers.find(e => Number(e.id) === currentEngId);
-          if (currentEng) {
-            pRates = {
-              hourlyRate: currentEng.hourly_rate || 0, halfDayRate: currentEng.half_day_rate || 0, fullDayRate: currentEng.full_day_rate || 0,
-              monthlyRate: currentEng.monthly_rate || 0, agreedRate: currentEng.agreed_rate || 0, cancellationFee: currentEng.cancellation_fee || 0,
-              billingType: currentEng.billing_type || 'Hourly',
-              overtimeRate: currentEng.overtime_rate || 0,
-              oohRate:      currentEng.ooh_rate      || 0,
-              weekendRate:  currentEng.weekend_rate  || 0,
-              holidayRate:  currentEng.holiday_rate  || 0
-            };
-          }
         }
 
         const payRes = calculateTicketTotal({
@@ -782,10 +779,10 @@ function TicketsPage() {
       } else {
          const mainE = engineers.find(e => Number(e.id) === Number(engineerId));
          if (mainE) {
-           pRates.ot = mainE.overtime_rate || 0;
-           pRates.ooh = mainE.ooh_rate || 0;
-           pRates.we = mainE.weekend_rate || 0;
-           pRates.hol = mainE.holiday_rate || 0;
+           pRates.ot = mainE.overtimeRate ?? mainE.overtime_rate ?? 0;
+           pRates.ooh = mainE.oohRate ?? mainE.ooh_rate ?? 0;
+           pRates.we = mainE.weekendRate ?? mainE.weekend_rate ?? 0;
+           pRates.hol = mainE.holidayRate ?? mainE.holiday_rate ?? 0;
          }
       }
 
@@ -2246,13 +2243,18 @@ function TicketsPage() {
       const eng = engineers.find(e => String(e.id) === String(engineerId));
       if (eng) {
         console.log(`[SYNC] Auto-populating profile rates for ${eng.name}`);
-        setEngBillingType(eng.billing_type || 'Hourly');
-        setEngHourlyRate(String(eng.hourly_rate != null ? eng.hourly_rate : '0.00'));
-        setEngHalfDayRate(String(eng.half_day_rate != null ? eng.half_day_rate : '0.00'));
-        setEngFullDayRate(String(eng.full_day_rate != null ? eng.full_day_rate : '0.00'));
-        setEngMonthlyRate(String(eng.monthly_rate != null ? eng.monthly_rate : '0.00'));
-        setEngAgreedRate(String(eng.agreed_rate || '0.00'));
-        setEngCancellationFee(String(eng.cancellation_fee != null ? eng.cancellation_fee : '0.00'));
+        setEngBillingType(eng.billingType ?? eng.billing_type ?? 'Hourly');
+        const hRate = eng.hourlyRate ?? eng.hourly_rate;
+        setEngHourlyRate(String(hRate != null ? hRate : '0.00'));
+        const hdRate = eng.halfDayRate ?? eng.half_day_rate;
+        setEngHalfDayRate(String(hdRate != null ? hdRate : '0.00'));
+        const fdRate = eng.fullDayRate ?? eng.full_day_rate;
+        setEngFullDayRate(String(fdRate != null ? fdRate : '0.00'));
+        const mRate = eng.monthlyRate ?? eng.monthly_rate;
+        setEngMonthlyRate(String(mRate != null ? mRate : '0.00'));
+        setEngAgreedRate(String(eng.agreedRate ?? eng.agreed_rate ?? '0.00'));
+        const cfRate = eng.cancellationFee ?? eng.cancellation_fee;
+        setEngCancellationFee(String(cfRate != null ? cfRate : '0.00'));
         setEngCurrency(eng.currency || 'USD');
         
         // Update the ref to the new engineer so we don't keep syncing if other fields change
@@ -2498,17 +2500,17 @@ function TicketsPage() {
                       setEngineerName(eng.name)
                       // Auto-sync Engineer's default billing type if not already overridden
                       if (engPayType === 'Default') {
-                        setEngBillingType(eng.billing_type || 'Hourly')
-                        setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '')
-                        setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '')
-                        setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '')
-                        setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
-                        setEngAgreedRate(eng.agreed_rate || '')
-                        setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
-                        setEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '')
-                        setEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '')
-                        setEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '')
-                        setEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '')
+                        setEngBillingType(eng.billingType ?? eng.billing_type ?? 'Hourly')
+                        setEngHourlyRate(String(eng.hourlyRate ?? eng.hourly_rate ?? '0.00'))
+                        setEngHalfDayRate(String(eng.halfDayRate ?? eng.half_day_rate ?? '0.00'))
+                        setEngFullDayRate(String(eng.fullDayRate ?? eng.full_day_rate ?? '0.00'))
+                        setEngMonthlyRate(String(eng.monthlyRate ?? eng.monthly_rate ?? '0.00'))
+                        setEngAgreedRate(String(eng.agreedRate ?? eng.agreed_rate ?? '0.00'))
+                        setEngCancellationFee(String(eng.cancellationFee ?? eng.cancellation_fee ?? '0.00'))
+                        setEngOvertimeRate(String(eng.overtimeRate ?? eng.overtime_rate ?? '0.00'))
+                        setEngOohRate(String(eng.oohRate ?? eng.ooh_rate ?? '0.00'))
+                        setEngWeekendRate(String(eng.weekendRate ?? eng.weekend_rate ?? '0.00'))
+                        setEngHolidayRate(String(eng.holidayRate ?? eng.holiday_rate ?? '0.00'))
                         setEngCurrency(eng.currency || 'USD')
                       }
                     }
@@ -2535,17 +2537,17 @@ function TicketsPage() {
                       setEngPayType('Default');
                       const eng = engineers.find(en => String(en.id) === String(engineerId));
                       if (eng) {
-                        setEngBillingType(eng.billing_type || 'Hourly')
-                        setEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '')
-                        setEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '')
-                        setEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '')
-                        setEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '')
-                        setEngAgreedRate(eng.agreed_rate || '')
-                        setEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '')
-                        setEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '')
-                        setEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '')
-                        setEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '')
-                        setEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '')
+                        setEngBillingType(eng.billingType ?? eng.billing_type ?? 'Hourly')
+                        setEngHourlyRate(String(eng.hourlyRate ?? eng.hourly_rate ?? '0.00'))
+                        setEngHalfDayRate(String(eng.halfDayRate ?? eng.half_day_rate ?? '0.00'))
+                        setEngFullDayRate(String(eng.fullDayRate ?? eng.full_day_rate ?? '0.00'))
+                        setEngMonthlyRate(String(eng.monthlyRate ?? eng.monthly_rate ?? '0.00'))
+                        setEngAgreedRate(String(eng.agreedRate ?? eng.agreed_rate ?? '0.00'))
+                        setEngCancellationFee(String(eng.cancellationFee ?? eng.cancellation_fee ?? '0.00'))
+                        setEngOvertimeRate(String(eng.overtimeRate ?? eng.overtime_rate ?? '0.00'))
+                        setEngOohRate(String(eng.oohRate ?? eng.ooh_rate ?? '0.00'))
+                        setEngWeekendRate(String(eng.weekendRate ?? eng.weekend_rate ?? '0.00'))
+                        setEngHolidayRate(String(eng.holidayRate ?? eng.holiday_rate ?? '0.00'))
                         setEngCurrency(eng.currency || 'USD')
                       }
                     }}>
@@ -2923,7 +2925,7 @@ function TicketsPage() {
                               if (Number(lEngId) === 0) pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
                               else if (lEngId && String(lEngId) !== String(engineerId)) {
                                 const eng = engineers.find(en => String(en.id) === String(lEngId));
-                                if (eng) pRates = { hr: eng.hourly_rate || 0, hd: eng.half_day_rate || 0, fd: eng.full_day_rate || 0, mr: eng.monthly_rate || 0, bt: eng.billing_type || 'Hourly' };
+                                if (eng) pRates = { hr: eng.hourlyRate ?? eng.hourly_rate ?? 0, hd: eng.halfDayRate ?? eng.half_day_rate ?? 0, fd: eng.fullDayRate ?? eng.full_day_rate ?? 0, mr: eng.monthlyRate ?? eng.monthly_rate ?? 0, bt: eng.billingType ?? eng.billing_type ?? 'Hourly' };
                               }
                               const calc = calculateTicketTotal({
                                 startTime: lg.start_time || `${d}T08:00:00Z`, endTime: lg.end_time || `${d}T16:00:00Z`, breakTime: Number(lg.break_time_mins || 0),
@@ -3034,12 +3036,12 @@ function TicketsPage() {
                                     const subEng = engineers.find(en => Number(en.id) === curEngId);
                                     if (subEng) {
                                       effectiveRates = {
-                                        hr: subEng.hourly_rate || 0,
-                                        hd: subEng.half_day_rate || 0,
-                                        fd: subEng.full_day_rate || 0,
-                                        mr: subEng.monthly_rate || 0,
-                                        ar: subEng.agreed_rate || '',
-                                        cf: subEng.cancellation_fee || 0
+                                        hr: subEng.hourlyRate ?? subEng.hourly_rate ?? 0,
+                                        hd: subEng.halfDayRate ?? subEng.half_day_rate ?? 0,
+                                        fd: subEng.fullDayRate ?? subEng.full_day_rate ?? 0,
+                                        mr: subEng.monthlyRate ?? subEng.monthly_rate ?? 0,
+                                        ar: subEng.agreedRate ?? subEng.agreed_rate ?? '',
+                                        cf: subEng.cancellationFee ?? subEng.cancellation_fee ?? 0
                                       };
                                     }
                                   }
@@ -3107,7 +3109,13 @@ function TicketsPage() {
                                               {(() => {
                                                 const selectedEng = engineers.find(e => Number(e.id) === Number(curEngId));
                                                 if (!selectedEng) return null;
-                                                const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${currency} ${selectedEng.hourly_rate || 0}\n• Half Day: ${currency} ${selectedEng.half_day_rate || 0}\n• Full Day: ${currency} ${selectedEng.full_day_rate || 0}\n• Monthly: ${currency} ${selectedEng.monthly_rate || 0}\n• Agreed: ${currency} ${selectedEng.agreed_rate || 0}\n• Cancellation: ${currency} ${selectedEng.cancellation_fee || 0}`;
+                                                const hR = selectedEng.hourlyRate ?? selectedEng.hourly_rate ?? 0;
+                                                const hdR = selectedEng.halfDayRate ?? selectedEng.half_day_rate ?? 0;
+                                                const fdR = selectedEng.fullDayRate ?? selectedEng.full_day_rate ?? 0;
+                                                const mR = selectedEng.monthlyRate ?? selectedEng.monthly_rate ?? 0;
+                                                const aR = selectedEng.agreedRate ?? selectedEng.agreed_rate ?? 0;
+                                                const cF = selectedEng.cancellationFee ?? selectedEng.cancellation_fee ?? 0;
+                                                const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${currency} ${hR}\n• Half Day: ${currency} ${hdR}\n• Full Day: ${currency} ${fdR}\n• Monthly: ${currency} ${mR}\n• Agreed: ${currency} ${aR}\n• Cancellation: ${currency} ${cF}`;
 
                                                 return (
                                                   <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block' }}>
@@ -4600,7 +4608,11 @@ function TicketsPage() {
                                                 {(() => {
                                                   const selectedEng = engineers.find(e => Number(e.id) === viewEngId);
                                                   if (!selectedEng) return null;
-                                                  const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${cur} ${selectedEng.hourly_rate || 0}\n• Half Day: ${cur} ${selectedEng.half_day_rate || 0}\n• Full Day: ${cur} ${selectedEng.full_day_rate || 0}\n• Monthly: ${cur} ${selectedEng.monthly_rate || 0}`;
+                                                  const hR = selectedEng.hourlyRate ?? selectedEng.hourly_rate ?? 0;
+                                                  const hdR = selectedEng.halfDayRate ?? selectedEng.half_day_rate ?? 0;
+                                                  const fdR = selectedEng.fullDayRate ?? selectedEng.full_day_rate ?? 0;
+                                                  const mR = selectedEng.monthlyRate ?? selectedEng.monthly_rate ?? 0;
+                                                  const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${cur} ${hR}\n• Half Day: ${cur} ${hdR}\n• Full Day: ${cur} ${fdR}\n• Monthly: ${cur} ${mR}`;
 
                                                   return (
                                                     <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block' }}>

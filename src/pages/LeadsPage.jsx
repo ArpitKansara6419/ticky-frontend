@@ -178,18 +178,18 @@ function LeadsPage() {
     if (assignEngineerId && assignPayType === 'Default') {
       const eng = engineers.find(e => String(e.id) === String(assignEngineerId));
       if (eng) {
-        setAssignEngBillingType(eng.billing_type || 'Hourly');
+        setAssignEngBillingType(eng.billingType ?? eng.billing_type ?? 'Hourly');
         setAssignEngCurrency(eng.currency || 'USD');
-        setAssignEngHourlyRate(eng.hourly_rate != null ? String(eng.hourly_rate) : '');
-        setAssignEngHalfDayRate(eng.half_day_rate != null ? String(eng.half_day_rate) : '');
-        setAssignEngFullDayRate(eng.full_day_rate != null ? String(eng.full_day_rate) : '');
-        setAssignEngMonthlyRate(eng.monthly_rate != null ? String(eng.monthly_rate) : '');
-        setAssignEngAgreedRate(eng.agreed_rate || '');
-        setAssignEngCancellationFee(eng.cancellation_fee != null ? String(eng.cancellation_fee) : '');
-        setAssignEngOvertimeRate(eng.overtime_rate != null ? String(eng.overtime_rate) : '');
-        setAssignEngOohRate(eng.ooh_rate != null ? String(eng.ooh_rate) : '');
-        setAssignEngWeekendRate(eng.weekend_rate != null ? String(eng.weekend_rate) : '');
-        setAssignEngHolidayRate(eng.holiday_rate != null ? String(eng.holiday_rate) : '');
+        setAssignEngHourlyRate(String(eng.hourlyRate ?? eng.hourly_rate ?? '0.00'));
+        setAssignEngHalfDayRate(String(eng.halfDayRate ?? eng.half_day_rate ?? '0.00'));
+        setAssignEngFullDayRate(String(eng.fullDayRate ?? eng.full_day_rate ?? '0.00'));
+        setAssignEngMonthlyRate(String(eng.monthlyRate ?? eng.monthly_rate ?? '0.00'));
+        setAssignEngAgreedRate(String(eng.agreedRate ?? eng.agreed_rate ?? '0.00'));
+        setAssignEngCancellationFee(String(eng.cancellationFee ?? eng.cancellation_fee ?? '0.00'));
+        setAssignEngOvertimeRate(String(eng.overtimeRate ?? eng.overtime_rate ?? '0.00'));
+        setAssignEngOohRate(String(eng.oohRate ?? eng.ooh_rate ?? '0.00'));
+        setAssignEngWeekendRate(String(eng.weekendRate ?? eng.weekend_rate ?? '0.00'));
+        setAssignEngHolidayRate(String(eng.holidayRate ?? eng.holiday_rate ?? '0.00'));
       }
     }
   }, [assignEngineerId, assignPayType, engineers]);
@@ -1661,13 +1661,13 @@ function LeadsPage() {
                         📊 {eng.name}'s Profile Rates
                       </p>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.billing_type || 'Hourly'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.hourly_rate || '0.00'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OT:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.overtime_rate || '0.00'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OOH:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.ooh_rate || '0.00'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>W-End:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.weekend_rate || '0.00'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Holiday:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.holiday_rate || '0.00'}</span></div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancel:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.cancellation_fee || '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.billingType ?? eng.billing_type ?? 'Hourly'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.hourlyRate ?? eng.hourly_rate ?? '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OT:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.overtimeRate ?? eng.overtime_rate ?? '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OOH:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.oohRate ?? eng.ooh_rate ?? '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>W-End:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.weekendRate ?? eng.weekend_rate ?? '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Holiday:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.holidayRate ?? eng.holiday_rate ?? '0.00'}</span></div>
+                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancel:</b><br /> <span style={{ fontWeight: '700', color: '#1e293b' }}>{eng.currency || 'USD'} {eng.cancellationFee ?? eng.cancellation_fee ?? '0.00'}</span></div>
                       </div>
                     </div>
                   );
