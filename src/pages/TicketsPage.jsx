@@ -1,5 +1,5 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
-import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
