@@ -1,9 +1,11 @@
 
 import React, { useEffect, useState } from 'react'
 import { FiSearch, FiEye, FiEdit2, FiTrash2, FiArrowLeft, FiSave, FiCheck, FiX, FiBriefcase, FiDollarSign, FiClock, FiCalendar } from 'react-icons/fi'
+import Autocomplete from 'react-google-autocomplete'
 import './EngineersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDLND9h_AWApPg9gQVYZhhsPmIHMuN-6fg'
 
 // --- REUSE CALCULATION LOGIC FROM TICKET SYSTEM ---
 const calculateEngineerPayoutForTicket = (t, eng) => {
@@ -189,10 +191,32 @@ function EngineersPage() {
         holidayRate: '',
         monthlyRate: '',
         billingType: 'Hourly',
-        city: ''
+        city: '',
+        country: '',
+        address: ''
     });
     const [savingCharges, setSavingCharges] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
+
+    const onPlaceSelected = (place) => {
+        if (!place.address_components) return;
+        
+        let city = '';
+        let country = '';
+        const address = place.formatted_address || '';
+
+        place.address_components.forEach(comp => {
+            if (comp.types.includes('locality')) city = comp.long_name;
+            if (comp.types.includes('country')) country = comp.long_name;
+        });
+
+        setChargesForm(prev => ({
+            ...prev,
+            city: city,
+            country: country,
+            address: address
+        }));
+    };
 
     // New Profile Features State
     const [rtwData, setRtwData] = useState({
@@ -281,7 +305,9 @@ function EngineersPage() {
                     holidayRate: eng.holidayRate || '',
                     monthlyRate: eng.monthlyRate || '',
                     billingType: eng.billingType || 'Hourly',
-                    city: eng.city || ''
+                    city: eng.city || '',
+                    country: eng.country || '',
+                    address: eng.address || ''
                 });
             }
         } catch (e) { console.error(e); }
@@ -485,7 +511,9 @@ function EngineersPage() {
                 holidayRate: chargesForm.holidayRate,
                 monthlyRate: chargesForm.monthlyRate,
                 billingType: chargesForm.billingType,
-                city: chargesForm.city
+                city: chargesForm.city,
+                country: chargesForm.country,
+                address: chargesForm.address
             };
 
             const res = await fetch(`${API_BASE_URL}/engineers/${selectedEngineer.id}`, {
@@ -945,9 +973,24 @@ function EngineersPage() {
                                         <input type="date" className="form-input" value={chargesForm.startDate} onChange={e => setChargesForm({ ...chargesForm, startDate: e.target.value })} />
                                     </div>
                                     <div className="form-group">
-                                        <label>City / Location</label>
-                                        <input type="text" className="form-input" value={chargesForm.city} onChange={e => setChargesForm({ ...chargesForm, city: e.target.value })} placeholder="e.g. New York" />
+                                        <label>Full Address / Location (Google Detect)</label>
+                                        <Autocomplete
+                                            apiKey={GOOGLE_MAPS_API_KEY}
+                                            onPlaceSelected={onPlaceSelected}
+                                            options={{ types: ['address'] }}
+                                            className="form-input"
+                                            placeholder="Start typing address..."
+                                            defaultValue={chargesForm.address || chargesForm.city}
+                                        />
                                     </div>
+                                    {chargesForm.city && (
+                                        <div className="form-group">
+                                            <label>Detected City & Country</label>
+                                            <div style={{ padding: '8px 12px', background: '#f1f5f9', borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+                                                {chargesForm.city}, {chargesForm.country}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Row 3: Check-In | Check-Out */}
