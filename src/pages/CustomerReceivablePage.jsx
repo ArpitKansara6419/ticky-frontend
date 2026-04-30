@@ -4,7 +4,7 @@ import {
     FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
     FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
     FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload, FiLayout, FiFile,
-    FiTag, FiGrid
+    FiTag, FiGrid, FiTrash2
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -720,6 +720,30 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error(e); }
     };
 
+    const handleDeleteInvoice = async (id) => {
+        if (!confirm('Are you sure you want to delete this invoice? Associated tickets will be set back to Unbilled.')) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                fetchStats();
+                fetchInvoices();
+                fetchUnbilled();
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const handleClearAllInvoices = async () => {
+        if (!confirm('DANGER: This will delete ALL invoice records and reset all tickets to Unbilled. Continue?')) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/invoices/clear-all`, { method: 'POST' });
+            if (res.ok) {
+                fetchStats();
+                fetchInvoices();
+                fetchUnbilled();
+            }
+        } catch (e) { console.error(e); }
+    };
+
     const handleUpdateTicketRates = async () => {
         if (!detailTicket) return;
         
@@ -1181,6 +1205,15 @@ const CustomerReceivablePage = () => {
                         </>
                     ) : (
                         <>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+                                <button 
+                                    className="btn-wow-secondary" 
+                                    style={{ color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                    onClick={handleClearAllInvoices}
+                                >
+                                    <FiTrash2 /> Clear All History
+                                </button>
+                            </div>
                             <div className="table-wrapper-premium">
                                 <table className="table-premium">
                                     <thead>
@@ -1216,6 +1249,14 @@ const CustomerReceivablePage = () => {
                                                             title="Print Invoice"
                                                         >
                                                             <FiDownload />
+                                                        </button>
+                                                        <button
+                                                            className="eye-btn-v3"
+                                                            style={{ color: '#ef4444' }}
+                                                            onClick={() => handleDeleteInvoice(inv.id)}
+                                                            title="Delete Invoice"
+                                                        >
+                                                            <FiTrash2 />
                                                         </button>
                                                         {inv.status !== 'Paid' && (
                                                             <button
