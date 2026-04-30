@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FiCalendar, FiClock, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight, FiX, FiCheckCircle, FiMinusCircle, FiTarget, FiSearch, FiFilter, FiDownload, FiGlobe, FiAlertCircle } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight, FiX, FiCheckCircle, FiMinusCircle, FiTarget, FiSearch, FiFilter, FiDownload, FiGlobe, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
 import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -50,6 +50,29 @@ const AttendancePage = ({ user }) => {
     };
 
     const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
+    
+    const handleClearAttendance = async () => {
+        if (!window.confirm('DANGER: This will delete ALL attendance records for all engineers. Continue?')) return;
+        try {
+            setLoading(true);
+            const res = await fetch(`${API_BASE_URL}/attendance/clear-all`, { method: 'POST', credentials: 'include' });
+            if (res.ok) {
+                // Refresh data
+                const endpoint = viewMode === 'daily'
+                    ? `${API_BASE_URL}/attendance?date=${date}`
+                    : `${API_BASE_URL}/attendance/monthly?year=${year}&month=${month}`;
+                const refreshRes = await fetch(endpoint, { credentials: 'include' });
+                const data = await refreshRes.json();
+                if (viewMode === 'daily') setRecords(Array.isArray(data) ? data : []);
+                else setMonthlyRecords(Array.isArray(data) ? data : []);
+            }
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // --- Effects ---
     useEffect(() => {
@@ -396,6 +419,13 @@ const AttendancePage = ({ user }) => {
                     <p className="page-subtitle">Monitor daily check-ins and monthly attendance performance.</p>
                 </div>
                 <div className="view-switcher" style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        className="tickets-primary-btn"
+                        style={{ height: '40px', padding: '0 15px', backgroundColor: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', borderColor: '#fee2e2' }}
+                        onClick={handleClearAttendance}
+                    >
+                        <FiTrash2 /> Clear Records
+                    </button>
                     <button
                         className="tickets-primary-btn"
                         style={{ height: '40px', padding: '0 15px', backgroundColor: '#10B981', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}
