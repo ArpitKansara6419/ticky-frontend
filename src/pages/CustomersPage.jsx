@@ -1,7 +1,7 @@
 // CustomersPage.jsx - Customers listing and Add Customer flow
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiMoreVertical, FiArrowLeft, FiFileText, FiX, FiEye } from 'react-icons/fi'
+import { FiMoreVertical, FiArrowLeft, FiFileText, FiX, FiEye, FiTrash2 } from 'react-icons/fi'
 import './CustomersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -543,6 +543,23 @@ function CustomersPage() {
     }
   }
 
+  const handleClearAll = async () => {
+    if (!window.confirm('DANGER: This will delete ALL customers and all their leads, tickets, and invoices. This action cannot be undone. Continue?')) return
+    try {
+      setLoading(true)
+      const res = await fetch(`${API_BASE_URL}/customers/clear-all`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed to clear data')
+      await loadCustomers('all')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleViewDocument = (fileUrl) => {
     if (!fileUrl) return;
 
@@ -950,16 +967,26 @@ function CustomersPage() {
           <h1 className="customers-title">Customers</h1>
           <p className="customers-subtitle">Manage your customer relationships.</p>
         </div>
-        <button
-          type="button"
-          className="customers-primary-btn"
-          onClick={() => {
-            resetForm()
-            setViewMode('form')
-          }}
-        >
-          + Add Customer
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            type="button"
+            className="customers-primary-btn"
+            style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fee2e2' }}
+            onClick={handleClearAll}
+          >
+            <FiTrash2 /> Clear All
+          </button>
+          <button
+            type="button"
+            className="customers-primary-btn"
+            onClick={() => {
+              resetForm()
+              setViewMode('form')
+            }}
+          >
+            + Add Customer
+          </button>
+        </div>
       </header>
 
       <section className="customers-summary-row">
