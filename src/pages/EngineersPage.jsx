@@ -445,6 +445,23 @@ function EngineersPage() {
             alert('Failed to delete engineer')
         }
     }
+    const handleClearAll = async () => {
+        if (!window.confirm('DANGER: This will delete ALL engineers and their profile data (Skills, RTW, Attendance, etc.). Continue?')) return;
+        try {
+            setLoading(true);
+            const res = await fetch(`${API_BASE_URL}/engineers/clear-all`, { method: 'POST', credentials: 'include' });
+            if (res.ok) {
+                await fetchEngineers();
+            } else {
+                alert('Failed to clear engineers');
+            }
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSaveCharges = async () => {
         setSavingCharges(true);
