@@ -178,6 +178,8 @@ function CustomersPage() {
   const [companyRegistrationNo, setCompanyRegistrationNo] = useState('')
   const [vatNumber, setVatNumber] = useState('')
   const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('')
   const [profileFile, setProfileFile] = useState(null)
   const [profilePreview, setProfilePreview] = useState('')
 
@@ -207,6 +209,8 @@ function CustomersPage() {
     setCompanyRegistrationNo('')
     setVatNumber('')
     setAddress('')
+    setCity('')
+    setCountry('')
     setProfileFile(null)
     setProfilePreview('')
     setPersons([])
@@ -426,6 +430,8 @@ function CustomersPage() {
         companyRegistrationNo,
         vatNumber,
         address,
+        city,
+        country,
         profileImageUrl: finalProfileImageUrl,
         status,
         persons: finalPersons,
@@ -500,6 +506,8 @@ function CustomersPage() {
       setCompanyRegistrationNo(customer.companyRegistrationNo || '')
       setVatNumber(customer.vatNumber || '')
       setAddress(customer.address || '')
+      setCity(customer.city || '')
+      setCountry(customer.country || '')
       setProfileFile(null)
       setProfilePreview(customer.profileImageUrl || '')
       setPersons(personRows.map((p) => ({ name: p.name, email: p.email, contact: p.contact })))
@@ -715,6 +723,26 @@ function CustomersPage() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Enter full address"
+                />
+              </label>
+
+              <label className="customers-field">
+                <span>City</span>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Enter city"
+                />
+              </label>
+
+              <label className="customers-field">
+                <span>Country</span>
+                <input
+                  type="text"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  placeholder="Enter country"
                 />
               </label>
 
