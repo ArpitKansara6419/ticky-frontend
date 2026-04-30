@@ -180,6 +180,9 @@ function CustomersPage() {
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
+  const [citySuggestions, setCitySuggestions] = useState([])
+  const [isSearchingCity, setIsSearchingCity] = useState(false)
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
   const [profileFile, setProfileFile] = useState(null)
   const [profilePreview, setProfilePreview] = useState('')
 
@@ -211,6 +214,8 @@ function CustomersPage() {
     setAddress('')
     setCity('')
     setCountry('')
+    setCitySuggestions([])
+    setShowCityDropdown(false)
     setProfileFile(null)
     setProfilePreview('')
     setPersons([])
@@ -219,6 +224,40 @@ function CustomersPage() {
     setDocumentDraft(initialDocument)
     setError('')
     setEditingCustomerId(null)
+  }
+
+  const searchCities = async (query) => {
+    if (!query || query.length < 3) {
+      setCitySuggestions([])
+      setShowCityDropdown(false)
+      return
+    }
+    setIsSearchingCity(true)
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&addressdetails=1&limit=5`)
+      const data = await res.json()
+      setCitySuggestions(data)
+      setShowCityDropdown(true)
+    } catch (err) {
+      console.error('City search error:', err)
+    } finally {
+      setIsSearchingCity(false)
+    }
+  }
+
+  const handleCityInput = (val) => {
+    setCity(val)
+    // Debounce manual: only search if we're not selecting
+    searchCities(val)
+  }
+
+  const selectCitySuggestion = (item) => {
+    const cityName = item.address.city || item.address.town || item.address.village || item.display_name.split(',')[0]
+    const countryName = item.address.country || ''
+    setCity(cityName)
+    setCountry(countryName)
+    setCitySuggestions([])
+    setShowCityDropdown(false)
   }
 
   const loadCustomers = async (filter = documentFilter) => {
@@ -726,14 +765,29 @@ function CustomersPage() {
                 />
               </label>
 
-              <label className="customers-field">
+              <label className="customers-field" style={{ position: 'relative' }}>
                 <span>City</span>
                 <input
                   type="text"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={(e) => handleCityInput(e.target.value)}
                   placeholder="Enter city"
+                  autoComplete="off"
+                  onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
                 />
+                {isSearchingCity && <div className="searching-spinner" />}
+                {showCityDropdown && citySuggestions.length > 0 && (
+                  <ul className="city-suggestions">
+                    {citySuggestions.map((item, idx) => (
+                      <li key={idx} onClick={() => selectCitySuggestion(item)}>
+                        <span className="suggestion-main">
+                          {item.address.city || item.address.town || item.address.village || item.display_name.split(',')[0]}
+                        </span>
+                        <span className="suggestion-sub">{item.display_name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </label>
 
               <label className="customers-field">
