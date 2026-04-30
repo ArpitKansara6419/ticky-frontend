@@ -537,9 +537,7 @@ function LeadsPage() {
           return alert('The new dates must be different from the current service dates.')
         }
 
-        if (followUpDate > lastDayOfCurrentMonth) {
-          return alert(`The start date must be within the current month (${now.toLocaleString('default', { month: 'long' })}).`);
-        }
+        // Removed current month restriction for rescheduling as per user request
       }
 
       const res = await fetch(`${API_BASE_URL}/leads/${leadId}/status`, {
@@ -666,11 +664,7 @@ function LeadsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setFormError('')
 
-    if (taskStartDate > lastDayOfCurrentMonth) {
-      setFormError(`Start date must be within the current month (${now.toLocaleString('default', { month: 'long' })}).`);
-      setSaving(false);
-      return;
-    }
+    // Removed current month restriction as per user request
 
     try {
       const res = await fetch(editingLeadId ? `${API_BASE_URL}/leads/${editingLeadId}` : `${API_BASE_URL}/leads`, {
@@ -842,7 +836,6 @@ function LeadsPage() {
                   value={taskStartDate}
                   onChange={e => setTaskStartDate(e.target.value)}
                   min={todayStr}
-                  max={lastDayOfCurrentMonth}
                   required
                 />
               </label>
