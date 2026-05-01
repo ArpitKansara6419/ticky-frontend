@@ -557,6 +557,107 @@ const CustomerReceivablePage = () => {
         doc.save(`Invoice_Ticket_${ticket.id}.pdf`);
     };
 
+    const generateBreakdownPDF = (ticket, bd) => {
+        const doc = new jsPDF();
+        const cur = ticket.currency || 'USD';
+
+        // Header
+        doc.setFillColor(30, 41, 59);
+        doc.rect(0, 0, 210, 35, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.text('COST BREAKDOWN REPORT', 20, 22);
+        
+        doc.setFontSize(10);
+        doc.text(`Ticket #${ticket.id}`, 160, 22);
+
+        // Details Table
+        doc.setTextColor(30, 41, 59);
+        autoTable(doc, {
+            startY: 45,
+            head: [['Property', 'Details']],
+            body: [
+                ['Customer', ticket.customer_name || '-'],
+                ['Engineer', ticket.engineer_name || '-'],
+                ['Task Name', ticket.task_name || '-'],
+                ['Service Date', (ticket.task_start_date || '') + ' to ' + (ticket.task_end_date || '')],
+                ['Billing Model', ticket.billing_type || 'Hourly'],
+                ['Location', [ticket.city, ticket.country].filter(Boolean).join(', ') || '-']
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105] }
+        });
+
+        // Time Logs Section
+        if (ticket.start_time) {
+            doc.setFontSize(12);
+            doc.text('Activity Time Log', 20, doc.lastAutoTable.finalY + 15);
+            autoTable(doc, {
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['Clock In', 'Clock Out', 'Break', 'Billable Hours']],
+                body: [[
+                    new Date(ticket.start_time).toLocaleString(),
+                    new Date(ticket.end_time).toLocaleString(),
+                    `${ticket.break_time || 0}s`,
+                    bd.formattedHours
+                ]],
+                theme: 'grid'
+            });
+        }
+
+        // Financial Breakdown
+        doc.setFontSize(12);
+        doc.text('Financial Breakdown', 20, doc.lastAutoTable.finalY + 15);
+        const rows = [
+            ['Labor Base Cost', bd.baseBreakdown, `${cur} ${bd.baseCost}`],
+            ['Overtime Premium', bd.otBreakdown || '-', `${cur} ${bd.otPremium}`],
+            ['OOH Premium', bd.oohBreakdown || '-', `${cur} ${bd.oohPremium}`],
+            ['Special Day Premium', bd.spBreakdown || '-', `${cur} ${bd.specialDayPremium}`],
+            ['Travel Logistics', '-', `${cur} ${bd.travelCost.toFixed(2)}`],
+            ['Tools & Materials', '-', `${cur} ${bd.toolCost.toFixed(2)}`]
+        ];
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 20,
+            head: [['Component', 'Description', 'Amount']],
+            body: rows,
+            theme: 'grid',
+            headStyles: { fillColor: [79, 70, 229] },
+            foot: [['TOTAL RECEIVABLE', '', `${cur} ${bd.totalReceivable}`]],
+            footStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold' }
+        });
+
+        doc.save(`Breakdown_Ticket_${ticket.id}.pdf`);
+    };
+
+    const generateBreakdownExcel = (ticket, bd) => {
+        const cur = ticket.currency || 'USD';
+        const data = [
+            ["TICKET COST BREAKDOWN"],
+            ["Ticket ID", ticket.id],
+            ["Customer", ticket.customer_name],
+            ["Engineer", ticket.engineer_name],
+            ["Task", ticket.task_name],
+            [],
+            ["FINANCIAL SUMMARY"],
+            ["Base Labor", parseFloat(bd.baseCost), cur],
+            ["Overtime", parseFloat(bd.otPremium), cur],
+            ["Special Premiums", parseFloat(bd.specialDayPremium) + parseFloat(bd.oohPremium), cur],
+            ["Travel", parseFloat(bd.travelCost), cur],
+            ["Tools", parseFloat(bd.toolCost), cur],
+            ["TOTAL NET", parseFloat(bd.totalReceivable), cur],
+            [],
+            ["TIME DETAILS"],
+            ["Total Billable Hours", bd.totalHours],
+            ["Clock In", ticket.start_time],
+            ["Clock Out", ticket.end_time]
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Breakdown");
+        XLSX.writeFile(wb, `Breakdown_Ticket_${ticket.id}.xlsx`);
+    };
+
     const generateExcelReport = (ticket, bd) => {
         const cur = ticket.currency || 'USD';
         const data = [
@@ -1472,12 +1573,22 @@ const CustomerReceivablePage = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="modal-footer-premium" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px' }}>
-                                <button className="btn-secondary" style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setDetailTicket(null)}>Dismiss Breakdown</button>
-                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => handleOpenInvoiceOptions(detailTicket)}>
-                                    <FiFileText style={{ marginRight: '6px' }} /> Create Invoice & Customer Breakdown
+                            <div className="modal-footer-premium" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '16px', flexWrap: 'wrap' }}>
+                                <button className="btn-secondary" style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setDetailTicket(null)}>Dismiss</button>
+                                
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button className="btn-secondary" title="Download Breakdown PDF" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#6366f1', cursor: 'pointer' }} onClick={() => generateBreakdownPDF(detailTicket, bd)}>
+                                        <FiFileText /> PDF
+                                    </button>
+                                    <button className="btn-secondary" title="Download Breakdown Excel" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#10b981', cursor: 'pointer' }} onClick={() => generateBreakdownExcel(detailTicket, bd)}>
+                                        <FiGrid /> Excel
+                                    </button>
+                                </div>
+
+                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => handleOpenInvoiceOptions(detailTicket)}>
+                                    <FiDownload style={{ marginRight: '6px' }} /> Invoice Options
                                 </button>
-                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)' }} onClick={handleUpdateTicketRates}>Update Costs & Rates</button>
+                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#7c3aed', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(124, 58, 237, 0.4)' }} onClick={handleUpdateTicketRates}>Update & Save</button>
                             </div>
                         </div>
                     </div>
