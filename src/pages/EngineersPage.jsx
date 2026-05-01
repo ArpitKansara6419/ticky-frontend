@@ -1,11 +1,9 @@
 
 import React, { useEffect, useState } from 'react'
 import { FiSearch, FiEye, FiEdit2, FiTrash2, FiArrowLeft, FiSave, FiCheck, FiX, FiBriefcase, FiDollarSign, FiClock, FiCalendar } from 'react-icons/fi'
-import Autocomplete from 'react-google-autocomplete'
 import './EngineersPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDLND9h_AWApPg9gQVYZhhsPmIHMuN-6fg'
 
 // --- REUSE CALCULATION LOGIC FROM TICKET SYSTEM ---
 const calculateEngineerPayoutForTicket = (t, eng) => {
@@ -191,8 +189,6 @@ function EngineersPage() {
         holidayRate: '',
         monthlyRate: '',
         billingType: 'Hourly',
-        city: '',
-        country: '',
         address: ''
     });
     const [savingCharges, setSavingCharges] = useState(false);
@@ -212,8 +208,6 @@ function EngineersPage() {
 
         setChargesForm(prev => ({
             ...prev,
-            city: city,
-            country: country,
             address: address
         }));
     };
@@ -678,9 +672,7 @@ function EngineersPage() {
                                 </div>
                                 <div className="detail-item">
                                     <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', marginBottom: '5px', display: 'block' }}>LOCATION</label>
-                                    <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>
-                                        {selectedEngineer.address || '-'}{selectedEngineer.city ? `, ${selectedEngineer.city}` : ''}{selectedEngineer.country ? `, ${selectedEngineer.country}` : ''}
-                                    </div>
+                                    <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>{selectedEngineer.address || '-'}</div>
                                 </div>
                             </div>
 
@@ -884,7 +876,6 @@ function EngineersPage() {
                                                     <th>Status</th>
                                                     <th>Worked Time</th>
                                                     <th>Earnings</th>
-                                                    <th>Location</th>
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
@@ -914,9 +905,6 @@ function EngineersPage() {
                                                                         {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
                                                                         {p.total.toFixed(2)}
                                                                     </div>
-                                                                </td>
-                                                                <td>
-                                                                    {t.city}, {t.country}
                                                                 </td>
                                                                 <td>
                                                                     <div className="engineer-actions">
@@ -972,25 +960,7 @@ function EngineersPage() {
                                         <label>Start Date <span className="req">*</span></label>
                                         <input type="date" className="form-input" value={chargesForm.startDate} onChange={e => setChargesForm({ ...chargesForm, startDate: e.target.value })} />
                                     </div>
-                                    <div className="form-group">
-                                        <label>Full Address / Location (Google Detect)</label>
-                                        <Autocomplete
-                                            apiKey={GOOGLE_MAPS_API_KEY}
-                                            onPlaceSelected={onPlaceSelected}
-                                            options={{ types: ['address'] }}
-                                            className="form-input"
-                                            placeholder="Start typing address..."
-                                            defaultValue={chargesForm.address || chargesForm.city}
-                                        />
                                     </div>
-                                    {chargesForm.city && (
-                                        <div className="form-group">
-                                            <label>Detected City & Country</label>
-                                            <div style={{ padding: '8px 12px', background: '#f1f5f9', borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
-                                                {chargesForm.city}, {chargesForm.country}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Row 3: Check-In | Check-Out */}

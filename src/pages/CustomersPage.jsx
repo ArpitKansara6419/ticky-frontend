@@ -214,8 +214,6 @@ function CustomersPage() {
     setAddress('')
     setCity('')
     setCountry('')
-    setCitySuggestions([])
-    setShowCityDropdown(false)
     setProfileFile(null)
     setProfilePreview('')
     setPersons([])
@@ -226,39 +224,6 @@ function CustomersPage() {
     setEditingCustomerId(null)
   }
 
-  const searchCities = async (query) => {
-    if (!query || query.length < 3) {
-      setCitySuggestions([])
-      setShowCityDropdown(false)
-      return
-    }
-    setIsSearchingCity(true)
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&addressdetails=1&limit=5`)
-      const data = await res.json()
-      setCitySuggestions(data)
-      setShowCityDropdown(true)
-    } catch (err) {
-      console.error('City search error:', err)
-    } finally {
-      setIsSearchingCity(false)
-    }
-  }
-
-  const handleCityInput = (val) => {
-    setCity(val)
-    // Debounce manual: only search if we're not selecting
-    searchCities(val)
-  }
-
-  const selectCitySuggestion = (item) => {
-    const cityName = item.address.city || item.address.town || item.address.village || item.display_name.split(',')[0]
-    const countryName = item.address.country || ''
-    setCity(cityName)
-    setCountry(countryName)
-    setCitySuggestions([])
-    setShowCityDropdown(false)
-  }
 
   const loadCustomers = async (filter = documentFilter) => {
     try {
@@ -765,29 +730,14 @@ function CustomersPage() {
                 />
               </label>
 
-              <label className="customers-field" style={{ position: 'relative' }}>
+              <label className="customers-field">
                 <span>City</span>
                 <input
                   type="text"
                   value={city}
-                  onChange={(e) => handleCityInput(e.target.value)}
+                  onChange={(e) => setCity(e.target.value)}
                   placeholder="Enter city"
-                  autoComplete="off"
-                  onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
                 />
-                {isSearchingCity && <div className="searching-spinner" />}
-                {showCityDropdown && citySuggestions.length > 0 && (
-                  <ul className="city-suggestions">
-                    {citySuggestions.map((item, idx) => (
-                      <li key={idx} onClick={() => selectCitySuggestion(item)}>
-                        <span className="suggestion-main">
-                          {item.address.city || item.address.town || item.address.village || item.display_name.split(',')[0]}
-                        </span>
-                        <span className="suggestion-sub">{item.display_name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </label>
 
               <label className="customers-field">
@@ -1126,7 +1076,7 @@ function CustomersPage() {
                 <th>Name</th>
                 <th>Customer Type</th>
                 <th>Authorised Person</th>
-                <th>Location</th>
+                <th>Address</th>
                 <th>Documents</th>
                 <th>Create Lead</th>
                 <th>Actions</th>
@@ -1185,9 +1135,7 @@ function CustomersPage() {
                     </td>
                     <td>{customer.customerType === 'company' ? 'Company' : 'Freelancer'}</td>
                     <td>{customer.authorizedPersonName || '-'}</td>
-                    <td style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
-                      {customer.city || '-'}, {customer.country || '-'}
-                    </td>
+                    <td>{customer.address || '-'}</td>
                     <td>
                       {customer.documentTitle ? (
                         <div className="customers-doc-container">
