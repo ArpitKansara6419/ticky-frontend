@@ -2388,7 +2388,7 @@ function TicketsPage() {
                   <option value="">Choose a customer...</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.accountEmail})
+                      {c.name} {c.accountEmail ? `(${c.accountEmail})` : ''}
                     </option>
                   ))}
                 </select>
