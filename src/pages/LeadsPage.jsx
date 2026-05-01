@@ -173,6 +173,25 @@ function LeadsPage() {
   const [latitude, setLatitude] = useState(null)
   const [longitude, setLongitude] = useState(null)
  
+  // AUTO FILL customer details when a customer is selected in the Lead form
+  useEffect(() => {
+    if (!customerId) return
+    const selected = customers.find(c => String(c.id) === String(customerId))
+    if (!selected) return
+    // Fill address/location fields from customer record
+    if (selected.address) setAddressLine1(selected.address)
+    if (selected.city) setCity(selected.city)
+    if (selected.country) {
+      setCountry(selected.country)
+      const match = countriesList.find(c => c.name === selected.country)
+      if (match) {
+        setAvailableTimezones(match.timezones)
+        setTimezone(match.timezones[0] || '')
+      }
+    }
+    if (selected.zipCode) setZipCode(selected.zipCode)
+  }, [customerId, customers, countriesList])
+
   // AUTO SYNC Engineer Payout details when selecting an engineer in the assignment modal
   useEffect(() => {
     if (assignEngineerId && assignPayType === 'Default') {
@@ -501,8 +520,8 @@ function LeadsPage() {
       newStatus: lead.status
     })
 
-    // Default the dates to current lead's dates (using followUpDate history if available)
-    const currentStart = (lead.followUpDate || lead.taskStartDate)?.split('T')[0] || ''
+    // Always pre-fill with the lead's own start/end dates so user doesn't have to re-enter them
+    const currentStart = lead.taskStartDate?.split('T')[0] || ''
     const currentEnd = lead.taskEndDate?.split('T')[0] || ''
 
     setFollowUpDate(currentStart)
@@ -1381,17 +1400,16 @@ function LeadsPage() {
               {(statusChangeData.newStatus === 'Reschedule' || statusChangeData.newStatus === 'Confirm') && (
                 <div className="reschedule-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div className="reschedule-date-box">
-                    <label>New Start Date</label>
+                    <label>{statusChangeData.newStatus === 'Confirm' ? 'Start Date' : 'New Start Date'}</label>
                     <input
                       type="date"
                       value={followUpDate}
                       min={todayStr}
-                      max={lastDayOfCurrentMonth}
                       onChange={e => setFollowUpDate(e.target.value)}
                     />
                   </div>
                   <div className="reschedule-date-box">
-                    <label>New End Date</label>
+                    <label>{statusChangeData.newStatus === 'Confirm' ? 'End Date' : 'New End Date'}</label>
                     <input
                       type="date"
                       value={statusChangeEndDate}
