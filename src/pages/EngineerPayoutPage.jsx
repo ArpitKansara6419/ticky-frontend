@@ -236,7 +236,9 @@ const EngineerPayoutPage = () => {
                 if (res.otBreakdown) combinedOtBD += (combinedOtBD ? " + " : "") + res.otBreakdown;
                 
                 spP += parseFloat(res.sp || 0);
-                travC += parseFloat(res.trav || 0);
+                // Travel and Tool costs are excluded from Engineer Payout
+                travC = 0;
+                toolC = 0;
             });
 
             // ── One-Time Fees Attribution ──────────────────────────────────
@@ -251,15 +253,15 @@ const EngineerPayoutPage = () => {
                    baseC = parseFloat(ticket.eng_cancellation_fee || 0);
                    combinedBaseBD = "Fixed Cancellation Fee";
                }
-               const tOneTime = parseFloat(ticket.eng_tool_cost || ticket.tool_cost || 0);
-               toolC = tOneTime;
+               const tOneTime = 0; // Excluded
+               toolC = 0; // Excluded
             } else {
                if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
                    // No base for sub-eng on fixed tickets unless logs (which are summed above)
                }
             }
 
-            totalRec = baseC + otP + spP + travC + toolC;
+            totalRec = baseC + otP + spP; // Excluded travC and toolC
             return {
                 totalPayout: totalRec.toFixed(2),
                 base: baseC.toFixed(2), ot: otP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
