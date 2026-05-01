@@ -1577,16 +1577,16 @@ const CustomerReceivablePage = () => {
                                 <button className="btn-secondary" style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setDetailTicket(null)}>Dismiss</button>
                                 
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button className="btn-secondary" title="Download Breakdown PDF" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#6366f1', cursor: 'pointer' }} onClick={() => generateBreakdownPDF(detailTicket, bd)}>
-                                        <FiFileText /> PDF
+                                    <button className="btn-secondary" title="Download Breakdown PDF" style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => generateBreakdownPDF(detailTicket, bd)}>
+                                        <FiFileText /> Breakdown PDF
                                     </button>
-                                    <button className="btn-secondary" title="Download Breakdown Excel" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#10b981', cursor: 'pointer' }} onClick={() => generateBreakdownExcel(detailTicket, bd)}>
-                                        <FiGrid /> Excel
+                                    <button className="btn-secondary" title="Download Breakdown Excel" style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => generateBreakdownExcel(detailTicket, bd)}>
+                                        <FiGrid /> Breakdown Excel
                                     </button>
                                 </div>
 
-                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => handleOpenInvoiceOptions(detailTicket)}>
-                                    <FiDownload style={{ marginRight: '6px' }} /> Invoice Options
+                                <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => handleOpenInvoiceOptions(detailTicket)}>
+                                    <FiDownload /> Download Invoice
                                 </button>
                                 <button className="btn-primary-premium" style={{ padding: '10px 16px', borderRadius: '8px', background: '#7c3aed', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(124, 58, 237, 0.4)' }} onClick={handleUpdateTicketRates}>Update & Save</button>
                             </div>
