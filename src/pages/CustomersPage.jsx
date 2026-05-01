@@ -1076,7 +1076,7 @@ function CustomersPage() {
                 <th>Name</th>
                 <th>Customer Type</th>
                 <th>Authorised Person</th>
-                <th>Address</th>
+                <th>Location</th>
                 <th>Documents</th>
                 <th>Create Lead</th>
                 <th>Actions</th>
@@ -1135,7 +1135,12 @@ function CustomersPage() {
                     </td>
                     <td>{customer.customerType === 'company' ? 'Company' : 'Freelancer'}</td>
                     <td>{customer.authorizedPersonName || '-'}</td>
-                    <td>{customer.address || '-'}</td>
+                    <td>
+                      <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+                        {customer.city || '-'}, {customer.country || '-'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>{customer.address}</div>
+                    </td>
                     <td>
                       {customer.documentTitle ? (
                         <div className="customers-doc-container">
