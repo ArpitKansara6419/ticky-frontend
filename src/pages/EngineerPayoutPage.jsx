@@ -368,16 +368,6 @@ const EngineerPayoutPage = () => {
                     >
                         <FiRefreshCw className={loading ? 'spin' : ''} />
                     </button>
-                    <button className="btn-secondary" onClick={async () => {
-                        setProcessing(true);
-                        try {
-                            const res = await fetch(`${API_BASE_URL}/payouts/maintenance/recalculate`, { method: 'POST' });
-                            if (res.ok) alert('All unpaid payouts recalculated.');
-                        } catch (e) { alert('Maintenance failed.'); }
-                        setProcessing(false);
-                    }}>
-                        <FiRefreshCw className={processing ? 'spin' : ''} /> Recalculate Old Payouts
-                    </button>
                 </div>
                 <div className="header-stats">
                     <div className="stat-card blue">
