@@ -1,4 +1,4 @@
-﻿
+
 import React, { useEffect, useState } from 'react'
 import { FiSearch, FiEye, FiEdit2, FiTrash2, FiArrowLeft, FiSave, FiCheck, FiX, FiBriefcase, FiDollarSign, FiClock, FiCalendar } from 'react-icons/fi'
 import './EngineersPage.css'
@@ -6,7 +6,7 @@ import './EngineersPage.css'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 // --- REUSE CALCULATION LOGIC FROM TICKET SYSTEM ---
-const calculateEngineerPayoutForTicket = (t, eng) => {
+const calculateEngineerPayoutForTicket = (t, eng, timezoneContext = 'Ticket Local') => {
     if (!t || !eng) return { total: 0 };
 
     // 1. Prepare Rates (use engineer rates)
@@ -63,7 +63,7 @@ const calculateEngineerPayoutForTicket = (t, eng) => {
     const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - breakSec);
     const hrs = totSec / 3600;
 
-    const targetTZ = t.timezone || 'UTC';
+    const targetTZ = (timezoneContext && timezoneContext !== 'Ticket Local') ? timezoneContext : (t.timezone || 'UTC');
     const getZonedInfo = (date) => {
         try {
             const parts = new Intl.DateTimeFormat('en-US', {
@@ -777,7 +777,7 @@ function EngineersPage() {
                                             <div key={i} style={{ background: '#ffffff', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                                                 <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{cert.certificationName}</div>
                                                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px' }}>
-                                                    ID: {cert.certificationId || 'N/A'} â€¢ Issued: {cert.issueDate || 'N/A'} â€¢ Expires: {cert.expiryDate || 'N/A'}
+                                                    ID: {cert.certificationId || 'N/A'} • Issued: {cert.issueDate || 'N/A'} • Expires: {cert.expiryDate || 'N/A'}
                                                 </div>
                                             </div>
                                         )) : <div style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No certifications listed.</div>}
@@ -849,7 +849,7 @@ function EngineersPage() {
                                     <div style={{ background: '#eff6ff', padding: '15px', borderRadius: '12px', border: '1px solid #dbeafe' }}>
                                         <div style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600', marginBottom: '5px' }}>TOTAL EARNINGS</div>
                                         <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
-                                            {selectedEngineer?.currency === 'EUR' ? 'â‚¬' : selectedEngineer?.currency === 'GBP' ? 'Â£' : 'â‚¹'}
+                                            {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : selectedEngineer?.currency === 'INR' ? '₹' : '$'}
                                             {engTickets.reduce((acc, t) => acc + calculateEngineerPayoutForTicket(t, selectedEngineer, calcTimezone).total, 0).toFixed(2)}
                                         </div>
                                     </div>
@@ -901,8 +901,8 @@ function EngineersPage() {
                                                                     <div style={{ fontSize: '11px', color: '#64748b' }}>{t.billingType}</div>
                                                                 </td>
                                                                 <td>
-                                                                    <div style={{ fontWeight: 'bold', color: '#059669', fontSize: '15px' }}>
-                                                                        {selectedEngineer?.currency === 'EUR' ? 'â‚¬' : selectedEngineer?.currency === 'GBP' ? 'Â£' : 'â‚¹'}
+                                                                    <div style={{ fontWeight: '700', color: '#1e40af' }}>
+                                                                        {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
                                                                         {p.total.toFixed(2)}
                                                                     </div>
                                                                 </td>
@@ -985,9 +985,9 @@ function EngineersPage() {
                                         <label>Select Currency <span className="req">*</span></label>
                                         <select className="form-input" value={chargesForm.currency} onChange={e => setChargesForm({ ...chargesForm, currency: e.target.value })}>
                                             <option value="USD">USD - Dollar ($)</option>
-                                            <option value="EUR">EUR - Euro (â‚¬)</option>
-                                            <option value="GBP">GBP - Pound (Â£)</option>
-                                            <option value="INR">INR - Rupee (â‚¹)</option>
+                                            <option value="EUR">EUR - Euro (€)</option>
+                                            <option value="GBP">GBP - Pound (£)</option>
+                                            <option value="INR">INR - Rupee (₹)</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -1214,7 +1214,7 @@ function EngineersPage() {
                                         <td><span style={{ fontSize: '13px', color: '#64748b' }}>{eng.employmentType || '-'}</span></td>
                                         <td>
                                             <span style={{ fontWeight: 'bold', color: '#059669' }}>
-                                                {eng.currency === 'EUR' ? 'â‚¬' : eng.currency === 'GBP' ? 'Â£' : eng.currency === 'INR' ? 'â‚¹' : '$'}
+                                                {eng.currency === 'EUR' ? '€' : eng.currency === 'GBP' ? '£' : eng.currency === 'INR' ? '₹' : '$'}
                                                 {parseFloat(eng.hourlyRate || 0).toFixed(2)}
                                             </span>
                                         </td>
