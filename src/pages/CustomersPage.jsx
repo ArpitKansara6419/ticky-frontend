@@ -730,25 +730,7 @@ function CustomersPage() {
                 />
               </label>
 
-              <label className="customers-field">
-                <span>City</span>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Enter city"
-                />
-              </label>
 
-              <label className="customers-field">
-                <span>Country</span>
-                <input
-                  type="text"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  placeholder="Enter country"
-                />
-              </label>
 
               <div className="customers-field customers-field--full">
                 <span>Profile Picture</span>
