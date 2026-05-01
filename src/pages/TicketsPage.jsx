@@ -355,6 +355,7 @@ function TicketsPage() {
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
       travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country,
       overtimeRate, oohRate, weekendRate, holidayRate,
+      isEngineer,
       _isLogAggregation
     } = opts;
 
@@ -483,8 +484,8 @@ function TicketsPage() {
       if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
         ooh = hrs * customOOHRate;
       }
-      const travelVal = parseFloat(opts.travelCostPerDay || 0);
-      const toolCostRaw = parseFloat(opts.toolCost || 0);
+      const travelVal = isEngineer ? 0 : parseFloat(opts.travelCostPerDay || 0);
+      const toolCostRaw = isEngineer ? 0 : parseFloat(opts.toolCost || 0);
       const toolsVal = _isLogAggregation ? 0 : toolCostRaw; // Skip tools in multi-day aggregation loop
 
       // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
@@ -653,6 +654,7 @@ function TicketsPage() {
           overtimeRate: pRates.overtimeRate, oohRate: pRates.oohRate, weekendRate: pRates.weekendRate, holidayRate: pRates.holidayRate,
           travelCostPerDay: 0, toolCost: 0, billingType: pRates.billingType, timezone, calcTimezone,
           monthlyDivisor: dayMonthlyDivisor, country,
+          isEngineer: true,
           _isLogAggregation: true
         });
 
@@ -796,7 +798,8 @@ function TicketsPage() {
         cancellationFee: engCancellationFee || 0,
         overtimeRate: pRates.ot, oohRate: pRates.ooh, weekendRate: pRates.we, holidayRate: pRates.hol,
         travelCostPerDay: 0, toolCost: 0, billingType: engBillingType, timezone, calcTimezone,
-        country // Travel & Tool Cost excluded from engineer payout
+        country, // Travel & Tool Cost excluded from engineer payout
+        isEngineer: true
       });
 
       if (payRes) {
@@ -3582,8 +3585,8 @@ function TicketsPage() {
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '10px', borderLeft: '4px solid #10b981', marginTop: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <div>
-                          <span style={{ display: 'block', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>Engineer Payout Estimation</span>
-                          <span style={{ fontSize: '9px', color: '#94a3b8' }}>Based on {engBillingType || 'Profile'} Rates (+ Travel & Tool)</span>
+                          <span style={{ display: 'block', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>Labor Payout Estimation</span>
+                          <span style={{ fontSize: '9px', color: '#94a3b8' }}>Based on {engBillingType || 'Profile'} Rates (Excl. Travel & Tool)</span>
                         </div>
                           <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
                         </div>
