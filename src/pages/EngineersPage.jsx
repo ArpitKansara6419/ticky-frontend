@@ -1,4 +1,4 @@
-
+﻿
 import React, { useEffect, useState } from 'react'
 import { FiSearch, FiEye, FiEdit2, FiTrash2, FiArrowLeft, FiSave, FiCheck, FiX, FiBriefcase, FiDollarSign, FiClock, FiCalendar } from 'react-icons/fi'
 import './EngineersPage.css'
@@ -777,7 +777,7 @@ function EngineersPage() {
                                             <div key={i} style={{ background: '#ffffff', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                                                 <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{cert.certificationName}</div>
                                                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px' }}>
-                                                    ID: {cert.certificationId || 'N/A'} • Issued: {cert.issueDate || 'N/A'} • Expires: {cert.expiryDate || 'N/A'}
+                                                    ID: {cert.certificationId || 'N/A'} â€¢ Issued: {cert.issueDate || 'N/A'} â€¢ Expires: {cert.expiryDate || 'N/A'}
                                                 </div>
                                             </div>
                                         )) : <div style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No certifications listed.</div>}
@@ -849,7 +849,7 @@ function EngineersPage() {
                                     <div style={{ background: '#eff6ff', padding: '15px', borderRadius: '12px', border: '1px solid #dbeafe' }}>
                                         <div style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600', marginBottom: '5px' }}>TOTAL EARNINGS</div>
                                         <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
-                                            {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
+                                            {selectedEngineer?.currency === 'EUR' ? 'â‚¬' : selectedEngineer?.currency === 'GBP' ? 'Â£' : 'â‚¹'}
                                             {engTickets.reduce((acc, t) => acc + calculateEngineerPayoutForTicket(t, selectedEngineer, calcTimezone).total, 0).toFixed(2)}
                                         </div>
                                     </div>
@@ -902,7 +902,7 @@ function EngineersPage() {
                                                                 </td>
                                                                 <td>
                                                                     <div style={{ fontWeight: 'bold', color: '#059669', fontSize: '15px' }}>
-                                                                        {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
+                                                                        {selectedEngineer?.currency === 'EUR' ? 'â‚¬' : selectedEngineer?.currency === 'GBP' ? 'Â£' : 'â‚¹'}
                                                                         {p.total.toFixed(2)}
                                                                     </div>
                                                                 </td>
@@ -960,7 +960,6 @@ function EngineersPage() {
                                         <label>Start Date <span className="req">*</span></label>
                                         <input type="date" className="form-input" value={chargesForm.startDate} onChange={e => setChargesForm({ ...chargesForm, startDate: e.target.value })} />
                                     </div>
-                                    </div>
                                 </div>
 
                                 {/* Row 3: Check-In | Check-Out */}
@@ -986,9 +985,9 @@ function EngineersPage() {
                                         <label>Select Currency <span className="req">*</span></label>
                                         <select className="form-input" value={chargesForm.currency} onChange={e => setChargesForm({ ...chargesForm, currency: e.target.value })}>
                                             <option value="USD">USD - Dollar ($)</option>
-                                            <option value="EUR">EUR - Euro (€)</option>
-                                            <option value="GBP">GBP - Pound (£)</option>
-                                            <option value="INR">INR - Rupee (₹)</option>
+                                            <option value="EUR">EUR - Euro (â‚¬)</option>
+                                            <option value="GBP">GBP - Pound (Â£)</option>
+                                            <option value="INR">INR - Rupee (â‚¹)</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -996,7 +995,7 @@ function EngineersPage() {
                                         <select className="form-input" value={chargesForm.billingType} onChange={e => setChargesForm({ ...chargesForm, billingType: e.target.value })}>
                                             <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
                                             <option value="Half Day + Hourly">2) Half Day + Hourly</option>
-                                            <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
+                                            <option value="Full Day + OT">3) Full Day + OT (OT = Rate Ã— 1.5)</option>
                                             <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
                                             <option value="Mixed Mode">5) Mixed (Half/Full/OT Tier)</option>
                                             <option value="Agreed Rate">6) Agreed/Fixed Rate</option>
@@ -1215,7 +1214,7 @@ function EngineersPage() {
                                         <td><span style={{ fontSize: '13px', color: '#64748b' }}>{eng.employmentType || '-'}</span></td>
                                         <td>
                                             <span style={{ fontWeight: 'bold', color: '#059669' }}>
-                                                {eng.currency === 'EUR' ? '€' : eng.currency === 'GBP' ? '£' : eng.currency === 'INR' ? '₹' : '$'}
+                                                {eng.currency === 'EUR' ? 'â‚¬' : eng.currency === 'GBP' ? 'Â£' : eng.currency === 'INR' ? 'â‚¹' : '$'}
                                                 {parseFloat(eng.hourlyRate || 0).toFixed(2)}
                                             </span>
                                         </td>
