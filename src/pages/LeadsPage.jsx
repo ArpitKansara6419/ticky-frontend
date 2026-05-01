@@ -658,7 +658,7 @@ function LeadsPage() {
 
   const filteredLeads = useMemo(() => {
     const t = searchTerm.toLowerCase().trim()
-    return leads.filter(l => l.taskName.toLowerCase().includes(t) || l.customerName.toLowerCase().includes(t))
+    return leads.filter(l => (l.taskName || '').toLowerCase().includes(t) || (l.customerName || '').toLowerCase().includes(t))
   }, [leads, searchTerm])
 
   const handleSubmit = async (e) => {
