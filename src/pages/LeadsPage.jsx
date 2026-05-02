@@ -1,7 +1,7 @@
 // LeadsPage.jsx - Leads list + Create / Edit Lead page
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft, FiEye, FiEdit2, FiCopy, FiTrash2, FiRefreshCw, FiX } from 'react-icons/fi'
+import { FiMoreVertical, FiCheckCircle, FiCalendar, FiXCircle, FiAlertCircle, FiFileText, FiArrowLeft, FiEye, FiEdit2, FiCopy, FiTrash2, FiRefreshCw, FiX, FiDollarSign, FiTag } from 'react-icons/fi'
 import Select from 'react-select'
 import Autocomplete from 'react-google-autocomplete'
 import './LeadsPage.css'
@@ -786,21 +786,24 @@ function LeadsPage() {
           border: '1px solid #e2e8f0'
         }}>
           {[
-            { key: 'tickets', label: '🎫 Tickets' },
-            { key: 'rates', label: '💰 Price & Rates' }
+            { key: 'tickets', icon: <FiFileText size={15} />, label: 'Tickets' },
+            { key: 'rates', icon: <FiDollarSign size={15} />, label: 'Price & Rates' }
           ].map(tab => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveFormTab(tab.key)}
               style={{
-                padding: '10px 28px',
+                padding: '10px 24px',
                 borderRadius: '10px',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: '700',
                 transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
                 background: activeFormTab === tab.key
                   ? 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'
                   : 'transparent',
@@ -808,7 +811,7 @@ function LeadsPage() {
                 boxShadow: activeFormTab === tab.key ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
               }}
             >
-              {tab.label}
+              {tab.icon} {tab.label}
             </button>
           ))}
         </div>
@@ -1092,54 +1095,7 @@ function LeadsPage() {
                 </div>
               </section>
 
-              {/* Smart Quote Preview */}
-              {(() => {
-                const res = calculateTicketTotal({
-                  startTime: taskStartDate ? `${taskStartDate} ${taskTime}` : '',
-                  endTime: taskEndDate ? `${taskEndDate} ${taskTime}` : '',
-                  hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-                  travelCostPerDay, toolCost: toolCost, billingType, timezone, country
-                });
 
-                if (!res.grandTotal || res.grandTotal == 0) return null;
-
-                return (
-                  <div className="preview-box-premium" style={{
-                    marginBottom: '24px',
-                    background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
-                    border: '1px solid #10b981',
-                    borderRadius: '16px',
-                    padding: '24px'
-                  }}>
-                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
-                      Smart Quote Preview
-                    </div>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)',
-                      gap: '12px'
-                    }}>
-                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE COST</div>
-                        <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.base}</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>OT</div>
-                        <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.ot}</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>WORKED HOURS</div>
-                        <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{res.hrs} hrs</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                        <div style={{ fontSize: '9px', color: '#047857', fontWeight: '800', marginBottom: '2px' }}>GRAND TOTAL</div>
-                        <div style={{ fontSize: '16px', color: '#047857', fontWeight: '900' }}>{currency} {res.grandTotal}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Tab 2 Footer Actions */}
               <div className="leads-actions-footer">
@@ -1516,12 +1472,14 @@ function LeadsPage() {
               </header>
               <div className="lead-modal-content">
                 <div className="details-grid">
+
+                  {/* ── Row 1: Basic Info ── */}
                   <div className="detail-item">
                     <label>Customer</label>
                     <span>{selectedLead.customerName}</span>
                   </div>
                   <div className="detail-item">
-                    <label>Type / Category</label>
+                    <label>Type</label>
                     <span>{selectedLead.leadType || '--'}</span>
                   </div>
                   <div className="detail-item--full">
@@ -1530,25 +1488,19 @@ function LeadsPage() {
                       {(() => {
                         const s = selectedLead.taskStartDate?.split('T')[0];
                         const e = selectedLead.taskEndDate?.split('T')[0];
-
-                        const formatDate = (ds) => {
-                          if (!ds) return '';
-                          const d = new Date(ds);
-                          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                        };
-
-                        if (!e || s === e) return formatDate(s);
-                        return `${formatDate(s)} - ${formatDate(e)}`;
+                        const fmt = (ds) => { if (!ds) return ''; const d = new Date(ds); return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); };
+                        if (!e || s === e) return fmt(s);
+                        return `${fmt(s)} → ${fmt(e)}`;
                       })()}
                     </span>
                   </div>
                   <div className="detail-item">
                     <label>Task Time</label>
-                    <span>{selectedLead.taskTime}</span>
+                    <span>{selectedLead.taskTime || '--'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Location</label>
-                    <span>{selectedLead.city}, {selectedLead.country}</span>
+                    <span>{[selectedLead.city, selectedLead.country].filter(Boolean).join(', ') || '--'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Timezone</label>
@@ -1556,52 +1508,13 @@ function LeadsPage() {
                   </div>
                   <div className="detail-item--full">
                     <label>Address</label>
-                    <span>{[selectedLead.addressLine1, selectedLead.addressLine2, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')}</span>
+                    <span>{[selectedLead.addressLine1, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ') || '--'}</span>
                   </div>
 
-                  {/* --- Google Maps Location Button --- */}
-                  {(() => {
-                    const lat = selectedLead.latitude;
-                    const lng = selectedLead.longitude;
-                    const addressQuery = encodeURIComponent(
-                      [selectedLead.addressLine1, selectedLead.city, selectedLead.zipCode, selectedLead.country].filter(Boolean).join(', ')
-                    );
-                    const hasCoords = lat && lng;
-                    const mapsLink = hasCoords
-                      ? `https://www.google.com/maps?q=${lat},${lng}&z=16`
-                      : `https://www.google.com/maps/search/?q=${addressQuery}`;
-
-                    return (
-                      <div className="detail-item--full" style={{ marginTop: '4px' }}>
-                        <label>📍 Location on Map</label>
-                        <a
-                          href={mapsLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                            padding: '10px 20px', borderRadius: '10px',
-                            background: 'linear-gradient(135deg, #4285F4, #34A853)',
-                            color: 'white', fontWeight: '700', fontSize: '13px',
-                            textDecoration: 'none', border: 'none',
-                            boxShadow: '0 4px 12px rgba(66,133,244,0.35)',
-                            transition: 'opacity 0.2s',
-                            marginTop: '6px'
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                          </svg>
-                          View on Google Maps
-                        </a>
-                      </div>
-                    );
-                  })()}
+                  {/* ── Scope & Tools ── */}
                   <div className="detail-item--full">
                     <label>Scope of Work</label>
-                    <p className="scope-text">{selectedLead.scopeOfWork}</p>
+                    <p className="scope-text">{selectedLead.scopeOfWork || '--'}</p>
                   </div>
                   <div className="detail-item">
                     <label>Tools Required</label>
@@ -1612,21 +1525,14 @@ function LeadsPage() {
                     <span className={`status-pill ${selectedLead.status?.toLowerCase()}`}>{selectedLead.status}</span>
                   </div>
 
-                  {/* Billing Type Section */}
+                  {/* ── Billing Configuration ── */}
                   <div className="detail-item--full divider"></div>
                   <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
-                    <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Billing Configuration</label>
+                    <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>Billing Configuration</label>
                   </div>
                   <div className="detail-item">
                     <label>Billing Type</label>
-                    <span style={{
-                      fontWeight: '600',
-                      color: 'var(--primary-color, #6366f1)',
-                      background: 'var(--primary-bg, #eef2ff)',
-                      padding: '4px 12px',
-                      borderRadius: '6px',
-                      fontSize: '13px'
-                    }}>
+                    <span style={{ fontWeight: '600', color: '#6366f1', background: '#eef2ff', padding: '3px 10px', borderRadius: '6px', fontSize: '13px' }}>
                       {selectedLead.billingType || 'Hourly'}
                     </span>
                   </div>
@@ -1635,53 +1541,58 @@ function LeadsPage() {
                     <span style={{ fontWeight: '600' }}>{selectedLead.currency || 'USD'}</span>
                   </div>
 
-                  {/* Pricing & Rates Section */}
+                  {/* ── Pricing Rates — only relevant to selected billing type ── */}
                   <div className="detail-item--full divider"></div>
                   <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
-                    <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Pricing & Rates</label>
+                    <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>Pricing Rates</label>
                   </div>
-                  <div className="detail-item">
-                    <label>Hourly Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.hourlyRate || selectedLead.hourly_rate || '0.00'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Half Day Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.halfDayRate || selectedLead.half_day_rate || '0.00'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Full Day Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.fullDayRate || selectedLead.full_day_rate || '0.00'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Monthly Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.currency} {selectedLead.monthlyRate || selectedLead.monthly_rate || '0.00'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Agreed / Fixed Rate</label>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{selectedLead.agreedRate || selectedLead.agreed_rate || '--'}</span>
-                  </div>
+                  {(() => {
+                    const bt = selectedLead.billingType || 'Hourly';
+                    const cur = selectedLead.currency || 'USD';
+                    const fmt = (v) => v != null && v !== '' ? `${cur} ${v}` : '--';
+                    const rows = [];
+                    if (bt === 'Hourly') rows.push({ label: 'Hourly Rate', val: fmt(selectedLead.hourlyRate ?? selectedLead.hourly_rate) });
+                    if (bt === 'Half Day + Hourly') {
+                      rows.push({ label: 'Half Day Rate', val: fmt(selectedLead.halfDayRate ?? selectedLead.half_day_rate) });
+                      rows.push({ label: 'Hourly Rate', val: fmt(selectedLead.hourlyRate ?? selectedLead.hourly_rate) });
+                    }
+                    if (bt === 'Full Day + OT') {
+                      rows.push({ label: 'Full Day Rate', val: fmt(selectedLead.fullDayRate ?? selectedLead.full_day_rate) });
+                      rows.push({ label: 'Hourly Rate (OT base)', val: fmt(selectedLead.hourlyRate ?? selectedLead.hourly_rate) });
+                    }
+                    if (bt === 'Monthly + OT + Weekend') {
+                      rows.push({ label: 'Monthly Rate', val: fmt(selectedLead.monthlyRate ?? selectedLead.monthly_rate) });
+                      rows.push({ label: 'Hourly Rate (OT base)', val: fmt(selectedLead.hourlyRate ?? selectedLead.hourly_rate) });
+                    }
+                    if (bt === 'Mixed Mode') {
+                      rows.push({ label: 'Half Day Rate', val: fmt(selectedLead.halfDayRate ?? selectedLead.half_day_rate) });
+                      rows.push({ label: 'Full Day Rate', val: fmt(selectedLead.fullDayRate ?? selectedLead.full_day_rate) });
+                      rows.push({ label: 'Hourly Rate (OT)', val: fmt(selectedLead.hourlyRate ?? selectedLead.hourly_rate) });
+                    }
+                    if (bt === 'Agreed Rate') rows.push({ label: 'Agreed / Fixed Rate', val: fmt(selectedLead.agreedRate ?? selectedLead.agreed_rate) });
+                    if (bt === 'Cancellation') rows.push({ label: 'Cancellation Fee', val: fmt(selectedLead.cancellationFee ?? selectedLead.cancellation_fee) });
+                    return rows.map(r => (
+                      <div className="detail-item" key={r.label}>
+                        <label>{r.label}</label>
+                        <span style={{ fontWeight: '600', color: '#059669' }}>{r.val}</span>
+                      </div>
+                    ));
+                  })()}
 
-                  {/* Additional Costs Section */}
+                  {/* ── Additional Costs ── */}
                   <div className="detail-item--full divider"></div>
                   <div className="detail-item--full" style={{ marginBottom: '0.5rem' }}>
-                    <label style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Additional Costs</label>
+                    <label style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>Additional Costs</label>
                   </div>
                   <div className="detail-item">
                     <label>Tool Cost</label>
-                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.toolCost || selectedLead.tool_cost || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.toolCost ?? selectedLead.tool_cost ?? '0.00'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Travel Cost / Day</label>
-                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay || selectedLead.travel_cost_per_day || '0.00'}</span>
+                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{selectedLead.currency} {selectedLead.travelCostPerDay ?? selectedLead.travel_cost_per_day ?? '0.00'}</span>
                   </div>
-                  <div className="detail-item">
-                    <label>Grand Total (Receivable)</label>
-                    <span style={{ fontWeight: '800', color: '#059669', fontSize: '15px' }}>{selectedLead.currency} {selectedLead.totalCost || selectedLead.total_cost || '0.00'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <label>Task Location</label>
-                    <span style={{ fontWeight: '600' }}>{selectedLead.city}, {selectedLead.country}</span>
-                  </div>
+
                 </div>
               </div>
               <div className="lead-modal-footer">
