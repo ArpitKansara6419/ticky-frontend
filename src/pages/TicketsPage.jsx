@@ -83,41 +83,46 @@ const CURRENCIES = [
   { value: 'INR', label: 'Rupee (INR)' },
 ]
 
-const HOLIDAYS_CALC = {
-  'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
-  'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
-  'Other': []
+const getDatesInRange = (start, end) => {
+  const dates = [];
+  if (!start || !end) return dates;
+  let curr = new Date(`${start}T00:00:00Z`);
+  const stop = new Date(`${end}T00:00:00Z`);
+  let count = 0;
+  while (curr <= stop && count < 366) {
+    dates.push(curr.toISOString().split('T')[0]);
+    curr.setUTCDate(curr.getUTCDate() + 1);
+    count++;
+  }
+  return dates;
 };
 
 const getWorkingDaysInMonth = (dateStr, countryName) => {
   if (!dateStr) return 22;
-  const date = new Date(dateStr);
-  const month = date.getMonth();
-  const year = date.getFullYear();
-  const holidays = HOLIDAYS_CALC[countryName] || HOLIDAYS_CALC['India'] || [];
+  const HOLIDAYS_LIST = {
+    'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+    'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+    'Other': []
+  };
+  const holidays = HOLIDAYS_LIST[countryName] || HOLIDAYS_LIST['India'] || [];
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const firstDay = new Date(Date.UTC(year, month, 1));
+  const lastDay  = new Date(Date.UTC(year, month + 1, 0));
   let workingDays = 0;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dObj = new Date(year, month, d);
-    const dw = dObj.getDay();
-    const dStr = dObj.toISOString().split('T')[0];
-    if (dw !== 0 && dw !== 6 && !holidays.includes(dStr)) {
+  let cur = new Date(firstDay);
+  while (cur <= lastDay) {
+    const dayOfWeek = cur.getUTCDay();
+    const iso = cur.toISOString().split('T')[0];
+    if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(iso)) {
       workingDays++;
     }
+    cur.setUTCDate(cur.getUTCDate() + 1);
   }
   return workingDays || 22;
 };
 
-const getDatesInRange = (startDate, endDate) => {
-  const dates = [];
-  let curr = new Date(startDate);
-  const end = new Date(endDate);
-  while (curr <= end) {
-    dates.push(curr.toISOString().split('T')[0]);
-    curr.setDate(curr.getDate() + 1);
-  }
-  return dates;
-};
 
 const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break', 'Approval Pending']
 
@@ -308,51 +313,6 @@ function TicketsPage() {
     }
   }, [startTime, endTime, viewMode]);
 
-  const getDatesInRange = (start, end) => {
-    const dates = [];
-    if (!start || !end) return dates;
-
-    // Use UTC midnights to avoid local offset shifts for YYYY-MM-DD strings
-    let curr = new Date(`${start}T00:00:00Z`);
-    const stop = new Date(`${end}T00:00:00Z`);
-
-    // Safety cap to prevent infinity if dates are invalid
-    let count = 0;
-    while (curr <= stop && count < 366) {
-      dates.push(curr.toISOString().split('T')[0]);
-      curr.setUTCDate(curr.getUTCDate() + 1);
-      count++;
-    }
-    return dates;
-  };
-
-  // Returns the count of working days (Mon-Fri, non-holiday) in the month of the given dateStr
-  const getWorkingDaysInMonth = (dateStr, countryName) => {
-    if (!dateStr) return 22; // safe fallback
-    const HOLIDAYS_BY_COUNTRY = {
-      'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
-      'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
-      'Other': []
-    };
-    const holidays = HOLIDAYS_BY_COUNTRY[countryName] || HOLIDAYS_BY_COUNTRY['India'] || [];
-    const d = new Date(`${dateStr}T00:00:00Z`);
-    const year = d.getUTCFullYear();
-    const month = d.getUTCMonth();
-    // First and last day of month
-    const firstDay = new Date(Date.UTC(year, month, 1));
-    const lastDay  = new Date(Date.UTC(year, month + 1, 0));
-    let workingDays = 0;
-    let cur = new Date(firstDay);
-    while (cur <= lastDay) {
-      const dayOfWeek = cur.getUTCDay();
-      const iso = cur.toISOString().split('T')[0];
-      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(iso)) {
-        workingDays++;
-      }
-      cur.setUTCDate(cur.getUTCDate() + 1);
-    }
-    return workingDays || 22;
-  };
 
   // Pure calculation function for reuse
   const calculateTicketTotal = (opts) => {
