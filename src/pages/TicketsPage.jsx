@@ -253,6 +253,10 @@ function TicketsPage() {
   const [collapsedMonths, setCollapsedMonths] = useState(new Set()); // Month keys like "2026-04" that are COLLAPSED
   const [activeMainTab, setActiveMainTab] = useState('Tickets'); // 'Tickets' | 'Cost & Breakdown'
   const [activeCostTab, setActiveCostTab] = useState('Customer'); // 'Customer' | 'Engineer'
+  
+  const daysInRange = useMemo(() => getDatesInRange(taskStartDate, taskEndDate), [taskStartDate, taskEndDate]);
+  const isMultiDay = useMemo(() => daysInRange.length > 1 || leadType === 'Dispatch' || (billingType && billingType.includes('Monthly')), [daysInRange, leadType, billingType]);
+
 
   // Smart Auto-Sync for Start & End Time based on Task Details
   // TIMEZONE-SAFE: builds wall-clock strings directly without new Date() to avoid local TZ shifts
@@ -2325,8 +2329,6 @@ function TicketsPage() {
   }, [])
 
   if (viewMode === 'form') {
-    const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
-
     return (
       <section className="tickets-page">
         <header className="tickets-header" style={{ marginBottom: '20px' }}>
