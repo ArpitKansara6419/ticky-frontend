@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo, FiUser, FiCpu, FiCalendar, FiCheckCircle, FiActivity, FiFileText } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -251,6 +251,8 @@ function TicketsPage() {
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
   const [reassignTicketId, setReassignTicketId] = useState(null);
   const [collapsedMonths, setCollapsedMonths] = useState(new Set()); // Month keys like "2026-04" that are COLLAPSED
+  const [activeMainTab, setActiveMainTab] = useState('Tickets'); // 'Tickets' | 'Cost & Breakdown'
+  const [activeCostTab, setActiveCostTab] = useState('Customer'); // 'Customer' | 'Engineer'
 
   // Smart Auto-Sync for Start & End Time based on Task Details
   // TIMEZONE-SAFE: builds wall-clock strings directly without new Date() to avoid local TZ shifts
@@ -2327,1309 +2329,467 @@ function TicketsPage() {
 
     return (
       <section className="tickets-page">
-        <header className="tickets-header">
-          <button
-            type="button"
-            className="tickets-back"
-            onClick={() => {
-              resetForm()
-              setViewMode('list')
-            }}
-          >
-            ← Back
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.3)' }}>{editingTicketId ? '⚒️' : '🆕'}</div>
-            <div>
-              <h1 className="tickets-title" style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.02em' }}>
-                {editingTicketId ? 'Edit Ticket' : 'Create Ticket'}
-              </h1>
-              <p className="tickets-subtitle" style={{ margin: '2px 0 0 0', color: '#64748b', fontSize: '0.95rem', fontWeight: '500' }}>
-                {editingTicketId ? `Refining details for #AIM-T-${editingTicketId}` : 'Initiate a new support session'}
-              </p>
+        <header className="tickets-header" style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button
+                type="button"
+                className="tickets-back"
+                style={{ padding: '8px 12px', background: '#f1f5f9', border: 'none', borderRadius: '8px', color: '#64748b', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => {
+                  resetForm()
+                  setViewMode('list')
+                }}
+              >
+                <FiX /> Back
+              </button>
+              <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.3)' }}>
+                {editingTicketId ? <FiEdit2 /> : <FiFileText />}
+              </div>
+              <div>
+                <h1 className="tickets-title" style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#1e293b', letterSpacing: '-0.02em' }}>
+                  {editingTicketId ? 'Edit Ticket' : 'Create Ticket'}
+                </h1>
+                <p className="tickets-subtitle" style={{ margin: '0', color: '#94a3b8', fontSize: '0.85rem', fontWeight: '500' }}>
+                  {editingTicketId ? `#AIM-T-${editingTicketId}` : 'Initiate new session'}
+                </p>
+              </div>
+            </div>
+
+            {/* Top Status Highlight */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', padding: '8px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket Status:</span>
+              <div style={{ 
+                padding: '6px 14px', 
+                borderRadius: '20px', 
+                fontSize: '13px', 
+                fontWeight: '700', 
+                color: status === 'Resolved' ? '#059669' : '#2563eb',
+                background: status === 'Resolved' ? '#ecfdf5' : '#eff6ff',
+                border: `1px solid ${status === 'Resolved' ? '#10b981' : '#3b82f6'}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <div style={{ width: '8px', height: '8px', background: status === 'Resolved' ? '#10b981' : '#3b82f6', borderRadius: '50%' }}></div>
+                {status}
+              </div>
             </div>
           </div>
         </header>
 
-        <form className="tickets-form" onSubmit={handleSubmitTicket}>
-          {leadId && (
-            <div className="lead-sync-alert" style={{
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '24px',
+        {/* Main Tab Navigation */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: '#f1f5f9', padding: '6px', borderRadius: '14px', width: 'fit-content' }}>
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('Tickets')}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '10px',
+              border: 'none',
+              fontSize: '14px',
+              fontWeight: '700',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              color: '#1e40af',
+              gap: '8px',
+              transition: 'all 0.2s',
+              background: activeMainTab === 'Tickets' ? '#fff' : 'transparent',
+              color: activeMainTab === 'Tickets' ? '#6366f1' : '#64748b',
+              boxShadow: activeMainTab === 'Tickets' ? '0 4px 12px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <FiFileText /> Tickets
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('Cost & Breakdown')}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '10px',
+              border: 'none',
               fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              <span style={{ fontSize: '20px' }}>ℹ️</span>
-              <div>
-                This ticket is linked to <strong>Lead #L-{leadId}</strong>.
-                <span style={{ display: 'block', fontSize: '12px', color: '#60a5fa', marginTop: '4px' }}>
-                  Fully Automatic Sync Active: Any changes made here will automatically update the linked Lead.
-                </span>
-              </div>
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              background: activeMainTab === 'Cost & Breakdown' ? '#fff' : 'transparent',
+              color: activeMainTab === 'Cost & Breakdown' ? '#6366f1' : '#64748b',
+              boxShadow: activeMainTab === 'Cost & Breakdown' ? '0 4px 12px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <FiDollarSign /> Cost & Breakdown
+          </button>
+        </div>
+
+        <form className="tickets-form" onSubmit={handleSubmitTicket}>
+          {leadId && (
+            <div className="lead-sync-alert" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', color: '#1e40af', fontSize: '13px', fontWeight: '500' }}>
+              <FiInfo style={{ fontSize: '18px', color: '#3b82f6' }} />
+              <div>This ticket is linked to <strong>Lead #L-{leadId}</strong>. Details are synced for accuracy.</div>
             </div>
           )}
-          {/* Customer & Lead */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Customer &amp; Lead</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>
-                  Select Customer <span className="field-required">*</span>
-                </span>
-                <select
-                  value={customerId}
-                  onChange={(e) => setCustomerId(e.target.value)}
-                  disabled={loadingDropdowns}
-                >
-                  <option value="">Choose a customer...</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.accountEmail ? `(${c.accountEmail})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
 
-              <label className="tickets-field">
-                <span>Select Lead</span>
-                <select
-                  value={leadId}
-                  onChange={(e) => setLeadId(e.target.value)}
-                  disabled={loadingDropdowns || filteredLeads.length === 0}
-                >
-                  <option value="">Choose a lead...</option>
-                  {filteredLeads.map((lead) => (
-                    <option key={lead.id} value={lead.id}>
-                      {lead.taskName}
-                    </option>
-                  ))}
-                </select>
-              </label>
+          {activeMainTab === 'Tickets' && (
+            <>
+              {/* Customer & Lead */}
+              <section className="tickets-card">
+                <h2 className="tickets-section-title">Customer &amp; Lead</h2>
+                <div className="tickets-grid">
+                  <label className="tickets-field">
+                    <span>Select Customer <span className="field-required">*</span></span>
+                    <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={loadingDropdowns}>
+                      <option value="">Choose a customer...</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name} {c.accountEmail ? `(${c.accountEmail})` : ''}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="tickets-field">
+                    <span>Select Lead</span>
+                    <select value={leadId} onChange={(e) => setLeadId(e.target.value)} disabled={loadingDropdowns || filteredLeads.length === 0}>
+                      <option value="">Choose a lead...</option>
+                      {filteredLeads.map((lead) => (
+                        <option key={lead.id} value={lead.id}>{lead.taskName}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="tickets-field tickets-field--full">
+                    <span>Client Name</span>
+                    <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter client name" />
+                  </label>
+                </div>
+              </section>
 
-              <label className="tickets-field tickets-field--full">
-                <span>Client Name</span>
-                <input
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Enter client name"
-                />
-              </label>
-            </div>
-          </section>
+              {/* Task Details */}
+              <section className="tickets-card">
+                <h2 className="tickets-section-title">Task Details</h2>
+                <div className="tickets-grid">
+                  <label className="tickets-field tickets-field--full">
+                    <span>Task Name <span className="field-required">*</span></span>
+                    <input type="text" value={taskName} onChange={(e) => setTaskName(e.target.value)} placeholder="Enter task name" />
+                  </label>
+                  <label className="tickets-field">
+                    <span>Start Date <span className="field-required">*</span></span>
+                    <input type="date" value={taskStartDate} onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime); }} />
+                  </label>
+                  <label className="tickets-field">
+                    <span>End Date <span className="field-required">*</span></span>
+                    <input type="date" value={taskEndDate} onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime); }} />
+                  </label>
+                  <label className="tickets-field">
+                    <span>Time <span className="field-required">*</span></span>
+                    <input type="time" value={taskTime} onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value); }} />
+                  </label>
+                  <label className="tickets-field tickets-field--full">
+                    <span>Scope of Work <span className="field-required">*</span></span>
+                    <textarea rows={3} value={scopeOfWork} onChange={(e) => setScopeOfWork(e.target.value)} placeholder="Describe the scope of work" />
+                  </label>
+                  <label className="tickets-field tickets-field--full">
+                    <span>Tools Required</span>
+                    <input type="text" value={tools} onChange={(e) => setTools(e.target.value)} placeholder="e.g. Drill, Laptop, Console cable" />
+                  </label>
+                </div>
+              </section>
 
-          {/* Task Details */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Task Details</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Task Name <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={taskName}
-                  onChange={(e) => setTaskName(e.target.value)}
-                  placeholder="Enter task name"
-                />
-              </label>
+              {/* Location */}
+              <section className="tickets-card">
+                <h2 className="tickets-section-title">Location</h2>
+                <div className="tickets-grid">
+                  <label className="tickets-field tickets-field--full">
+                    <span>Address Search</span>
+                    <Autocomplete
+                      onPlaceSelected={handleGoogleAddressSelect}
+                      options={GOOGLE_AUTOCOMPLETE_OPTIONS}
+                      placeholder="Type to search global address..."
+                      style={{ width: '100%', height: '42px', padding: '0 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px', outline: 'none', background: '#fff' }}
+                    />
+                  </label>
+                  <label className="tickets-field"><span>Address Line 1 <span className="field-required">*</span></span><input type="text" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} /></label>
+                  <label className="tickets-field"><span>City <span className="field-required">*</span></span><input type="text" value={city} onChange={(e) => setCity(e.target.value)} /></label>
+                  <label className="tickets-field">
+                    <span>Country <span className="field-required">*</span></span>
+                    <select value={country} onChange={(e) => handleCountryChange(e.target.value)} disabled={loadingCountries}>
+                      <option value="">Select country...</option>
+                      {countriesList.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="tickets-field"><span>Zip Code <span className="field-required">*</span></span><input type="text" value={zipCode} onChange={(e) => setZipCode(e.target.value)} /></label>
+                </div>
+              </section>
 
-              <label className="tickets-field">
-                <span>
-                  Task Start Date <span className="field-required">*</span>
-                </span>
-                <input
-                  type="date"
-                  value={taskStartDate}
-                  onChange={(e) => {
-                    setTaskStartDate(e.target.value);
-                    autoSyncTime(e.target.value, taskEndDate, taskTime);
-                  }}
-                />
-              </label>
+              {/* POC & Documents */}
+              <section className="tickets-card">
+                <h2 className="tickets-section-title">POC &amp; Documents</h2>
+                <div className="tickets-grid">
+                  <label className="tickets-field"><span>POC details</span><textarea rows={2} value={pocDetails} onChange={(e) => setPocDetails(e.target.value)} /></label>
+                  <label className="tickets-field"><span>RE details</span><textarea rows={2} value={reDetails} onChange={(e) => setReDetails(e.target.value)} /></label>
+                  <label className="tickets-field">
+                    <span>Documents</span>
+                    <input type="file" multiple onChange={handleDocumentsChange} style={{ fontSize: '12px' }} />
+                  </label>
+                </div>
+              </section>
 
-              <label className="tickets-field">
-                <span>
-                  Task End Date <span className="field-required">*</span>
-                </span>
-                <input
-                  type="date"
-                  value={taskEndDate}
-                  onChange={(e) => {
-                    setTaskEndDate(e.target.value);
-                    autoSyncTime(taskStartDate, e.target.value, taskTime);
-                  }}
-                />
-              </label>
+              {/* Status Update */}
+              <section className="tickets-card">
+                <h2 className="tickets-section-title">Ticket Status</h2>
+                <div className="tickets-grid">
+                  <label className="tickets-field">
+                    <span>Current Status</span>
+                    <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                      {TICKET_STATUSES.filter(s => s !== 'Approval Pending').map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </label>
+                </div>
+              </section>
 
-              <label className="tickets-field">
-                <span>
-                  Task Time <span className="field-required">*</span>
-                </span>
-                <input type="time" value={taskTime} onChange={(e) => {
-                  setTaskTime(e.target.value);
-                  autoSyncTime(taskStartDate, taskEndDate, e.target.value);
-                }} />
-              </label>
-
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Scope of Work <span className="field-required">*</span>
-                </span>
-                <textarea
-                  rows={3}
-                  value={scopeOfWork}
-                  onChange={(e) => setScopeOfWork(e.target.value)}
-                  placeholder="Describe the scope of work"
-                />
-              </label>
-
-              <label className="tickets-field tickets-field--full">
-                <span>Tools</span>
-                <input
-                  type="text"
-                  value={tools}
-                  onChange={(e) => setTools(e.target.value)}
-                  placeholder="Enter tools if any"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Engineer Assignment */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Engineer Assignment</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Select Engineer <span className="field-required">*</span>
-                </span>
-                <select
-                  value={engineerId}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    setEngineerId(id)
-                    const eng = engineers.find(en => String(en.id) === String(id))
-                    if (eng) {
-                      setEngineerName(eng.name)
-                      // Auto-sync Engineer's default billing type if not already overridden
-                      if (engPayType === 'Default') {
-                        setEngBillingType(eng.billingType ?? eng.billing_type ?? 'Hourly')
-                        setEngHourlyRate(String(eng.hourlyRate ?? eng.hourly_rate ?? '0.00'))
-                        setEngHalfDayRate(String(eng.halfDayRate ?? eng.half_day_rate ?? '0.00'))
-                        setEngFullDayRate(String(eng.fullDayRate ?? eng.full_day_rate ?? '0.00'))
-                        setEngMonthlyRate(String(eng.monthlyRate ?? eng.monthly_rate ?? '0.00'))
-                        setEngAgreedRate(String(eng.agreedRate ?? eng.agreed_rate ?? '0.00'))
-                        setEngCancellationFee(String(eng.cancellationFee ?? eng.cancellation_fee ?? '0.00'))
-                        setEngOvertimeRate(String(eng.overtimeRate ?? eng.overtime_rate ?? '0.00'))
-                        setEngOohRate(String(eng.oohRate ?? eng.ooh_rate ?? '0.00'))
-                        setEngWeekendRate(String(eng.weekendRate ?? eng.weekend_rate ?? '0.00'))
-                        setEngHolidayRate(String(eng.holidayRate ?? eng.holiday_rate ?? '0.00'))
-                        setEngCurrency(eng.currency || 'USD')
-                      }
-                    }
-                  }}
-                  disabled={loadingDropdowns}
-                >
-                  <option value="">Choose an engineer...</option>
-                  {engineers.map((eng) => (
-                    <option key={eng.id} value={eng.id}>
-                      {eng.name} ({eng.email})
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {engineerId && (
-                <div style={{ marginTop: '20px', gridColumn: '1 / -1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FiDollarSign style={{ color: '#2563eb' }} /> Engineer Payout Configuration
-                  </h3>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                    <div className="payout-type-selector" style={{ background: engPayType === 'Default' ? '#eff6ff' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Default' ? '#3b82f6' : '#e2e8f0', cursor: 'pointer' }} onClick={() => {
-                      setEngPayType('Default');
-                      const eng = engineers.find(en => String(en.id) === String(engineerId));
-                      if (eng) {
-                        setEngBillingType(eng.billingType ?? eng.billing_type ?? 'Hourly')
-                        setEngHourlyRate(String(eng.hourlyRate ?? eng.hourly_rate ?? '0.00'))
-                        setEngHalfDayRate(String(eng.halfDayRate ?? eng.half_day_rate ?? '0.00'))
-                        setEngFullDayRate(String(eng.fullDayRate ?? eng.full_day_rate ?? '0.00'))
-                        setEngMonthlyRate(String(eng.monthlyRate ?? eng.monthly_rate ?? '0.00'))
-                        setEngAgreedRate(String(eng.agreedRate ?? eng.agreed_rate ?? '0.00'))
-                        setEngCancellationFee(String(eng.cancellationFee ?? eng.cancellation_fee ?? '0.00'))
-                        setEngOvertimeRate(String(eng.overtimeRate ?? eng.overtime_rate ?? '0.00'))
-                        setEngOohRate(String(eng.oohRate ?? eng.ooh_rate ?? '0.00'))
-                        setEngWeekendRate(String(eng.weekendRate ?? eng.weekend_rate ?? '0.00'))
-                        setEngHolidayRate(String(eng.holidayRate ?? eng.holiday_rate ?? '0.00'))
-                        setEngCurrency(eng.currency || 'USD')
-                      }
-                    }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#1e40af', fontWeight: '700' }}>
-                        <input type="radio" name="engPayType" value="Default" checked={engPayType === 'Default'} readOnly />
-                        Engineers Profile Rates
-                      </label>
-                      <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Automatically use rates from the engineer's profile.</p>
-                    </div>
-                    <div className="payout-type-selector" style={{ background: engPayType === 'Custom' ? '#fdf2f8' : 'white', padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: engPayType === 'Custom' ? '#db2777' : '#e2e8f0', cursor: 'pointer' }} onClick={() => setEngPayType('Custom')}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#831843', fontWeight: '700' }}>
-                        <input type="radio" name="engPayType" value="Custom" checked={engPayType === 'Custom'} readOnly />
-                        Custom Ticket Rates
-                      </label>
-                      <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', paddingLeft: '24px' }}>Manually override rates and billing type for this ticket.</p>
-                    </div>
+              {/* Daily Shift Logs */}
+              {(() => {
+                const isDispatch = (leadType === 'Dispatch') || billingType.includes('Monthly') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate);
+                if (!isDispatch) {
+              {isMultiDay && (
+                <section className="tickets-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h2 className="tickets-section-title" style={{ margin: 0 }}><FiCalendar /> Daily Shift Logs</h2>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', background: '#f1f5f9', padding: '4px 10px', borderRadius: '12px' }}>
+                      {daysInRange.length} Active Days
+                    </span>
                   </div>
+                  <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <tr>
+                          <th style={{ padding: '12px', textAlign: 'left', color: '#64748b' }}>Date</th>
+                          <th style={{ padding: '12px', textAlign: 'left', color: '#64748b' }}>Engineer</th>
+                          <th style={{ padding: '12px', textAlign: 'left', color: '#64748b' }}>Shift Times</th>
+                          <th style={{ padding: '12px', textAlign: 'center', color: '#64748b' }}>Hours</th>
+                          <th style={{ padding: '12px', textAlign: 'right', color: '#64748b' }}>Cost Est.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {daysInRange.map((dStr) => {
+                          const existingLog = timeLogs.find(l => (l.task_date || '').split('T')[0] === dStr) || {};
+                          const lStart = safeExtractTime(existingLog.start_time || existingLog.startTime) || taskTime;
+                          const lEnd = safeExtractTime(existingLog.end_time || existingLog.endTime) || '17:00';
+                          const lBreak = existingLog.break_time_mins || 0;
+                          const lEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
+                          
+                          const dur = calculateDuration(lStart, lEnd, lBreak);
+                          
+                          return (
+                            <tr key={dStr} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '12px', fontWeight: '600' }}>{new Date(dStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</td>
+                              <td style={{ padding: '12px' }}>
+                                <select 
+                                  value={lEngId} 
+                                  style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', width: '100%' }}
+                                  onChange={(e) => {
+                                    const newEngId = e.target.value;
+                                    if (existingLog.id) handleUpdateLog(existingLog.id, { engineerId: Number(newEngId) });
+                                    else {
+                                      setTimeLogs(prev => {
+                                        const exists = prev.find(l => (l.task_date || '').split('T')[0] === dStr);
+                                        if (exists) return prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, engineer_id: Number(newEngId) } : l);
+                                        return [...prev, { task_date: dStr, engineer_id: Number(newEngId), start_time: `${dStr}T${lStart}:00`, end_time: `${dStr}T${lEnd}:00`, break_time_mins: lBreak }];
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <option value="">Assign...</option>
+                                  {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                  <option value="0">❌ Absent</option>
+                                </select>
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <input type="time" value={lStart} style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} onChange={(e) => { if (existingLog.id) handleUpdateLog(existingLog.id, { startTime: `${dStr}T${e.target.value}:00` }); else setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, start_time: `${dStr}T${e.target.value}:00` } : l)); }} />
+                                  <span>-</span>
+                                  <input type="time" value={lEnd} style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} onChange={(e) => { if (existingLog.id) handleUpdateLog(existingLog.id, { endTime: `${dStr}T${e.target.value}:00` }); else setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, end_time: `${dStr}T${e.target.value}:00` } : l)); }} />
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center', fontWeight: '700', color: '#6366f1' }}>{dur.toFixed(1)}h</td>
+                              <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700' }}>
+                                {currency} {(() => {
+                                  const calc = calculateTicketTotal({
+                                    startTime: `${dStr}T${lStart}:00`, endTime: `${dStr}T${lEnd}:00`, breakTime: lBreak,
+                                    hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, travelCostPerDay, toolCost: toolCostInput, billingType, timezone, country, monthlyDivisor: getWorkingDaysInMonth(dStr, country)
+                                  });
+                                  return calc ? calc.grandTotal : '0.00';
+                                })()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+            </>
+          )}
 
-                  {engPayType === 'Custom' && (
-                    <div className="tickets-grid" style={{ paddingTop: '10px', borderTop: '1px dashed #cbd5e1' }}>
+          {activeMainTab === 'Cost & Breakdown' && (
+            <div className="cost-tab-container">
+              {/* Sub-Tabs for Breakdown */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', borderBottom: '2px solid #f1f5f9', padding: '0 4px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setActiveCostTab('Customer')} 
+                  style={{ 
+                    padding: '12px 24px', 
+                    border: 'none', 
+                    background: 'transparent', 
+                    fontWeight: '800', 
+                    fontSize: '13px', 
+                    cursor: 'pointer', 
+                    color: activeCostTab === 'Customer' ? '#6366f1' : '#94a3b8', 
+                    borderBottom: activeCostTab === 'Customer' ? '3px solid #6366f1' : '3px solid transparent',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <FiDollarSign style={{ marginRight: '8px' }} /> Customer Breakdown
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setActiveCostTab('Engineer')} 
+                  style={{ 
+                    padding: '12px 24px', 
+                    border: 'none', 
+                    background: 'transparent', 
+                    fontWeight: '800', 
+                    fontSize: '13px', 
+                    cursor: 'pointer', 
+                    color: activeCostTab === 'Engineer' ? '#6366f1' : '#94a3b8', 
+                    borderBottom: activeCostTab === 'Engineer' ? '3px solid #6366f1' : '3px solid transparent',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <FiActivity style={{ marginRight: '8px' }} /> Engineer Breakdown
+                </button>
+              </div>
+
+              {activeCostTab === 'Customer' && (
+                <div className="fade-in">
+                  <section className="tickets-card">
+                    <h2 className="tickets-section-title"><FiDollarSign /> Price &amp; Rates (Customer)</h2>
+                    <div className="tickets-grid">
                       <label className="tickets-field">
-                        <span>Payout Billing Type</span>
-                        <select value={engBillingType} onChange={(e) => setEngBillingType(e.target.value)}>
-                          <option value="Hourly">1) Hourly Only (min 2 hrs)</option>
-                          <option value="Half Day + Hourly">2) Half Day + Hourly</option>
-                          <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
-                          <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
-                          <option value="Mixed Mode">5) Mixed (Half/Full/OT Tier)</option>
-                          <option value="Agreed Rate">6) Agreed/Fixed Rate</option>
-                          <option value="Cancellation">7) Cancellation Fee</option>
+                        <span>Currency</span>
+                        <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                          {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
                       </label>
+                      <label className="tickets-field">
+                        <span>Billing Type</span>
+                        <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
+                          <option value="Hourly">Hourly Only</option>
+                          <option value="Half Day + Hourly">Half Day + Hourly</option>
+                          <option value="Full Day + OT">Full Day + OT</option>
+                          <option value="Mixed Mode">Mixed Mode</option>
+                          <option value="Monthly + OT + Weekend">Monthly + OT + Weekend</option>
+                          <option value="Agreed Rate">Agreed Rate</option>
+                          <option value="Cancellation">Cancellation Fee</option>
+                        </select>
+                      </label>
+                      <label className="tickets-field"><span>Hourly Rate</span><input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Half Day Rate</span><input type="number" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Full Day Rate</span><input type="number" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Monthly Rate</span><input type="number" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Agreed Rate</span><input type="number" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Cancellation Fee</span><input type="number" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} /></label>
+                    </div>
+                  </section>
+                  <section className="tickets-card">
+                    <h2 className="tickets-section-title">Additional Costs (Customer)</h2>
+                    <div className="tickets-grid">
+                      <label className="tickets-field"><span>Travel Cost / Day</span><input type="number" value={travelCostPerDay} onChange={(e) => setTravelCostPerDay(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} /></label>
+                    </div>
+                  </section>
+                </div>
+              )}
 
+              {activeCostTab === 'Engineer' && (
+                <div className="fade-in">
+                  <section className="tickets-card">
+                    <h2 className="tickets-section-title"><FiActivity /> Engineer Payout Configuration</h2>
+                    <div className="tickets-grid">
+                      <label className="tickets-field">
+                        <span>Pay Type</span>
+                        <select value={engPayType} onChange={(e) => setEngPayType(e.target.value)}>
+                          <option value="Default">Use Profile Rates</option>
+                          <option value="Custom">Custom Ticket Rates</option>
+                        </select>
+                      </label>
                       <label className="tickets-field">
                         <span>Payout Currency</span>
                         <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)}>
                           {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
                       </label>
-
-                      <div className="tickets-grid" style={{ gridColumn: '1 / -1' }}>
-                        {engBillingType !== 'Agreed Rate' && engBillingType !== 'Cancellation' && (
-                          <>
-                            <label className="tickets-field">
-                              <span>Hourly Rate</span>
-                              <input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} placeholder="0.00" />
-                            </label>
-                            <label className="tickets-field">
-                              <span>Half Day Rate</span>
-                              <input type="number" value={engHalfDayRate} onChange={(e) => setEngHalfDayRate(e.target.value)} placeholder="0.00" />
-                            </label>
-                            <label className="tickets-field">
-                              <span>Full Day Rate</span>
-                              <input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} placeholder="0.00" />
-                            </label>
-                            {engBillingType === 'Monthly + OT + Weekend' && (
-                              <label className="tickets-field">
-                                <span>Monthly Rate</span>
-                                <input type="number" value={engMonthlyRate} onChange={(e) => setEngMonthlyRate(e.target.value)} placeholder="0.00" />
-                              </label>
-                            )}
-                            <label className="tickets-field">
-                              <span>Overtime Rate</span>
-                              <input type="number" value={engOvertimeRate} onChange={(e) => setEngOvertimeRate(e.target.value)} placeholder="Default (Rate × 1.5)" />
-                            </label>
-                            <label className="tickets-field">
-                              <span>OOH Rate (Per Hr)</span>
-                              <input type="number" value={engOohRate} onChange={(e) => setEngOohRate(e.target.value)} placeholder="0.00" />
-                            </label>
-                            <label className="tickets-field">
-                              <span>Weekend Premium</span>
-                              <input type="number" value={engWeekendRate} onChange={(e) => setEngWeekendRate(e.target.value)} placeholder="Default (Rate × 2.0)" />
-                            </label>
-                            <label className="tickets-field">
-                              <span>Holiday Premium</span>
-                              <input type="number" value={engHolidayRate} onChange={(e) => setEngHolidayRate(e.target.value)} placeholder="Default (Rate × 2.0)" />
-                            </label>
-                          </>
-                        )}
-                        {engBillingType === 'Agreed Rate' && (
+                      {engPayType === 'Custom' && (
+                        <>
                           <label className="tickets-field">
-                            <span>Agreed Rate</span>
-                            <input type="number" value={engAgreedRate} onChange={(e) => setEngAgreedRate(e.target.value)} placeholder="0.00" />
+                            <span>Payout Billing Type</span>
+                            <select value={engBillingType} onChange={(e) => setEngBillingType(e.target.value)}>
+                              <option value="Hourly">Hourly Only</option>
+                              <option value="Full Day + OT">Full Day + OT</option>
+                              <option value="Agreed Rate">Agreed Rate</option>
+                            </select>
                           </label>
-                        )}
-                        {engBillingType === 'Cancellation' && (
-                          <label className="tickets-field">
-                            <span>Cancellation Penalty</span>
-                            <input type="number" value={engCancellationFee} onChange={(e) => setEngCancellationFee(e.target.value)} placeholder="0.00" />
-                          </label>
-                        )}
-                      </div>
+                          <label className="tickets-field"><span>Payout Hourly Rate</span><input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} /></label>
+                          <label className="tickets-field"><span>Payout Full Day Rate</span><input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} /></label>
+                          <label className="tickets-field"><span>Payout Agreed Rate</span><input type="number" value={engAgreedRate} onChange={(e) => setEngAgreedRate(e.target.value)} /></label>
+                        </>
+                      )}
                     </div>
-                  )}
-                  {engPayType === 'Default' && (
-                    <div style={{ marginTop: '12px', background: '#f1f5f9', padding: '15px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                      <p style={{ fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <FiInfo style={{ color: '#64748b' }} /> Current Profile Rates:
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Billing:</b><br /> {engBillingType}</div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Hourly:</b><br /> {engCurrency} {engHourlyRate || '0.00'}</div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Half Day:</b><br /> {engCurrency} {engHalfDayRate || '0.00'}</div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Full Day:</b><br /> {engCurrency} {engFullDayRate || '0.00'}</div>
-                        {engBillingType === 'Monthly + OT + Weekend' && (
-                          <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Monthly:</b><br /> {engCurrency} {engMonthlyRate || '0.00'}</div>
-                        )}
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Cancellation:</b><br /> {engCurrency} {engCancellationFee || '0.00'}</div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OT:</b><br /> {engCurrency} {engOvertimeRate || '0.00'}</div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>OOH:</b><br /> {engCurrency} {engOohRate || '0.00'}</div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>W-End:</b><br /> {engCurrency} {engWeekendRate || '0.00'}</div>
-                        <div style={{ fontSize: '11px' }}><b style={{ color: '#64748b' }}>Holiday:</b><br /> {engCurrency} {engHolidayRate || '0.00'}</div>
-                      </div>
-                      <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '10px', fontStyle: 'italic' }}>
-                        These rates are pulled from the engineer's profile. Switch to "Custom Ticket Rates" above to override.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
+                  </section>
 
-          {/* Location */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Location</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field tickets-field--full">
-                <span>Address Search</span>
-                <Autocomplete
-                  onPlaceSelected={handleGoogleAddressSelect}
-                  options={GOOGLE_AUTOCOMPLETE_OPTIONS}
-                  placeholder="Type to search global address..."
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    padding: '0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-subtle, #e5e7eb)',
-                    fontSize: '13px',
-                    outline: 'none',
-                    background: 'var(--input-bg)',
-                    color: 'var(--text-main)'
-                  }}
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Address Line 1 <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
-                  placeholder="Street / Building"
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  City <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Enter city"
-                />
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Country <span className="field-required">*</span>
-                </span>
-                <select
-                  value={country}
-                  onChange={(e) => handleCountryChange(e.target.value)}
-                  disabled={loadingCountries}
-                >
-                  <option value="">Select a country...</option>
-                  {countriesList.map((c) => (
-                    <option key={c.code} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="tickets-field">
-                <span>
-                  Zip/Postal Code <span className="field-required">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  placeholder="Enter zip/postal code"
-                />
-              </label>
-
-              <label className="tickets-field tickets-field--full">
-                <span>
-                  Timezone <span className="field-required">*</span>
-                </span>
-                <select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={!country}>
-                  <option value="">Select timezone...</option>
-                  {availableTimezones.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </select>
-                {country && availableTimezones.length === 0 && (
-                  <small style={{ color: '#999', marginTop: '4px' }}>No timezone data available for this country</small>
-                )}
-              </label>
-            </div>
-          </section>
-
-          {/* POC & Documents */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">POC &amp; Documents</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>POC details</span>
-                <textarea
-                  rows={2}
-                  value={pocDetails}
-                  onChange={(e) => setPocDetails(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>RE details</span>
-                <textarea
-                  rows={2}
-                  value={reDetails}
-                  onChange={(e) => setReDetails(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Call invites</span>
-                <textarea
-                  rows={2}
-                  value={callInvites}
-                  onChange={(e) => setCallInvites(e.target.value)}
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Documents (any file)</span>
-                <div className="tickets-file-row">
-                  <input type="file" multiple onChange={handleDocumentsChange} />
-                </div>
-                {documents.length > 0 && (
-                  <ul className="tickets-file-list">
-                    {documents.map((file, idx) => (
-                      <li key={idx}>
-                        <span>{file.name}</span>
-                        <button type="button" onClick={() => removeDocument(idx)}><FiX /></button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </label>
-              <label className="tickets-field">
-                <span>Sign-off Sheet (any file)</span>
-                <div className="tickets-file-row">
-                  <input type="file" multiple onChange={handleSignoffChange} />
-                </div>
-                {signoffSheets.length > 0 && (
-                  <ul className="tickets-file-list">
-                    {signoffSheets.map((file, idx) => (
-                      <li key={idx}>
-                        <span>{file.name}</span>
-                        <button type="button" onClick={() => removeSignoff(idx)}><FiX /></button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </label>
-            </div>
-          </section>
-
-          {/* Conditional Time Adjustment Section */}
-          {(() => {
-            const isDispatch = (leadType === 'Dispatch') || billingType.includes('Monthly') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate);
-
-            if (!isDispatch) {
-              // Same Day Task
-              return (
-                <section className="tickets-card">
-                  <h2 className="tickets-section-title">Time Log (Manual Override)</h2>
-                  <p className="tickets-subtitle" style={{ marginBottom: '16px', fontSize: '13px' }}>
-                    Adjust working hours for a single-day task.
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                    <button
-                      type="button"
-                      className="tickets-secondary-btn"
-                      style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '8px' }}
-                      onClick={() => autoSyncTime(taskStartDate, taskEndDate, taskTime)}
-                    >
-                      Sync with Scheduled
-                    </button>
-                  </div>
-                  <div className="tickets-grid">
-                    <label className="tickets-field">
-                      <span>Start Time (Override)</span>
-                      <input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-                    </label>
-                    <label className="tickets-field">
-                      <span>End Time (Override)</span>
-                      <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-                    </label>
-                    <label className="tickets-field">
-                      <span>Break Time (Minutes)</span>
-                      <input type="number" min="0" value={breakTime} onChange={(e) => setBreakTime(e.target.value)} placeholder="0" />
-                    </label>
-                  </div>
-                </section>
-              );
-            } else {
-              // Multi-Day Task
-              return (
-                <section className="tickets-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <div>
-                      <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📅</span>
-                        Daily Shift Logs
-                        {billingType.includes('Monthly') && (
-                          <span style={{ fontSize: '10px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(99, 102, 241, 0.2)', fontWeight: '700' }}>MONTHLY MODE</span>
-                        )}
-                      </h2>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Manage engineer assignments and shift timings per day</p>
-                    </div>
-                  </div>
-
-                  {/* Edit Mode Live Summary Banner */}
-                  {editingTicketId && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-                      <div style={{ padding: '12px 16px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '12px' }}>
-                        <div style={{ fontSize: '10px', color: '#6366f1', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Est. Revenue</div>
-                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>
-                          {currency} {(() => {
-                            let total = 0;
-                            const days = getDatesInRange(taskStartDate, taskEndDate);
-                            days.forEach(d => {
-                              const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
-                              if (dw === 0 || dw === 6) return;
-                              const lg = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d) || {};
-                              const calc = calculateTicketTotal({
-                                startTime: lg.start_time || `${d}T08:00:00Z`, endTime: lg.end_time || `${d}T16:00:00Z`, breakTime: Number(lg.break_time_mins || 0),
-                                hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee, travelCostPerDay, toolCost: toolCostInput,
-                                billingType, timezone, calcTimezone, monthlyDivisor: getWorkingDaysInMonth(d, country), country
-                              });
-                              total += parseFloat(calc?.grandTotal || 0);
-                            });
-                            return total.toFixed(2);
-                          })()}
-                        </div>
-                      </div>
-                      <div style={{ padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
-                        <div style={{ fontSize: '10px', color: '#16a34a', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Est. Payout</div>
-                        <div style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>
-                          {currency} {(() => {
-                            let total = 0;
-                            const days = getDatesInRange(taskStartDate, taskEndDate);
-                            days.forEach(d => {
-                              const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
-                              if (dw === 0 || dw === 6) return;
-                              const lg = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === d) || {};
-                              const lEngId = lg.engineer_id || lg.engineerId || engineerId;
-                              let pRates = { hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, bt: billingType };
-                              if (Number(lEngId) === 0) pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
-                              else if (lEngId && String(lEngId) !== String(engineerId)) {
-                                const eng = engineers.find(en => String(en.id) === String(lEngId));
-                                if (eng) pRates = { hr: eng.hourlyRate ?? eng.hourly_rate ?? 0, hd: eng.halfDayRate ?? eng.half_day_rate ?? 0, fd: eng.fullDayRate ?? eng.full_day_rate ?? 0, mr: eng.monthlyRate ?? eng.monthly_rate ?? 0, bt: eng.billingType ?? eng.billing_type ?? 'Hourly' };
-                              }
-                              const calc = calculateTicketTotal({
-                                startTime: lg.start_time || `${d}T08:00:00Z`, endTime: lg.end_time || `${d}T16:00:00Z`, breakTime: Number(lg.break_time_mins || 0),
-                                hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, monthlyRate: pRates.mr,
-                                billingType: pRates.bt, timezone, calcTimezone, travelCostPerDay: 0, toolCost: 0,
-                                monthlyDivisor: getWorkingDaysInMonth(d, country), country
-                              });
-                              total += parseFloat(calc?.grandTotal || 0);
-                            });
-                            return total.toFixed(2);
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="tickets-table-wrapper" style={{ boxShadow: 'none', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                    <table className="tickets-table" style={{ fontSize: '12px' }}>
-                      <thead>
-                        <tr style={{ background: '#f8fafc' }}>
-                          <th style={{ padding: '10px' }}>Date</th>
-                          <th style={{ padding: '10px' }}>Engineer</th>
-                          <th style={{ padding: '10px' }}>Shift (In / Out / Break)</th>
-                          <th style={{ padding: '10px', textAlign: 'center' }}>Hrs</th>
-                          {billingType.includes('Monthly') && <th style={{ padding: '10px', textAlign: 'right' }}>Per Day Rate</th>}
-                          <th style={{ padding: '10px', textAlign: 'right' }}>Travel</th>
-                          <th style={{ padding: '10px', textAlign: 'right' }}>Tools</th>
-                          <th style={{ padding: '10px', textAlign: 'right', color: '#6366f1' }}>Day Total (Cust)</th>
-                          <th style={{ padding: '10px', textAlign: 'right', color: '#059669' }}>Payout (Eng)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const daysInRange = getDatesInRange(taskStartDate, taskEndDate);
-                          
-                          // Group days by month for the accordion-style display
-                          const monthGroups = {};
-                          daysInRange.forEach(d => {
-                            const mKey = d.substring(0, 7);
-                            if (!monthGroups[mKey]) monthGroups[mKey] = [];
-                            monthGroups[mKey].push(d);
-                          });
-
-                          return Object.keys(monthGroups).sort().map(mKey => {
-                            const monthDays = monthGroups[mKey];
-                            const isMonthCollapsed = collapsedMonths.has(mKey + '-modal'); // unique key for modal collapse
-                            const monthLabel = new Date(mKey + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
-                            return (
-                              <React.Fragment key={mKey}>
-                                {/* Month Section Header */}
-                                <tr 
-                                  onClick={() => {
-                                    setCollapsedMonths(prev => {
-                                      const next = new Set(prev);
-                                      if (next.has(mKey + '-modal')) next.delete(mKey + '-modal');
-                                      else next.add(mKey + '-modal');
-                                      return next;
-                                    });
-                                  }}
-                                  style={{ background: '#f1f5f9', cursor: 'pointer', userSelect: 'none' }}
-                                >
-                                  <td colSpan={billingType.includes('Monthly') ? 8 : 7} style={{ padding: '8px 12px', fontWeight: '800', color: '#475569', fontSize: '13px' }}>
-                                    <span style={{ marginRight: '8px' }}>{isMonthCollapsed ? '▶' : '▼'}</span>
-                                    {monthLabel} 
-                                    <span style={{ marginLeft: '8px', fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>({monthDays.length} days)</span>
-                                  </td>
-                                </tr>
-                                
-                                {!isMonthCollapsed && monthDays.map((dStr, idx) => {
-                                  const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === dStr) || {};
-                                  const cleanTaskTime = (taskTime || '09:00').padStart(5, '0');
-                                  
-                                  const _tblHolsList = (HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || []);
-                                  
-                                  const dObj = new Date(dStr);
-                                  const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
-                                  const activeHols = (HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || []);
-                                  const isHoliday = activeHols.includes(dStr);
-                                  
-                                  if (isWeekend || isHoliday) return null;
-
-                                  const actualStartStr = existingLog.start_time || existingLog.startTime;
-                                  const actualEndStr = existingLog.end_time || existingLog.endTime;
-                                  const actualBreak = existingLog.break_time_mins != null ? Number(existingLog.break_time_mins) : (existingLog.breakTime != null ? Number(existingLog.breakTime) : 0);
-
-                                  const lStart = safeExtractTime(actualStartStr) || cleanTaskTime;
-                                  let lEnd = safeExtractTime(actualEndStr);
-                                  if (!lEnd) {
-                                    const [h, m] = (lStart || '09:00').split(':');
-                                    let endH = parseInt(h, 10) + 8;
-                                    if (endH >= 24) endH = 23;
-                                    lEnd = `${String(endH).padStart(2, '0')}:${m || '00'}`;
-                                  }
-
-                                  const dur = calculateDuration(lStart, lEnd, actualBreak);
-                                  const dayMonthlyDivisor = getWorkingDaysInMonth(dStr, country);
-                                  // AUTOMATIC SUBSTITUTE ENGINEER RATES
-                                  const curEngId = Number(existingLog.engineer_id ?? existingLog.engineerId ?? engineerId);
-                                  const isNoEng = Number(curEngId) === 0;
-                                  let effectiveRates = {
-                                    hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, ar: agreedRate, cf: cancellationFee
-                                  };
-
-                                  if (isNoEng) {
-                                    effectiveRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0 };
-                                  } else if (curEngId && curEngId !== Number(engineerId)) {
-                                    const subEng = engineers.find(en => Number(en.id) === curEngId);
-                                    if (subEng) {
-                                      effectiveRates = {
-                                        hr: subEng.hourlyRate ?? subEng.hourly_rate ?? 0,
-                                        hd: subEng.halfDayRate ?? subEng.half_day_rate ?? 0,
-                                        fd: subEng.fullDayRate ?? subEng.full_day_rate ?? 0,
-                                        mr: subEng.monthlyRate ?? subEng.monthly_rate ?? 0,
-                                        ar: subEng.agreedRate ?? subEng.agreed_rate ?? '',
-                                        cf: subEng.cancellationFee ?? subEng.cancellation_fee ?? 0
-                                      };
-                                    }
-                                  }
-
-                                  const dayCostBreakdown = calculateTicketTotal({
-                                    startTime: `${dStr}T${lStart}:00.000Z`,
-                                    endTime: `${dStr}T${lEnd}:00.000Z`,
-                                    breakTime: actualBreak,
-                                    hourlyRate: effectiveRates.hr, 
-                                    halfDayRate: effectiveRates.hd, 
-                                    fullDayRate: effectiveRates.fd, 
-                                    monthlyRate: effectiveRates.mr, 
-                                    agreedRate: effectiveRates.ar, 
-                                    cancellationFee: effectiveRates.cf,
-                                    travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
-                                    monthlyDivisor: dayMonthlyDivisor, country
-                                  });
-
-                                  return (
-                                    <tr key={dStr} className={isNoEng ? 'row-no-engineer' : ''} style={{ background: dur > 8 ? 'rgba(239, 68, 68, 0.05)' : (existingLog.id ? 'rgba(99, 102, 241, 0.03)' : undefined) }}>
-                                      <td style={{ padding: '10px' }}>
-                                        <div style={{ fontWeight: '700', color: '#475569' }}>{new Date(`${dStr}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}</div>
-                                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>{[0, 6].includes(new Date(`${dStr}T00:00:00`).getDay()) ? 'Weekend' : 'Weekday'}</div>
-                                      </td>
-                                      <td style={{ padding: '10px' }}>
-                                        {/* Dropdowns for BOTH Create and Edit modes */}
-                                        {(isFillingForm || editingTicketId) ? (
-                                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                              <select
-                                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '11px', background: '#fff', minWidth: '120px' }}
-                                                value={curEngId}
-                                                onChange={(e) => {
-                                                  const val = Number(e.target.value);
-                                                  if (existingLog.id) {
-                                                    handleUpdateLog(existingLog.id, { engineerId: val });
-                                                  } else {
-                                                    setTimeLogs(prev => {
-                                                      const next = [...prev];
-                                                      const lgIdx = next.findIndex(l => (l.task_date || '').split('T')[0] === dStr);
-                                                      if (lgIdx > -1) {
-                                                        next[lgIdx].engineer_id = val;
-                                                      } else {
-                                                        next.push({
-                                                          task_date: dStr,
-                                                          engineer_id: val,
-                                                          start_time: `${dStr}T${lStart}:00.000Z`,
-                                                          end_time: `${dStr}T${lEnd}:00.000Z`,
-                                                          break_time_mins: actualBreak
-                                                        });
-                                                      }
-                                                      return next;
-                                                    });
-                                                  }
-                                                }}
-                                              >
-                                                <optgroup label="Core Team">
-                                                  {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                                </optgroup>
-                                                <optgroup label="Special Cases">
-                                                  <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
-                                                </optgroup>
-                                              </select>
-
-                                              {/* Premium Rates Tooltip */}
-                                              {(() => {
-                                                const selectedEng = engineers.find(e => Number(e.id) === Number(curEngId));
-                                                if (!selectedEng) return null;
-                                                const hR = selectedEng.hourlyRate ?? selectedEng.hourly_rate ?? 0;
-                                                const hdR = selectedEng.halfDayRate ?? selectedEng.half_day_rate ?? 0;
-                                                const fdR = selectedEng.fullDayRate ?? selectedEng.full_day_rate ?? 0;
-                                                const mR = selectedEng.monthlyRate ?? selectedEng.monthly_rate ?? 0;
-                                                const aR = selectedEng.agreedRate ?? selectedEng.agreed_rate ?? 0;
-                                                const cF = selectedEng.cancellationFee ?? selectedEng.cancellation_fee ?? 0;
-                                                const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${currency} ${hR}\n• Half Day: ${currency} ${hdR}\n• Full Day: ${currency} ${fdR}\n• Monthly: ${currency} ${mR}\n• Agreed: ${currency} ${aR}\n• Cancellation: ${currency} ${cF}`;
-
-                                                return (
-                                                  <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block' }}>
-                                                    <span style={{ fontSize: '14px', cursor: 'help', color: '#6366f1' }}>ℹ️</span>
-                                                    <div className="tooltip-text" style={{
-                                                      visibility: 'hidden', width: '220px', backgroundColor: '#1e293b', color: '#fff', textAlign: 'left',
-                                                      borderRadius: '12px', padding: '14px', position: 'absolute', zIndex: 9999, top: '-20px', right: '35px',
-                                                      opacity: 0, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', fontSize: '11px', lineHeight: '1.6',
-                                                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2)', pointerEvents: 'none', whiteSpace: 'pre-line',
-                                                      border: '1px solid rgba(255,255,255,0.1)'
-                                                    }}>
-                                                      <div style={{ fontWeight: '800', color: '#818cf8', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>Rate Card: {selectedEng.name}</div>
-                                                      {tooltipContent.split('\n').slice(1).join('\n')}
-                                                      <div style={{
-                                                        position: 'absolute', top: '24px', left: '100%',
-                                                        borderWidth: '6px', borderStyle: 'solid', borderColor: 'transparent transparent transparent #1e293b'
-                                                      }}></div>
-                                                    </div>
-                                                  </div>
-                                                );
-                                              })()}
-                                              <style>{`.tooltip-container:hover .tooltip-text { visibility: visible !important; opacity: 1 !important; }`}</style>
-                                            </div>
-                                        ) : (
-                                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
-                                            {engineers.find(e => String(e.id) === String(existingLog.engineer_id || existingLog.engineerId || engineerId))?.name || engineerName || 'Primary Engineer'}
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td style={{ padding: '10px' }}>
-                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                          <input
-                                            type="time"
-                                            id={`fst-${dStr}`}
-                                            value={lStart}
-                                            style={{ padding: '2px', fontSize: '11px' }}
-                                            onChange={(e) => {
-                                              const nt = e.target.value;
-                                              if (editingTicketId && existingLog.id) {
-                                                handleUpdateLog(existingLog.id, { startTime: `${dStr}T${nt}:00.000Z` });
-                                              } else {
-                                                setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, start_time: `${dStr}T${nt}:00.000Z` } : l));
-                                              }
-                                            }}
-                                          />
-                                          <span>to</span>
-                                          <input
-                                            type="time"
-                                            id={`fet-${dStr}`}
-                                            value={lEnd}
-                                            style={{ padding: '2px', fontSize: '11px' }}
-                                            onChange={(e) => {
-                                              const nt = e.target.value;
-                                              if (editingTicketId && existingLog.id) {
-                                                handleUpdateLog(existingLog.id, { endTime: `${dStr}T${nt}:00.000Z` });
-                                              } else {
-                                                setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, end_time: `${dStr}T${nt}:00.000Z` } : l));
-                                              }
-                                            }}
-                                          />
-                                          <input
-                                            type="number"
-                                            id={`fbr-${dStr}`}
-                                            placeholder="Break"
-                                            value={actualBreak}
-                                            style={{ width: '45px', padding: '2px', fontSize: '11px' }}
-                                            onChange={(e) => {
-                                              const brVal = parseInt(e.target.value) || 0;
-                                              if (editingTicketId && existingLog.id) {
-                                                handleUpdateLog(existingLog.id, { breakTimeMins: brVal });
-                                              } else {
-                                                setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, break_time_mins: brVal } : l));
-                                              }
-                                            }}
-                                          />
-                                          {editingTicketId && existingLog.id && (
-                                            <span style={{
-                                              fontSize: '10px',
-                                              fontWeight: '700',
-                                              padding: '2px 8px',
-                                              borderRadius: '20px',
-                                              color: isUpdatingLog === existingLog.id ? '#f59e0b' : '#10b981',
-                                              background: isUpdatingLog === existingLog.id ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
-                                              border: `1px solid ${isUpdatingLog === existingLog.id ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`,
-                                              transition: 'all 0.3s ease',
-                                              whiteSpace: 'nowrap'
-                                            }}>
-                                              {isUpdatingLog === existingLog.id ? '⏳ Saving…' : '✓ Saved'}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </td>
-                                      {billingType.includes('Monthly') && (
-                                        <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#6366f1', fontWeight: '700' }}>
-                                          {dayCostBreakdown ? (
-                                            <span title={`${currency}${monthlyRate} ÷ ${dayMonthlyDivisor} days`}>{currency} {dayCostBreakdown.perDayRate}</span>
-                                          ) : '--'}
-                                        </td>
-                                      )}
-                                      <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#0891b2', fontWeight: '600' }}>
-                                        {dayCostBreakdown ? `${currency} ${dayCostBreakdown.travel}` : '--'}
-                                      </td>
-                                      <td style={{ padding: '10px', textAlign: 'right', fontSize: '11px', color: '#7c3aed', fontWeight: '600' }}>
-                                        {dayCostBreakdown ? `${currency} ${dayCostBreakdown.tools}` : '--'}
-                                      </td>
-                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#1e293b' }}>
-                                        {currency} {dayCostBreakdown ? dayCostBreakdown.grandTotal : '0.00'}
-                                      </td>
-                                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: '#059669', background: 'rgba(5, 150, 105, 0.04)' }}>
-                                        {currency} {(() => {
-                                           const lEngId = curEngId;
-                                           let pRates = {
-                                             hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, bt: billingType
-                                           };
-                                           if (Number(lEngId) === 0) {
-                                             pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly' };
-                                           } else if (lEngId && Number(lEngId) !== Number(engineerId)) {
-                                             const eng = engineers.find(en => Number(en.id) === lEngId);
-                                             if (eng) pRates = { hr: eng.hourly_rate || 0, hd: eng.half_day_rate || 0, fd: eng.full_day_rate || 0, mr: eng.monthly_rate || 0, bt: eng.billing_type || billingType };
-                                           }
-                                           const engCalc = calculateTicketTotal({
-                                             startTime: `${dStr}T${lStart}:00.000Z`,
-                                             endTime: `${dStr}T${lEnd}:00.000Z`,
-                                             breakTime: actualBreak,
-                                             hourlyRate: pRates.hr, halfDayRate: pRates.hd, fullDayRate: pRates.fd, monthlyRate: pRates.mr,
-                                             billingType: pRates.bt, timezone, calcTimezone,
-                                             travelCostPerDay: 0, toolCost: 0, // Payout usually excludes client-charged travel/tools unless specified
-                                             monthlyDivisor: dayMonthlyDivisor, country
-                                           });
-                                           return engCalc ? engCalc.grandTotal : '0.00';
-                                        })()}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                  {!editingTicketId && (
-                    <div style={{ marginTop: '12px', fontSize: '11px', color: '#64748b', background: '#fef3c7', padding: '10px', borderRadius: '8px' }}>
-                      💡 <strong>Note:</strong> Daily logs with individual times/engineers can be managed in detail once the ticket is created or while editing.
-                    </div>
-                  )}
-                </section>
-              );
-            }
-          })()}
-
-          {/* Pricing & Rates */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Pricing &amp; Rates</h2>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px', fontWeight: '500' }}>
-              ≡ƒôî <strong>Rate Multipliers:</strong> OT/OOH = 1.5x | Weekend/Holiday = 2.0x
-            </p>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>Select Currency</span>
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                  {CURRENCIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="tickets-field">
-                <span>Billing Type</span>
-                <select value={(billingType || '').trim()} onChange={(e) => setBillingType(e.target.value)}>
-                  <option value="Hourly">Hourly Only</option>
-                  <option value="Half Day + Hourly">Half Day + Hourly</option>
-                  <option value="Full Day + OT">Full Day + OT</option>
-                  <option value="Mixed Mode">Mixed Mode (Half/Full/OT)</option>
-                  <option value="Monthly + OT + Weekend">Monthly + OT + Weekend or Holidays</option>
-                  <option value="Agreed Rate">Agreed rate</option>
-                  <option value="Cancellation">Cancellation / Reschedule charges</option>
-                </select>
-              </label>
-              <label className="tickets-field">
-                <span>Support Type</span>
-                <select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
-                  <option value="Full time">Full time</option>
-                  <option value="Dispatch">Dispatch (Multi-day)</option>
-                </select>
-              </label>
-
-              <label className="tickets-field">
-                <span>Hourly Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Half Day Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={halfDayRate}
-                  onChange={(e) => setHalfDayRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Full Day Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fullDayRate}
-                  onChange={(e) => setFullDayRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Cancellation Fee ({currency})</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={cancellationFee}
-                  onChange={(e) => setCancellationFee(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Monthly Rate</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={monthlyRate}
-                  onChange={(e) => setMonthlyRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
-                <span>Agreed Rate</span>
-                <input
-                  type="text"
-                  value={agreedRate}
-                  onChange={(e) => setAgreedRate(e.target.value)}
-                  placeholder="Details"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Additional Costs */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Additional Costs</h2>
-            <div className="tickets-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-              <label className="tickets-field">
-                <span>Travel Cost / Day</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={travelCostPerDay}
-                  onChange={(e) => setTravelCostPerDay(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="tickets-field">
-                <span>Tool Cost / Day</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={toolCostInput}
-                  onChange={(e) => setToolCostInput(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Ticket Status */}
-          <section className="tickets-card">
-            <h2 className="tickets-section-title">Ticket Status</h2>
-            <div className="tickets-grid">
-              <label className="tickets-field">
-                <span>Status</span>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  {TICKET_STATUSES.filter(s => s !== 'Approval Pending').map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </section>
-
-          {error && <div className="tickets-message tickets-message--error">{error}</div>}
-          {success && <div className="tickets-message tickets-message--success">{success}</div>}
-
-          <div className="tickets-actions-footer">
-            {liveBreakdown && (
-              <div className="calculation-preview-card" style={{
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                borderRadius: '16px',
-                padding: '24px',
-                marginBottom: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)'
-              }}>
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '6px', height: '6px', background: '#6366f1', borderRadius: '50%', boxShadow: '0 0 8px #6366f1' }}></div>
-                      Live Cost Breakdown
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '600' }}>
-                      {billingType} · {liveBreakdown.hrs}h billable
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total</div>
-                    <div style={{ fontSize: '30px', fontWeight: '900', color: '#a5b4fc', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                      {currency} {liveBreakdown.grandTotal}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Premium Alerts */}
-                {liveBreakdown.isSpecialDay && (
-                  <div style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px', color: '#fbbf24', fontWeight: '600' }}>
-                    <span>📅</span>
-                    <span>{liveBreakdown.isHoliday ? '🎉 Public Holiday' : '🏖️ Weekend'} — Special day rate (2×) applied.</span>
-                  </div>
-                )}
-                {!liveBreakdown.isSpecialDay && liveBreakdown.isOOH && parseFloat(liveBreakdown.ooh) > 0 && (
-                  <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px', color: '#a5b4fc', fontWeight: '600' }}>
-                    <span>🌙</span>
-                    <span><strong>OOH Premium</strong> — Work is outside normal hours (08:00—18:00).</span>
-                  </div>
-                )}
-                {!liveBreakdown.isSpecialDay && parseFloat(liveBreakdown.ot) > 0 && (
-                  <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px', color: '#fcd34d', fontWeight: '600' }}>
-                    <span>⏱️</span>
-                    <span><strong>Overtime</strong> — Work exceeded 8h standard shift.</span>
-                  </div>
-                )}
-
-                {/* Breakdown Lines */}
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-
-                  {/* Monthly Formula Banner */}
-                  {billingType.includes('Monthly') && liveBreakdown.monthlyRecords && (
-                    <div style={{ background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '10px', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Rate Formula Breakdown</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
-                        {liveBreakdown.monthlyRecords.map((rec, i) => {
-                          const monthName = new Date(rec.month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-                          const dRate = (parseFloat(rec.rate) / rec.divisor).toFixed(2);
-                          
-                          return (
-                            <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                              <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '2px' }}>{monthName}</div>
-                              <div style={{ fontSize: '12px', color: '#c7d2fe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>Rate: <strong>{currency} {rec.rate}</strong> ÷ <strong>{rec.divisor}</strong> days = <strong>{currency} {dRate}/day</strong></span>
-                                <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: '#fff', fontWeight: '800', fontSize: '11px' }}>
-                                  {currency} {dRate} × {rec.workedDaysCount} days = {currency} {(parseFloat(dRate) * rec.workedDaysCount).toFixed(2)}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Base */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '500' }}>
-                      Base ({billingType === 'Hourly' ? `${liveBreakdown.hrs}h × ${currency}${hourlyRate}/hr`
-                        : billingType === 'Half Day + Hourly' ? 'Half Day flat'
-                          : billingType === 'Full Day + OT' ? 'Full Day flat'
-                            : billingType.includes('Monthly') ? `Monthly Pro-rata (${liveBreakdown.days} days)`
-                              : billingType === 'Agreed Rate' ? 'Fixed rate'
-                                : 'Cancellation fee'})
-                    </span>
-                    <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700' }}>{currency} {liveBreakdown.base}</span>
-                  </div>
-
-                  {/* OT */}
-                  {parseFloat(liveBreakdown.ot) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', color: '#fcd34d', fontWeight: '500' }}>
-                        Overtime Premium (1.5×)
-                      </span>
-                      <span style={{ fontSize: '14px', color: '#fcd34d', fontWeight: '700' }}>+ {currency} {liveBreakdown.ot}</span>
-                    </div>
-                  )}
-
-                  {/* OOH */}
-                  {parseFloat(liveBreakdown.ooh) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '500' }}>
-                        OOH Premium (1.5×)
-                      </span>
-                      <span style={{ fontSize: '14px', color: '#a5b4fc', fontWeight: '700' }}>+ {currency} {liveBreakdown.ooh}</span>
-                    </div>
-                  )}
-
-                  {/* Special Day */}
-                  {parseFloat(liveBreakdown.specialDay) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', color: '#fbbf24', fontWeight: '500' }}>
-                        Weekend/Holiday Premium (2×)
-                      </span>
-                      <span style={{ fontSize: '14px', color: '#fbbf24', fontWeight: '700' }}>+ {currency} {liveBreakdown.specialDay}</span>
-                    </div>
-                  )}
-
-                  {/* Travel & Tool Costs */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#7dd3fc', fontWeight: '600', marginBottom: '4px' }}>
-                    <span>✈ Travel Cost{liveBreakdown.days > 1 ? ` (${liveBreakdown.days} days × ${currency}${travelCostPerDay || '0'})` : ' / Day'}</span>
-                    <span>+ {currency} {liveBreakdown.travel}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#c4b5fd', fontWeight: '600', marginBottom: '12px' }}>
-                    <span>🔧 Tool Cost{liveBreakdown.days > 1 ? ` (${liveBreakdown.days} days × ${currency}${toolCostInput || '0'})` : ''}</span>
-                    <span>+ {currency} {liveBreakdown.tools}</span>
-                  </div>
-
-                  {/* Divider */}
-                  <div style={{ borderTop: '1.5px dashed rgba(99, 102, 241, 0.3)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Grand Total (Receivable)
-                    </span>
-                    <span style={{ fontSize: '22px', color: '#a5b4fc', fontWeight: '900', letterSpacing: '-0.02em' }}>
-                      {currency} {liveBreakdown.grandTotal}
-                    </span>
-                  </div>
-
+                  {/* Live Payout Summary */}
                   {payoutLiveBreakdown && (
-                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '10px', borderLeft: '4px solid #10b981', marginTop: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div>
-                          <span style={{ display: 'block', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>Engineer Payout Estimation</span>
-                          <span style={{ fontSize: '9px', color: '#94a3b8' }}>Based on {engBillingType || 'Profile'} Rates (Excl. Travel & Tool)</span>
-                        </div>
-                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
-                        </div>
-
-                        {/* UPGRADED: Professional Engineer Cards in Edit Page */}
-                        {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.filter(s => !s.isNoEng).length > 0 && (
-                          <div style={{ borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '16px', marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-                            {payoutLiveBreakdown.engSummary.filter(es => !es.isNoEng).map((es, idx) => (
-                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(16,185,129,0.1)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
-                                    {es.name.charAt(0)}
-                                  </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#ecfdf5' }}>{es.name}</span>
-                                    <span style={{ fontSize: '10px', color: '#64748b' }}>Individual Payout</span>
-                                  </div>
+                    <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FiActivity style={{ color: '#10b981' }} /> Engineer Payout Breakdown
+                      </h3>
+                      
+                      {/* Engineer-wise Payout List */}
+                      {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.filter(s => !s.isNoEng).length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                          {payoutLiveBreakdown.engSummary.filter(s => !s.isNoEng).map((es, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
+                                  {es.name.charAt(0)}
                                 </div>
-                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#10b981' }}>
-                                  {engCurrency || currency} {es.total.toFixed(2)}
-                                </div>
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>{es.name}</span>
                               </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {/* Summary Total for Payout (All Engineers Combined) */}
-                        <div style={{ borderTop: '1.5px dashed rgba(16,185,129,0.3)', marginTop: '20px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Combined Engineer Payout</span>
-                          <span style={{ fontSize: '20px', fontWeight: '900', color: '#fff' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</span>
+                              <span style={{ fontSize: '13px', fontWeight: '800', color: '#059669' }}>
+                                {engCurrency || currency} {es.total.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Labor Subtotal</span>
+                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{engCurrency || currency} {payoutLiveBreakdown.base || '0.00'}</div>
+                        </div>
+                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Grand Total Payout</span>
+                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#059669' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</div>
                         </div>
                       </div>
+                      <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
+                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? daysInRange.length : '1'} working day(s).
+                      </p>
+                    </div>
                   )}
                 </div>
-
-                <p style={{ fontSize: '11px', color: '#475569', marginTop: '12px', textAlign: 'center' }}>
-                  ⚡ Live preview — Final total is confirmed on save.
-                </p>
-              </div>
-            )}
-
-            <button
-              type="button"
               className="tickets-secondary-btn"
               onClick={() => {
                 resetForm()
