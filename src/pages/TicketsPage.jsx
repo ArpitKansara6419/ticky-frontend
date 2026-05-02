@@ -2547,9 +2547,7 @@ function TicketsPage() {
               </section>
 
               {/* Daily Shift Logs */}
-              {(() => {
-                const isDispatch = (leadType === 'Dispatch') || billingType.includes('Monthly') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate);
-                if (!isDispatch) {
+              {/* Daily Shift Logs (Only for Multi-day or Dispatch) */}
               {isMultiDay && (
                 <section className="tickets-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -2790,6 +2788,13 @@ function TicketsPage() {
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+          )}
+
+          <div className="tickets-form-actions" style={{ marginTop: '32px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
               className="tickets-secondary-btn"
               onClick={() => {
                 resetForm()
@@ -2799,13 +2804,12 @@ function TicketsPage() {
             >
               Cancel
             </button>
-
             <button type="submit" className="tickets-primary-btn" disabled={saving || !canSubmit}>
               {saving ? (editingTicketId ? 'Saving Changes...' : 'Creating Ticket...') : (editingTicketId ? 'Save Changes' : 'Create Ticket')}
             </button>
           </div>
-        </form >
-      </section >
+        </form>
+      </section>
     )
   }
 
