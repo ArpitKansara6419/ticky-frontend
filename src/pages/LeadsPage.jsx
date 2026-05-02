@@ -53,6 +53,7 @@ function LeadsPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [viewMode, setViewMode] = useState('list')
+  const [activeFormTab, setActiveFormTab] = useState('tickets')
 
   // Google Maps Places Autocomplete setup using hook (more stable)
   // Google Maps Places Autocomplete setup (using Autocomplete component now)
@@ -766,344 +767,399 @@ function LeadsPage() {
     return (
       <section className="leads-page">
         <header className="leads-header">
-          <button type="button" className="leads-back" onClick={() => { resetForm(); setViewMode('list'); }}><FiArrowLeft /></button>
+          <button type="button" className="leads-back" onClick={() => { resetForm(); setViewMode('list'); setActiveFormTab('tickets'); }}><FiArrowLeft /></button>
           <div>
             <h1 className="leads-title">{editingLeadId ? 'Edit Lead' : 'Create Lead'}</h1>
             <p className="leads-subtitle">Task details and pricing.</p>
           </div>
         </header>
 
+        {/* Tab Navigation */}
+        <div style={{
+          display: 'flex',
+          gap: '0',
+          marginBottom: '24px',
+          background: '#f1f5f9',
+          borderRadius: '14px',
+          padding: '5px',
+          width: 'fit-content',
+          border: '1px solid #e2e8f0'
+        }}>
+          {[
+            { key: 'tickets', label: '🎫 Tickets' },
+            { key: 'rates', label: '💰 Price & Rates' }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveFormTab(tab.key)}
+              style={{
+                padding: '10px 28px',
+                borderRadius: '10px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '700',
+                transition: 'all 0.2s ease',
+                background: activeFormTab === tab.key
+                  ? 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'
+                  : 'transparent',
+                color: activeFormTab === tab.key ? '#ffffff' : '#64748b',
+                boxShadow: activeFormTab === tab.key ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <form className="leads-form" onSubmit={handleSubmit}>
-          {/* Lead Information */}
-          <section className="leads-card">
-            <h2 className="leads-section-title">Lead Information</h2>
-            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-              <label className="leads-field">
-                <span>Task Name *</span>
-                <input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} required placeholder="Enter task name" />
-              </label>
 
-              <label className="leads-field">
-                <span>Customer *</span>
-                <select value={customerId} onChange={e => setCustomerId(e.target.value)} required>
-                  <option value="">Select...</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
+          {/* ==================== TAB 1: TICKETS ==================== */}
+          {activeFormTab === 'tickets' && (
+            <>
+              {/* Lead Information */}
+              <section className="leads-card">
+                <h2 className="leads-section-title">Lead Information</h2>
+                <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <label className="leads-field">
+                    <span>Task Name *</span>
+                    <input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} required placeholder="Enter task name" />
+                  </label>
 
-              <label className="leads-field">
-                <span>Type</span>
-                <select value={leadType} onChange={e => setLeadType(e.target.value)}>
-                  {LEAD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </label>
+                  <label className="leads-field">
+                    <span>Customer *</span>
+                    <select value={customerId} onChange={e => setCustomerId(e.target.value)} required>
+                      <option value="">Select...</option>
+                      {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </label>
 
-              <label className="leads-field">
-                <span>Ticket #</span>
-                <input type="text" value={clientTicketNumber} onChange={e => setClientTicketNumber(e.target.value)} placeholder="Optional" />
-              </label>
-            </div>
+                  <label className="leads-field">
+                    <span>Type</span>
+                    <select value={leadType} onChange={e => setLeadType(e.target.value)}>
+                      {LEAD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </label>
 
-            {leadType === 'Dispatch' && (
-              <div style={{ marginTop: '16px', padding: '16px', background: 'var(--input-bg)', borderRadius: '12px' }}>
-                <div className="leads-field">
-                  <span style={{ display: 'block', marginBottom: '8px' }}>Recurring?</span>
-                  <div style={{ display: 'flex', gap: '20px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                      <input type="radio" value="Yes" checked={isRecurring === 'Yes'} onChange={e => setIsRecurring(e.target.value)} /> Yes
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                      <input type="radio" value="No" checked={isRecurring === 'No'} onChange={e => setIsRecurring(e.target.value)} /> No
-                    </label>
-                  </div>
+                  <label className="leads-field">
+                    <span>Ticket #</span>
+                    <input type="text" value={clientTicketNumber} onChange={e => setClientTicketNumber(e.target.value)} placeholder="Optional" />
+                  </label>
                 </div>
 
-                {isRecurring === 'Yes' && (
-                  <div style={{ marginTop: '16px' }}>
-
-                    <div className="leads-field leads-field--full">
-                      <span style={{ display: 'block', marginBottom: '8px' }}>Recur on Days</span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                        {WEEKDAYS.map(day => (
-                          <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', background: 'var(--card-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
-                            <input
-                              type="checkbox"
-                              checked={recurringDays.includes(day)}
-                              onChange={e => {
-                                if (e.target.checked) setRecurringDays([...recurringDays, day])
-                                else setRecurringDays(recurringDays.filter(d => d !== day))
-                              }}
-                            /> {day.slice(0, 3)}
-                          </label>
-                        ))}
+                {leadType === 'Dispatch' && (
+                  <div style={{ marginTop: '16px', padding: '16px', background: 'var(--input-bg)', borderRadius: '12px' }}>
+                    <div className="leads-field">
+                      <span style={{ display: 'block', marginBottom: '8px' }}>Recurring?</span>
+                      <div style={{ display: 'flex', gap: '20px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                          <input type="radio" value="Yes" checked={isRecurring === 'Yes'} onChange={e => setIsRecurring(e.target.value)} /> Yes
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                          <input type="radio" value="No" checked={isRecurring === 'No'} onChange={e => setIsRecurring(e.target.value)} /> No
+                        </label>
                       </div>
                     </div>
+
+                    {isRecurring === 'Yes' && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div className="leads-field leads-field--full">
+                          <span style={{ display: 'block', marginBottom: '8px' }}>Recur on Days</span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                            {WEEKDAYS.map(day => (
+                              <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', background: 'var(--card-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={recurringDays.includes(day)}
+                                  onChange={e => {
+                                    if (e.target.checked) setRecurringDays([...recurringDays, day])
+                                    else setRecurringDays(recurringDays.filter(d => d !== day))
+                                  }}
+                                /> {day.slice(0, 3)}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
+              </section>
+
+              {/* Schedule & Scope */}
+              <section className="leads-card">
+                <h2 className="leads-section-title">Schedule & Scope</h2>
+                <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <label className="leads-field">
+                    <span>Start Date *</span>
+                    <input
+                      type="date"
+                      value={taskStartDate}
+                      onChange={e => setTaskStartDate(e.target.value)}
+                      min={todayStr}
+                      required
+                    />
+                  </label>
+                  <label className="leads-field">
+                    <span>End Date *</span>
+                    <input
+                      type="date"
+                      value={taskEndDate}
+                      onChange={e => setTaskEndDate(e.target.value)}
+                      min={taskStartDate || new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </label>
+                  <label className="leads-field">
+                    <span>Time *</span>
+                    <input type="time" value={taskTime} onChange={e => setTaskTime(e.target.value)} required />
+                  </label>
+                  <label className="leads-field leads-field--full">
+                    <span>Scope of Work *</span>
+                    <textarea rows={3} value={scopeOfWork} onChange={e => setScopeOfWork(e.target.value)} required placeholder="Describe requirements..." />
+                  </label>
+                </div>
+              </section>
+
+              {/* Location */}
+              <section className="leads-card">
+                <h2 className="leads-section-title">Location</h2>
+                <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <label className="leads-field leads-field--full">
+                    <span>Details Address Search</span>
+                    <Autocomplete
+                      onPlaceSelected={handleGoogleAddressSelect}
+                      options={GOOGLE_AUTOCOMPLETE_OPTIONS}
+                      placeholder="Type to search global address..."
+                      style={{
+                        width: '100%',
+                        height: '42px',
+                        padding: '0 12px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border-subtle, #e5e7eb)',
+                        fontSize: '13px',
+                        outline: 'none',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-main)'
+                      }}
+                    />
+                  </label>
+
+                  <label className="leads-field">
+                    <span>Address Line 1 *</span>
+                    <input type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} required placeholder="Street / Building" />
+                  </label>
+
+                  <label className="leads-field">
+                    <span>City *</span>
+                    <input type="text" value={city} onChange={e => setCity(e.target.value)} required placeholder="Enter city" />
+                  </label>
+
+                  <label className="leads-field">
+                    <span>Country *</span>
+                    <Select
+                      options={countryOptions}
+                      value={countryOptions.find(o => o.value === country)}
+                      onChange={handleCountrySelectChange}
+                      styles={customSelectStyles}
+                      placeholder="Select Country"
+                    />
+                  </label>
+
+                  <label className="leads-field">
+                    <span>Zip Code *</span>
+                    <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} required placeholder="Enter zip code" />
+                  </label>
+
+                  <label className="leads-field leads-field--full">
+                    <span>Timezone *</span>
+                    <Select
+                      options={timezoneOptions}
+                      value={timezoneOptions.find(o => o.value === timezone)}
+                      onChange={o => setTimezone(o?.value)}
+                      styles={customSelectStyles}
+                      placeholder="Select Timezone"
+                    />
+                  </label>
+                </div>
+              </section>
+
+              {/* Tools & Equipment */}
+              <section className="leads-card">
+                <h2 className="leads-section-title">Tools & Equipment</h2>
+                <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(1, 1fr)' }}>
+                  <label className="leads-field">
+                    <span>Tools Required</span>
+                    <input type="text" value={toolsRequired} onChange={(e) => setToolsRequired(e.target.value)} placeholder="e.g. Drill, Laptop, Console cable" />
+                  </label>
+                </div>
+              </section>
+
+              {/* Tab 1 Footer Actions */}
+              <div className="leads-actions-footer">
+                <button type="button" className="leads-secondary-btn" onClick={() => { resetForm(); setViewMode('list'); setActiveFormTab('tickets'); }}>Cancel</button>
+                <button type="button" className="leads-primary-btn" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)' }} onClick={() => setActiveFormTab('rates')}>
+                  Next: Price &amp; Rates →
+                </button>
               </div>
-            )}
-          </section>
+            </>
+          )}
 
-          {/* Schedule & Scope */}
-          <section className="leads-card">
-            <h2 className="leads-section-title">Schedule & Scope</h2>
-            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-              <label className="leads-field">
-                <span>Start Date *</span>
-                <input
-                  type="date"
-                  value={taskStartDate}
-                  onChange={e => setTaskStartDate(e.target.value)}
-                  min={todayStr}
-                  required
-                />
-              </label>
-              <label className="leads-field">
-                <span>End Date *</span>
-                <input
-                  type="date"
-                  value={taskEndDate}
-                  onChange={e => setTaskEndDate(e.target.value)}
-                  min={taskStartDate || new Date().toISOString().split('T')[0]}
-                  required
-                />
-              </label>
-              <label className="leads-field">
-                <span>Time *</span>
-                <input type="time" value={taskTime} onChange={e => setTaskTime(e.target.value)} required />
-              </label>
-              <label className="leads-field leads-field--full">
-                <span>Scope of Work *</span>
-                <textarea rows={3} value={scopeOfWork} onChange={e => setScopeOfWork(e.target.value)} required placeholder="Describe requirements..." />
-              </label>
-            </div>
-          </section>
+          {/* ==================== TAB 2: PRICE & RATES ==================== */}
+          {activeFormTab === 'rates' && (
+            <>
+              {/* Pricing & Rates */}
+              <section className="leads-card">
+                <h2 className="leads-section-title">Price & Rates</h2>
+                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px', fontWeight: '500' }}>
+                  📌 <strong>Rate Multipliers:</strong> OT/OOH = Standard × 1.5 | Weekend/Holiday = Standard × 2.0
+                </p>
+                <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                  <label className="leads-field">
+                    <span>Currency *</span>
+                    <select value={currency} onChange={(e) => setCurrency(e.target.value)} required>
+                      {CURRENCIES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </label>
 
-          {/* Location */}
-          <section className="leads-card">
-            <h2 className="leads-section-title">Location</h2>
-            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-              <label className="leads-field leads-field--full">
-                <span>Details Address Search</span>
-                <Autocomplete
-                  onPlaceSelected={handleGoogleAddressSelect}
-                  options={GOOGLE_AUTOCOMPLETE_OPTIONS}
-                  placeholder="Type to search global address..."
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    padding: '0 12px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-subtle, #e5e7eb)',
-                    fontSize: '13px',
-                    outline: 'none',
-                    background: 'var(--input-bg)',
-                    color: 'var(--text-main)'
-                  }}
-                />
-              </label>
+                  <label className="leads-field" style={{ gridColumn: 'span 3' }}>
+                    <span>Billing Type *</span>
+                    <select value={billingType} onChange={(e) => setBillingType(e.target.value)} required>
+                      <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
+                      <option value="Half Day + Hourly">2) Half Day + Hourly</option>
+                      <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
+                      <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
+                      <option value="Mixed Mode">5) Mixed (Half/Full/OT Tier)</option>
+                      <option value="Agreed Rate">6) Agreed/Fixed Rate</option>
+                      <option value="Cancellation">7) Cancellation/Reschedule Fee</option>
+                    </select>
+                  </label>
 
-              <label className="leads-field">
-                <span>Address Line 1 *</span>
-                <input type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} required placeholder="Street / Building" />
-              </label>
+                  <label className="leads-field">
+                    <span>Hourly Rate ({currency})</span>
+                    <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="0.00" />
+                  </label>
+                  <label className="leads-field">
+                    <span>Half Day Rate ({currency})</span>
+                    <input type="number" step="0.01" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} placeholder="0.00" />
+                  </label>
+                  <label className="leads-field">
+                    <span>Full Day Rate ({currency})</span>
+                    <input type="number" step="0.01" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} placeholder="0.00" />
+                  </label>
+                  <label className="leads-field">
+                    <span>Monthly Rate ({currency})</span>
+                    <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="0.00" />
+                  </label>
+                  <label className="leads-field" style={{ gridColumn: 'span 2' }}>
+                    <span>Agreed/Fixed Rate ({currency})</span>
+                    <input type="number" step="0.01" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} placeholder="0.00" />
+                  </label>
+                  <label className="leads-field" style={{ gridColumn: 'span 2' }}>
+                    <span>Cancellation Fee ({currency})</span>
+                    <input type="number" step="0.01" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} placeholder="0.00" />
+                  </label>
+                </div>
+              </section>
 
-              <label className="leads-field">
-                <span>City *</span>
-                <input type="text" value={city} onChange={e => setCity(e.target.value)} required placeholder="Enter city" />
-              </label>
+              {/* Additional Costs */}
+              <section className="leads-card">
+                <h2 className="leads-section-title">Additional Costs</h2>
+                <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <label className="leads-field">
+                    <span>Travel Cost / Day</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={travelCostPerDay}
+                      onChange={(e) => setTravelCostPerDay(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </label>
+                  <label className="leads-field">
+                    <span>Tool Cost</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={toolCost}
+                      onChange={(e) => setToolCost(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </label>
+                </div>
+              </section>
 
-              <label className="leads-field">
-                <span>Country *</span>
-                <Select
-                  options={countryOptions}
-                  value={countryOptions.find(o => o.value === country)}
-                  onChange={handleCountrySelectChange}
-                  styles={customSelectStyles}
-                  placeholder="Select Country"
-                />
-              </label>
+              {/* Smart Quote Preview */}
+              {(() => {
+                const res = calculateTicketTotal({
+                  startTime: taskStartDate ? `${taskStartDate} ${taskTime}` : '',
+                  endTime: taskEndDate ? `${taskEndDate} ${taskTime}` : '',
+                  hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                  travelCostPerDay, toolCost: toolCost, billingType, timezone, country
+                });
 
-              <label className="leads-field">
-                <span>Zip Code *</span>
-                <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} required placeholder="Enter zip code" />
-              </label>
+                if (!res.grandTotal || res.grandTotal == 0) return null;
 
-              <label className="leads-field leads-field--full">
-                <span>Timezone *</span>
-                <Select
-                  options={timezoneOptions}
-                  value={timezoneOptions.find(o => o.value === timezone)}
-                  onChange={o => setTimezone(o?.value)}
-                  styles={customSelectStyles}
-                  placeholder="Select Timezone"
-                />
-              </label>
-            </div>
-          </section>
-
-
-          {/* Project Details */}
-          <section className="leads-card">
-            <h2 className="leads-section-title">Tools & Equipment</h2>
-            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(1, 1fr)' }}>
-              <label className="leads-field">
-                <span>Tools Required</span>
-                <input type="text" value={toolsRequired} onChange={(e) => setToolsRequired(e.target.value)} placeholder="e.g. Drill, Laptop, Console cable" />
-              </label>
-            </div>
-          </section>
-
-          {/* Pricing */}
-          <section className="leads-card">
-            <h2 className="leads-section-title">Pricing & Rates</h2>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px', fontWeight: '500' }}>
-              📌 <strong>Rate Multipliers:</strong> OT/OOH = Standard × 1.5 | Weekend/Holiday = Standard × 2.0
-            </p>
-            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-              <label className="leads-field">
-                <span>Currency *</span>
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)} required>
-                  {CURRENCIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="leads-field" style={{ gridColumn: 'span 3' }}>
-                <span>Billing Type *</span>
-                <select value={billingType} onChange={(e) => {
-                  setBillingType(e.target.value);
-                }} required>
-                  <option value="Hourly">1) Hourly Only (min 2 hrs billing)</option>
-                  <option value="Half Day + Hourly">2) Half Day + Hourly</option>
-                  <option value="Full Day + OT">3) Full Day + OT (OT = Rate × 1.5)</option>
-                  <option value="Monthly + OT + Weekend">4) Monthly + OT + Weekend/Holidays (Weekend = 2x)</option>
-                  <option value="Mixed Mode">5) Mixed (Half/Full/OT Tier)</option>
-                  <option value="Agreed Rate">6) Agreed/Fixed Rate</option>
-                  <option value="Cancellation">7) Cancellation/Reschedule Fee</option>
-                </select>
-              </label>
-
-              <label className="leads-field">
-                <span>Hourly Rate ({currency})</span>
-                <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="0.00" />
-              </label>
-              <label className="leads-field">
-                <span>Half Day Rate ({currency})</span>
-                <input type="number" step="0.01" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} placeholder="0.00" />
-              </label>
-              <label className="leads-field">
-                <span>Full Day Rate ({currency})</span>
-                <input type="number" step="0.01" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} placeholder="0.00" />
-              </label>
-              <label className="leads-field">
-                <span>Monthly Rate ({currency})</span>
-                <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="0.00" />
-              </label>
-              <label className="leads-field" style={{ gridColumn: 'span 2' }}>
-                <span>Agreed/Fixed Rate ({currency})</span>
-                <input type="number" step="0.01" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} placeholder="0.00" />
-              </label>
-              <label className="leads-field" style={{ gridColumn: 'span 2' }}>
-                <span>Cancellation Fee ({currency})</span>
-                <input type="number" step="0.01" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} placeholder="0.00" />
-              </label>
-            </div>
-          </section>
-
-          {/* Additional Costs */}
-          <section className="leads-card">
-            <h2 className="leads-section-title">Additional Costs</h2>
-            <div className="leads-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-              <label className="leads-field">
-                <span>Travel Cost / Day</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={travelCostPerDay}
-                  onChange={(e) => setTravelCostPerDay(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-              <label className="leads-field">
-                <span>Tool Cost</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={toolCost}
-                  onChange={(e) => setToolCost(e.target.value)}
-                  placeholder="0.00"
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Pricing Preview */}
-          {(() => {
-            const res = calculateTicketTotal({
-              startTime: taskStartDate ? `${taskStartDate} ${taskTime}` : '',
-              endTime: taskEndDate ? `${taskEndDate} ${taskTime}` : '',
-              hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-              travelCostPerDay, toolCost: toolCost, billingType, timezone, country
-            });
-
-            if (!res.grandTotal || res.grandTotal == 0) return null;
-
-            return (
-              <div className="preview-box-premium" style={{
-                marginBottom: '24px',
-                background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
-                border: '1px solid #10b981',
-                borderRadius: '16px',
-                padding: '24px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                return (
+                  <div className="preview-box-premium" style={{
+                    marginBottom: '24px',
+                    background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+                    border: '1px solid #10b981',
+                    borderRadius: '16px',
+                    padding: '24px'
+                  }}>
+                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#065f46', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
                       Smart Quote Preview
                     </div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: '12px'
+                    }}>
+                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE COST</div>
+                        <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.base}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>OT</div>
+                        <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.ot}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>WORKED HOURS</div>
+                        <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{res.hrs} hrs</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                        <div style={{ fontSize: '9px', color: '#047857', fontWeight: '800', marginBottom: '2px' }}>GRAND TOTAL</div>
+                        <div style={{ fontSize: '16px', color: '#047857', fontWeight: '900' }}>{currency} {res.grandTotal}</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                );
+              })()}
 
-                <div style={{
-                  marginTop: '12px',
-                  paddingTop: '16px',
-                  borderTop: '1.5px dashed rgba(16, 185, 129, 0.2)',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '12px'
-                }}>
-                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>BASE COST</div>
-                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.base}</div>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>OT</div>
-                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{currency} {res.ot}</div>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                    <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '800', marginBottom: '2px' }}>WORKED HOURS</div>
-                    <div style={{ fontSize: '14px', color: '#166534', fontWeight: '800' }}>{res.hrs} hrs</div>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.4)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                    <div style={{ fontSize: '9px', color: '#047857', fontWeight: '800', marginBottom: '2px' }}>GRAND TOTAL</div>
-                    <div style={{ fontSize: '16px', color: '#047857', fontWeight: '900' }}>{currency} {res.grandTotal}</div>
-                  </div>
-                </div>
+              {/* Tab 2 Footer Actions */}
+              <div className="leads-actions-footer">
+                <button type="button" className="leads-secondary-btn" onClick={() => setActiveFormTab('tickets')}>
+                  ← Back to Tickets
+                </button>
+                <button type="button" className="leads-secondary-btn" onClick={() => { resetForm(); setViewMode('list'); setActiveFormTab('tickets'); }}>Cancel</button>
+                <button type="submit" className="leads-primary-btn" disabled={saving}>
+                  {saving ? 'Saving...' : editingLeadId ? '✓ Update Lead' : '✓ Save Lead'}
+                </button>
               </div>
-            );
-          })()}
+            </>
+          )}
 
-          <div className="leads-actions-footer">
-            <button type="button" className="leads-secondary-btn" onClick={() => setViewMode('list')}>Cancel</button>
-            <button type="submit" className="leads-primary-btn" disabled={saving}>{saving ? 'Saving...' : 'Save Lead'}</button>
-          </div>
-        </form >
-      </section >
+          {formError && <p style={{ color: 'red', padding: '8px', textAlign: 'center' }}>{formError}</p>}
+        </form>
+      </section>
     )
   }
+
 
   return (
     <section className="leads-page">
