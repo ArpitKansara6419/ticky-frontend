@@ -461,9 +461,8 @@ function TicketsPage() {
       if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
         ooh = hrs * customOOHRate;
       }
-      const travelVal = isEngineer ? 0 : parseFloat(opts.travelCostPerDay || 0);
-      const toolCostRaw = isEngineer ? 0 : parseFloat(opts.toolCost || 0);
-      const toolsVal = _isLogAggregation ? 0 : toolCostRaw; // Skip tools in multi-day aggregation loop
+      const travelVal = parseFloat(opts.travelCostPerDay || 0);
+      const toolsVal = parseFloat(opts.toolCost || 0);
 
       // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
       let effectiveBase = base;
@@ -606,7 +605,7 @@ function TicketsPage() {
           hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
           overtimeRate: pRates.overtimeRate, oohRate: pRates.oohRate, weekendRate: pRates.weekendRate, holidayRate: pRates.holidayRate,
-          travelCostPerDay: 0, toolCost: 0, billingType: pRates.billingType, timezone, calcTimezone,
+          travelCostPerDay: travelCostPerDay, toolCost: toolCostInput, billingType: pRates.billingType, timezone, calcTimezone,
           monthlyDivisor: dayMonthlyDivisor, country, isEngineer: true, _isLogAggregation: true
         });
 
@@ -628,6 +627,8 @@ function TicketsPage() {
           engBreakdown.ot = (parseFloat(engBreakdown.ot) + parseFloat(payRes.ot)).toFixed(2);
           engBreakdown.ooh = (parseFloat(engBreakdown.ooh) + parseFloat(payRes.ooh)).toFixed(2);
           engBreakdown.special = (parseFloat(engBreakdown.special) + parseFloat(payRes.specialDay)).toFixed(2);
+          engBreakdown.travel = (parseFloat(engBreakdown.travel || 0) + parseFloat(payRes.travel)).toFixed(2);
+          engBreakdown.tools = (parseFloat(engBreakdown.tools || 0) + parseFloat(payRes.tools)).toFixed(2);
           
           const currentEngId = Number(specificEngId || engineerId);
           if (!isNaN(currentEngId)) {
@@ -721,7 +722,7 @@ function TicketsPage() {
         agreedRate: pRates.ar,
         cancellationFee: pRates.cf,
         overtimeRate: pRates.ot, oohRate: pRates.ooh, weekendRate: pRates.we, holidayRate: pRates.hol,
-        travelCostPerDay: 0, toolCost: 0, billingType: pRates.bt, timezone, calcTimezone,
+        travelCostPerDay: travelCostPerDay, toolCost: toolCostInput, billingType: pRates.bt, timezone, calcTimezone,
         country, 
         isEngineer: true
       });
@@ -732,7 +733,10 @@ function TicketsPage() {
         setPayoutLiveBreakdown({ 
           base: payRes.base,
           ot: payRes.ot,
+          ooh: payRes.ooh,
           special: payRes.specialDay,
+          travel: payRes.travel,
+          tools: payRes.tools,
           grandTotal: payRes.grandTotal, 
           engSummary: [{ name: eName, total: parseFloat(payRes.grandTotal) }] 
         });
@@ -2728,9 +2732,9 @@ function TicketsPage() {
                     {[
                       { label: 'Base Labor Cost', cust: liveBreakdown?.base, eng: payoutLiveBreakdown?.base },
                       { label: 'Overtime (OT)', cust: liveBreakdown?.ot, eng: payoutLiveBreakdown?.ot },
-                      { label: 'OOH / Special Premiums', cust: liveBreakdown?.specialDay, eng: payoutLiveBreakdown?.special },
-                      { label: 'Travel Expenses', cust: liveBreakdown?.travel, eng: '0.00' },
-                      { label: 'Tools & Equipment', cust: liveBreakdown?.tools, eng: '0.00' },
+                      { label: 'OOH / Special Premiums', cust: (parseFloat(liveBreakdown?.specialDay || 0) + parseFloat(liveBreakdown?.ooh || 0)).toFixed(2), eng: (parseFloat(payoutLiveBreakdown?.special || 0) + parseFloat(payoutLiveBreakdown?.ooh || 0)).toFixed(2) },
+                      { label: 'Travel Expenses', cust: liveBreakdown?.travel, eng: payoutLiveBreakdown?.travel },
+                      { label: 'Tools & Equipment', cust: liveBreakdown?.tools, eng: payoutLiveBreakdown?.tools },
                     ].map((row, i) => {
                       const c = parseFloat(row.cust || 0);
                       const p = parseFloat(row.eng || 0);
