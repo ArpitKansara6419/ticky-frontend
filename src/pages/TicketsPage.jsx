@@ -509,33 +509,25 @@ function TicketsPage() {
       let totalHrs = 0;
       let validDaysCount = 0;
       let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: 0, perDayRate: null, workingDays: null, monthlyFull: null };
-      let engSummaryMap = {};
+      let engBreakdown = { base: '0.00', ot: '0.00', ooh: '0.00', special: '0.00', agreed: '0.00' };
 
       daysArr.forEach((d) => {
         const existing = (timeLogs || []).find(l => {
           const rawDate = l.task_date || l.taskDate || '';
           if (!rawDate) return false;
-          // Clean the date strings to ensure perfect matching (YYYY-MM-DD)
           const dateOnly = rawDate.toString().split('T')[0].split(' ')[0].trim();
           return dateOnly === d;
         });
 
-        // Skip Weekends/Holidays unless an existing log was manually recorded for that day
-        // FORCE UTC to avoid local timezone shifting "YYYY-MM-DD" to the previous day
         const dObj = new Date(`${d}T00:00:00Z`);
         const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
 
-        // FORCE skip Weekends and Holidays completely as per user requirement
-        if (isWeekend || isHoliday) {
-          return;
-        }
+        if (isWeekend || isHoliday) return;
 
         let sTime, eTime, bMins = 0, specificEngId = null;
-        if (existing) {
-          specificEngId = existing.engineer_id || existing.engineerId || null;
-        }
+        if (existing) specificEngId = existing.engineer_id || existing.engineerId || null;
 
         if (existing && (existing.start_time || existing.startTime)) {
           sTime = existing.start_time || existing.startTime;
@@ -551,32 +543,26 @@ function TicketsPage() {
         }
 
         const dayMonthlyDivisor = getWorkingDaysInMonth(d, country);
-
         const currentEngId = Number(specificEngId || engineerId);
         const isNoEngDay = currentEngId === 0;
 
-        // ── CUSTOMER RECEIVABLE RATES ─────────────────────────────────────────────
-        let rRates = {
-          hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate,
-          ar: agreedRate, cf: cancellationFee, bt: billingType
-        };
-        if (isNoEngDay) {
-          rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
-        } else if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
+        // CUSTOMER
+        let rRates = { hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, ar: agreedRate, cf: cancellationFee, bt: billingType };
+        if (isNoEngDay) rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
+        else if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
           const subEng = engineers.find(en => Number(en.id) === currentEngId);
           if (subEng) {
             rRates = {
-              hr: subEng.hourlyRate   ?? subEng.hourly_rate   ?? 0,
-              hd: subEng.halfDayRate  ?? subEng.half_day_rate ?? 0,
-              fd: subEng.fullDayRate  ?? subEng.full_day_rate ?? 0,
-              mr: subEng.monthlyRate  ?? subEng.monthly_rate  ?? 0,
-              ar: subEng.agreedRate   ?? subEng.agreed_rate   ?? 0,
+              hr: subEng.hourlyRate ?? subEng.hourly_rate ?? 0,
+              hd: subEng.halfDayRate ?? subEng.half_day_rate ?? 0,
+              fd: subEng.fullDayRate ?? subEng.full_day_rate ?? 0,
+              mr: subEng.monthlyRate ?? subEng.monthly_rate ?? 0,
+              ar: subEng.agreedRate ?? subEng.agreed_rate ?? 0,
               cf: subEng.cancellationFee ?? subEng.cancellation_fee ?? 0,
-              bt: subEng.billingType  ?? subEng.billing_type  ?? billingType
+              bt: subEng.billingType ?? subEng.billing_type ?? billingType
             };
           }
         }
-
         const res = calculateTicketTotal({
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
@@ -586,53 +572,42 @@ function TicketsPage() {
           _isLogAggregation: true
         });
 
-        // ── ENGINEER PAYOUT RATES ────────────────────────────────────────────────
-        let pRates = {
+        // ENGINEER
+        let pRates = { 
           hourlyRate: engHourlyRate || 0, halfDayRate: engHalfDayRate || 0, fullDayRate: engFullDayRate || 0,
           monthlyRate: engMonthlyRate || 0, agreedRate: engAgreedRate || 0, cancellationFee: engCancellationFee || 0,
-          billingType: engBillingType,
-          overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0
+          billingType: engBillingType, overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0 
         };
-        
-        // Find rates for the specific engineer of this log (if different from main)
         if (engPayType === 'Custom' && (!specificEngId || Number(specificEngId) === Number(engineerId))) {
-           pRates.overtimeRate = engOvertimeRate || 0;
-           pRates.oohRate      = engOohRate      || 0;
-           pRates.weekendRate  = engWeekendRate  || 0;
-           pRates.holidayRate  = engHolidayRate  || 0;
+           pRates.overtimeRate = engOvertimeRate || 0; pRates.oohRate = engOohRate || 0; pRates.weekendRate = engWeekendRate || 0; pRates.holidayRate = engHolidayRate || 0;
         } else {
            const logEngId = Number(specificEngId || engineerId);
            const currentEng = engineers.find(e => Number(e.id) === logEngId);
            if (currentEng) {
              pRates = {
-               hourlyRate:      currentEng.hourlyRate   ?? currentEng.hourly_rate   ?? 0,
-               halfDayRate:     currentEng.halfDayRate  ?? currentEng.half_day_rate ?? 0,
-               fullDayRate:     currentEng.fullDayRate  ?? currentEng.full_day_rate ?? 0,
-               monthlyRate:     currentEng.monthlyRate  ?? currentEng.monthly_rate  ?? 0,
-               agreedRate:      currentEng.agreedRate   ?? currentEng.agreed_rate   ?? 0,
+               hourlyRate: currentEng.hourlyRate ?? currentEng.hourly_rate ?? 0,
+               halfDayRate: currentEng.halfDayRate ?? currentEng.half_day_rate ?? 0,
+               fullDayRate: currentEng.fullDayRate ?? currentEng.full_day_rate ?? 0,
+               monthlyRate: currentEng.monthlyRate ?? currentEng.monthly_rate ?? 0,
+               agreedRate: currentEng.agreedRate ?? currentEng.agreed_rate ?? 0,
                cancellationFee: currentEng.cancellationFee ?? currentEng.cancellation_fee ?? 0,
-               billingType:     currentEng.billingType  ?? currentEng.billing_type  ?? engBillingType,
-               overtimeRate:    currentEng.overtimeRate ?? currentEng.overtime_rate ?? 0,
-               oohRate:         currentEng.oohRate      ?? currentEng.ooh_rate      ?? 0,
-               weekendRate:     currentEng.weekendRate  ?? currentEng.weekend_rate  ?? 0,
-               holidayRate:     currentEng.holidayRate  ?? currentEng.holiday_rate  ?? 0
+               billingType: currentEng.billingType ?? currentEng.billing_type ?? engBillingType,
+               overtimeRate: currentEng.overtimeRate ?? currentEng.overtime_rate ?? 0,
+               oohRate: currentEng.oohRate ?? currentEng.ooh_rate ?? 0,
+               weekendRate: currentEng.weekendRate ?? currentEng.weekend_rate ?? 0,
+               holidayRate: currentEng.holidayRate ?? currentEng.holiday_rate ?? 0
              };
            }
         }
-
-        if (isNoEngDay) {
-          pRates = { hourlyRate: 0, halfDayRate: 0, fullDayRate: 0, monthlyRate: 0, agreedRate: 0, cancellationFee: 0, billingType: 'Hourly', overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0 };
-        }
-
+        if (isNoEngDay) pRates = { hourlyRate: 0, halfDayRate: 0, fullDayRate: 0, monthlyRate: 0, agreedRate: 0, cancellationFee: 0, billingType: 'Hourly', overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0 };
+        
         const payRes = calculateTicketTotal({
           startTime: sTime, endTime: eTime, breakTime: bMins,
           hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
           overtimeRate: pRates.overtimeRate, oohRate: pRates.oohRate, weekendRate: pRates.weekendRate, holidayRate: pRates.holidayRate,
           travelCostPerDay: 0, toolCost: 0, billingType: pRates.billingType, timezone, calcTimezone,
-          monthlyDivisor: dayMonthlyDivisor, country,
-          isEngineer: true,
-          _isLogAggregation: true
+          monthlyDivisor: dayMonthlyDivisor, country, isEngineer: true, _isLogAggregation: true
         });
 
         if (res) {
@@ -645,91 +620,44 @@ function TicketsPage() {
           combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
           combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
           validDaysCount += 1;
-          
-          // Track monthly divisors for the summary bar
-          const mKey = d.substring(0, 7);
-          if (!combinedBreakdown.monthlyRecords) combinedBreakdown.monthlyRecords = [];
-          let mRec = combinedBreakdown.monthlyRecords.find(r => r.month === mKey);
-          if (!mRec) {
-            mRec = { month: mKey, divisor: dayMonthlyDivisor, rate: monthlyRate, workedDaysCount: 0 };
-            combinedBreakdown.monthlyRecords.push(mRec);
-          }
-          mRec.workedDaysCount += 1;
         }
         if (payRes) {
           const pVal = parseFloat(payRes.grandTotal);
           totalPayout += pVal;
-          // Use specificEngId from the log, fallback to the main ticket engineer
-          const currentEngId = (specificEngId !== null && specificEngId !== undefined) ? Number(specificEngId) : Number(engineerId);
+          engBreakdown.base = (parseFloat(engBreakdown.base) + parseFloat(payRes.base)).toFixed(2);
+          engBreakdown.ot = (parseFloat(engBreakdown.ot) + parseFloat(payRes.ot)).toFixed(2);
+          engBreakdown.ooh = (parseFloat(engBreakdown.ooh) + parseFloat(payRes.ooh)).toFixed(2);
+          engBreakdown.special = (parseFloat(engBreakdown.special) + parseFloat(payRes.specialDay)).toFixed(2);
           
+          const currentEngId = Number(specificEngId || engineerId);
           if (!isNaN(currentEngId)) {
             const currentEng = engineers.find(e => Number(e.id) === currentEngId);
-            
-            let eName = 'Substitute Engineer';
-            if (currentEng) {
-              eName = currentEng.name;
-            } else if (currentEngId === Number(engineerId) && engineerName) {
-              eName = engineerName;
-            } else if (existing && (existing.engineer_name || existing.engineerName)) {
-              eName = existing.engineer_name || existing.engineerName;
-            } else if (currentEngId === 0) {
-              eName = 'No Engineer / Absent';
-            } else {
-              eName = `Engineer (ID: ${currentEngId})`;
-            }
-            
-            if (!engSummaryMap[currentEngId]) {
-              engSummaryMap[currentEngId] = { name: eName, total: 0, isNoEng: currentEngId === 0 };
-            }
+            let eName = currentEng ? currentEng.name : (currentEngId === Number(engineerId) ? engineerName : `Engineer ${currentEngId}`);
+            if (currentEngId === 0) eName = 'No Engineer / Absent';
+            if (!engSummaryMap[currentEngId]) engSummaryMap[currentEngId] = { name: eName, total: 0, isNoEng: currentEngId === 0 };
             engSummaryMap[currentEngId].total += pVal;
           }
         }
       });
 
-      combinedBreakdown.days = validDaysCount;
-      
-      // Add one-time costs after the loop
-      if (billingType === 'Agreed Rate') {
-        const arVal = parseFloat(agreedRate) || 0;
-        totalReceivable += arVal;
-        combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + arVal).toFixed(2);
-      } else if (billingType === 'Cancellation') {
-        const cfVal = parseFloat(cancellationFee) || 0;
-        totalReceivable += cfVal;
-        combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + cfVal).toFixed(2);
-      }
-      
-      // Add Tool Cost per working day
-      const tCost = parseFloat(toolCostInput) || 0;
-      const totalToolCost = tCost * validDaysCount;
-      totalReceivable += totalToolCost;
-      combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + totalToolCost).toFixed(2);
-
-      // Engineer Payout One-Time costs
-      Object.keys(engSummaryMap).forEach(eid => {
-        // If it's the main engineer, or if we have engRates state for them
-        // For simplicity, we add the Agreed/Tool cost to the main engineer or split it?
-        // Usually, Agreed Rate is for the WHOLE TICKET. We'll add it once to the engSummary.
-        // If there are multiple engineers, we might need a better logic, but for now we'll add it to the first one found or main.
-        // Actually, let's add it to the totalPayout once.
-      });
-
-      // Tool Cost & Travel Cost are customer-side charges — excluded from engineer payout
       const pOneTime = (billingType === 'Agreed Rate' ? (parseFloat(engAgreedRate) || 0) : (billingType === 'Cancellation' ? (parseFloat(engCancellationFee) || 0) : 0));
       totalPayout += pOneTime;
+      engBreakdown.agreed = pOneTime.toFixed(2);
+      if (engineerId && engSummaryMap[engineerId]) engSummaryMap[engineerId].total += pOneTime;
 
-      // Attribute one-time fees (Agreed Rate, Tool Cost) to the main ticket engineer in the summary
-      if (engineerId && engSummaryMap[engineerId]) {
-        engSummaryMap[engineerId].total += pOneTime;
-      } else if (engineerId && !engSummaryMap[engineerId]) {
-         const eng = engineers.find(e => Number(e.id) === Number(engineerId));
-         engSummaryMap[engineerId] = { name: eng ? eng.name : engineerName || 'Main Engineer', total: pOneTime };
+      // Wrap up customer-side one-time fees (already handled in loop for tools/travel per day)
+      // but Agreed Rate / Cancellation are one-time per ticket
+      if (billingType === 'Agreed Rate') {
+        const ar = parseFloat(agreedRate) || 0;
+        totalReceivable += ar; combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + ar).toFixed(2);
+      } else if (billingType === 'Cancellation') {
+        const cf = parseFloat(cancellationFee) || 0;
+        totalReceivable += cf; combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + cf).toFixed(2);
       }
 
-      const finalGrandTotal = totalReceivable.toFixed(2);
-      setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: finalGrandTotal });
-      setTotalCost(finalGrandTotal);
-      setPayoutLiveBreakdown({ grandTotal: totalPayout.toFixed(2), engSummary: Object.values(engSummaryMap) });
+      setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: totalReceivable.toFixed(2), days: validDaysCount });
+      setTotalCost(totalReceivable.toFixed(2));
+      setPayoutLiveBreakdown({ ...engBreakdown, grandTotal: totalPayout.toFixed(2), engSummary: Object.values(engSummaryMap) });
 
     } else {
       const singleDayDivisor = getWorkingDaysInMonth(taskStartDate, country);
@@ -2626,187 +2554,145 @@ function TicketsPage() {
           )}
 
           {activeMainTab === 'Cost & Breakdown' && (
-            <div className="cost-tab-container">
-              {/* Sub-Tabs for Breakdown */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', borderBottom: '2px solid #f1f5f9', padding: '0 4px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setActiveCostTab('Customer')} 
-                  style={{ 
-                    padding: '12px 24px', 
-                    border: 'none', 
-                    background: 'transparent', 
-                    fontWeight: '800', 
-                    fontSize: '13px', 
-                    cursor: 'pointer', 
-                    color: activeCostTab === 'Customer' ? '#6366f1' : '#94a3b8', 
-                    borderBottom: activeCostTab === 'Customer' ? '3px solid #6366f1' : '3px solid transparent',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <FiDollarSign style={{ marginRight: '8px' }} /> Customer Breakdown
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setActiveCostTab('Engineer')} 
-                  style={{ 
-                    padding: '12px 24px', 
-                    border: 'none', 
-                    background: 'transparent', 
-                    fontWeight: '800', 
-                    fontSize: '13px', 
-                    cursor: 'pointer', 
-                    color: activeCostTab === 'Engineer' ? '#6366f1' : '#94a3b8', 
-                    borderBottom: activeCostTab === 'Engineer' ? '3px solid #6366f1' : '3px solid transparent',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <FiActivity style={{ marginRight: '8px' }} /> Engineer Breakdown
-                </button>
+            <div className="fade-in">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                {/* Left: Customer Configuration */}
+                <section className="tickets-card">
+                  <h2 className="tickets-section-title"><FiDollarSign /> Customer Billing</h2>
+                  <div className="tickets-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                    <label className="tickets-field">
+                      <span>Currency</span>
+                      <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                        {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                    </label>
+                    <label className="tickets-field">
+                      <span>Billing Type</span>
+                      <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
+                        <option value="Hourly">Hourly Only</option>
+                        <option value="Half Day + Hourly">Half Day + Hourly</option>
+                        <option value="Full Day + OT">Full Day + OT</option>
+                        <option value="Mixed Mode">Mixed Mode</option>
+                        <option value="Monthly + OT + Weekend">Monthly + OT + Weekend</option>
+                        <option value="Agreed Rate">Agreed Rate</option>
+                        <option value="Cancellation">Cancellation Fee</option>
+                      </select>
+                    </label>
+                    <label className="tickets-field"><span>Hourly Rate</span><input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} /></label>
+                    <label className="tickets-field"><span>Half Day Rate</span><input type="number" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} /></label>
+                    <label className="tickets-field"><span>Full Day Rate</span><input type="number" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} /></label>
+                    <label className="tickets-field"><span>Monthly Rate</span><input type="number" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} /></label>
+                    <label className="tickets-field"><span>Travel Cost / Day</span><input type="number" value={travelCostPerDay} onChange={(e) => setTravelCostPerDay(e.target.value)} /></label>
+                    <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} /></label>
+                  </div>
+                </section>
+
+                {/* Right: Engineer Payout Configuration */}
+                <section className="tickets-card">
+                  <h2 className="tickets-section-title"><FiActivity /> Engineer Payout</h2>
+                  <div className="tickets-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                    <label className="tickets-field">
+                      <span>Pay Type</span>
+                      <select value={engPayType} onChange={(e) => setEngPayType(e.target.value)}>
+                        <option value="Default">Use Profile Rates</option>
+                        <option value="Custom">Custom Ticket Rates</option>
+                      </select>
+                    </label>
+                    <label className="tickets-field">
+                      <span>Payout Currency</span>
+                      <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)}>
+                        {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                    </label>
+                    {engPayType === 'Custom' && (
+                      <>
+                        <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
+                          <span>Payout Billing Type</span>
+                          <select value={engBillingType} onChange={(e) => setEngBillingType(e.target.value)}>
+                            <option value="Hourly">Hourly Only</option>
+                            <option value="Full Day + OT">Full Day + OT</option>
+                            <option value="Agreed Rate">Agreed Rate</option>
+                          </select>
+                        </label>
+                        <label className="tickets-field"><span>Payout Hourly</span><input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} /></label>
+                        <label className="tickets-field"><span>Payout Full Day</span><input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} /></label>
+                      </>
+                    )}
+                  </div>
+                  {/* Payout Summary Preview */}
+                  {payoutLiveBreakdown && (
+                    <div style={{ marginTop: '16px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px dashed #e2e8f0' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Payout Summary:</span>
+                      {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.map((en, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '13px', fontWeight: '600' }}>
+                          <span>{en.name}</span>
+                          <span style={{ color: '#10b981' }}>{engCurrency || currency} {parseFloat(en.total).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </div>
 
-              {activeCostTab === 'Customer' && (
-                <div className="fade-in">
-                  <section className="tickets-card">
-                    <h2 className="tickets-section-title"><FiDollarSign /> Price &amp; Rates (Customer)</h2>
-                    <div className="tickets-grid">
-                      <label className="tickets-field">
-                        <span>Currency</span>
-                        <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                          {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                        </select>
-                      </label>
-                      <label className="tickets-field">
-                        <span>Billing Type</span>
-                        <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
-                          <option value="Hourly">Hourly Only</option>
-                          <option value="Half Day + Hourly">Half Day + Hourly</option>
-                          <option value="Full Day + OT">Full Day + OT</option>
-                          <option value="Mixed Mode">Mixed Mode</option>
-                          <option value="Monthly + OT + Weekend">Monthly + OT + Weekend</option>
-                          <option value="Agreed Rate">Agreed Rate</option>
-                          <option value="Cancellation">Cancellation Fee</option>
-                        </select>
-                      </label>
-                      <label className="tickets-field"><span>Hourly Rate</span><input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} /></label>
-                      <label className="tickets-field"><span>Half Day Rate</span><input type="number" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} /></label>
-                      <label className="tickets-field"><span>Full Day Rate</span><input type="number" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} /></label>
-                      <label className="tickets-field"><span>Monthly Rate</span><input type="number" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} /></label>
-                      <label className="tickets-field"><span>Agreed Rate</span><input type="number" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} /></label>
-                      <label className="tickets-field"><span>Cancellation Fee</span><input type="number" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} /></label>
-                    </div>
-                  </section>
-                  <section className="tickets-card">
-                    <h2 className="tickets-section-title">Additional Costs (Customer)</h2>
-                    <div className="tickets-grid">
-                      <label className="tickets-field"><span>Travel Cost / Day</span><input type="number" value={travelCostPerDay} onChange={(e) => setTravelCostPerDay(e.target.value)} /></label>
-                      <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} /></label>
-                    </div>
-                  </section>
-                  
-                  {/* Live Revenue Summary */}
-                  {liveBreakdown && (
-                    <div style={{ background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
-                      <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FiDollarSign style={{ color: '#6366f1' }} /> Customer Revenue Summary
-                      </h3>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Estimated Base</span>
-                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{currency} {liveBreakdown.base || '0.00'}</div>
-                        </div>
-                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Total Receivable</span>
-                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#6366f1' }}>{currency} {liveBreakdown.grandTotal || '0.00'}</div>
-                        </div>
-                      </div>
-                      <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
-                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? workingDays.length : '1'} working day(s).
-                      </p>
-                    </div>
-                  )}
+              {/* UNIFIED FINANCIAL BREAKDOWN TABLE */}
+              <section className="tickets-card" style={{ padding: '0', overflow: 'hidden' }}>
+                <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #1e293b, #334155)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FiActivity /> Financial Breakdown Summary
+                  </h2>
+                  <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px' }}>
+                    Based on {liveBreakdown?.days || 0} working days
+                  </span>
                 </div>
-              )}
-
-              {activeCostTab === 'Engineer' && (
-                <div className="fade-in">
-                  <section className="tickets-card">
-                    <h2 className="tickets-section-title"><FiActivity /> Engineer Payout Configuration</h2>
-                    <div className="tickets-grid">
-                      <label className="tickets-field">
-                        <span>Pay Type</span>
-                        <select value={engPayType} onChange={(e) => setEngPayType(e.target.value)}>
-                          <option value="Default">Use Profile Rates</option>
-                          <option value="Custom">Custom Ticket Rates</option>
-                        </select>
-                      </label>
-                      <label className="tickets-field">
-                        <span>Payout Currency</span>
-                        <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)}>
-                          {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                        </select>
-                      </label>
-                      {engPayType === 'Custom' && (
-                        <>
-                          <label className="tickets-field">
-                            <span>Payout Billing Type</span>
-                            <select value={engBillingType} onChange={(e) => setEngBillingType(e.target.value)}>
-                              <option value="Hourly">Hourly Only</option>
-                              <option value="Full Day + OT">Full Day + OT</option>
-                              <option value="Agreed Rate">Agreed Rate</option>
-                            </select>
-                          </label>
-                          <label className="tickets-field"><span>Payout Hourly Rate</span><input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} /></label>
-                          <label className="tickets-field"><span>Payout Full Day Rate</span><input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} /></label>
-                          <label className="tickets-field"><span>Payout Agreed Rate</span><input type="number" value={engAgreedRate} onChange={(e) => setEngAgreedRate(e.target.value)} /></label>
-                        </>
-                      )}
-                    </div>
-                  </section>
-
-                  {/* Live Payout Summary */}
-                  {payoutLiveBreakdown && (
-                    <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
-                      <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FiActivity style={{ color: '#10b981' }} /> Engineer Payout Breakdown
-                      </h3>
-                      
-                      {/* Engineer-wise Payout List */}
-                      {payoutLiveBreakdown.engSummary && payoutLiveBreakdown.engSummary.filter(s => !s.isNoEng).length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                          {payoutLiveBreakdown.engSummary.filter(s => !s.isNoEng).map((es, idx) => (
-                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
-                                  {es.name.charAt(0)}
-                                </div>
-                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>{es.name}</span>
-                              </div>
-                              <span style={{ fontSize: '13px', fontWeight: '800', color: '#059669' }}>
-                                {engCurrency || currency} {es.total.toFixed(2)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Labor Subtotal</span>
-                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{engCurrency || currency} {payoutLiveBreakdown.base || '0.00'}</div>
-                        </div>
-                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Grand Total Payout</span>
-                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#059669' }}>{engCurrency || currency} {payoutLiveBreakdown.grandTotal}</div>
-                        </div>
-                      </div>
-                      <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
-                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? workingDays.length : '1'} working day(s).
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+                
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', color: '#64748b', fontWeight: '700' }}>Breakdown Category</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: '700' }}>Customer Revenue ({currency})</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: '700' }}>Engineer Payout ({engCurrency || currency})</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: '700' }}>Net Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { label: 'Base Labor Cost', cust: liveBreakdown?.base, eng: payoutLiveBreakdown?.base },
+                      { label: 'Overtime (OT)', cust: liveBreakdown?.ot, eng: payoutLiveBreakdown?.ot },
+                      { label: 'OOH / Special Premiums', cust: liveBreakdown?.specialDay, eng: payoutLiveBreakdown?.special },
+                      { label: 'Travel Expenses', cust: liveBreakdown?.travel, eng: '0.00' },
+                      { label: 'Tools & Equipment', cust: liveBreakdown?.tools, eng: '0.00' },
+                    ].map((row, i) => {
+                      const c = parseFloat(row.cust || 0);
+                      const p = parseFloat(row.eng || 0);
+                      const margin = c - p;
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '16px 24px', fontWeight: '600', color: '#1e293b' }}>{row.label}</td>
+                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#1e293b' }}>{c.toFixed(2)}</td>
+                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#dc2626' }}>{p.toFixed(2)}</td>
+                          <td style={{ padding: '16px 24px', textAlign: 'right', color: margin >= 0 ? '#10b981' : '#ef4444', fontWeight: '800' }}>
+                            {margin >= 0 ? '+' : ''}{margin.toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
+                      <td style={{ padding: '20px 24px', fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>Grand Total Summary</td>
+                      <td style={{ padding: '20px 24px', textAlign: 'right', fontSize: '18px', fontWeight: '900', color: '#6366f1' }}>
+                        {currency} {liveBreakdown?.grandTotal || '0.00'}
+                      </td>
+                      <td style={{ padding: '20px 24px', textAlign: 'right', fontSize: '18px', fontWeight: '900', color: '#dc2626' }}>
+                        {engCurrency || currency} {payoutLiveBreakdown?.grandTotal || '0.00'}
+                      </td>
+                      <td style={{ padding: '20px 24px', textAlign: 'right', fontSize: '20px', fontWeight: '900', color: '#10b981', background: '#f0fdf4' }}>
+                        {currency} {(parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)).toFixed(2)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </section>
             </div>
           )}
 
