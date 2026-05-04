@@ -2583,6 +2583,13 @@ function TicketsPage() {
             </>
           )}
 
+          {activeMainTab === 'Tickets' && (
+            <div className="tickets-form-actions" style={{ marginTop: '32px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
+              <button type="button" className="tickets-secondary-btn" onClick={() => { resetForm(); setViewMode('list'); }}>Cancel</button>
+              <button type="button" className="tickets-primary-btn" onClick={() => setActiveMainTab('POC')}>Next to POC <FiArrowRight /></button>
+            </div>
+          )}
+
           {activeMainTab === 'POC' && (
             <div className="fade-in">
               <section className="tickets-card">
@@ -2609,6 +2616,10 @@ function TicketsPage() {
                   </label>
                 </div>
               </section>
+              <div className="tickets-form-actions" style={{ marginTop: '32px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
+                <button type="button" className="tickets-secondary-btn" onClick={() => setActiveMainTab('Tickets')}><FiArrowLeft /> Back to Tickets</button>
+                <button type="button" className="tickets-primary-btn" onClick={() => setActiveMainTab('Cost & Breakdown')}>Next to Financials <FiArrowRight /></button>
+              </div>
             </div>
           )}
 
@@ -2752,25 +2763,15 @@ function TicketsPage() {
                   </tfoot>
                 </table>
               </section>
+              <div className="tickets-form-actions" style={{ marginTop: '32px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
+                <button type="button" className="tickets-secondary-btn" onClick={() => setActiveMainTab('POC')}><FiArrowLeft /> Back to POC</button>
+                <button type="submit" className="tickets-primary-btn" disabled={saving || !canSubmit}>
+                  {saving ? (editingTicketId ? 'Saving Changes...' : 'Creating Ticket...') : (editingTicketId ? 'Save Changes' : 'Create Ticket')}
+                </button>
+              </div>
             </div>
           )}
 
-          <div className="tickets-form-actions" style={{ marginTop: '32px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              className="tickets-secondary-btn"
-              onClick={() => {
-                resetForm()
-                setViewMode('list')
-              }}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="tickets-primary-btn" disabled={saving || !canSubmit}>
-              {saving ? (editingTicketId ? 'Saving Changes...' : 'Creating Ticket...') : (editingTicketId ? 'Save Changes' : 'Create Ticket')}
-            </button>
-          </div>
         </form>
       </section>
     )
