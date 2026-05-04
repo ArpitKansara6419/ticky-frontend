@@ -2998,7 +2998,6 @@ function TicketsPage() {
                                   </td>
                                   <td>
                                     <div style={{ fontWeight: '600', fontSize: '13px' }}>{ticket.customerName}</div>
-                                    {ticket.engineerName && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>👷 {ticket.engineerName}</div>}
                                   </td>
                                   <td>
                                     <div style={{ color: '#15803d', fontWeight: '600' }}>
@@ -3296,26 +3295,20 @@ function TicketsPage() {
               </div>
             </header>
 
-            <div className="ticket-modal-content">
-              <div className="details-grid">
-                {/* --- Row 1: Basic Info --- */}
+            <div className="ticket-modal-content" style={{ padding: '24px' }}>
+              <div className="details-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 <div className="detail-item">
-                  <label>Customer</label>
-                  <span style={{ fontWeight: '700' }}>{selectedTicket.customerName}</span>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Customer</label>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>{selectedTicket.customerName}</span>
                 </div>
                 <div className="detail-item">
-                  <label>Assigned Engineer</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: '700', color: 'var(--primary)' }}>{selectedTicket.engineerName || '--'}</span>
-                    <button className="btn-wow-secondary" style={{ padding: '2px 8px', fontSize: '10px' }} onClick={() => { setReassignTicketId(selectedTicket.id); setReassignModalOpen(true); }}>Change</button>
-                    {selectedTicket.engineerStatus === 'Declined' && <span style={{ color: '#ef4444', fontSize: '10px', fontWeight: '800' }}>[DECLINED]</span>}
-                  </div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Assigned Engineer</label>
+                  <span style={{ fontWeight: '700', color: '#6366f1' }}>{selectedTicket.engineerName || '--'}</span>
                 </div>
 
-                {/* --- Row 2: Dates & Status --- */}
-                <div className="detail-item--full">
-                  <label>Service Date</label>
-                  <span style={{ fontWeight: '800', color: '#10b981', fontSize: '15px' }}>
+                <div className="detail-item">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Service Date</label>
+                  <span style={{ fontWeight: '700', color: '#10b981' }}>
                     {(() => {
                       const formatDate = (ds) => { if (!ds) return ''; const d = new Date(ds); return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); };
                       const s = selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '';
@@ -3325,734 +3318,182 @@ function TicketsPage() {
                   </span>
                 </div>
                 <div className="detail-item">
-                  <label>Status</label>
-                  <span className={`status-pill ${selectedTicket.status?.toLowerCase().replace(' ', '-')}`}>{selectedTicket.status}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Scheduled Time</label>
-                  <span style={{ fontWeight: '600' }}>{selectedTicket.taskTime}</span>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Status</label>
+                  <span className={`status-pill ${selectedTicket.status?.toLowerCase().replace(' ', '-')}`} style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{selectedTicket.status}</span>
                 </div>
 
-                {/* --- Row 3: Location --- */}
                 <div className="detail-item">
-                  <label>City / Country</label>
-                  <span style={{ fontWeight: '600' }}>{selectedTicket.city}, {selectedTicket.country}</span>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Scheduled Time</label>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>{selectedTicket.taskTime}</span>
                 </div>
                 <div className="detail-item">
-                  <label>Timezone</label>
-                  <span style={{ fontWeight: '600' }}>{selectedTicket.timezone || '--'}</span>
-                </div>
-                <div className="detail-item--full">
-                  <label>Address</label>
-                  <span style={{ fontSize: '13px' }}>{selectedTicket.addressLine1} {selectedTicket.addressLine2 && `, ${selectedTicket.addressLine2}`} - {selectedTicket.zipCode}</span>
-                </div>
-                <div className="detail-item--full">
-                  <label>Scope of Work</label>
-                  <p className="scope-text" style={{ fontSize: '13px', lineHeight: '1.5' }}>{selectedTicket.scopeOfWork}</p>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>City</label>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>{selectedTicket.city}, {selectedTicket.country}</span>
                 </div>
 
-                <div className="detail-item--full divider"></div>
-
-                {/* --- Row 4: Pricing Config --- */}
                 <div className="detail-item">
-                  <label>Billing Type</label>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Timezone</label>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>{selectedTicket.timezone || '--'}</span>
+                </div>
+                <div className="detail-item">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Address</label>
+                  <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: '500' }}>{selectedTicket.addressLine1} {selectedTicket.addressLine2 && `, ${selectedTicket.addressLine2}`} - {selectedTicket.zipCode}</span>
+                </div>
+
+                <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Scope of Work</label>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#1e293b', lineHeight: '1.5', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>{selectedTicket.scopeOfWork}</p>
+                </div>
+
+                <div style={{ gridColumn: 'span 2', height: '1px', background: '#f1f5f9', margin: '10px 0' }}></div>
+
+                <div className="detail-item">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Billing Type</label>
                   <span style={{ fontWeight: '700', color: '#6366f1' }}>{selectedTicket.billingType || 'Hourly'}</span>
                 </div>
                 <div className="detail-item">
-                  <label>Currency</label>
-                  <span style={{ fontWeight: '700' }}>{selectedTicket.currency || 'USD'}</span>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Currency</label>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>{selectedTicket.currency || 'USD'}</span>
                 </div>
+
+                {/* Conditional Rates */}
+                {selectedTicket.billingType === 'Hourly' && (
+                  <div className="detail-item">
+                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Hourly Rate</label>
+                    <span style={{ fontWeight: '700', color: '#059669' }}>{selectedTicket.currency} {selectedTicket.hourlyRate || '0.00'}</span>
+                  </div>
+                )}
+                {(selectedTicket.billingType === 'Monthly' || selectedTicket.billingType === 'Mixed Mode (Monthly + Hourly)') && (
+                  <div className="detail-item">
+                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Monthly Rate</label>
+                    <span style={{ fontWeight: '700', color: '#6366f1' }}>{selectedTicket.currency} {parseFloat(selectedTicket.monthlyRate || 0).toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedTicket.billingType === 'Agreed Rate' && (
+                  <div className="detail-item">
+                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Agreed Rate</label>
+                    <span style={{ fontWeight: '700', color: '#6366f1' }}>{selectedTicket.currency} {parseFloat(selectedTicket.agreedRate || 0).toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedTicket.billingType === 'Cancellation' && (
+                  <div className="detail-item">
+                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Cancellation Fee</label>
+                    <span style={{ fontWeight: '700', color: '#ef4444' }}>{selectedTicket.currency} {parseFloat(selectedTicket.cancellationFee || 0).toFixed(2)}</span>
+                  </div>
+                )}
+
                 <div className="detail-item">
-                  <label>Hourly Rate</label>
-                  <span style={{ fontWeight: '700', color: '#059669' }}>{selectedTicket.currency} {selectedTicket.hourlyRate || '0.00'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Monthly Rate</label>
-                  <span style={{ fontWeight: '700', color: '#6366f1' }}>{selectedTicket.currency} {parseFloat(selectedTicket.monthlyRate || 0).toFixed(2)}</span>
-                </div>
-                <div className="detail-item">
-                  <label>✈ Travel / Day</label>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>✈ Travel Cost / Day</label>
                   <span style={{ fontWeight: '700', color: '#0891b2' }}>{selectedTicket.currency} {parseFloat(selectedTicket.travelCostPerDay || 0).toFixed(2)}</span>
                 </div>
                 <div className="detail-item">
-                  <label>🔧 Tools / Day</label>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>🔧 Tool Cost / Day</label>
                   <span style={{ fontWeight: '700', color: '#7c3aed' }}>{selectedTicket.currency} {parseFloat(selectedTicket.toolCost || 0).toFixed(2)}</span>
                 </div>
+              </div>
 
-                <div className="detail-item--full divider"></div>
+              <div style={{ height: '1px', background: '#f1f5f9', margin: '24px 0' }}></div>
 
-                {/* --- Financial Breakdown --- */}
-                {(() => {
-                  const stBil = (selectedTicket.billingType || 'Hourly').trim();
-                  const stStart = selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '';
-                  const stEnd   = selectedTicket.taskEndDate   ? String(selectedTicket.taskEndDate).split('T')[0]   : '';
-                  const isMonthly = stBil.includes('Monthly');
-                  const isMulti   = (stStart && stEnd && stStart !== stEnd) || (isMonthly && stStart && stEnd);
-
-                  if (isMulti) {
-                    // Pre-compute ticket working days for Monthly per-day rate
-                    const _vmHols = {
-                      'India':  ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
-                      'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
-                      'Other':  []
-                    };
-                    const vmHolsList = _vmHols[selectedTicket.country] || _vmHols['India'] || [];
-                    const vmAllDates = getDatesInRange(stStart, stEnd);
-                    const vmWorkingDates = vmAllDates.filter(d => {
-                      const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
-                      return dw !== 0 && dw !== 6 && !vmHolsList.includes(d);
-                    });
-                    const engSummaryMap = {};
-                    const cleanTaskTime = (selectedTicket.taskTime || '08:00').toString().slice(0, 5);
-                    let totalR = 0, totalP = 0;
-
-                    const logs = vmWorkingDates.map((dStr, i) => {
-                      const logDateStr = dStr;
-                      const existingLog = (timeLogs || []).find(l => (l.task_date || '').split('T')[0] === logDateStr) || {};
-
-                      let ls = existingLog.start_time || existingLog.startTime;
-                      let le = existingLog.end_time || existingLog.endTime;
-                      let lb = existingLog.break_time_mins != null ? Number(existingLog.break_time_mins) : (existingLog.breakTime != null ? Number(existingLog.breakTime) : 0);
-
-                      if (!ls || !le) {
-                        ls = `${logDateStr}T${cleanTaskTime}:00`;
-                        const ed = new Date(`${ls}Z`);
-                        ed.setUTCHours(ed.getUTCHours() + 8);
-                        le = ed.toISOString();
-                        lb = 0;
-                      }
-
-                      const dayMonthlyDivisor = getWorkingDaysInMonth(logDateStr, selectedTicket.country);
-
-                      // ── Determine which engineer is on this day ──────────────────────────
-                      // lEngId is the actual engineer assigned to THIS specific day's log.
-                      // We MUST resolve this BEFORE calculating any rates.
-                      const lEngId = Number(
-                        existingLog.engineer_id ?? existingLog.engineerId ?? selectedTicket.engineerId
-                      );
-                      const isNoEngDay = lEngId === 0;
-
-                      // ── Build CUSTOMER RECEIVABLE rates for this day ─────────────────────
-                      // Default to ticket rates; override with the assigned engineer's own
-                      // rate card if it's a substitute (different engineer than primary).
-                      let rRates = {
-                        hr: selectedTicket.hourlyRate,
-                        hd: selectedTicket.halfDayRate,
-                        fd: selectedTicket.fullDayRate,
-                        mr: selectedTicket.monthlyRate,
-                        ar: selectedTicket.agreedRate,
-                        cf: selectedTicket.cancellationFee,
-                        bt: stBil
-                      };
-                      if (isNoEngDay) {
-                        rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
-                      } else if (lEngId && lEngId !== Number(selectedTicket.engineerId)) {
-                        const subEng = engineers.find(en => Number(en.id) === lEngId);
-                        if (subEng) {
-                          rRates = {
-                            hr: subEng.hourly_rate   || 0,
-                            hd: subEng.half_day_rate || 0,
-                            fd: subEng.full_day_rate || 0,
-                            mr: subEng.monthly_rate  || 0,
-                            ar: subEng.agreed_rate   || 0,
-                            cf: subEng.cancellation_fee || 0,
-                            bt: subEng.billing_type  || stBil
-                          };
-                        }
-                      }
-
-                      const resR = calculateTicketTotal({
-                        startTime: ls, endTime: le, breakTime: lb,
-                        hourlyRate:      rRates.hr, halfDayRate:     rRates.hd,
-                        fullDayRate:     rRates.fd, monthlyRate:     rRates.mr,
-                        agreedRate:      rRates.ar, cancellationFee: rRates.cf,
-                        travelCostPerDay: selectedTicket.travelCostPerDay,
-                        toolCost:         selectedTicket.toolCost,
-                        billingType: rRates.bt, timezone: selectedTicket.timezone,
-                        calcTimezone: 'Ticket Local', monthlyDivisor: dayMonthlyDivisor,
-                        _isLogAggregation: true
-                      });
-
-                      // ── Build ENGINEER PAYOUT rates for this day ─────────────────────────
-                      let pRates = {
-                        hr: selectedTicket.engHourlyRate  || 0,
-                        hd: selectedTicket.engHalfDayRate || 0,
-                        fd: selectedTicket.engFullDayRate || 0,
-                        mr: selectedTicket.engMonthlyRate || 0,
-                        bt: selectedTicket.engBillingType || 'Hourly',
-                        ot: 0, ooh: 0, we: 0, hol: 0
-                      };
-                      
-                      // If Default pay type, pull ALL rates from MAIN engineer's profile
-                      if (selectedTicket.eng_pay_type === 'Default') {
-                         const mainE = engineers.find(e => Number(e.id) === Number(selectedTicket.engineerId));
-                         if (mainE) {
-                           pRates.hr = mainE.hourly_rate || 0;
-                           pRates.hd = mainE.half_day_rate || 0;
-                           pRates.fd = mainE.full_day_rate || 0;
-                           pRates.mr = mainE.monthly_rate || 0;
-                           pRates.bt = mainE.billing_type || 'Hourly';
-                           pRates.ot = mainE.overtime_rate || 0;
-                           pRates.ooh = mainE.ooh_rate || 0;
-                           pRates.we = mainE.weekend_rate || 0;
-                           pRates.hol = mainE.holiday_rate || 0;
-                         }
-                      }
-
-                      if (isNoEngDay) {
-                        pRates = { hr: 0, hd: 0, fd: 0, mr: 0, bt: 'Hourly', ot: 0, ooh: 0, we: 0, hol: 0 };
-                      } else if (lEngId && lEngId !== Number(selectedTicket.engineerId)) {
-                        const eng = engineers.find(en => Number(en.id) === lEngId);
-                        if (eng) {
-                          pRates = {
-                            hr: eng.hourly_rate   || 0,
-                            hd: eng.half_day_rate || 0,
-                            fd: eng.full_day_rate || 0,
-                            mr: eng.monthly_rate  || 0,
-                            bt: eng.billing_type  || 'Hourly',
-                            ot: eng.overtime_rate || 0,
-                            ooh: eng.ooh_rate || 0,
-                            we: eng.weekend_rate || 0,
-                            hol: eng.holiday_rate || 0
-                          };
-                        }
-                      }
-
-                      const resP = calculateTicketTotal({
-                        startTime: ls, endTime: le, breakTime: lb,
-                        hourlyRate: pRates.hr, halfDayRate: pRates.hd,
-                        fullDayRate: pRates.fd, monthlyRate: pRates.mr,
-                        overtimeRate: pRates.ot, oohRate: pRates.ooh,
-                        weekendRate: pRates.we, holidayRate: pRates.hol,
-                        billingType: pRates.bt, timezone: selectedTicket.timezone,
-                        calcTimezone: 'Ticket Local',
-                        travelCostPerDay: selectedTicket.travelCostPerDay,
-                        toolCost: selectedTicket.toolCost,
-                        monthlyDivisor: dayMonthlyDivisor,
-                        _isLogAggregation: true
-                      });
-
-                      const rV  = parseFloat(resR?.grandTotal || 0);
-                      const pV  = parseFloat(resP?.grandTotal || 0);
-                      const trv = parseFloat(resR?.travel || 0);
-                      const tol = parseFloat(resR?.tools  || 0);
-                      const base= parseFloat(resR?.base   || 0);
-                      totalR += rV; totalP += pV;
-
-                      // Engineer tracking
-                      const currentEngineer = engineers.find(en => Number(en.id) === Number(lEngId));
-                      const isNoEng = Number(lEngId) === 0;
-                      const eName = isNoEng ? 'No Engineer Assigned' : (currentEngineer ? currentEngineer.name : (selectedTicket.engineerName || 'Assigned Eng'));
-                      if (!engSummaryMap[lEngId]) engSummaryMap[lEngId] = { name: eName, total: 0, hours: 0, isNoEng };
-                      if (!isNoEng) {
-                        engSummaryMap[lEngId].total += pV;
-                        engSummaryMap[lEngId].hours += parseFloat(resP?.hrs || 0);
-                      }
-
-                      return { ...existingLog, rV, pV, trv, tol, base, dur: parseFloat(resR?.hrs || 0), logDateStr };
-                    });
-
-                    // ── Attribute One-Time Fees to Primary Engineer ──────────────────────
-                    const primaryId = Number(selectedTicket.engineerId);
-                    const otBil = (selectedTicket.billingType || 'Hourly').trim();
-                    let oneTimeR = 0, oneTimeP = 0;
-                    
-                    if (otBil === 'Agreed Rate') {
-                      oneTimeR += (parseFloat(selectedTicket.agreedRate) || 0);
-                      oneTimeP += (parseFloat(selectedTicket.engAgreedRate) || 0);
-                    } else if (otBil === 'Cancellation') {
-                      oneTimeR += (parseFloat(selectedTicket.cancellationFee) || 0);
-                      oneTimeP += (parseFloat(selectedTicket.engCancellationFee) || 0);
-                    }
-                    
-                    // Add Tool Cost once
-                    const tc = (parseFloat(selectedTicket.toolCost || 0));
-                    oneTimeR += tc;
-                    oneTimeP += tc;
-
-                    totalR += oneTimeR;
-                    totalP += oneTimeP;
-
-                    if (primaryId && engSummaryMap[primaryId]) {
-                      engSummaryMap[primaryId].total += oneTimeP;
-                    } else if (primaryId && !engSummaryMap[primaryId]) {
-                      const eng = engineers.find(e => Number(e.id) === primaryId);
-                      engSummaryMap[primaryId] = { name: eng ? eng.name : (selectedTicket.engineerName || 'Primary'), total: oneTimeP, hours: 0 };
-                    }
-
-                    const engSummary = Object.values(engSummaryMap);
-
-                    const cur = selectedTicket.currency || 'USD';
-
-                    return (
-                      <div className="detail-item--full">
-
-                        {/* Monthly Formula banner */}
-                        {isMonthly && (
-                          <div style={{ marginBottom: '14px', padding: '12px 16px', background: 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08))', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '13px', fontWeight: '900', color: '#6366f1' }}>📊 Monthly Billing Breakdown</span>
-                            <span style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600' }}>
-                              Monthly Rate: <strong>{cur} {parseFloat(selectedTicket.monthlyRate || 0).toFixed(2)}</strong>
-                            </span>
-                            <span style={{ fontSize: '12px', color: '#4f46e5', fontWeight: '600' }}>
-                              Working Days Summary: <strong>{vmWorkingDates.length} days</strong>
-                            </span>
-                            <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }}>Calculated using month-specific divisors (approx {cur}{(parseFloat(selectedTicket.monthlyRate||0)/22).toFixed(2)}/day)</span>
-                            <span style={{ fontSize: '12px', color: '#0891b2', fontWeight: '600' }}>
-                              ✈ Travel/day: <strong>{cur} {parseFloat(selectedTicket.travelCostPerDay || 0).toFixed(2)}</strong>
-                            </span>
-                            <span style={{ fontSize: '12px', color: '#7c3aed', fontWeight: '600' }}>
-                              🔧 Tool Cost: <strong>{cur} {parseFloat(selectedTicket.toolCost || 0).toFixed(2)}</strong>
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Premium Summary Cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                          <div style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', padding: '16px', borderRadius: '16px', color: 'white', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)' }}>
-                            <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>Revenue (Receivable)</div>
-                            <div style={{ fontSize: '24px', fontWeight: '900' }}>{cur} {totalR.toFixed(2)}</div>
-                          </div>
-                          <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '16px', borderRadius: '16px', color: 'white', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' }}>
-                            <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>Engineer Payout</div>
-                            <div style={{ fontSize: '24px', fontWeight: '900' }}>{selectedTicket.eng_currency || cur} {totalP.toFixed(2)}</div>
-                          </div>
-                          <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>Estimated Margin</div>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: (totalR - totalP) >= 0 ? '#059669' : '#ef4444' }}>
-                              {cur} {(totalR - totalP).toFixed(2)}
-                              <span style={{ fontSize: '14px', marginLeft: '8px', opacity: 0.6 }}>({totalR > 0 ? (((totalR - totalP) / totalR) * 100).toFixed(0) : 0}%)</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>📅</span>
-                            Shift History & Logs
-                          </h3>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <input type="date" value={newExtendEndDate} onChange={e => setNewExtendEndDate(e.target.value)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
-                            <button className="btn-wow-secondary" onClick={handleExtendJob} disabled={isExtending} style={{ padding: '4px 12px', fontSize: '11px' }}>{isExtending ? 'Wait...' : '+ Add Day'}</button>
-                            <button 
-                              className="btn-wow-secondary" 
-                              onClick={() => handleResolveEarly(newExtendEndDate)} 
-                              disabled={isResolvingEarly || !newExtendEndDate} 
-                              style={{ padding: '4px 12px', fontSize: '11px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
-                            >
-                              {isResolvingEarly ? 'Wait...' : 'Resolve Early'}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="dispatch-logs-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflowX: 'auto', marginBottom: '20px' }}>
-                          <table style={{ width: '100%', minWidth: '680px', borderCollapse: 'collapse', fontSize: '12px' }}>
-                            <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                              <tr>
-                                <th style={{ padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>Date</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>Engineer / Shift</th>
-                                <th style={{ padding: '8px 6px', textAlign: 'center', whiteSpace: 'nowrap' }}>Hrs</th>
-                                {isMonthly && <th style={{ padding: '8px 10px', textAlign: 'right', color: '#6366f1', whiteSpace: 'nowrap' }}>Per Day Rate</th>}
-                                <th style={{ padding: '8px 10px', textAlign: 'right', color: '#0891b2', whiteSpace: 'nowrap' }}>✈ Travel</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right', color: '#7c3aed', whiteSpace: 'nowrap' }}>🔧 Tools</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right', color: '#6366f1', whiteSpace: 'nowrap' }}>Day Total</th>
-                                <th style={{ padding: '8px 10px', textAlign: 'right', color: '#059669', whiteSpace: 'nowrap' }}>Payout</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {(() => {
-                                // Group logs by month for accordion display
-                                const monthGroups = {};
-                                logs.forEach((L, i) => {
-                                  const mKey = L.logDateStr.substring(0, 7); // "2026-04"
-                                  if (!monthGroups[mKey]) monthGroups[mKey] = [];
-                                  monthGroups[mKey].push({ ...L, _origIdx: i });
-                                });
-
-                                const totalColSpan = isMonthly ? 8 : 7;
-
-                                return Object.keys(monthGroups).sort().map(mKey => {
-                                  const monthLogs = monthGroups[mKey];
-                                  const collapseKey = mKey + '-view';
-                                  const isCollapsed = collapsedMonths.has(collapseKey);
-                                  const monthLabel = new Date(mKey + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-                                  
-                                  // Calculate month subtotals
-                                  const mTotalR = monthLogs.reduce((s, l) => s + l.rV, 0);
-                                  const mTotalP = monthLogs.reduce((s, l) => s + l.pV, 0);
-                                  const mTotalHrs = monthLogs.reduce((s, l) => s + l.dur, 0);
-
-                                  return (
-                                    <React.Fragment key={mKey}>
-                                      {/* Month Accordion Header */}
-                                      <tr
-                                        onClick={() => {
-                                          setCollapsedMonths(prev => {
-                                            const next = new Set(prev);
-                                            if (next.has(collapseKey)) next.delete(collapseKey);
-                                            else next.add(collapseKey);
-                                            return next;
-                                          });
-                                        }}
-                                        style={{ background: 'linear-gradient(135deg, #f1f5f9, #eef2ff)', cursor: 'pointer', userSelect: 'none', borderBottom: '2px solid #c7d2fe' }}
-                                      >
-                                        <td colSpan={totalColSpan} style={{ padding: '10px 12px' }}>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                              <span style={{ fontSize: '14px', color: '#6366f1', fontWeight: '900', transition: 'transform 0.2s', display: 'inline-block', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
-                                              <span style={{ fontWeight: '800', color: '#1e293b', fontSize: '13px' }}>{monthLabel}</span>
-                                              <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600', background: '#e2e8f0', padding: '2px 8px', borderRadius: '20px' }}>{monthLogs.length} days</span>
-                                              <span style={{ fontSize: '10px', color: '#6366f1', fontWeight: '600', background: 'rgba(99,102,241,0.08)', padding: '2px 8px', borderRadius: '20px' }}>{mTotalHrs.toFixed(1)}h</span>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#6366f1' }}>{cur} {mTotalR.toFixed(2)}</span>
-                                              <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669' }}>{selectedTicket.eng_currency || cur} {mTotalP.toFixed(2)}</span>
-                                            </div>
-                                          </div>
-                                        </td>
-                                      </tr>
-
-                                      {/* Month Rows (visible when expanded) */}
-                                      {!isCollapsed && monthLogs.map((L, mIdx) => {
-                                        const i = L._origIdx;
-                                        const viewEngId = Number(L.engineer_id ?? L.engineerId ?? selectedTicket.engineerId);
-                                        const isNoEngRow = viewEngId === 0;
-                                        return (
-                                          <tr key={L.id || i} className={isNoEngRow ? 'row-no-engineer' : ''} style={{ borderBottom: '1px solid #f1f5f9', background: mIdx % 2 === 0 ? '#fff' : '#fafafa', position: 'relative' }}>
-                                            <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
-                                              <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '11px' }}>
-                                                {new Date(`${L.logDateStr}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
-                                              </div>
-                                              <div style={{ fontSize: '10px', color: '#94a3b8' }}>Weekday</div>
-                                            </td>
-                                            <td style={{ padding: '8px 10px', minWidth: '180px' }}>
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <select
-                                                  style={{ width: '100%', padding: '4px 6px', fontSize: '11px', borderRadius: '6px', border: '1px solid #e2e8f0', fontWeight: isNoEngRow ? '800' : '500', color: isNoEngRow ? '#ef4444' : 'inherit', background: 'white' }}
-                                                  value={viewEngId}
-                                                  onChange={(e) => handleUpdateLog(L.id, { engineerId: Number(e.target.value) })}
-                                                >
-                                                  <optgroup label="Core Team">
-                                                    {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                                  </optgroup>
-                                                  <optgroup label="Special Cases">
-                                                    <option value="0" style={{ color: '#ef4444', fontWeight: '800' }}>❌ No Engineer / Absent</option>
-                                                  </optgroup>
-                                                </select>
-
-                                                {/* Bulk Assign: set this engineer for ALL days on this ticket */}
-                                                <button
-                                                  type="button"
-                                                  title={`Assign ${engineers.find(e => Number(e.id) === viewEngId)?.name || 'this engineer'} to all days`}
-                                                  style={{ padding: '4px 6px', background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap', fontWeight: '700' }}
-                                                  onClick={() => {
-                                                    const tStart = selectedTicket.taskStartDate ? String(selectedTicket.taskStartDate).split('T')[0] : '';
-                                                    const tEnd   = selectedTicket.taskEndDate   ? String(selectedTicket.taskEndDate).split('T')[0]   : '';
-                                                    const allDays = getDatesInRange(tStart, tEnd);
-                                                    const newEngId = viewEngId;
-                                                    // Update all existing logs (those with an id) for this ticket
-                                                    (timeLogs || []).forEach(l => {
-                                                      if (l.id) handleUpdateLog(l.id, { engineerId: newEngId });
-                                                    });
-                                                  }}
-                                                >
-                                                  🚀 All Days
-                                                </button>
-                                                {/* Rate Card Tooltip */}
-                                                {(() => {
-                                                  const selectedEng = engineers.find(e => Number(e.id) === viewEngId);
-                                                  if (!selectedEng) return null;
-                                                  const hR = selectedEng.hourlyRate ?? selectedEng.hourly_rate ?? 0;
-                                                  const hdR = selectedEng.halfDayRate ?? selectedEng.half_day_rate ?? 0;
-                                                  const fdR = selectedEng.fullDayRate ?? selectedEng.full_day_rate ?? 0;
-                                                  const mR = selectedEng.monthlyRate ?? selectedEng.monthly_rate ?? 0;
-                                                  const tooltipContent = `Rates for ${selectedEng.name}:\n• Hourly: ${cur} ${hR}\n• Half Day: ${cur} ${hdR}\n• Full Day: ${cur} ${fdR}\n• Monthly: ${cur} ${mR}`;
-
-                                                  return (
-                                                    <div className="tooltip-container" style={{ position: 'relative', display: 'inline-block' }}>
-                                                      <span style={{ fontSize: '13px', cursor: 'help', color: '#6366f1' }}>ℹ️</span>
-                                                      <div className="tooltip-text" style={{
-                                                        visibility: 'hidden', width: '220px', backgroundColor: '#1e293b', color: '#fff', textAlign: 'left',
-                                                        borderRadius: '12px', padding: '14px', position: 'absolute', zIndex: 9999, top: '-20px', right: '35px',
-                                                        opacity: 0, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', fontSize: '11px', lineHeight: '1.6',
-                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2)', pointerEvents: 'none', whiteSpace: 'pre-line',
-                                                        border: '1px solid rgba(255,255,255,0.1)'
-                                                      }}>
-                                                        <div style={{ fontWeight: '800', color: '#818cf8', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>Rate Card: {selectedEng.name}</div>
-                                                        {tooltipContent.split('\n').slice(1).join('\n')}
-                                                        <div style={{
-                                                          position: 'absolute', top: '24px', left: '100%',
-                                                          borderWidth: '6px', borderStyle: 'solid', borderColor: 'transparent transparent transparent #1e293b'
-                                                        }}></div>
-                                                      </div>
-                                                    </div>
-                                                  );
-                                                })()}
-                                                </div>
-                                               <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '4px' }}>
-                                                  <input
-                                                    type="time"
-                                                    value={safeExtractTime(L.start_time)}
-                                                    style={{ fontSize: '10px', padding: '3px 4px', width: '76px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
-                                                    onChange={(e) => handleUpdateLog(L.id, { startTime: `${L.logDateStr}T${e.target.value}:00.000Z` })}
-                                                  />
-                                                  <span style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '700' }}>→</span>
-                                                  <input
-                                                    type="time"
-                                                    value={safeExtractTime(L.end_time)}
-                                                    style={{ fontSize: '10px', padding: '3px 4px', width: '76px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
-                                                    onChange={(e) => handleUpdateLog(L.id, { endTime: `${L.logDateStr}T${e.target.value}:00.000Z` })}
-                                                  />
-                                                  <span style={{
-                                                    fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '20px', whiteSpace: 'nowrap',
-                                                    color: isUpdatingLog === L.id ? '#f59e0b' : '#10b981',
-                                                    background: isUpdatingLog === L.id ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
-                                                    border: `1px solid ${isUpdatingLog === L.id ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`,
-                                                    transition: 'all 0.3s ease'
-                                                  }}>
-                                                    {isUpdatingLog === L.id ? '⏳ Saving…' : '✓ Saved'}
-                                                  </span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '700', color: L.dur > 8 ? '#ef4444' : '#6366f1', whiteSpace: 'nowrap' }}>
-                                              {L.dur > 0 ? L.dur.toFixed(1) + 'h' : '--'}
-                                            </td>
-                                            {isMonthly && (
-                                              <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', color: '#6366f1', whiteSpace: 'nowrap' }}>
-                                                <div>{cur} {L.base.toFixed(2)}</div>
-                                                <div style={{ fontSize: '9px', color: '#94a3b8' }}>Divisor: {getWorkingDaysInMonth(L.logDateStr, selectedTicket.country)}</div>
-                                              </td>
-                                            )}
-                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#0891b2', whiteSpace: 'nowrap' }}>
-                                              {cur} {L.trv.toFixed(2)}
-                                            </td>
-                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: '#7c3aed', whiteSpace: 'nowrap' }}>
-                                              {cur} {L.tol.toFixed(2)}
-                                            </td>
-                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800', color: '#1e293b', fontSize: '12px', whiteSpace: 'nowrap', background: 'rgba(99,102,241,0.04)' }}>
-                                              {cur} {L.rV.toFixed(2)}
-                                            </td>
-                                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800', color: '#059669', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                              {selectedTicket.eng_currency || cur} {L.pV.toFixed(2)}
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </React.Fragment>
-                                  );
-                                });
-                              })()}
-                              {/* Totals row: colspan = total_cols - 2 (Day Total + Payout shown separately) */}
-                              <tr style={{ background: 'linear-gradient(135deg,#f8fafc,#eef2ff)', borderTop: '2px solid #c7d2fe' }}>
-                                <td colSpan={isMonthly ? 6 : 5} style={{ padding: '12px 10px', textAlign: 'right', fontSize: '12px', color: '#6366f1', fontWeight: '900', letterSpacing: '0.04em' }}>
-                                  GRAND TOTAL &nbsp;·&nbsp; {logs.length} working day{logs.length !== 1 ? 's' : ''}
-                                </td>
-                                <td style={{ padding: '12px 10px', textAlign: 'right', fontSize: '15px', color: '#6366f1', fontWeight: '900', whiteSpace: 'nowrap' }}>
-                                  {cur} {totalR > 0 ? totalR.toFixed(2) : parseFloat(selectedTicket.totalCost || 0).toFixed(2)}
-                                </td>
-                                <td style={{ padding: '12px 10px', textAlign: 'right', fontSize: '15px', color: '#059669', fontWeight: '900', whiteSpace: 'nowrap' }}>
-                                  {selectedTicket.eng_currency || cur} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* UPGRADED: Always show Engineer-wise Breakdown */}
-                        {engSummary.filter(s => !s.isNoEng).length > 0 && (
-                          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '12px' }}>👷 Engineer-wise Breakdown (Payout)</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-                              {engSummary.map((es, idx) => (
-                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800' }}>
-                                      {es.name.charAt(0)}
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{es.name}</span>
-                                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>{es.hours.toFixed(2)} hours logged</span>
-                                    </div>
-                                  </div>
-                                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#059669' }}>
-                                    {selectedTicket.eng_currency || cur} {es.total.toFixed(2)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* View Modal Combined Payout Summary */}
-                            <div style={{ borderTop: '1.5px dashed rgba(16,185,129,0.3)', marginTop: '20px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Combined Engineer Payout</span>
-                              <span style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>{selectedTicket.eng_currency || cur} {totalP.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Summary cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                          <div style={{ background: 'linear-gradient(135deg,#f8fafc,#eef2ff)', padding: '16px', borderRadius: '12px', border: '1px solid #e0e7ff' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total (Receivable)</label>
-                            <div style={{ fontSize: '26px', fontWeight: '900', color: '#6366f1', marginTop: '6px' }}>{cur} {totalR > 0 ? totalR.toFixed(2) : parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
-                            {isMonthly && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Combined monthly pro-rata + travel + tools</div>}
-                          </div>
-                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Grand Total (Payout)</label>
-                            <div style={{ fontSize: '26px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>{selectedTicket.eng_currency || cur} {totalP > 0 ? totalP.toFixed(2) : parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}</div>
-                          </div>
-                        </div>
-
-                      </div>
-                    );
-                  } else {
-                    // Single-day view
-                    const cur = selectedTicket.currency || 'USD';
-                    return (
-                      <div className="detail-item--full">
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                          <div style={{ background: 'linear-gradient(135deg,#f8fafc,#eef2ff)', padding: '16px', borderRadius: '12px', border: '1px solid #e0e7ff' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total (Receivable)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1', marginTop: '6px' }}>{cur} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
-                            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-                              Travel: {cur} {parseFloat(selectedTicket.travel_cost_per_day || selectedTicket.travelCostPerDay || 0).toFixed(2)} · Tools: {cur} {parseFloat(selectedTicket.tool_cost || selectedTicket.toolCost || 0).toFixed(2)}
-                            </div>
-                          </div>
-                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', padding: '16px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total (Payout)</label>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>{selectedTicket.eng_currency || cur} {parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}</div>
-                          </div>
-                        </div>
-
-                        {/* Professional Engineer Card for Single Day */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '800' }}>
-                              {(selectedTicket.engineerName || 'E').charAt(0)}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>{selectedTicket.engineerName || 'Assigned Engineer'}</span>
-                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>Main Assignee</span>
-                            </div>
-                          </div>
-                          <div style={{ fontSize: '18px', fontWeight: '900', color: '#059669' }}>
-                            {selectedTicket.eng_currency || cur} {parseFloat(selectedTicket.eng_total_cost || selectedTicket.engTotalCost || 0).toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                })()}
-
-                <div className="detail-item--full divider"></div>
-
-                <div className="detail-item--full">
-                  <label>Linked Documents</label>
-                  <div className="ticket-docs-list" style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {/* Secondary Sections: Docs, Notes, Uploads, Expenses */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '30px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>Linked Documents</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {selectedTicket.documentsLabel ? (
                       selectedTicket.documentsLabel.split(', ').map((docName, idx) => (
-                        <div key={idx} style={{ background: 'var(--bg-lighter)', padding: '6px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
-                          <span style={{ fontSize: '0.9rem' }}>{docName}</span>
-                          <button type="button" onClick={() => handleViewDocument(docName)} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }} title="View"><FiEye size={16} /></button>
+                        <div key={idx} style={{ background: '#f1f5f9', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: '600' }}>
+                          <span>{docName}</span>
+                          <button type="button" onClick={() => handleViewDocument(docName)} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '0', display: 'flex' }}><FiEye size={14} /></button>
                         </div>
                       ))
-                    ) : (<span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No documents linked.</span>)}
+                    ) : (<span style={{ color: '#94a3b8', fontSize: '12px' }}>No documents linked.</span>)}
                   </div>
-                </div>
 
-                <div className="detail-item--full divider"></div>
-
-                <div className="detail-item--full">
-                  <label>Service Notes / Timeline</label>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: '8px' }}>
-                    {ticketNotes.length === 0 ? <p style={{ fontSize: '0.85rem', color: '#94a3b8', textAlign: 'center' }}>No notes yet.</p> : ticketNotes.map((n, idx) => (
-                      <div key={n.id || idx} style={{ marginBottom: '10px', padding: '10px', background: n.author_type === 'admin' ? '#f0f9ff' : '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: '800', color: n.author_type === 'admin' ? '#0369a1' : '#334155' }}>{n.author_type === 'admin' ? 'ADMIN' : 'ENGINEER'}</span>
-                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(n.created_at).toLocaleString()}</span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e293b', whiteSpace: 'pre-wrap' }}>{n.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <input type="text" placeholder="Reply..." value={newAdminNote} onChange={e => setNewAdminNote(e.target.value)} style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '0.85rem' }} />
-                    <button onClick={handleAddAdminNote} disabled={addingNote || !newAdminNote} className="btn-wow-primary" style={{ padding: '0 16px' }}>{addingNote ? '...' : 'Send'}</button>
-                  </div>
-                </div>
-
-                <div className="detail-item--full divider"></div>
-
-                <div className="detail-item--full">
-                  <label>Engineer Uploads</label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    {ticketAttachments.length === 0 ? <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No attachments.</span> : ticketAttachments.map((a, idx) => (
-                      <a key={a.id || idx} href={`https://awokta.com/${a.file_url}`} target="_blank" rel="noreferrer" style={{ width: '80px', height: '80px', borderRadius: '8px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginTop: '24px', marginBottom: '12px', display: 'block' }}>Engineer Uploads</label>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {ticketAttachments.length === 0 ? <span style={{ color: '#94a3b8', fontSize: '12px' }}>No attachments.</span> : ticketAttachments.map((a, idx) => (
+                      <a key={a.id || idx} href={`https://awokta.com/${a.file_url}`} target="_blank" rel="noreferrer" style={{ width: '60px', height: '60px', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'block' }}>
                         <img src={`https://awokta.com/${a.file_url}`} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </a>
                     ))}
                   </div>
-                </div>
 
-                <div className="detail-item--full divider"></div>
-
-                <div className="detail-item--full">
-                  <label>Reported Expenses</label>
-                  <div style={{ marginTop: '8px' }}>
-                    {ticketExpenses.length === 0 ? <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No expenses.</span> : ticketExpenses.map((ex, idx) => (
-                      <div key={ex.id || idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', marginBottom: '6px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginTop: '24px', marginBottom: '12px', display: 'block' }}>Reported Expenses</label>
+                  <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '12px', border: '1px solid #e2e8f0' }}>
+                    {ticketExpenses.length === 0 ? <span style={{ color: '#94a3b8', fontSize: '12px' }}>No expenses.</span> : ticketExpenses.map((ex, idx) => (
+                      <div key={ex.id || idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'white', borderRadius: '8px', marginBottom: '6px', border: '1px solid #e2e8f0' }}>
                         <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>{ex.description}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(ex.created_at).toLocaleDateString()}</div>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>{ex.description}</div>
+                          <div style={{ fontSize: '10px', color: '#94a3b8' }}>{new Date(ex.created_at).toLocaleDateString()}</div>
                         </div>
-                        <div style={{ fontWeight: '800', color: '#166534', fontSize: '0.9rem' }}>{selectedTicket.currency} {parseFloat(ex.amount).toFixed(2)}</div>
+                        <div style={{ fontWeight: '800', color: '#10b981', fontSize: '13px' }}>{selectedTicket.currency} {parseFloat(ex.amount).toFixed(2)}</div>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="ticket-modal-footer">
-                <button className="btn-wow-secondary" onClick={handleCloseTicketModal}><FiX /> Close Details</button>
-                <button
-                  className="btn-wow-primary"
-                  style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
-                  onClick={() => {
-                    handleCloseTicketModal();
-                    startEditTicket(selectedTicket.id);
-                  }}
-                >
-                  <FiEdit2 /> Edit Full Ticket
-                </button>
-                <button
-                  className="btn-wow-secondary"
-                  onClick={() => {
-                    if (!isInlineEditing) {
-                      const actualStart = selectedTicket.startTime || selectedTicket.start_time;
-                      const actualEnd = selectedTicket.endTime || selectedTicket.end_time;
-                      if (actualStart) {
-                        setInlineStartTime(formatForInput(actualStart));
-                        setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
-                      } else {
-                        const sd = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
-                        const st = (selectedTicket.taskTime || '08:00').padStart(5, '0');
-                        if (sd) {
-                          setInlineStartTime(`${sd}T${st}`);
-                          let h = parseInt(st.split(':')[0], 10) + 8;
-                          let d = sd;
-                          if (h >= 24) { d = new Date(new Date(`${sd}T00:00:00Z`).getTime() + 86400000).toISOString().split('T')[0]; h -= 24; }
-                          setInlineEndTime(`${d}T${String(h).padStart(2, '0')}:${st.split(':')[1]}`);
-                        }
-                      }
-                      const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
-                      setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
-                    }
-                    setIsInlineEditing(!isInlineEditing);
-                  }}
-                >
-                  {isInlineEditing ? <><FiX /> Cancel</> : <><FiEdit2 /> Edit Time</>}
-                </button>
-                {isInlineEditing && <button className="tickets-primary-btn" onClick={handleUpdateInlineTime} disabled={isUpdatingTime}>{isUpdatingTime ? 'Saving...' : 'Confirm Changes'}</button>}
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>Service Notes</label>
+                  <div style={{ maxHeight: '250px', overflowY: 'auto', background: '#f8fafc', borderRadius: '12px', padding: '12px', border: '1px solid #e2e8f0' }}>
+                    {ticketNotes.length === 0 ? <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', margin: '20px 0' }}>No notes yet.</p> : ticketNotes.map((n, idx) => (
+                      <div key={n.id || idx} style={{ marginBottom: '12px', padding: '10px', background: n.author_type === 'admin' ? '#fff' : '#f1f5f9', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '10px', fontWeight: '800' }}>
+                          <span style={{ color: n.author_type === 'admin' ? '#6366f1' : '#64748b' }}>{n.author_type === 'admin' ? 'ADMIN' : 'ENGINEER'}</span>
+                          <span style={{ color: '#94a3b8' }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#1e293b', lineHeight: '1.4' }}>{n.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <input type="text" placeholder="Add a note..." value={newAdminNote} onChange={e => setNewAdminNote(e.target.value)} style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '12px', outline: 'none' }} />
+                    <button onClick={handleAddAdminNote} disabled={addingNote || !newAdminNote} className="btn-wow-primary" style={{ padding: '8px 16px', fontSize: '12px' }}>Send</button>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <div className="ticket-modal-footer">
+              <button className="btn-wow-secondary" onClick={handleCloseTicketModal}><FiX /> Close Details</button>
+              <button
+                className="btn-wow-primary"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                onClick={() => {
+                  handleCloseTicketModal();
+                  startEditTicket(selectedTicket.id);
+                }}
+              >
+                <FiEdit2 /> Edit Full Ticket
+              </button>
+              <button
+                className="btn-wow-secondary"
+                onClick={() => {
+                  if (!isInlineEditing) {
+                    const actualStart = selectedTicket.startTime || selectedTicket.start_time;
+                    const actualEnd = selectedTicket.endTime || selectedTicket.end_time;
+                    if (actualStart) {
+                      setInlineStartTime(formatForInput(actualStart));
+                      setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
+                    } else {
+                      const sd = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
+                      const st = (selectedTicket.taskTime || '08:00').padStart(5, '0');
+                      if (sd) {
+                        setInlineStartTime(`${sd}T${st}`);
+                        let h = parseInt(st.split(':')[0], 10) + 8;
+                        let d = sd;
+                        if (h >= 24) { d = new Date(new Date(`${sd}T00:00:00Z`).getTime() + 86400000).toISOString().split('T')[0]; h -= 24; }
+                        setInlineEndTime(`${d}T${String(h).padStart(2, '0')}:${st.split(':')[1]}`);
+                      }
+                    }
+                    const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
+                    setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
+                  }
+                  setIsInlineEditing(!isInlineEditing);
+                }}
+              >
+                {isInlineEditing ? <><FiX /> Cancel</> : <><FiEdit2 /> Edit Time</>}
+              </button>
+              {isInlineEditing && <button className="tickets-primary-btn" onClick={handleUpdateInlineTime} disabled={isUpdatingTime}>{isUpdatingTime ? 'Saving...' : 'Confirm Changes'}</button>}
             </div>
           </div>
         </div>
