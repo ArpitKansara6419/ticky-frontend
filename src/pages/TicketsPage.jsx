@@ -261,8 +261,17 @@ function TicketsPage() {
   const [activeMainTab, setActiveMainTab] = useState('Tickets'); // 'Tickets' | 'Cost & Breakdown'
   const [activeCostTab, setActiveCostTab] = useState('Customer'); // 'Customer' | 'Engineer'
   
-  const daysInRange = useMemo(() => getDatesInRange(taskStartDate, taskEndDate), [taskStartDate, taskEndDate]);
-  const isMultiDay = useMemo(() => daysInRange.length > 1 || leadType === 'Dispatch' || (billingType && billingType.includes('Monthly')), [daysInRange, leadType, billingType]);
+  const workingDays = useMemo(() => {
+    const all = getDatesInRange(taskStartDate, taskEndDate);
+    return all.filter(d => {
+      const dObj = new Date(`${d}T00:00:00Z`);
+      const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
+      const holidays = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
+      return !isWeekend && !holidays.includes(d);
+    });
+  }, [taskStartDate, taskEndDate, country]);
+
+  const isMultiDay = useMemo(() => workingDays.length > 1 || leadType === 'Dispatch' || (billingType && billingType.includes('Monthly')), [workingDays, leadType, billingType]);
 
 
   // Smart Auto-Sync for Start & End Time based on Task Details
@@ -486,8 +495,8 @@ function TicketsPage() {
     // Enable live calculations for both view mode AND creation/editing mode
     // if (isFillingForm) return; <--- REMOVED TO ALLOW LIVE SUMMARIES WHILE FILLING FORM
     // Also treat Monthly billing as multi-day calendar view even if start==end
-    const isMultiDay = (taskStartDate && taskEndDate && taskStartDate !== taskEndDate) || (billingType.includes('Monthly') && taskStartDate && taskEndDate);
-    const daysArr = isMultiDay ? getDatesInRange(taskStartDate, taskEndDate) : [];
+    const isMultiDayEffect = (taskStartDate && taskEndDate && taskStartDate !== taskEndDate) || (billingType.includes('Monthly') && taskStartDate && taskEndDate);
+    const daysArr = isMultiDayEffect ? workingDays : [];
     const numDays = daysArr.length || 1;
 
     if (isMultiDay) {
@@ -2540,7 +2549,7 @@ function TicketsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <h2 className="tickets-section-title" style={{ margin: 0 }}><FiCalendar /> Daily Shift Logs</h2>
                     <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', background: '#f1f5f9', padding: '4px 10px', borderRadius: '12px' }}>
-                      {daysInRange.length} Active Days
+                      {workingDays.length} Working Days
                     </span>
                   </div>
                   <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -2555,7 +2564,7 @@ function TicketsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {daysInRange.map((dStr) => {
+                        {workingDays.map((dStr) => {
                           const existingLog = timeLogs.find(l => (l.task_date || '').split('T')[0] === dStr) || {};
                           const lStart = safeExtractTime(existingLog.start_time || existingLog.startTime) || taskTime;
                           const lEnd = safeExtractTime(existingLog.end_time || existingLog.endTime) || '17:00';
@@ -2712,7 +2721,7 @@ function TicketsPage() {
                         </div>
                       </div>
                       <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
-                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? daysInRange.length : '1'} working day(s).
+                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? workingDays.length : '1'} working day(s).
                       </p>
                     </div>
                   )}
@@ -2792,7 +2801,7 @@ function TicketsPage() {
                         </div>
                       </div>
                       <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
-                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? daysInRange.length : '1'} working day(s).
+                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? workingDays.length : '1'} working day(s).
                       </p>
                     </div>
                   )}

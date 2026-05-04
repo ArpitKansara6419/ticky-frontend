@@ -1095,6 +1095,65 @@ function LeadsPage() {
                 </div>
               </section>
 
+              {/* Real-time Calculation Summary */}
+              {(() => {
+                const days = [];
+                if (taskStartDate && taskEndDate) {
+                  let curr = new Date(`${taskStartDate}T00:00:00Z`);
+                  const stop = new Date(`${taskEndDate}T00:00:00Z`);
+                  const hols = (country === 'Poland' ? ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'] : ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25']);
+                  while (curr <= stop) {
+                    const dw = curr.getUTCDay();
+                    const dStr = curr.toISOString().split('T')[0];
+                    if (dw !== 0 && dw !== 6 && !hols.includes(dStr)) {
+                      days.push(dStr);
+                    }
+                    curr.setUTCDate(curr.getUTCDate() + 1);
+                  }
+                }
+
+                const numWorkingDays = days.length || 1;
+                const isMulti = taskStartDate !== taskEndDate;
+                
+                // Use a default 8-hour window for the estimate
+                const sTime = `${taskStartDate || '2026-05-01'}T09:00:00Z`;
+                const eTime = `${taskStartDate || '2026-05-01'}T17:00:00Z`;
+
+                const res = calculateTicketTotal({
+                  startTime: sTime, endTime: eTime,
+                  hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+                  travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country
+                });
+
+                if (!res) return null;
+
+                const baseTotal = parseFloat(res.base) * numWorkingDays;
+                const grandTotal = parseFloat(res.grandTotal) * numWorkingDays;
+
+                return (
+                  <div style={{ background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FiDollarSign style={{ color: '#6366f1' }} /> Live Revenue Estimate
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Estimated Base</span>
+                        <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{currency} {baseTotal.toFixed(2)}</div>
+                      </div>
+                      <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Total Receivable</span>
+                        <div style={{ fontSize: '20px', fontWeight: '900', color: '#6366f1' }}>{currency} {grandTotal.toFixed(2)}</div>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
+                      * Based on <b>{numWorkingDays} working day(s)</b> (Saturdays, Sundays, and Public Holidays excluded). 
+                      Estimate assumes standard 8-hour shift per day.
+                    </p>
+                  </div>
+                );
+              })()}
+
+
 
 
               {/* Tab 2 Footer Actions */}
