@@ -508,6 +508,7 @@ function TicketsPage() {
       let totalPayout = 0;
       let totalHrs = 0;
       let validDaysCount = 0;
+      const engSummaryMap = {};
       let combinedBreakdown = { hrs: '0.00', grandTotal: '0.00', base: '0.00', ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', days: 0, perDayRate: null, workingDays: null, monthlyFull: null };
       let engBreakdown = { base: '0.00', ot: '0.00', ooh: '0.00', special: '0.00', agreed: '0.00' };
 
