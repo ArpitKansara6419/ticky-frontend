@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo, FiUser, FiCpu, FiCalendar, FiCheckCircle, FiActivity, FiFileText, FiArrowLeft, FiArrowRight } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo, FiUser, FiCpu, FiCalendar, FiCheckCircle, FiActivity, FiFileText, FiArrowLeft, FiArrowRight, FiTag, FiNavigation, FiTool } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -3245,7 +3245,9 @@ function TicketsPage() {
               background: '#fff'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.3)' }}>🎟️</div>
+                <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', boxShadow: '0 8px 16px -4px rgba(99, 102, 241, 0.3)' }}>
+                  <FiTag />
+                </div>
                 <div>
                   <h2 className="ticket-modal-title" style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.02em' }}>
                     Ticket <span style={{ color: '#6366f1' }}>#AIM-T-{selectedTicket.id}</span>
@@ -3255,29 +3257,6 @@ function TicketsPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <button
-                  className="btn-wow-primary"
-                  style={{
-                    padding: '10px 20px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                  onClick={() => {
-                    handleCloseTicketModal();
-                    startEditTicket(selectedTicket.id);
-                  }}
-                >
-                  <FiEdit2 /> Edit Full Ticket
-                </button>
                 <button
                   className="ticket-modal-close-btn"
                   onClick={handleCloseTicketModal}
@@ -3383,11 +3362,15 @@ function TicketsPage() {
                 )}
 
                 <div className="detail-item">
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>✈ Travel Cost / Day</label>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FiNavigation size={12} /> Travel Cost / Day
+                  </label>
                   <span style={{ fontWeight: '700', color: '#0891b2' }}>{selectedTicket.currency} {parseFloat(selectedTicket.travelCostPerDay || 0).toFixed(2)}</span>
                 </div>
                 <div className="detail-item">
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>🔧 Tool Cost / Day</label>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FiTool size={12} /> Tool Cost / Day
+                  </label>
                   <span style={{ fontWeight: '700', color: '#7c3aed' }}>{selectedTicket.currency} {parseFloat(selectedTicket.toolCost || 0).toFixed(2)}</span>
                 </div>
               </div>
@@ -3455,16 +3438,6 @@ function TicketsPage() {
 
             <div className="ticket-modal-footer">
               <button className="btn-wow-secondary" onClick={handleCloseTicketModal}><FiX /> Close Details</button>
-              <button
-                className="btn-wow-primary"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
-                onClick={() => {
-                  handleCloseTicketModal();
-                  startEditTicket(selectedTicket.id);
-                }}
-              >
-                <FiEdit2 /> Edit Full Ticket
-              </button>
               <button
                 className="btn-wow-secondary"
                 onClick={() => {
