@@ -83,6 +83,13 @@ const CURRENCIES = [
   { value: 'INR', label: 'Rupee (INR)' },
 ]
 
+const HOLIDAYS_CALC = {
+  'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
+  'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
+  'Other': []
+};
+
+
 const getDatesInRange = (start, end) => {
   const dates = [];
   if (!start || !end) return dates;
@@ -99,12 +106,7 @@ const getDatesInRange = (start, end) => {
 
 const getWorkingDaysInMonth = (dateStr, countryName) => {
   if (!dateStr) return 22;
-  const HOLIDAYS_LIST = {
-    'India': ['2026-01-26','2026-03-21','2026-03-31','2026-04-03','2026-04-14','2026-05-01','2026-05-27','2026-06-26','2026-08-15','2026-08-26','2026-10-02','2026-10-20','2026-11-08','2026-11-24','2026-12-25'],
-    'Poland': ['2026-01-01','2026-01-06','2026-04-05','2026-04-06','2026-05-01','2026-05-03','2026-06-04','2026-08-15','2026-11-01','2026-11-11','2026-12-25','2026-12-26'],
-    'Other': []
-  };
-  const holidays = HOLIDAYS_LIST[countryName] || HOLIDAYS_LIST['India'] || [];
+  const holidays = HOLIDAYS_CALC[countryName] || HOLIDAYS_CALC['India'] || [];
   const d = new Date(`${dateStr}T00:00:00Z`);
   const year = d.getUTCFullYear();
   const month = d.getUTCMonth();
@@ -2396,6 +2398,29 @@ function TicketsPage() {
 
           {activeMainTab === 'Tickets' && (
             <>
+              {/* Engineer Assignment */}
+              <section className="tickets-card">
+                <h2 className="tickets-section-title"><FiActivity /> Engineer Assignment</h2>
+                <div className="tickets-grid">
+                  <label className="tickets-field">
+                    <span>Primary Engineer <span className="field-required">*</span></span>
+                    <select value={engineerId} onChange={(e) => setEngineerId(e.target.value)} disabled={loadingDropdowns}>
+                      <option value="">Select an engineer...</option>
+                      {engineers.map((en) => (
+                        <option key={en.id} value={en.id}>{en.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="tickets-field">
+                    <span>Lead Type</span>
+                    <select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
+                      <option value="Onsite">Onsite</option>
+                      <option value="Dispatch">Dispatch (Multi-day)</option>
+                    </select>
+                  </label>
+                </div>
+              </section>
+
               {/* Customer & Lead */}
               <section className="tickets-card">
                 <h2 className="tickets-section-title">Customer &amp; Lead</h2>
@@ -2669,6 +2694,28 @@ function TicketsPage() {
                       <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} /></label>
                     </div>
                   </section>
+                  
+                  {/* Live Revenue Summary */}
+                  {liveBreakdown && (
+                    <div style={{ background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FiDollarSign style={{ color: '#6366f1' }} /> Customer Revenue Summary
+                      </h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Estimated Base</span>
+                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{currency} {liveBreakdown.base || '0.00'}</div>
+                        </div>
+                        <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Total Receivable</span>
+                          <div style={{ fontSize: '20px', fontWeight: '900', color: '#6366f1' }}>{currency} {liveBreakdown.grandTotal || '0.00'}</div>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
+                        * Includes travel and tool costs if configured. Estimated based on {isMultiDay ? daysInRange.length : '1'} working day(s).
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
