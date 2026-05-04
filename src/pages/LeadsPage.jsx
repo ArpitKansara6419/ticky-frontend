@@ -743,7 +743,9 @@ function LeadsPage() {
       // Clear dates for clone as per requirement
       setTaskStartDate('')
       setTaskEndDate('')
-
+      
+      // Reset status to BID and clear ticket links for a fresh clone
+      setStatus('BID')
       setEditingLeadId(null) // Clear ID to represent a new clone
       setViewMode('form')
     }
@@ -1342,7 +1344,12 @@ function LeadsPage() {
 
                             return (
                               <div className="date-stack">
-                                <span className="date-value date-value--old" style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '12px' }}>
+                                <span className="date-value" style={{ 
+                                  textDecoration: l.status === 'Cancelled' ? 'line-through' : 'none', 
+                                  color: l.status === 'Cancelled' ? '#9ca3af' : '#64748b', 
+                                  fontSize: '12px',
+                                  fontWeight: l.status === 'Cancelled' ? '400' : '700'
+                                }}>
                                   {getRangeStr(originalDate, originalEndDate)}
                                 </span>
 

@@ -677,7 +677,17 @@ function TicketsPage() {
       }
 
       // Find rates for the main engineer if using Default or Custom
-      let pRates = { ot: 0, ooh: 0, we: 0, hol: 0 };
+      let pRates = { 
+        hr: engHourlyRate || 0,
+        hd: engHalfDayRate || 0,
+        fd: engFullDayRate || 0,
+        mr: engMonthlyRate || 0,
+        ar: engAgreedRate || 0,
+        cf: engCancellationFee || 0,
+        bt: engBillingType,
+        ot: 0, ooh: 0, we: 0, hol: 0 
+      };
+
       if (engPayType === 'Custom') {
         pRates.ot = engOvertimeRate || 0;
         pRates.ooh = engOohRate || 0;
@@ -686,24 +696,33 @@ function TicketsPage() {
       } else {
          const mainE = engineers.find(e => Number(e.id) === Number(engineerId));
          if (mainE) {
-           pRates.ot = mainE.overtimeRate ?? mainE.overtime_rate ?? 0;
-           pRates.ooh = mainE.oohRate ?? mainE.ooh_rate ?? 0;
-           pRates.we = mainE.weekendRate ?? mainE.weekend_rate ?? 0;
-           pRates.hol = mainE.holidayRate ?? mainE.holiday_rate ?? 0;
+           pRates = {
+             hr: mainE.hourlyRate ?? mainE.hourly_rate ?? 0,
+             hd: mainE.halfDayRate ?? mainE.half_day_rate ?? 0,
+             fd: mainE.fullDayRate ?? mainE.full_day_rate ?? 0,
+             mr: mainE.monthlyRate ?? mainE.monthly_rate ?? 0,
+             ar: mainE.agreedRate ?? mainE.agreed_rate ?? 0,
+             cf: mainE.cancellationFee ?? mainE.cancellation_fee ?? 0,
+             bt: mainE.billingType ?? mainE.billing_type ?? engBillingType,
+             ot: mainE.overtimeRate ?? mainE.overtime_rate ?? 0,
+             ooh: mainE.oohRate ?? mainE.ooh_rate ?? 0,
+             we: mainE.weekendRate ?? mainE.weekend_rate ?? 0,
+             hol: mainE.holidayRate ?? mainE.holiday_rate ?? 0
+           };
          }
       }
 
       const payRes = calculateTicketTotal({
         startTime, endTime, breakTime,
-        hourlyRate: engHourlyRate || 0,
-        halfDayRate: engHalfDayRate || 0,
-        fullDayRate: engFullDayRate || 0,
-        monthlyRate: engMonthlyRate || 0,
-        agreedRate: engAgreedRate || 0,
-        cancellationFee: engCancellationFee || 0,
+        hourlyRate: pRates.hr,
+        halfDayRate: pRates.hd,
+        fullDayRate: pRates.fd,
+        monthlyRate: pRates.mr,
+        agreedRate: pRates.ar,
+        cancellationFee: pRates.cf,
         overtimeRate: pRates.ot, oohRate: pRates.ooh, weekendRate: pRates.we, holidayRate: pRates.hol,
-        travelCostPerDay: 0, toolCost: 0, billingType: engBillingType, timezone, calcTimezone,
-        country, // Travel & Tool Cost excluded from engineer payout
+        travelCostPerDay: 0, toolCost: 0, billingType: pRates.bt, timezone, calcTimezone,
+        country, 
         isEngineer: true
       });
 
@@ -711,6 +730,9 @@ function TicketsPage() {
         const eng = engineers.find(e => Number(e.id) === Number(engineerId));
         const eName = eng ? eng.name : (engineerName || 'Lead Engineer');
         setPayoutLiveBreakdown({ 
+          base: payRes.base,
+          ot: payRes.ot,
+          special: payRes.specialDay,
           grandTotal: payRes.grandTotal, 
           engSummary: [{ name: eName, total: parseFloat(payRes.grandTotal) }] 
         });
@@ -2304,6 +2326,27 @@ function TicketsPage() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveMainTab('POC')}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '10px',
+              border: 'none',
+              fontSize: '14px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              background: activeMainTab === 'POC' ? '#fff' : 'transparent',
+              color: activeMainTab === 'POC' ? '#6366f1' : '#64748b',
+              boxShadow: activeMainTab === 'POC' ? '0 4px 12px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <FiUser /> POC
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveMainTab('Cost & Breakdown')}
             style={{
               padding: '10px 24px',
@@ -2444,20 +2487,7 @@ function TicketsPage() {
                 </div>
               </section>
 
-              {/* POC & Documents */}
-              <section className="tickets-card">
-                <h2 className="tickets-section-title">POC &amp; Documents</h2>
-                <div className="tickets-grid">
-                  <label className="tickets-field"><span>POC details</span><textarea rows={2} value={pocDetails} onChange={(e) => setPocDetails(e.target.value)} /></label>
-                  <label className="tickets-field"><span>RE details</span><textarea rows={2} value={reDetails} onChange={(e) => setReDetails(e.target.value)} /></label>
-                  <label className="tickets-field">
-                    <span>Documents</span>
-                    <input type="file" multiple onChange={handleDocumentsChange} style={{ fontSize: '12px' }} />
-                  </label>
-                </div>
-              </section>
-
-              {/* Status Update */}
+              {/* Ticket Status */}
               <section className="tickets-card">
                 <h2 className="tickets-section-title">Ticket Status</h2>
                 <div className="tickets-grid">
@@ -2551,6 +2581,35 @@ function TicketsPage() {
                 </section>
               )}
             </>
+          )}
+
+          {activeMainTab === 'POC' && (
+            <div className="fade-in">
+              <section className="tickets-card">
+                <h2 className="tickets-section-title"><FiUser /> POC & Documents</h2>
+                <div className="tickets-grid">
+                  <label className="tickets-field">
+                    <span>POC details</span>
+                    <textarea rows={4} value={pocDetails} onChange={(e) => setPocDetails(e.target.value)} placeholder="Name, Phone, Email etc." />
+                  </label>
+                  <label className="tickets-field">
+                    <span>RE details</span>
+                    <textarea rows={4} value={reDetails} onChange={(e) => setReDetails(e.target.value)} placeholder="Relative details..." />
+                  </label>
+                  <label className="tickets-field tickets-field--full">
+                    <span>Attachments / Documents</span>
+                    <div style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', padding: '24px', textAlign: 'center', background: '#f8fafc' }}>
+                      <input type="file" multiple onChange={handleDocumentsChange} id="ticket-files" style={{ display: 'none' }} />
+                      <label htmlFor="ticket-files" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <FiDownload size={24} style={{ color: '#6366f1' }} />
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Click to upload documents</span>
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>PDF, PNG, JPG supported</span>
+                      </label>
+                    </div>
+                  </label>
+                </div>
+              </section>
+            </div>
           )}
 
           {activeMainTab === 'Cost & Breakdown' && (
