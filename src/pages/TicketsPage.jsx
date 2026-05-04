@@ -658,9 +658,20 @@ function TicketsPage() {
         totalReceivable += cf; combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + cf).toFixed(2);
       }
 
-      setLiveBreakdown({ ...combinedBreakdown, hrs: totalHrs.toFixed(2), grandTotal: totalReceivable.toFixed(2), days: validDaysCount });
+      setLiveBreakdown({ 
+        ...combinedBreakdown, 
+        hrs: totalHrs.toFixed(2), 
+        grandTotal: totalReceivable.toFixed(2), 
+        days: validDaysCount,
+        effectiveRate: validDaysCount > 0 ? (parseFloat(combinedBreakdown.base) / validDaysCount).toFixed(2) : '0.00'
+      });
       setTotalCost(totalReceivable.toFixed(2));
-      setPayoutLiveBreakdown({ ...engBreakdown, grandTotal: totalPayout.toFixed(2), engSummary: Object.values(engSummaryMap) });
+      setPayoutLiveBreakdown({ 
+        ...engBreakdown, 
+        grandTotal: totalPayout.toFixed(2), 
+        engSummary: Object.values(engSummaryMap),
+        effectiveRate: validDaysCount > 0 ? (parseFloat(engBreakdown.base) / validDaysCount).toFixed(2) : '0.00'
+      });
 
     } else {
       const singleDayDivisor = getWorkingDaysInMonth(taskStartDate, country);
@@ -673,7 +684,8 @@ function TicketsPage() {
       setLiveBreakdown({ 
         ...res, 
         days: 1, 
-        monthlyRecords: [{ month: taskStartDate.substring(0, 7), divisor: singleDayDivisor, rate: monthlyRate }] 
+        monthlyRecords: [{ month: taskStartDate.substring(0, 7), divisor: singleDayDivisor, rate: monthlyRate }],
+        effectiveRate: res?.base || '0.00'
       });
       if (res && res.grandTotal) {
         setTotalCost(res.grandTotal);
@@ -740,7 +752,8 @@ function TicketsPage() {
           travel: payRes.travel,
           tools: payRes.tools,
           grandTotal: payRes.grandTotal, 
-          engSummary: [{ name: eName, total: parseFloat(payRes.grandTotal) }] 
+          engSummary: [{ name: eName, total: parseFloat(payRes.grandTotal) }],
+          effectiveRate: payRes.base
         });
       }
     }
@@ -2743,9 +2756,30 @@ function TicketsPage() {
                       const margin = c - p;
                       return (
                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '16px 24px', fontWeight: '600', color: '#1e293b' }}>{row.label}</td>
-                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#1e293b' }}>{c.toFixed(2)}</td>
-                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#dc2626' }}>{p.toFixed(2)}</td>
+                          <td style={{ padding: '16px 24px', fontWeight: '600', color: '#1e293b' }}>
+                            {row.label}
+                            {row.label === 'Base Labor Cost' && (
+                              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '400', marginTop: '4px', fontStyle: 'italic' }}>
+                                Calculation Basis: {liveBreakdown?.days || 0} Working Days
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#1e293b' }}>
+                            <div style={{ fontWeight: '700' }}>{c.toFixed(2)}</div>
+                            {row.label === 'Base Labor Cost' && c > 0 && (
+                              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '500' }}>
+                                {currency} {liveBreakdown?.effectiveRate || '0.00'} × {liveBreakdown?.days || 0}d
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#dc2626' }}>
+                            <div style={{ fontWeight: '700' }}>{p.toFixed(2)}</div>
+                            {row.label === 'Base Labor Cost' && p > 0 && (
+                              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '500' }}>
+                                {engCurrency || currency} {payoutLiveBreakdown?.effectiveRate || '0.00'} × {liveBreakdown?.days || 0}d
+                              </div>
+                            )}
+                          </td>
                           <td style={{ padding: '16px 24px', textAlign: 'right', color: margin >= 0 ? '#10b981' : '#ef4444', fontWeight: '800' }}>
                             {margin >= 0 ? '+' : ''}{margin.toFixed(2)}
                           </td>
