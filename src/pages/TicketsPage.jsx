@@ -3241,45 +3241,70 @@ function TicketsPage() {
                                 const hrs = rawHrs !== null ? rawHrs.toFixed(2) : '--';
                                 const exceeded = rawHrs !== null && rawHrs > 8;
                                 const isWeekend = log.logDateStr ? [0, 6].includes(new Date(log.logDateStr).getDay()) : false;
+                                const logId = log.id;
+
                                 return (
-                                  <tr key={`${ticket.id}-log-${log.id || sidx}`} style={{ background: exceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
-                                    <td style={{ paddingLeft: '36px', fontSize: '12px' }}>
+                                  <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: exceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
+                                    <td style={{ paddingLeft: '36px', fontSize: '12px', verticalAlign: 'middle' }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <span style={{ color: '#6366f1', fontWeight: '700' }}>↳</span>
                                         <span style={{ fontWeight: '600', color: '#374151' }}>{logDate}</span>
                                         {isWeekend && <span style={{ background: '#fde68a', color: '#92400e', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>WKND</span>}
-                                        {hrs !== '--' && exceeded && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>⏱ {hrs}h</span>}
                                       </div>
                                     </td>
+                                    
                                     <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
-                                      <div style={{ display: 'flex', gap: '12px' }}>
-                                        <span>In: <strong style={{ color: log.start_time ? '#10b981' : '#94a3b8' }}>{(() => {
-                                          if (!log.start_time) return '--';
-                                          const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
-                                          return match ? `${match[1]}:${match[2]}` : '--';
-                                        })()}</strong></span>
-                                        <span>Out: <strong style={{ color: log.end_time ? '#ef4444' : '#94a3b8' }}>{(() => {
-                                          if (!log.end_time) return '--';
-                                          const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
-                                          return match ? `${match[1]}:${match[2]}` : '--';
-                                        })()}</strong></span>
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                          <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>IN</span>
+                                          <input 
+                                            type="time" 
+                                            defaultValue={log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : ''} 
+                                            style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
+                                            onBlur={(e) => {
+                                              const val = e.target.value;
+                                              if (val && logId) handleUpdateLog(logId, { ticketId: ticket.id, startTime: `${log.logDateStr}T${val}:00` });
+                                            }}
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                          <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>OUT</span>
+                                          <input 
+                                            type="time" 
+                                            defaultValue={log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : ''} 
+                                            style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
+                                            onBlur={(e) => {
+                                              const val = e.target.value;
+                                              if (val && logId) handleUpdateLog(logId, { ticketId: ticket.id, endTime: `${log.logDateStr}T${val}:00` });
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                     </td>
+
                                     <td colSpan={2} style={{ fontSize: '12px', color: '#475569' }}>
-                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
-                                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#e0e7ff', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #c7d2fe' }}>
-                                             <FiUser size={12} />
-                                          </div>
-                                          {(() => {
-                                              if (log.engineer_id) {
-                                                const eng = engineers.find(e => e.id === Number(log.engineer_id));
-                                                return eng ? eng.name : `Engineer #${log.engineer_id}`;
-                                              }
-                                              return ticket.engineerName || 'Unassigned';
-                                           })()}
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          <select
+                                            value={log.engineer_id || ''}
+                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', width: '160px', background: '#fff' }}
+                                            onChange={(e) => {
+                                              const newEngId = e.target.value;
+                                              if (logId) handleUpdateLog(logId, { ticketId: ticket.id, engineerId: Number(newEngId) });
+                                            }}
+                                          >
+                                            <option value="">Assign Engineer...</option>
+                                            {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                          </select>
                                        </div>
                                     </td>
-                                    <td colSpan={2}></td>
+                                    
+                                    <td style={{ textAlign: 'right', paddingRight: '20px' }}>
+                                      {hrs !== '--' && (
+                                        <span style={{ fontSize: '11px', fontWeight: '700', color: exceeded ? '#b45309' : '#6366f1', background: exceeded ? '#fef3c7' : '#e0e7ff', padding: '2px 8px', borderRadius: '10px' }}>
+                                          {hrs}h
+                                        </span>
+                                      )}
+                                    </td>
                                   </tr>
                                 );
                               }) : [];
