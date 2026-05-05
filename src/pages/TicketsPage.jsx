@@ -3225,17 +3225,21 @@ function TicketsPage() {
                                 const hols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
                                 const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
                                 const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
-                                if (s && e) {
+
+                                if (s && e && (ticket.leadType === 'Dispatch' || (ticket.billingType && ticket.billingType.includes('Monthly')) || s !== e)) {
                                   const allDates = getDatesInRange(s, e);
                                   displayLogs = allDates.filter(d => {
                                     const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
                                     return dw !== 0 && dw !== 6 && !hols.includes(d);
                                   }).map((dStr, sidx) => {
-                                    const existing = parsedLogs.find(l => (l.task_date || '').split('T')[0] === dStr) || {};
+                                    const existing = parsedLogs.find(l => {
+                                      const lDate = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
+                                      return lDate === dStr;
+                                    }) || {};
                                     return { ...existing, logDateStr: dStr };
                                   });
                                 } else {
-                                  displayLogs = parsedLogs.map((l, sidx) => ({ ...l, logDateStr: (l.task_date || '').split('T')[0] }));
+                                  displayLogs = parsedLogs.map((l, sidx) => ({ ...l, logDateStr: l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : `Day ${sidx + 1}` }));
                                 }
                               }
 
@@ -3290,7 +3294,13 @@ function TicketsPage() {
                                           <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#e0e7ff', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #c7d2fe' }}>
                                              <FiUser size={12} />
                                           </div>
-                                          {ticket.engineerName || 'Unassigned'}
+                                          {(() => {
+                                              if (log.engineer_id) {
+                                                const eng = engineers.find(e => e.id === Number(log.engineer_id));
+                                                return eng ? eng.name : `Engineer #${log.engineer_id}`;
+                                              }
+                                              return ticket.engineerName || 'Unassigned';
+                                           })()}
                                        </div>
                                     </td>
                                     <td colSpan={2}></td>
