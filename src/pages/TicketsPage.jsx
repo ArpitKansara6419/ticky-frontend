@@ -2670,6 +2670,45 @@ function TicketsPage() {
                       </label>
                     </div>
 
+                    {ticketAttachments && ticketAttachments.length > 0 && (
+                      <div style={{ marginTop: '24px', display: 'grid', gap: '12px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Previously Saved Documents ({ticketAttachments.length})</span>
+                          <span style={{ fontSize: '11px', color: '#3b82f6', background: '#dbeafe', padding: '2px 8px', borderRadius: '12px' }}>In Database</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                          {ticketAttachments.map((file, idx) => {
+                            const fileName = file.file_name || file.name || 'document';
+                            const fileUrl = file.file_url || file.url;
+                            const isPdf = fileName.toLowerCase().endsWith('.pdf');
+                            const isExcel = fileName.toLowerCase().match(/\.(xls|xlsx|csv)$/);
+                            const isImage = fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/);
+                            let Icon = FiFileText;
+                            let iconColor = '#64748b';
+                            let bgColor = '#f1f5f9';
+                            
+                            if (isPdf) { Icon = FiFileText; iconColor = '#ef4444'; bgColor = '#fee2e2'; }
+                            else if (isExcel) { Icon = FiActivity; iconColor = '#10b981'; bgColor = '#d1fae5'; }
+                            else if (isImage) { Icon = FiEye; iconColor = '#3b82f6'; bgColor = '#dbeafe'; }
+
+                            return (
+                              <a key={`saved-${idx}`} href={fileUrl ? `${API_BASE_URL.replace('/api', '')}/${fileUrl}` : '#'} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'none'}>
+                                <div style={{ background: bgColor, color: iconColor, padding: '10px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Icon size={20} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fileName}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <FiDownload size={10} /> Click to View
+                                  </div>
+                                </div>
+                              </a>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {documents.length > 0 && (
                       <div style={{ marginTop: '16px', display: 'grid', gap: '12px' }}>
                         <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
