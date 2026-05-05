@@ -1321,7 +1321,11 @@ function TicketsPage() {
         throw new Error(errMsg);
       }
 
-      setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
+      if (data.earlyResolve) {
+        setSuccess('Early closure requested. This ticket is now in "Approval Pending" status.');
+      } else {
+        setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.');
+      }
 
       // UPLOAD DOCUMENTS
       const finalTicketId = isEditing ? editingTicketId : data.ticket?.id || data.ticketId;
@@ -3118,21 +3122,9 @@ function TicketsPage() {
                                   <td style={{ paddingLeft: '24px' }}>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                       {isDispatch && (
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setExpandedTicketRows(prev => {
-                                              const next = new Set(prev);
-                                              if (next.has(ticket.id)) next.delete(ticket.id);
-                                              else next.add(ticket.id);
-                                              return next;
-                                            });
-                                          }}
-                                          style={{ flexShrink: 0, marginTop: '3px', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', padding: '2px 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', lineHeight: 1.4 }}
-                                          title={isExpanded ? 'Collapse days' : 'Expand days'}
-                                        >
-                                          {isExpanded ? '▲' : '▼'} {parsedLogs.length}d
-                                        </button>
+                                        <span style={{ flexShrink: 0, marginTop: '3px', background: isExpanded ? '#e0e7ff' : '#f1f5f9', border: '1px solid ' + (isExpanded ? '#818cf8' : '#e2e8f0'), borderRadius: '6px', padding: '2px 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', lineHeight: 1.4 }}>
+                                          {parsedLogs.length}d
+                                        </span>
                                       )}
                                       <div>
                                         <div className="leads-name-main">{ticket.taskName}</div>
@@ -3188,7 +3180,38 @@ function TicketsPage() {
                                   </td>
                                   <td style={{ paddingRight: '24px' }}>
                                     <div className="action-icons">
-                                      <button className="action-btn view" onClick={() => openTicketModal(ticket.id)} title="View Detail"><FiEye /></button>
+                                      {isDispatch && (
+                                        <button
+                                          className="action-btn"
+                                          title={isExpanded ? 'Collapse Shift Logs' : 'View Daily Shift Logs'}
+                                          onClick={() => {
+                                            setExpandedTicketRows(prev => {
+                                              const next = new Set(prev);
+                                              if (next.has(ticket.id)) next.delete(ticket.id);
+                                              else next.add(ticket.id);
+                                              return next;
+                                            });
+                                          }}
+                                          style={{
+                                            background: isExpanded ? 'linear-gradient(135deg, #e0e7ff, #c7d2fe)' : '#f8fafc',
+                                            border: '1px solid ' + (isExpanded ? '#818cf8' : '#e2e8f0'),
+                                            color: isExpanded ? '#4338ca' : '#6366f1',
+                                            borderRadius: '8px',
+                                            padding: '6px 8px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            transition: 'all 0.2s ease',
+                                            boxShadow: isExpanded ? '0 2px 8px rgba(99,102,241,0.2)' : 'none'
+                                          }}
+                                        >
+                                          <FiClock size={13} style={{ animation: isExpanded ? 'spin 2s linear infinite' : 'none' }} />
+                                          {isExpanded ? 'Hide' : 'Logs'}
+                                        </button>
+                                      )}
                                       <button className="action-btn edit" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
                                       <button className="action-btn delete" onClick={() => handleDeleteTicket(ticket.id)} title="Delete"><FiTrash2 /></button>
                                     </div>

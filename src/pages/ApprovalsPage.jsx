@@ -42,10 +42,11 @@ function ApprovalsPage({ onViewTicket }) {
 
         try {
             setProcessingId(approvalId)
+            const userName = localStorage.getItem('userName') || 'Admin'
             const res = await fetch(`${API_BASE_URL}/approvals/process`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ approvalId, action }),
+                body: JSON.stringify({ approvalId, action, processedBy: userName }),
                 credentials: 'include'
             })
             const data = await res.json()
@@ -87,6 +88,7 @@ function ApprovalsPage({ onViewTicket }) {
                         <th>Customer</th>
                         <th>Resolution</th>
                         <th>Status</th>
+                        <th>Approved By</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -117,6 +119,12 @@ function ApprovalsPage({ onViewTicket }) {
                                     {item.requestStatus === 'Approved' ? <FiCheck /> : <FiX />}
                                     {item.requestStatus}
                                 </span>
+                            </td>
+                            <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: '#4a5568' }}>
+                                    <FiUser size={12} color="#718096" />
+                                    {item.processedBy || 'Admin'}
+                                </div>
                             </td>
                         </tr>
                     ))}
