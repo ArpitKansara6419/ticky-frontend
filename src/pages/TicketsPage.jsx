@@ -2659,17 +2659,52 @@ function TicketsPage() {
                   </label>
                   <label className="tickets-field tickets-field--full">
                     <span>Attachments / Documents</span>
-                    <div style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', padding: '24px', textAlign: 'center', background: '#f8fafc' }}>
+                    <div style={{ border: '2px dashed #cbd5e1', borderRadius: '16px', padding: '32px 24px', textAlign: 'center', background: 'linear-gradient(to bottom, #f8fafc, #ffffff)', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden' }}>
                       <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.xls,.xlsx,.csv" onChange={handleDocumentsChange} id="ticket-files" style={{ display: 'none' }} />
-                      <label htmlFor="ticket-files" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                        <FiDownload size={24} style={{ color: '#6366f1' }} />
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Click to upload documents</span>
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>PDF, Images, Excel supported</span>
+                      <label htmlFor="ticket-files" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', zIndex: 2, position: 'relative' }}>
+                        <div style={{ background: '#e0e7ff', padding: '16px', borderRadius: '50%', color: '#4f46e5', boxShadow: '0 4px 14px rgba(79, 70, 229, 0.15)' }}>
+                          <FiDownload size={28} />
+                        </div>
+                        <span style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>Click to Browse or Drag Documents Here</span>
+                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px' }}>Supports: PDF, Excel, JPG, PNG</span>
                       </label>
                     </div>
+
                     {documents.length > 0 && (
-                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#3b82f6', fontWeight: '600' }}>
-                        {documents.length} file(s) selected for upload.
+                      <div style={{ marginTop: '16px', display: 'grid', gap: '12px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Selected Documents ({documents.length})</span>
+                          <span style={{ fontSize: '11px', color: '#10b981', background: '#d1fae5', padding: '2px 8px', borderRadius: '12px' }}>Ready to Upload</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                          {documents.map((file, idx) => {
+                            const isPdf = file.name.toLowerCase().endsWith('.pdf');
+                            const isExcel = file.name.toLowerCase().match(/\.(xls|xlsx|csv)$/);
+                            const isImage = file.type.startsWith('image/');
+                            let Icon = FiFileText;
+                            let iconColor = '#64748b';
+                            let bgColor = '#f1f5f9';
+                            
+                            if (isPdf) { Icon = FiFileText; iconColor = '#ef4444'; bgColor = '#fee2e2'; }
+                            else if (isExcel) { Icon = FiActivity; iconColor = '#10b981'; bgColor = '#d1fae5'; }
+                            else if (isImage) { Icon = FiEye; iconColor = '#3b82f6'; bgColor = '#dbeafe'; }
+
+                            return (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                <div style={{ background: bgColor, color: iconColor, padding: '10px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Icon size={20} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</div>
+                                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                                </div>
+                                <button type="button" onClick={() => removeDocument(idx)} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px' }} onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'} onMouseOut={(e) => e.currentTarget.style.color = '#cbd5e1'}>
+                                  <FiX size={16} />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )}
                   </label>
