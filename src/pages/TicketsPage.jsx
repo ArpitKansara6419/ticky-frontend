@@ -3222,25 +3222,13 @@ function TicketsPage() {
                               // NEW: Smart Date Logic for List View (Matching Modal)
                               let displayLogs = [];
                               if (isExpanded) {
-                                const hols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
-                                const s = ticket.taskStartDate ? String(ticket.taskStartDate).split('T')[0] : '';
-                                const e = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
-
-                                if (s && e && (ticket.leadType === 'Dispatch' || (ticket.billingType && ticket.billingType.includes('Monthly')) || s !== e)) {
-                                  const allDates = getDatesInRange(s, e);
-                                  displayLogs = allDates.filter(d => {
-                                    const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
-                                    return dw !== 0 && dw !== 6 && !hols.includes(d);
-                                  }).map((dStr, sidx) => {
-                                    const existing = parsedLogs.find(l => {
-                                      const lDate = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
-                                      return lDate === dStr;
-                                    }) || {};
-                                    return { ...existing, logDateStr: dStr };
-                                  });
-                                } else {
-                                  displayLogs = parsedLogs.map((l, sidx) => ({ ...l, logDateStr: l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : `Day ${sidx + 1}` }));
-                                }
+                                // Consistency: Only show days with actual log entries to match the modal
+                                displayLogs = parsedLogs.map((l, sidx) => {
+                                  const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
+                                  return { ...l, logDateStr: dStr || `Day ${sidx + 1}` };
+                                });
+                                // Sort by date
+                                displayLogs.sort((a, b) => new Date(a.logDateStr) - new Date(b.logDateStr));
                               }
 
                               const subRows = isExpanded ? displayLogs.map((log, sidx) => {
@@ -3267,25 +3255,13 @@ function TicketsPage() {
                                       <div style={{ display: 'flex', gap: '12px' }}>
                                         <span>In: <strong style={{ color: log.start_time ? '#10b981' : '#94a3b8' }}>{(() => {
                                           if (!log.start_time) return '--';
-                                          try {
-                                            const d = new Date(log.start_time);
-                                            if (isNaN(d.getTime())) {
-                                              const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
-                                              return match ? `${match[1]}:${match[2]}` : '--';
-                                            }
-                                            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                                          } catch (e) { return '--'; }
+                                          const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
+                                          return match ? `${match[1]}:${match[2]}` : '--';
                                         })()}</strong></span>
                                         <span>Out: <strong style={{ color: log.end_time ? '#ef4444' : '#94a3b8' }}>{(() => {
                                           if (!log.end_time) return '--';
-                                          try {
-                                            const d = new Date(log.end_time);
-                                            if (isNaN(d.getTime())) {
-                                              const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
-                                              return match ? `${match[1]}:${match[2]}` : '--';
-                                            }
-                                            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                                          } catch (e) { return '--'; }
+                                          const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
+                                          return match ? `${match[1]}:${match[2]}` : '--';
                                         })()}</strong></span>
                                       </div>
                                     </td>
