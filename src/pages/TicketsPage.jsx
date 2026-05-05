@@ -3222,12 +3222,19 @@ function TicketsPage() {
                               // NEW: Smart Date Logic for List View (Matching Modal)
                               let displayLogs = [];
                               if (isExpanded) {
-                                // Consistency: Only show days with actual log entries to match the modal
-                                displayLogs = parsedLogs.map((l, sidx) => {
-                                  const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
-                                  return { ...l, logDateStr: dStr || `Day ${sidx + 1}` };
-                                });
-                                // Sort by date
+                                // Consistency: Only show working days (hide weekends) and sort by date
+                                displayLogs = parsedLogs
+                                  .filter(l => {
+                                    const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
+                                    if (!dStr) return true;
+                                    const dw = new Date(`${dStr}T00:00:00Z`).getUTCDay();
+                                    return dw !== 0 && dw !== 6; // Hide Sat (6) and Sun (0)
+                                  })
+                                  .map((l, sidx) => {
+                                    const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
+                                    return { ...l, logDateStr: dStr || `Day ${sidx + 1}` };
+                                  });
+                                
                                 displayLogs.sort((a, b) => new Date(a.logDateStr) - new Date(b.logDateStr));
                               }
 
@@ -3235,21 +3242,41 @@ function TicketsPage() {
                                 const logDate = log.logDateStr
                                   ? new Date(log.logDateStr).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
                                   : `Day ${sidx + 1}`;
-                                const rawHrs = (log.start_time && log.end_time)
-                                  ? (new Date(log.end_time) - new Date(log.start_time)) / 3600000 - ((log.break_time_mins || 0) / 60)
-                                  : null;
-                                const hrs = rawHrs !== null ? rawHrs.toFixed(2) : '--';
-                                const exceeded = rawHrs !== null && rawHrs > 8;
-                                const isWeekend = log.logDateStr ? [0, 6].includes(new Date(log.logDateStr).getDay()) : false;
+                                
                                 const logId = log.id;
+                                
+                                // Default values for display if not yet logged (Matches Modal Logic)
+                                const displayIn = log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : (ticket.taskTime || '09:00');
+                                const displayOut = log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : '17:00';
+                                
+                                // Recalculate duration for display
+                                const rowHrs = calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
+                                const rowExceeded = rowHrs > 8;
+
+                                // Calculate Cost Est for this specific row (Matches Modal Logic)
+                                const rowCost = (() => {
+                                  const calc = calculateTicketTotal({
+                                    startTime: `${log.logDateStr}T${displayIn}:00`, 
+                                    endTime: `${log.logDateStr}T${displayOut}:00`, 
+                                    breakTime: log.break_time_mins || 0,
+                                    hourlyRate: ticket.hourlyRate, 
+                                    halfDayRate: ticket.halfDayRate, 
+                                    fullDayRate: ticket.fullDayRate, 
+                                    monthlyRate: ticket.monthlyRate, 
+                                    agreedRate: ticket.agreedRate, 
+                                    travelCostPerDay: ticket.travelCostPerDay, 
+                                    billingType: ticket.billingType,
+                                    country: ticket.country
+                                  });
+                                  return calc ? calc.grandTotal : '0.00';
+                                })();
 
                                 return (
-                                  <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: exceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
+                                  <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: rowExceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
                                     <td style={{ paddingLeft: '36px', fontSize: '12px', verticalAlign: 'middle' }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <span style={{ color: '#6366f1', fontWeight: '700' }}>↳</span>
                                         <span style={{ fontWeight: '600', color: '#374151' }}>{logDate}</span>
-                                        {isWeekend && <span style={{ background: '#fde68a', color: '#92400e', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '700' }}>WKND</span>}
                                       </div>
                                     </td>
                                     
@@ -3259,11 +3286,11 @@ function TicketsPage() {
                                           <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>IN</span>
                                           <input 
                                             type="time" 
-                                            defaultValue={log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : ''} 
+                                            value={displayIn} 
                                             style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
-                                            onBlur={(e) => {
+                                            onChange={(e) => {
                                               const val = e.target.value;
-                                              if (val && logId) handleUpdateLog(logId, { ticketId: ticket.id, startTime: `${log.logDateStr}T${val}:00` });
+                                              if (logId) handleUpdateLog(logId, { ticketId: ticket.id, startTime: `${log.logDateStr}T${val}:00` });
                                             }}
                                           />
                                         </div>
@@ -3271,11 +3298,11 @@ function TicketsPage() {
                                           <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>OUT</span>
                                           <input 
                                             type="time" 
-                                            defaultValue={log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : ''} 
+                                            value={displayOut} 
                                             style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
-                                            onBlur={(e) => {
+                                            onChange={(e) => {
                                               const val = e.target.value;
-                                              if (val && logId) handleUpdateLog(logId, { ticketId: ticket.id, endTime: `${log.logDateStr}T${val}:00` });
+                                              if (logId) handleUpdateLog(logId, { ticketId: ticket.id, endTime: `${log.logDateStr}T${val}:00` });
                                             }}
                                           />
                                         </div>
@@ -3299,11 +3326,14 @@ function TicketsPage() {
                                     </td>
                                     
                                     <td style={{ textAlign: 'right', paddingRight: '20px' }}>
-                                      {hrs !== '--' && (
-                                        <span style={{ fontSize: '11px', fontWeight: '700', color: exceeded ? '#b45309' : '#6366f1', background: exceeded ? '#fef3c7' : '#e0e7ff', padding: '2px 8px', borderRadius: '10px' }}>
-                                          {hrs}h
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: '700', color: rowExceeded ? '#b45309' : '#6366f1' }}>
+                                          {rowHrs.toFixed(2)}h
                                         </span>
-                                      )}
+                                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>
+                                          {currency} {rowCost}
+                                        </span>
+                                      </div>
                                     </td>
                                   </tr>
                                 );
