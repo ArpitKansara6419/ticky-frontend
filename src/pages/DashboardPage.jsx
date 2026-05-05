@@ -108,25 +108,16 @@ function DashboardHome({ onNavigate, insightsLayout }) {
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
     const daysInMonth = getDaysInMonth(year, month)
-    const startDay = getFirstDayOfMonth(year, month) // 0=Sun, 1=Mon...
+    const startDay = getFirstDayOfMonth(year, month)
 
     const days = []
-    // For a 5-day week starting on Monday:
-    // If 1st is Mon (1), nulls = 0
-    // If 1st is Tue (2), nulls = 1
-    // If 1st is Sun (0) or Sat (6), 1st visible is Mon (2nd or 3rd), nulls = 0
-    const nullsCount = (startDay === 0 || startDay === 6) ? 0 : startDay - 1
-    
-    for (let i = 0; i < nullsCount; i++) {
+    // Add empty slots for previous month
+    for (let i = 0; i < startDay; i++) {
       days.push(null)
     }
-    
+    // Add actual days
     for (let i = 1; i <= daysInMonth; i++) {
-      const d = new Date(year, month, i)
-      const dayOfWeek = d.getDay()
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        days.push(d)
-      }
+      days.push(new Date(year, month, i))
     }
     return days
   }
@@ -190,9 +181,6 @@ function DashboardHome({ onNavigate, insightsLayout }) {
   // Filter tickets for a specific date (based on range taskStartDate to taskEndDate)
   const getTicketsForDate = (date) => {
     if (!date) return []
-    // Skip weekends
-    if (date.getDay() === 0 || date.getDay() === 6) return []
-    
     // Normalize date to midnight for accurate comparison
     const checkDate = new Date(date)
     checkDate.setHours(0, 0, 0, 0)
@@ -434,7 +422,7 @@ function DashboardHome({ onNavigate, insightsLayout }) {
           <div className="ticket-calendar-body">
             <div className="ticket-calendar-month">{formatMonthYear(currentDate)}</div>
             <div className="ticket-calendar-grid">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day) => (
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                 <div key={day} className="ticket-calendar-day-header">
                   {day}
                 </div>
