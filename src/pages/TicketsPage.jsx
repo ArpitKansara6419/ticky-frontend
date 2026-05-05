@@ -406,24 +406,24 @@ function TicketsPage() {
       const customWeekendRate = parseFloat(weekendRate) || (hr * 2.0);
       const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
 
-      if (bil === 'Hourly') {
+      if (bil.includes('Hourly')) {
         const b = Math.max(2, hrs);
         base = b * hr;
 
-      } else if (bil === 'Half Day + Hourly') {
+      } else if (bil.includes('Half Day + Hourly')) {
         if (hrs <= 4) {
           base = hd;
         } else {
           base = hd + ((hrs - 4) * hr);
         }
 
-      } else if (bil === 'Full Day + OT') {
+      } else if (bil.includes('Full Day + OT')) {
         base = fd;
         if (hrs > 8) {
           ot = (hrs - 8) * customOTRate;
         }
 
-      } else if (bil === 'Mixed Mode') {
+      } else if (bil.includes('Mixed Mode')) {
         if (hrs <= 4) {
           base = hd;
         } else if (hrs <= 8) {
@@ -443,10 +443,10 @@ function TicketsPage() {
         opts._workingDays   = divisor;
         opts._monthlyFull   = fullRate;
 
-      } else if (bil === 'Agreed Rate') {
+      } else if (bil.includes('Agreed Rate')) {
         base = parseFloat(opts.agreedRate) || 0;
 
-      } else if (bil === 'Cancellation') {
+      } else if (bil.includes('Cancellation')) {
         base = parseFloat(opts.cancellationFee) || 0;
       }
 
@@ -2624,9 +2624,34 @@ function TicketsPage() {
                               <td style={{ padding: '12px', textAlign: 'center', fontWeight: '700', color: '#6366f1' }}>{dur.toFixed(1)}h</td>
                               <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700' }}>
                                 {currency} {(() => {
+                                  // Use specific engineer rates for the log row
+                                  const eng = engineers.find(e => String(e.id) === String(lEngId));
+                                  const hr = eng ? (eng.hourlyRate ?? eng.hourly_rate ?? 0) : engHourlyRate;
+                                  const hd = eng ? (eng.halfDayRate ?? eng.half_day_rate ?? 0) : engHalfDayRate;
+                                  const fd = eng ? (eng.fullDayRate ?? eng.full_day_rate ?? 0) : engFullDayRate;
+                                  const mn = eng ? (eng.monthlyRate ?? eng.monthly_rate ?? 0) : engMonthlyRate;
+                                  const ag = eng ? (eng.agreedRate ?? eng.agreed_rate ?? 0) : engAgreedRate;
+                                  const bt = eng ? (eng.billingType ?? eng.billing_type ?? 'Hourly') : engBillingType;
+
                                   const calc = calculateTicketTotal({
-                                    startTime: `${dStr}T${lStart}:00`, endTime: `${dStr}T${lEnd}:00`, breakTime: lBreak,
-                                    hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, travelCostPerDay, toolCost: toolCostInput, billingType, timezone, country, monthlyDivisor: getWorkingDaysInMonth(dStr, country)
+                                    startTime: `${dStr}T${lStart}:00`, 
+                                    endTime: `${dStr}T${lEnd}:00`, 
+                                    breakTime: lBreak,
+                                    hourlyRate: hr, 
+                                    halfDayRate: hd, 
+                                    fullDayRate: fd, 
+                                    monthlyRate: mn, 
+                                    agreedRate: ag, 
+                                    travelCostPerDay: travelCostPerDay, 
+                                    toolCost: toolCostInput, 
+                                    billingType: bt, 
+                                    overtimeRate: eng ? (eng.overtimeRate ?? eng.overtime_rate) : engOvertimeRate,
+                                    oohRate: eng ? (eng.oohRate ?? eng.ooh_rate) : engOohRate,
+                                    weekendRate: eng ? (eng.weekendRate ?? eng.weekend_rate) : engWeekendRate,
+                                    holidayRate: eng ? (eng.holidayRate ?? eng.holiday_rate) : engHolidayRate,
+                                    timezone, 
+                                    country, 
+                                    monthlyDivisor: getWorkingDaysInMonth(dStr, country)
                                   });
                                   return calc ? calc.grandTotal : '0.00';
                                 })()}
@@ -3277,8 +3302,12 @@ function TicketsPage() {
                                     fullDayRate: fd, 
                                     monthlyRate: mn, 
                                     agreedRate: ag, 
-                                    travelCostPerDay: ticket.travelCostPerDay, // Travel stays from ticket
+                                    travelCostPerDay: ticket.travelCostPerDay, 
                                     billingType: bt,
+                                    overtimeRate: eng ? (eng.overtimeRate ?? eng.overtime_rate) : (ticket.engOvertimeRate ?? ticket.eng_overtime_rate),
+                                    oohRate: eng ? (eng.oohRate ?? eng.ooh_rate) : (ticket.engOohRate ?? ticket.eng_ooh_rate),
+                                    weekendRate: eng ? (eng.weekendRate ?? eng.weekend_rate) : (ticket.engWeekendRate ?? ticket.eng_weekend_rate),
+                                    holidayRate: eng ? (eng.holidayRate ?? eng.holiday_rate) : (ticket.engHolidayRate ?? ticket.eng_holiday_rate),
                                     country: ticket.country
                                   });
                                   return calc ? calc.grandTotal : '0.00';
