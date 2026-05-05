@@ -1121,6 +1121,7 @@ function TicketsPage() {
   useEffect(() => {
     loadTickets()
     fetchCountries()
+    loadDropdowns() // Ensure engineers are loaded for inline editing
   }, [])
 
   const filteredTickets = useMemo(() => {
@@ -3312,7 +3313,7 @@ function TicketsPage() {
                                     <td colSpan={2} style={{ fontSize: '12px', color: '#475569' }}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                           <select
-                                            value={log.engineer_id || ''}
+                                            value={String(log.engineer_id || '')}
                                             style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', width: '160px', background: '#fff' }}
                                             onChange={(e) => {
                                               const newEngId = e.target.value;
