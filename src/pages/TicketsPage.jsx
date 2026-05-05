@@ -3208,8 +3208,8 @@ function TicketsPage() {
                                             boxShadow: isExpanded ? '0 2px 8px rgba(99,102,241,0.2)' : 'none'
                                           }}
                                         >
-                                          <FiClock size={13} style={{ animation: isExpanded ? 'spin 2s linear infinite' : 'none' }} />
-                                          {isExpanded ? 'Hide' : 'Logs'}
+                                          <FiClock size={16} style={{ animation: isExpanded ? 'spin 3s linear infinite' : 'none' }} />
+                                          {isExpanded && <span style={{ fontSize: '10px', marginLeft: '2px' }}>Hide</span>}
                                         </button>
                                       )}
                                       <button className="action-btn edit" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
@@ -3261,19 +3261,39 @@ function TicketsPage() {
                                     </td>
                                     <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
                                       <div style={{ display: 'flex', gap: '12px' }}>
-                                        <span>In: <strong>{(() => {
+                                        <span>In: <strong style={{ color: log.start_time ? '#10b981' : '#94a3b8' }}>{(() => {
                                           if (!log.start_time) return '--';
-                                          const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
-                                          return match ? `${match[1]}:${match[2]}` : '--';
+                                          try {
+                                            const d = new Date(log.start_time);
+                                            if (isNaN(d.getTime())) {
+                                              const match = String(log.start_time).match(/(\d{2}):(\d{2})/);
+                                              return match ? `${match[1]}:${match[2]}` : '--';
+                                            }
+                                            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                                          } catch (e) { return '--'; }
                                         })()}</strong></span>
-                                        <span>Out: <strong>{(() => {
+                                        <span>Out: <strong style={{ color: log.end_time ? '#ef4444' : '#94a3b8' }}>{(() => {
                                           if (!log.end_time) return '--';
-                                          const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
-                                          return match ? `${match[1]}:${match[2]}` : '--';
+                                          try {
+                                            const d = new Date(log.end_time);
+                                            if (isNaN(d.getTime())) {
+                                              const match = String(log.end_time).match(/(\d{2}):(\d{2})/);
+                                              return match ? `${match[1]}:${match[2]}` : '--';
+                                            }
+                                            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                                          } catch (e) { return '--'; }
                                         })()}</strong></span>
                                       </div>
                                     </td>
-                                    <td colSpan={4}></td>
+                                    <td colSpan={2} style={{ fontSize: '12px', color: '#475569' }}>
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#e0e7ff', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #c7d2fe' }}>
+                                             <FiUser size={12} />
+                                          </div>
+                                          {ticket.engineerName || 'Unassigned'}
+                                       </div>
+                                    </td>
+                                    <td colSpan={2}></td>
                                   </tr>
                                 );
                               }) : [];
