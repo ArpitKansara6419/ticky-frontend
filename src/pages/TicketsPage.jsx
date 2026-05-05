@@ -2298,23 +2298,52 @@ function TicketsPage() {
               </div>
             </div>
 
-            {/* Top Status Highlight */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', padding: '8px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket Status:</span>
-              <div style={{ 
-                padding: '6px 14px', 
-                borderRadius: '20px', 
-                fontSize: '13px', 
-                fontWeight: '700', 
-                color: status === 'Resolved' ? '#059669' : '#2563eb',
-                background: status === 'Resolved' ? '#ecfdf5' : '#eff6ff',
-                border: `1px solid ${status === 'Resolved' ? '#10b981' : '#3b82f6'}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <div style={{ width: '8px', height: '8px', background: status === 'Resolved' ? '#10b981' : '#3b82f6', borderRadius: '50%' }}></div>
-                {status}
+            {/* Top Status Interactive Switcher */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              background: '#fff', 
+              padding: '6px 12px 6px 16px', 
+              borderRadius: '14px', 
+              border: '1px solid #e2e8f0', 
+              boxShadow: '0 4px 12px -2px rgba(0,0,0,0.05)',
+              transition: 'all 0.3s ease'
+            }}>
+              <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Update Status:</span>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <select 
+                  value={status} 
+                  onChange={(e) => setStatus(e.target.value)}
+                  style={{
+                    padding: '8px 32px 8px 16px', 
+                    borderRadius: '10px', 
+                    fontSize: '13px', 
+                    fontWeight: '800', 
+                    color: status === 'Resolved' ? '#059669' : (status === 'In Progress' ? '#d97706' : '#2563eb'),
+                    background: status === 'Resolved' ? '#f0fdf4' : (status === 'In Progress' ? '#fffbeb' : '#eff6ff'),
+                    border: `2px solid ${status === 'Resolved' ? '#bbf7d0' : (status === 'In Progress' ? '#fef3c7' : '#dbeafe')}`,
+                    cursor: 'pointer',
+                    outline: 'none',
+                    appearance: 'none',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  {TICKET_STATUSES.filter(s => s !== 'Approval Pending').map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                {/* Custom indicator arrow/dot */}
+                <div style={{ 
+                  position: 'absolute', 
+                  right: '12px', 
+                  width: '8px', 
+                  height: '8px', 
+                  borderRadius: '50%', 
+                  background: status === 'Resolved' ? '#10b981' : (status === 'In Progress' ? '#f59e0b' : '#3b82f6'),
+                  boxShadow: `0 0 8px ${status === 'Resolved' ? '#10b981' : (status === 'In Progress' ? '#f59e0b' : '#3b82f6')}`
+                }}></div>
               </div>
             </div>
           </div>
@@ -2506,18 +2535,6 @@ function TicketsPage() {
                 </div>
               </section>
 
-              {/* Ticket Status */}
-              <section className="tickets-card">
-                <h2 className="tickets-section-title">Ticket Status</h2>
-                <div className="tickets-grid">
-                  <label className="tickets-field">
-                    <span>Current Status</span>
-                    <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                      {TICKET_STATUSES.filter(s => s !== 'Approval Pending').map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </label>
-                </div>
-              </section>
 
               {/* Daily Shift Logs */}
               {/* Daily Shift Logs (Only for Multi-day or Dispatch) */}
