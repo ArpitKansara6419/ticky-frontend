@@ -185,6 +185,8 @@ function DashboardHome({ onNavigate, insightsLayout }) {
     const checkDate = new Date(date)
     checkDate.setHours(0, 0, 0, 0)
 
+    const dayOfWeek = checkDate.getDay() // 0 = Sunday, 6 = Saturday
+
     return tickets.filter(t => {
       if (!t.taskStartDate) return false;
 
@@ -194,6 +196,11 @@ function DashboardHome({ onNavigate, insightsLayout }) {
       // If no end date, treat it as a single day task
       const end = t.taskEndDate ? new Date(t.taskEndDate) : new Date(start)
       end.setHours(0, 0, 0, 0)
+
+      const isMultiDay = end.getTime() > start.getTime()
+
+      // For multi-day (Dispatch) tickets: skip weekends - they don't generate daily logs on Sat/Sun
+      if (isMultiDay && (dayOfWeek === 0 || dayOfWeek === 6)) return false;
 
       return checkDate >= start && checkDate <= end
     })
