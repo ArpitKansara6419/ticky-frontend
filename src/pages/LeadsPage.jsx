@@ -690,20 +690,26 @@ function LeadsPage() {
       const res = await fetch(editingLeadId ? `${API_BASE_URL}/leads/${editingLeadId}` : `${API_BASE_URL}/leads`, {
         method: editingLeadId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({
-          customerId: Number(customerId), taskName, leadType, clientTicketNumber, taskStartDate, taskEndDate, taskTime: taskTime + ':00',
+          customerId: Number(customerId), 
+          taskName, 
+          leadType, 
+          clientTicketNumber, 
+          taskStartDate, 
+          taskEndDate, 
+          taskTime: (taskTime || '09:00').includes(':') ? (taskTime.split(':').length === 2 ? taskTime + ':00' : taskTime) : '09:00:00',
           scopeOfWork, apartment: '', addressLine1, addressLine2: '', city, country, zipCode, timezone, currency,
-          hourlyRate: hourlyRate !== '' ? Number(hourlyRate) : null,
-          halfDayRate: halfDayRate !== '' ? Number(halfDayRate) : null,
-          fullDayRate: fullDayRate !== '' ? Number(fullDayRate) : null,
-          monthlyRate: monthlyRate !== '' ? Number(monthlyRate) : null,
+          hourlyRate: hourlyRate !== '' && hourlyRate !== null ? Number(hourlyRate) : 0,
+          halfDayRate: halfDayRate !== '' && halfDayRate !== null ? Number(halfDayRate) : 0,
+          fullDayRate: fullDayRate !== '' && fullDayRate !== null ? Number(fullDayRate) : 0,
+          monthlyRate: monthlyRate !== '' && monthlyRate !== null ? Number(monthlyRate) : 0,
           toolsRequired,
           agreedRate: agreedRate !== '' && agreedRate !== null ? Number(agreedRate) : 0,
-          travelCostPerDay: travelCostPerDay !== '' ? Number(travelCostPerDay) : null,
+          travelCostPerDay: travelCostPerDay !== '' && travelCostPerDay !== null ? Number(travelCostPerDay) : 0,
           toolCost: (toolCost !== '' && toolCost !== null) ? Number(toolCost) : 0,
           billingType,
           status,
           isRecurring, recurringStartDate, recurringEndDate, totalWeeks, recurringDays: recurringDays.join(','),
-          cancellationFee: cancellationFee !== '' ? Number(cancellationFee) : null,
+          cancellationFee: cancellationFee !== '' && cancellationFee !== null ? Number(cancellationFee) : 0,
           latitude, longitude
         })
       })
@@ -716,7 +722,9 @@ function LeadsPage() {
   const fillFormFromLead = (l) => {
     setTaskName(l.taskName); setCustomerId(String(l.customerId)); setLeadType(l.leadType); setClientTicketNumber(l.clientTicketNumber || '')
     const effectiveStartDate = ((l.status === 'Reschedule' || l.status === 'Confirm') && l.followUpDate) ? l.followUpDate : l.taskStartDate
-    setTaskStartDate(effectiveStartDate?.split('T')[0]); setTaskEndDate(l.taskEndDate?.split('T')[0]); setTaskTime(l.taskTime?.slice(0, 5))
+    setTaskStartDate(effectiveStartDate?.split('T')[0] || ''); 
+    setTaskEndDate(l.taskEndDate?.split('T')[0] || ''); 
+    setTaskTime(l.taskTime ? l.taskTime.slice(0, 5) : '09:00')
     setScopeOfWork(l.scopeOfWork); setAddressLine1(l.addressLine1);
     setCity(l.city); setCountry(l.country); setZipCode(l.zipCode); setTimezone(l.timezone)
     setCurrency(l.currency); setHourlyRate(l.hourlyRate != null ? String(l.hourlyRate) : ''); setHalfDayRate(l.halfDayRate != null ? String(l.halfDayRate) : ''); setFullDayRate(l.fullDayRate != null ? String(l.fullDayRate) : '')
@@ -740,11 +748,8 @@ function LeadsPage() {
     const l = leads.find(x => x.id === id)
     if (l) {
       fillFormFromLead(l)
-      // Clear dates for clone as per requirement
-      setTaskStartDate('')
-      setTaskEndDate('')
       
-      // Reset status to BID and clear ticket links for a fresh clone
+      // Reset status to BID for a fresh clone
       setStatus('BID')
       setEditingLeadId(null) // Clear ID to represent a new clone
       setViewMode('form')
