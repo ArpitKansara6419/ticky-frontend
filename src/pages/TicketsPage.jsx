@@ -3303,12 +3303,14 @@ function TicketsPage() {
                                     monthlyRate: mn, 
                                     agreedRate: ag, 
                                     travelCostPerDay: ticket.travelCostPerDay, 
+                                    toolCost: ticket.toolCost, // Added missing toolCost
                                     billingType: bt,
                                     overtimeRate: eng ? (eng.overtimeRate ?? eng.overtime_rate) : (ticket.engOvertimeRate ?? ticket.eng_overtime_rate),
                                     oohRate: eng ? (eng.oohRate ?? eng.ooh_rate) : (ticket.engOohRate ?? ticket.eng_ooh_rate),
                                     weekendRate: eng ? (eng.weekendRate ?? eng.weekend_rate) : (ticket.engWeekendRate ?? ticket.eng_weekend_rate),
                                     holidayRate: eng ? (eng.holidayRate ?? eng.holiday_rate) : (ticket.engHolidayRate ?? ticket.eng_holiday_rate),
-                                    country: ticket.country
+                                    country: ticket.country,
+                                    monthlyDivisor: getWorkingDaysInMonth(log.logDateStr, ticket.country)
                                   });
                                   return calc ? calc.grandTotal : '0.00';
                                 })();
