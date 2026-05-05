@@ -3254,19 +3254,31 @@ function TicketsPage() {
                                 const rowHrs = calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
                                 const rowExceeded = rowHrs > 8;
 
-                                // Calculate Cost Est for this specific row (Matches Modal Logic)
+                                // Calculate Cost Est for this specific row (Matches Modal Logic - using Engineer Rates)
                                 const rowCost = (() => {
+                                  // Find the actual engineer assigned to this specific log row
+                                  const targetEngId = log.engineer_id || ticket.engineer_id;
+                                  const eng = engineers.find(e => String(e.id) === String(targetEngId));
+                                  
+                                  // Extract rates from the engineer profile (matching server-side logic)
+                                  const hr = eng ? (eng.hourlyRate ?? eng.hourly_rate ?? 0) : (ticket.engHourlyRate ?? ticket.eng_hourly_rate ?? 0);
+                                  const hd = eng ? (eng.halfDayRate ?? eng.half_day_rate ?? 0) : (ticket.engHalfDayRate ?? ticket.eng_half_day_rate ?? 0);
+                                  const fd = eng ? (eng.fullDayRate ?? eng.full_day_rate ?? 0) : (ticket.engFullDayRate ?? ticket.eng_full_day_rate ?? 0);
+                                  const mn = eng ? (eng.monthlyRate ?? eng.monthly_rate ?? 0) : (ticket.engMonthlyRate ?? ticket.eng_monthly_rate ?? 0);
+                                  const ag = eng ? (eng.agreedRate ?? eng.agreed_rate ?? 0) : (ticket.engAgreedRate ?? ticket.eng_agreed_rate ?? 0);
+                                  const bt = eng ? (eng.billingType ?? eng.billing_type ?? 'Hourly') : (ticket.engBillingType ?? ticket.eng_billing_type ?? 'Hourly');
+
                                   const calc = calculateTicketTotal({
                                     startTime: `${log.logDateStr}T${displayIn}:00`, 
                                     endTime: `${log.logDateStr}T${displayOut}:00`, 
                                     breakTime: log.break_time_mins || 0,
-                                    hourlyRate: ticket.hourlyRate, 
-                                    halfDayRate: ticket.halfDayRate, 
-                                    fullDayRate: ticket.fullDayRate, 
-                                    monthlyRate: ticket.monthlyRate, 
-                                    agreedRate: ticket.agreedRate, 
-                                    travelCostPerDay: ticket.travelCostPerDay, 
-                                    billingType: ticket.billingType,
+                                    hourlyRate: hr, 
+                                    halfDayRate: hd, 
+                                    fullDayRate: fd, 
+                                    monthlyRate: mn, 
+                                    agreedRate: ag, 
+                                    travelCostPerDay: ticket.travelCostPerDay, // Travel stays from ticket
+                                    billingType: bt,
                                     country: ticket.country
                                   });
                                   return calc ? calc.grandTotal : '0.00';
