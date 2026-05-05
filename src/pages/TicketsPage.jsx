@@ -1323,7 +1323,25 @@ function TicketsPage() {
 
       setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.')
 
-      // LEAD SYNC: If this ticket is linked to a lead, update the lead's dates too
+      // UPLOAD DOCUMENTS
+      const finalTicketId = isEditing ? editingTicketId : data.ticket?.id || data.ticketId;
+      if (finalTicketId && documents.length > 0) {
+        for (const file of documents) {
+          const formData = new FormData();
+          formData.append('file', file);
+          try {
+            await fetch(`${API_BASE_URL}/tickets/${finalTicketId}/attachments`, {
+              method: 'POST',
+              credentials: 'include',
+              body: formData
+            });
+          } catch (err) {
+            console.error('Failed to upload attachment:', file.name, err);
+          }
+        }
+        setDocuments([]);
+        setDocumentsLabel('');
+      }
       if (payload.leadId) {
         try {
           const leadSyncRes = await fetch(`${API_BASE_URL}/leads/${payload.leadId}`, {
@@ -2642,13 +2660,18 @@ function TicketsPage() {
                   <label className="tickets-field tickets-field--full">
                     <span>Attachments / Documents</span>
                     <div style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', padding: '24px', textAlign: 'center', background: '#f8fafc' }}>
-                      <input type="file" multiple onChange={handleDocumentsChange} id="ticket-files" style={{ display: 'none' }} />
+                      <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.xls,.xlsx,.csv" onChange={handleDocumentsChange} id="ticket-files" style={{ display: 'none' }} />
                       <label htmlFor="ticket-files" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                         <FiDownload size={24} style={{ color: '#6366f1' }} />
                         <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Click to upload documents</span>
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>PDF, PNG, JPG supported</span>
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>PDF, Images, Excel supported</span>
                       </label>
                     </div>
+                    {documents.length > 0 && (
+                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#3b82f6', fontWeight: '600' }}>
+                        {documents.length} file(s) selected for upload.
+                      </div>
+                    )}
                   </label>
                 </div>
               </section>
