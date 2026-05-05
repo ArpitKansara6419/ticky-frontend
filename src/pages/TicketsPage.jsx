@@ -1717,6 +1717,11 @@ function TicketsPage() {
         if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
           setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
         }
+
+        // Sync into Main List View (Clock View)
+        setTickets(prev => prev.map(t => 
+          Number(t.id) === Number(ticketId) ? { ...t, time_logs: normalized } : t
+        ));
       }
 
       // Auto-hold: silently flag ticket if shift > 8 h
@@ -2933,7 +2938,20 @@ function TicketsPage() {
                   </tbody>
                   <tfoot>
                     <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
-                      <td style={{ padding: '20px 24px', fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>Grand Total Summary</td>
+                      <td style={{ padding: '20px 24px', fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>
+                        <div>Grand Total Summary</div>
+                        {payoutLiveBreakdown?.engSummary && payoutLiveBreakdown.engSummary.length > 1 && (
+                          <div style={{ marginTop: '12px', padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>Individual Payouts</div>
+                            {payoutLiveBreakdown.engSummary.map((es, idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                                <span style={{ color: '#475569' }}>• {es.name}</span>
+                                <span style={{ fontWeight: '700', color: '#dc2626' }}>{engCurrency || currency} {es.total.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '20px 24px', textAlign: 'right', fontSize: '18px', fontWeight: '900', color: '#6366f1' }}>
                         {currency} {liveBreakdown?.grandTotal || '0.00'}
                       </td>
@@ -3671,11 +3689,31 @@ function TicketsPage() {
 
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginTop: '24px', marginBottom: '12px', display: 'block' }}>Engineer Uploads</label>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {ticketAttachments.length === 0 ? <span style={{ color: '#94a3b8', fontSize: '12px' }}>No attachments.</span> : ticketAttachments.map((a, idx) => (
-                      <a key={a.id || idx} href={`https://awokta.com/${a.file_url}`} target="_blank" rel="noreferrer" style={{ width: '60px', height: '60px', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'block' }}>
-                        <img src={`https://awokta.com/${a.file_url}`} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </a>
-                    ))}
+                    {ticketAttachments.length === 0 ? <span style={{ color: '#94a3b8', fontSize: '12px' }}>No attachments.</span> : ticketAttachments.map((a, idx) => {
+                      const isImg = a.file_url.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+                      return (
+                        <a 
+                          key={a.id || idx} 
+                          href={`https://awokta.com/${a.file_url}`} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          style={{ width: '100px', height: '100px', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', textDecoration: 'none', transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+                          onMouseOver={e => e.currentTarget.style.borderColor = '#6366f1'}
+                          onMouseOut={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                        >
+                          {isImg ? (
+                            <img src={`https://awokta.com/${a.file_url}`} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px' }}>
+                              <div style={{ fontSize: '24px' }}>📄</div>
+                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px', whiteSpace: 'nowrap' }}>
+                                {a.file_name || a.file_url.split('/').pop()}
+                              </span>
+                            </div>
+                          )}
+                        </a>
+                      );
+                    })}
                   </div>
 
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginTop: '24px', marginBottom: '12px', display: 'block' }}>Reported Expenses</label>
