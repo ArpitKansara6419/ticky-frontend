@@ -171,7 +171,8 @@ function TicketsPage() {
   const [taskName, setTaskName] = useState('')
   const [taskStartDate, setTaskStartDate] = useState('')
   const [taskEndDate, setTaskEndDate] = useState('')
-  const [taskTime, setTaskTime] = useState('00:00')
+  const [taskTime, setTaskTime] = useState('09:00')
+  const [taskEndTime, setTaskEndTime] = useState('17:00')
   const [scopeOfWork, setScopeOfWork] = useState('')
   const [tools, setTools] = useState('')
 
@@ -276,32 +277,33 @@ function TicketsPage() {
 
   // Smart Auto-Sync for Start & End Time based on Task Details
   // TIMEZONE-SAFE: builds wall-clock strings directly without new Date() to avoid local TZ shifts
-  const autoSyncTime = (startDate, endDate, timeStr) => {
-    if (viewMode === 'form' && startDate && timeStr) {
-      const time = timeStr.padStart(5, '0');
-      setStartTime(`${startDate}T${time}`);
+  const autoSyncTime = (startDate, endDate, startTimeStr, endTimeStr) => {
+    if (viewMode === 'form' && startDate && startTimeStr) {
+      const sTime = startTimeStr.padStart(5, '0');
+      const eTime = (endTimeStr || '').padStart(5, '0');
+
+      setStartTime(`${startDate}T${sTime}`);
 
       if (endDate) {
-        if (startDate === endDate) {
-          // Add 8 hours as default working block — pure string arithmetic, no TZ conversion
-          const [hStr, mStr] = time.split(':');
+        if (eTime && eTime !== '00:00') {
+           setEndTime(`${endDate}T${eTime}`);
+        } else {
+          // Fallback to 8 hours default if no end time provided
+          const [hStr, mStr] = sTime.split(':');
           const pad = (n) => String(n).padStart(2, '0');
           let h = parseInt(hStr, 10) + 8;
           let d = endDate;
           if (h >= 24) {
-            // Overflow to next day
             const baseDate = new Date(`${endDate}T00:00:00Z`);
             baseDate.setUTCDate(baseDate.getUTCDate() + 1);
             d = `${baseDate.getUTCFullYear()}-${pad(baseDate.getUTCMonth() + 1)}-${pad(baseDate.getUTCDate())}`;
             h = h - 24;
           }
           setEndTime(`${d}T${pad(h)}:${mStr}`);
-        } else {
-          setEndTime(`${endDate}T${time}`);
         }
       }
     }
-  }
+  };
 
   // Reverse Sync: Update Task Details from Time Log Overrides
   const reverseSyncTime = (startVal, endVal) => {
@@ -1913,7 +1915,8 @@ function TicketsPage() {
     setTaskName(normalized.taskName || '')
     setTaskStartDate(normalized.taskStartDate)
     setTaskEndDate(normalized.taskEndDate)
-    setTaskTime(normalized.taskTime || '00:00')
+    setTaskTime(normalized.taskTime || '09:00')
+    setTaskEndTime(t.task_end_time || (t.endTime && t.endTime.includes('T') ? t.endTime.split('T')[1].slice(0, 5) : '17:00'))
     setScopeOfWork(normalized.scopeOfWork || '')
     setTools(normalized.tools || '')
     setEngineerName(normalized.engineerName || '')
@@ -2076,6 +2079,8 @@ function TicketsPage() {
         // Ensure dates are in YYYY-MM-DD for the <input type="date" />
         setTaskStartDate(latestDate ? String(latestDate).split('T')[0] : '')
         setTaskEndDate(latestEndDate ? String(latestEndDate).split('T')[0] : '')
+        setTaskTime(parsedLead.taskTime?.slice(0, 5) || '09:00')
+        setTaskEndTime(parsedLead.taskEndTime?.slice(0, 5) || '17:00')
 
         setTaskTime(parsedLead.taskTime || '00:00')
         setScopeOfWork(parsedLead.scopeOfWork || '')
@@ -2170,7 +2175,8 @@ function TicketsPage() {
       const latestEndDate = lead.taskEndDate || latestDate;
       setTaskStartDate(latestDate ? String(latestDate).split('T')[0] : '')
       setTaskEndDate(latestEndDate ? String(latestEndDate).split('T')[0] : '')
-      setTaskTime(lead.taskTime?.slice(0, 5) || '00:00')
+      setTaskTime(lead.taskTime?.slice(0, 5) || '09:00')
+      setTaskEndTime(lead.taskEndTime?.slice(0, 5) || '17:00')
       setScopeOfWork(lead.scopeOfWork || '')
       setApartment(lead.apartment || '')
       setAddressLine1(lead.addressLine1 || '')
@@ -2516,15 +2522,19 @@ function TicketsPage() {
                   </label>
                   <label className="tickets-field">
                     <span>Start Date <span className="field-required">*</span></span>
-                    <input type="date" value={taskStartDate} onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime); }} />
+                    <input type="date" value={taskStartDate} onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime, taskEndTime); }} />
                   </label>
                   <label className="tickets-field">
                     <span>End Date <span className="field-required">*</span></span>
-                    <input type="date" value={taskEndDate} onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime); }} />
+                    <input type="date" value={taskEndDate} onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime, taskEndTime); }} />
                   </label>
                   <label className="tickets-field">
-                    <span>Time <span className="field-required">*</span></span>
-                    <input type="time" value={taskTime} onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value); }} />
+                    <span>Start Time <span className="field-required">*</span></span>
+                    <input type="time" value={taskTime} onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value, taskEndTime); }} />
+                  </label>
+                  <label className="tickets-field">
+                    <span>End Time <span className="field-required">*</span></span>
+                    <input type="time" value={taskEndTime} onChange={(e) => { setTaskEndTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, taskTime, e.target.value); }} />
                   </label>
                   <label className="tickets-field tickets-field--full">
                     <span>Scope of Work <span className="field-required">*</span></span>
@@ -3598,7 +3608,9 @@ function TicketsPage() {
 
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Scheduled Time</label>
-                  <span style={{ fontWeight: '700', color: '#1e293b' }}>{selectedTicket.taskTime}</span>
+                  <span style={{ fontWeight: '700', color: '#1e293b' }}>
+                    {selectedTicket.taskTime} - {selectedTicket.taskEndTime || (selectedTicket.endTime ? selectedTicket.endTime.split('T')[1].slice(0, 5) : '--:--')}
+                  </span>
                 </div>
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>City</label>

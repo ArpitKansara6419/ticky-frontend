@@ -88,6 +88,8 @@ function LeadsPage() {
   })
   const [followUpDate, setFollowUpDate] = useState('')
   const [statusChangeEndDate, setStatusChangeEndDate] = useState('')
+  const [statusChangeStartTime, setStatusChangeStartTime] = useState('09:00')
+  const [statusChangeEndTime, setStatusChangeEndTime] = useState('17:00')
   const [statusChangeReason, setStatusChangeReason] = useState('')
 
   // Sync status modal end date with start date
@@ -568,6 +570,8 @@ function LeadsPage() {
           status: newStatus,
           followUpDate: followUpDate || null,
           newEndDate: statusChangeEndDate || null,
+          taskTime: statusChangeStartTime || '09:00',
+          taskEndTime: statusChangeEndTime || '17:00',
           statusChangeReason: statusChangeReason || null
         })
       })
@@ -1470,6 +1474,22 @@ function LeadsPage() {
                       value={statusChangeEndDate}
                       min={followUpDate}
                       onChange={e => setStatusChangeEndDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="reschedule-date-box">
+                    <label>Start Time</label>
+                    <input
+                      type="time"
+                      value={statusChangeStartTime}
+                      onChange={e => setStatusChangeStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="reschedule-date-box">
+                    <label>End Time</label>
+                    <input
+                      type="time"
+                      value={statusChangeEndTime}
+                      onChange={e => setStatusChangeEndTime(e.target.value)}
                     />
                   </div>
                 </div>
