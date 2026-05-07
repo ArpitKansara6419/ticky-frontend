@@ -402,7 +402,7 @@ function TicketsPage() {
       const fd = parseFloat(opts.fullDayRate) || 0;
       const bil = opts.billingType;
 
-      // Rate Overrides from Engineer Profile if provided
+      // Rate Overrides from opts if provided
       const customOTRate = parseFloat(overtimeRate) || (hr * 1.5);
       const customOOHRate = parseFloat(oohRate) || (hr * 1.5);
       const customWeekendRate = parseFloat(weekendRate) || (hr * 2.0);
@@ -687,7 +687,8 @@ function TicketsPage() {
         startTime: estStartTime, endTime: estEndTime, breakTime,
         hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
         travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
-        monthlyDivisor: singleDayDivisor, country
+        monthlyDivisor: singleDayDivisor, country,
+        overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0
       });
       setLiveBreakdown({ 
         ...res, 
