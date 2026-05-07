@@ -566,8 +566,11 @@ function TicketsPage() {
             };
           }
         }
+        const dayStartTime = l.start_time || (l.task_date && taskTime ? `${l.task_date.split('T')[0]}T${taskTime.padStart(5, '0')}` : '');
+        const dayEndTime = l.end_time || (l.task_date && taskEndTime ? `${l.task_date.split('T')[0]}T${taskEndTime.padStart(5, '0')}` : '');
+
         const res = calculateTicketTotal({
-          startTime: sTime, endTime: eTime, breakTime: bMins,
+          startTime: dayStartTime, endTime: dayEndTime, breakTime: bMins,
           hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
           monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
           travelCostPerDay, toolCost: toolCostInput, billingType: rRates.bt, 
@@ -605,7 +608,7 @@ function TicketsPage() {
         if (isNoEngDay) pRates = { hourlyRate: 0, halfDayRate: 0, fullDayRate: 0, monthlyRate: 0, agreedRate: 0, cancellationFee: 0, billingType: 'Hourly', overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0 };
         
         const payRes = calculateTicketTotal({
-          startTime: sTime, endTime: eTime, breakTime: bMins,
+          startTime: dayStartTime, endTime: dayEndTime, breakTime: bMins,
           hourlyRate: pRates.hourlyRate, halfDayRate: pRates.halfDayRate, fullDayRate: pRates.fullDayRate,
           monthlyRate: pRates.monthlyRate, agreedRate: pRates.agreedRate, cancellationFee: pRates.cancellationFee,
           overtimeRate: pRates.overtimeRate, oohRate: pRates.oohRate, weekendRate: pRates.weekendRate, holidayRate: pRates.holidayRate,
@@ -676,9 +679,11 @@ function TicketsPage() {
       });
 
     } else {
-      const singleDayDivisor = getWorkingDaysInMonth(taskStartDate, country);
+      const estStartTime = startTime || (taskStartDate && taskTime ? `${taskStartDate}T${taskTime.padStart(5, '0')}` : '');
+      const estEndTime = endTime || (taskEndDate && taskEndTime ? `${taskEndDate}T${taskEndTime.padStart(5, '0')}` : '');
+
       const res = calculateTicketTotal({
-        startTime, endTime, breakTime,
+        startTime: estStartTime, endTime: estEndTime, breakTime,
         hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
         travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
         monthlyDivisor: singleDayDivisor, country
@@ -730,7 +735,7 @@ function TicketsPage() {
       }
 
       const payRes = calculateTicketTotal({
-        startTime, endTime, breakTime,
+        startTime: estStartTime, endTime: estEndTime, breakTime,
         hourlyRate: pRates.hr,
         halfDayRate: pRates.hd,
         fullDayRate: pRates.fd,
@@ -790,6 +795,7 @@ function TicketsPage() {
         taskStartDate &&
         taskEndDate &&
         taskTime &&
+        taskEndTime &&
         scopeOfWork &&
         engineerName
       ),
@@ -799,6 +805,7 @@ function TicketsPage() {
       taskStartDate,
       taskEndDate,
       taskTime,
+      taskEndTime,
       scopeOfWork,
       engineerName
     ],
@@ -1210,12 +1217,16 @@ function TicketsPage() {
       if (!finalStartTime && taskStartDate && taskTime) {
         finalStartTime = `${taskStartDate}T${taskTime.padStart(5, '0')}`;
       }
-      if (!finalEndTime && taskEndDate && taskTime) {
-        // Default to finish same day + 8 hours if no explicit end time
-        const d = new Date(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
-        d.setHours(d.getHours() + 8);
-        const pad = (n) => String(n).padStart(2, '0');
-        finalEndTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      if (!finalEndTime) {
+        if (taskEndDate && taskEndTime) {
+          finalEndTime = `${taskEndDate}T${taskEndTime.padStart(5, '0')}`;
+        } else if (taskEndDate && taskTime) {
+          // Default to finish same day + 8 hours if no explicit end time
+          const d = new Date(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
+          d.setHours(d.getHours() + 8);
+          const pad = (n) => String(n).padStart(2, '0');
+          finalEndTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
       }
 
       // SYNC: If activity times are provided, synchronize the scheduled task details to match
@@ -1237,6 +1248,7 @@ function TicketsPage() {
         clientName,
         taskName,
         taskTime: finalTaskTimeValue,
+        taskEndTime: taskEndTime,
         scopeOfWork,
         tools,
         engineerName,
