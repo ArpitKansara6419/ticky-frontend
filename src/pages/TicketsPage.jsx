@@ -681,6 +681,7 @@ function TicketsPage() {
     } else {
       const estStartTime = startTime || (taskStartDate && taskTime ? `${taskStartDate}T${taskTime.padStart(5, '0')}` : '');
       const estEndTime = endTime || (taskEndDate && taskEndTime ? `${taskEndDate}T${taskEndTime.padStart(5, '0')}` : '');
+      const singleDayDivisor = getWorkingDaysInMonth(taskStartDate, country);
 
       const res = calculateTicketTotal({
         startTime: estStartTime, endTime: estEndTime, breakTime,
