@@ -566,8 +566,8 @@ function TicketsPage() {
             };
           }
         }
-        const dayStartTime = l.start_time || (l.task_date && taskTime ? `${l.task_date.split('T')[0]}T${taskTime.padStart(5, '0')}` : '');
-        const dayEndTime = l.end_time || (l.task_date && taskEndTime ? `${l.task_date.split('T')[0]}T${taskEndTime.padStart(5, '0')}` : '');
+        const dayStartTime = sTime;
+        const dayEndTime = eTime;
 
         const res = calculateTicketTotal({
           startTime: dayStartTime, endTime: dayEndTime, breakTime: bMins,
