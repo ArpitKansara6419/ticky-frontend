@@ -899,8 +899,19 @@ function TicketsPage() {
         totalCost: t.totalCost ?? t.total_cost ?? 0,
         engTotalCost: t.engTotalCost ?? t.eng_total_cost ?? 0,
         billingType: t.billingType ?? t.billing_type ?? 'Hourly',
+        // Engineer Payout Rates
         engBillingType: t.engBillingType ?? t.eng_billing_type ?? 'Hourly',
-        engPayType: t.engPayType ?? t.eng_pay_type ?? 'Default'
+        engPayType: t.engPayType ?? t.eng_pay_type ?? 'Default',
+        engHourlyRate: t.engHourlyRate ?? t.eng_hourly_rate ?? 0,
+        engHalfDayRate: t.engHalfDayRate ?? t.eng_half_day_rate ?? 0,
+        engFullDayRate: t.engFullDayRate ?? t.eng_full_day_rate ?? 0,
+        engMonthlyRate: t.engMonthlyRate ?? t.eng_monthly_rate ?? 0,
+        engAgreedRate: t.engAgreedRate ?? t.eng_agreed_rate ?? 0,
+        engCancellationFee: t.engCancellationFee ?? t.eng_cancellation_fee ?? 0,
+        engOvertimeRate: t.engOvertimeRate ?? t.eng_overtime_rate ?? 0,
+        engOohRate: t.engOohRate ?? t.eng_ooh_rate ?? 0,
+        engWeekendRate: t.engWeekendRate ?? t.eng_weekend_rate ?? 0,
+        engHolidayRate: t.engHolidayRate ?? t.eng_holiday_rate ?? 0
       })).sort((a, b) => b.id - a.id))
 
       // COLLAPSE ALL MONTHS BY DEFAULT on load
@@ -2694,21 +2705,18 @@ function TicketsPage() {
                                     startTime: `${dStr}T${lStart}:00`, 
                                     endTime: `${dStr}T${lEnd}:00`, 
                                     breakTime: lBreak,
-                                    hourlyRate: hr, 
-                                    halfDayRate: hd, 
-                                    fullDayRate: fd, 
-                                    monthlyRate: mn, 
-                                    agreedRate: ag, 
+                                    hourlyRate: hourlyRate, 
+                                    halfDayRate: halfDayRate, 
+                                    fullDayRate: fullDayRate, 
+                                    monthlyRate: monthlyRate, 
+                                    agreedRate: agreedRate, 
                                     travelCostPerDay: travelCostPerDay, 
                                     toolCost: toolCostInput, 
-                                    billingType: bt, 
-                                    overtimeRate: eng ? (eng.overtimeRate ?? eng.overtime_rate) : engOvertimeRate,
-                                    oohRate: eng ? (eng.oohRate ?? eng.ooh_rate) : engOohRate,
-                                    weekendRate: eng ? (eng.weekendRate ?? eng.weekend_rate) : engWeekendRate,
-                                    holidayRate: eng ? (eng.holidayRate ?? eng.holiday_rate) : engHolidayRate,
+                                    billingType: billingType, 
                                     timezone, 
                                     country, 
-                                    monthlyDivisor: getWorkingDaysInMonth(dStr, country)
+                                    monthlyDivisor: getWorkingDaysInMonth(dStr, country),
+                                    _isLogAggregation: true
                                   });
                                   return calc ? calc.grandTotal : '0.00';
                                 })()}
@@ -3376,20 +3384,17 @@ function TicketsPage() {
                                     startTime: `${log.logDateStr}T${displayIn}:00`, 
                                     endTime: `${log.logDateStr}T${displayOut}:00`, 
                                     breakTime: log.break_time_mins || 0,
-                                    hourlyRate: hr, 
-                                    halfDayRate: hd, 
-                                    fullDayRate: fd, 
-                                    monthlyRate: mn, 
-                                    agreedRate: ag, 
+                                    hourlyRate: ticket.hourlyRate, 
+                                    halfDayRate: ticket.halfDayRate, 
+                                    fullDayRate: ticket.fullDayRate, 
+                                    monthlyRate: ticket.monthlyRate, 
+                                    agreedRate: ticket.agreedRate, 
                                     travelCostPerDay: ticket.travelCostPerDay, 
-                                    toolCost: ticket.toolCost, // Added missing toolCost
-                                    billingType: bt,
-                                    overtimeRate: eng ? (eng.overtimeRate ?? eng.overtime_rate) : (ticket.engOvertimeRate ?? ticket.eng_overtime_rate),
-                                    oohRate: eng ? (eng.oohRate ?? eng.ooh_rate) : (ticket.engOohRate ?? ticket.eng_ooh_rate),
-                                    weekendRate: eng ? (eng.weekendRate ?? eng.weekend_rate) : (ticket.engWeekendRate ?? ticket.eng_weekend_rate),
-                                    holidayRate: eng ? (eng.holidayRate ?? eng.holiday_rate) : (ticket.engHolidayRate ?? ticket.eng_holiday_rate),
+                                    toolCost: ticket.toolCost,
+                                    billingType: ticket.billingType,
                                     country: ticket.country,
-                                    monthlyDivisor: getWorkingDaysInMonth(log.logDateStr, ticket.country)
+                                    monthlyDivisor: getWorkingDaysInMonth(log.logDateStr, ticket.country),
+                                    _isLogAggregation: true
                                   });
                                   return calc ? calc.grandTotal : '0.00';
                                 })();
