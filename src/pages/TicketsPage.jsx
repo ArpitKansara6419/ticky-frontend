@@ -2481,7 +2481,16 @@ function TicketsPage() {
                 <div className="tickets-grid">
                   <label className="tickets-field">
                     <span>Primary Engineer <span className="field-required">*</span></span>
-                    <select value={engineerId} onChange={(e) => setEngineerId(e.target.value)} disabled={loadingDropdowns}>
+                    <select 
+                      value={engineerId} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEngineerId(val);
+                        const eng = engineers.find(en => String(en.id) === String(val));
+                        setEngineerName(eng ? eng.name : '');
+                      }} 
+                      disabled={loadingDropdowns}
+                    >
                       <option value="">Select an engineer...</option>
                       {engineers.map((en) => (
                         <option key={en.id} value={en.id}>{en.name}</option>
@@ -2504,7 +2513,16 @@ function TicketsPage() {
                 <div className="tickets-grid">
                   <label className="tickets-field">
                     <span>Select Customer <span className="field-required">*</span></span>
-                    <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={loadingDropdowns}>
+                    <select 
+                      value={customerId} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomerId(val);
+                        const cust = customers.find(c => String(c.id) === String(val));
+                        setClientName(cust ? cust.name : '');
+                      }} 
+                      disabled={loadingDropdowns}
+                    >
                       <option value="">Choose a customer...</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name} {c.accountEmail ? `(${c.accountEmail})` : ''}</option>
