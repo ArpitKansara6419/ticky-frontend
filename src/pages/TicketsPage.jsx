@@ -276,14 +276,8 @@ function TicketsPage() {
   const [activeCostTab, setActiveCostTab] = useState('Customer'); // 'Customer' | 'Engineer'
   
   const workingDays = useMemo(() => {
-    const all = getDatesInRange(taskStartDate, taskEndDate);
-    return all.filter(d => {
-      const dObj = new Date(`${d}T00:00:00Z`);
-      const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
-      const holidays = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
-      return !isWeekend && !holidays.includes(d);
-    });
-  }, [taskStartDate, taskEndDate, country]);
+    return getDatesInRange(taskStartDate, taskEndDate);
+  }, [taskStartDate, taskEndDate]);
 
   const isMultiDay = useMemo(() => workingDays.length > 1 || leadType === 'Dispatch' || (billingType && billingType.includes('Monthly')), [workingDays, leadType, billingType]);
 
@@ -540,7 +534,9 @@ function TicketsPage() {
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
 
-        if (isWeekend || isHoliday) return;
+        // Smart Skip: If it's a weekend or holiday, ONLY count it if explicit times are provided.
+        // This handles long-term tickets correctly while still allowing weekend-only tickets.
+        if ((isWeekend || isHoliday) && (!existing || (!existing.start_time && !existing.startTime))) return;
 
         let sTime, eTime, bMins = 0, specificEngId = null;
         if (existing) specificEngId = existing.engineer_id || existing.engineerId || null;
@@ -3477,9 +3473,7 @@ function TicketsPage() {
                                 displayLogs = parsedLogs
                                   .filter(l => {
                                     const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
-                                    if (!dStr) return true;
-                                    const dw = new Date(`${dStr}T00:00:00Z`).getUTCDay();
-                                    return dw !== 0 && dw !== 6; // Hide Sat (6) and Sun (0)
+                                    return !!dStr;
                                   })
                                   .map((l, sidx) => {
                                     const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
