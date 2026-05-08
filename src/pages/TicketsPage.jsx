@@ -465,7 +465,7 @@ function TicketsPage() {
       }
       const travelVal = isEngineer ? 0 : parseFloat(opts.travelCostPerDay || 0);
       const toolCostRaw = isEngineer ? 0 : parseFloat(opts.toolCost || 0);
-      const toolsVal = _isLogAggregation ? 0 : toolCostRaw; // Skip tools in multi-day aggregation loop
+      const toolsVal = toolCostRaw; // Tools applied per day like travel
 
       // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
       let effectiveBase = base;
@@ -767,11 +767,12 @@ function TicketsPage() {
       }
     }
   }, [
-    startTime, endTime, breakTime, taskStartDate, taskEndDate, taskTime,
+    startTime, endTime, breakTime, taskStartDate, taskEndDate, taskTime, taskEndTime,
     hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
     engHourlyRate, engHalfDayRate, engFullDayRate, engMonthlyRate, engAgreedRate, engCancellationFee,
     engOvertimeRate, engOohRate, engWeekendRate, engHolidayRate,
-    travelCostPerDay, toolCostInput, billingType, engBillingType, engPayType, timezone, calcTimezone, timeLogs, isFillingForm, country
+    travelCostPerDay, toolCostInput, billingType, engBillingType, engPayType, timezone, calcTimezone,
+    timeLogs, isFillingForm, country, engineerId, engineers
   ]);
 
   // Sync Task Dates with Manual Time Log
