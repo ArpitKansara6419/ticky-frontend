@@ -147,7 +147,9 @@ function TicketsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [statusFilter, setStatusFilter] = useState('Active Only')
+  const [resolvingTicket, setResolvingTicket] = useState(null)
+  const [closingNote, setClosingNote] = useState('')
 
   // Extra data modules
   const [ticketNotes, setTicketNotes] = useState([])
@@ -1169,7 +1171,9 @@ function TicketsPage() {
         (t.taskName || '').toLowerCase().includes(lower)
       )
     }
-    if (statusFilter !== 'All Status') {
+    if (statusFilter === 'Active Only') {
+      result = result.filter(t => t.status !== 'Resolved')
+    } else if (statusFilter !== 'All Status') {
       result = result.filter(t => t.status === statusFilter)
     }
     return result;
@@ -1628,6 +1632,15 @@ function TicketsPage() {
   };
 
   const handleUpdateStatus = async (tId, newStatus) => {
+    if (newStatus === 'Resolved') {
+      const t = tickets.find(x => x.id === tId);
+      if (t) {
+        setResolvingTicket(t);
+        setClosingNote('');
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
@@ -1647,6 +1660,41 @@ function TicketsPage() {
       if (selectedTicket && selectedTicket.id === tId) {
         await openTicketModal(tId);
       }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const finalizeResolution = async () => {
+    if (!resolvingTicket) return;
+    try {
+      setLoading(true);
+      
+      // 1. Update Status to Resolved
+      const res = await fetch(`${API_BASE_URL}/tickets/${resolvingTicket.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Resolved' }),
+        credentials: 'include'
+      });
+
+      if (!res.ok) throw new Error('Failed to resolve ticket');
+
+      // 2. Add Closing Note if provided
+      if (closingNote.trim()) {
+        await fetch(`${API_BASE_URL}/tickets/${resolvingTicket.id}/notes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: `FINAL CLOSING NOTE: ${closingNote}`, authorType: 'admin' }),
+          credentials: 'include'
+        });
+      }
+
+      setSuccess(`Ticket #${resolvingTicket.id} has been resolved and moved to billing.`);
+      setResolvingTicket(null);
+      await loadTickets();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3153,6 +3201,7 @@ function TicketsPage() {
           </div>
           <div className="tickets-filter-row">
             <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
+              <option value="Active Only">Active Only</option>
               <option value="All Status">All Status</option>
               {TICKET_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -3337,11 +3386,26 @@ function TicketsPage() {
                                     </button>
                                   </td>
                                   <td>
-                                    <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '14px' }}>
+                                    <div style={{ fontWeight: '800', color: isResolved ? '#94a3b8' : '#1e293b', fontSize: '14px' }}>
                                       {currency} {parseFloat(ticket.totalCost || 0).toFixed(2)}
                                     </div>
-                                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>
-                                      Receivable
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                      <div style={{ fontSize: '10px', color: isResolved ? '#cbd5e1' : '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                        Receivable
+                                      </div>
+                                      {isResolved && (
+                                        <span style={{ 
+                                          fontSize: '8px', 
+                                          fontWeight: '800', 
+                                          padding: '1px 5px', 
+                                          background: billingStatus === 'Invoiced' ? '#dcfce7' : '#fee2e2', 
+                                          color: billingStatus === 'Invoiced' ? '#166534' : '#991b1b', 
+                                          borderRadius: '4px',
+                                          textTransform: 'uppercase'
+                                        }}>
+                                          {billingStatus === 'Invoiced' ? 'Billed' : 'Ready to Bill'}
+                                        </span>
+                                      )}
                                     </div>
                                   </td>
                                   <td>
@@ -3964,6 +4028,61 @@ function TicketsPage() {
                 {isInlineEditing ? <><FiX /> Cancel</> : <><FiEdit2 /> Edit Time</>}
               </button>
               {isInlineEditing && <button className="tickets-primary-btn" onClick={handleUpdateInlineTime} disabled={isUpdatingTime}>{isUpdatingTime ? 'Saving...' : 'Confirm Changes'}</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ticket Resolution Confirmation Modal */}
+      {resolvingTicket && (
+        <div className="ticket-modal-overlay" onClick={() => setResolvingTicket(null)}>
+          <div className="ticket-modal" style={{ maxWidth: '500px', padding: '32px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ background: '#ecfdf5', color: '#10b981', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 16px' }}>
+                <FiCheckCircle />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#1e293b', margin: '0 0 8px 0' }}>Resolve Ticket?</h2>
+              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Please review the financial summary for Ticket <span style={{ fontWeight: '700', color: '#6366f1' }}>#AIM-T-{resolvingTicket.id}</span> before closing.</p>
+            </div>
+
+            <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                  <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Revenue</label>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{resolvingTicket.currency} {parseFloat(resolvingTicket.totalCost || 0).toFixed(2)}</div>
+                </div>
+                <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                  <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Payout</label>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#64748b' }}>{resolvingTicket.engCurrency || resolvingTicket.currency} {parseFloat(resolvingTicket.engTotalCost || 0).toFixed(2)}</div>
+                </div>
+                <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', padding: '12px', borderRadius: '12px', border: '1px solid #10b981', gridColumn: 'span 2' }}>
+                  <label style={{ fontSize: '10px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Net Profit (Estimated)</label>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#059669' }}>
+                    {resolvingTicket.currency} {(parseFloat(resolvingTicket.totalCost || 0) - parseFloat(resolvingTicket.engTotalCost || 0)).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Final Closing Note (Optional)</label>
+              <textarea 
+                value={closingNote}
+                onChange={(e) => setClosingNote(e.target.value)}
+                placeholder="E.g. Task completed, pending invoice generation..."
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '14px', minHeight: '80px', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn-wow-secondary" onClick={() => setResolvingTicket(null)} style={{ flex: 1 }}>Cancel</button>
+              <button 
+                className="btn-wow-primary" 
+                onClick={finalizeResolution}
+                style={{ flex: 2, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+              >
+                <FiCheckCircle /> Confirm & Resolve
+              </button>
             </div>
           </div>
         </div>
