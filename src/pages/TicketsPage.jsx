@@ -3833,10 +3833,65 @@ function TicketsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Financial Overview - Only shown for resolved or in-progress tickets with costs */}
+              {(selectedTicket.status === 'Resolved' || selectedTicket.status === 'Approval Pending' || parseFloat(selectedTicket.totalCost) > 0) && (
+                <div style={{ marginTop: '32px', padding: '24px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #6366f1' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FiDollarSign style={{ color: '#6366f1' }} /> Financial & Billing Summary
+                    </h3>
+                    <span style={{ fontSize: '10px', fontWeight: '800', padding: '4px 10px', background: '#eff6ff', color: '#1e40af', borderRadius: '20px', border: '1px solid #dbeafe', textTransform: 'uppercase' }}>
+                      {selectedTicket.billing_status || 'Unbilled'}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                    <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                      <label style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Customer Revenue</label>
+                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{selectedTicket.currency} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
+                    </div>
+                    <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                      <label style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Engineer Payout</label>
+                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#64748b' }}>{selectedTicket.engCurrency || selectedTicket.currency} {parseFloat(selectedTicket.engTotalCost || 0).toFixed(2)}</div>
+                    </div>
+                    <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', padding: '12px', borderRadius: '12px', border: '1px solid #10b981' }}>
+                      <label style={{ fontSize: '9px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Estimated Margin</label>
+                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#059669' }}>
+                        {selectedTicket.currency} {(parseFloat(selectedTicket.totalCost || 0) - parseFloat(selectedTicket.engTotalCost || 0)).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {selectedTicket.status === 'Resolved' && (
+                    <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button 
+                        onClick={() => {
+                          window.location.href = '/customer-receivable';
+                        }}
+                        style={{ background: '#6366f1', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <FiFileText /> Process Billing & Generate Invoice ➔
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="ticket-modal-footer">
               <button className="btn-wow-secondary" onClick={handleCloseTicketModal}><FiX /> Close Details</button>
+              {selectedTicket.status === 'Resolved' && (
+                <button
+                  className="btn-wow-primary"
+                  onClick={() => {
+                    window.location.href = '/customer-receivable';
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                >
+                  <FiDollarSign /> Customer Receivable ➔
+                </button>
+              )}
               <button
                 className="btn-wow-secondary"
                 onClick={() => {
