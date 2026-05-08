@@ -1336,7 +1336,10 @@ function TicketsPage() {
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          status: status // Force the current local status state
+        }),
       })
 
       const data = await res.json()
