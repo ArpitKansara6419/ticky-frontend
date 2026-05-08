@@ -163,6 +163,17 @@ function TicketsPage() {
   const [loadingDropdowns, setLoadingDropdowns] = useState(false)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState('')
+  
+  // Automatically clear messages after 5 seconds
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess('');
+        setError('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
 
   const [customerId, setCustomerId] = useState('')
   const [leadId, setLeadId] = useState('')
@@ -3122,6 +3133,10 @@ function TicketsPage() {
         </div>
 
         {error && <div className="tickets-message tickets-message--error tickets-message--inline">{error}</div>}
+        {success && <div className="tickets-message tickets-message--success tickets-message--inline" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0' }}>
+          <FiCheckCircle style={{ fontSize: '16px' }} />
+          {success}
+        </div>}
 
         {/* Monthly Grouped Accordion List */}
         {(() => {
@@ -3576,7 +3591,8 @@ function TicketsPage() {
                       // Refresh everything immediately
                       await openTicketModal(reassignTicketId);
                       await loadTickets();
-                      alert(`Ticket successfully re-assigned to ${newEng.name}`);
+                      setSuccess(`Ticket successfully re-assigned to ${newEng.name}`);
+                      setReassignTicketId(null);
                     } else {
                       const errD = await res.json().catch(() => ({}));
                       alert(`Failed to re-assign: ${errD.message || 'Unknown error'}`);
