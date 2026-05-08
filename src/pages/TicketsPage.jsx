@@ -1328,26 +1328,6 @@ function TicketsPage() {
         timeLogs: (leadType === 'Dispatch' || (taskStartDate && taskEndDate && (taskStartDate !== taskEndDate || billingType.includes('Monthly')))) ? timeLogs : []
       }
 
-      // --- EARLY RESOLVE APPROVAL LOGIC ---
-      // If user tries to manually set status to 'Resolved' but the task end date is in the future
-      if (status === 'Resolved' && taskEndDate) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const scheduledEnd = new Date(taskEndDate);
-        scheduledEnd.setHours(0, 0, 0, 0);
-
-        if (scheduledEnd > today) {
-          const reason = window.prompt("You are resolving this ticket earlier than the scheduled end date. Please provide a reason for the approval request:", "Job completed early");
-          if (reason === null) {
-            setSaving(false);
-            return; // User cancelled
-          }
-          payload.status = 'Approval Pending';
-          payload.reason = reason;
-          payload.resolveDate = today.toISOString().split('T')[0];
-        }
-      }
-
       const isEditing = Boolean(editingTicketId)
       const url = isEditing ? `${API_BASE_URL}/tickets/${editingTicketId}` : `${API_BASE_URL}/tickets`
       const method = isEditing ? 'PUT' : 'POST'
@@ -2492,7 +2472,13 @@ function TicketsPage() {
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <select 
                   value={status} 
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={(e) => {
+                    const nextStatus = e.target.value;
+                    setStatus(nextStatus);
+                    if (editingTicketId) {
+                      handleUpdateStatus(editingTicketId, nextStatus);
+                    }
+                  }}
                   style={{
                     padding: '8px 32px 8px 16px', 
                     borderRadius: '10px', 
@@ -2508,7 +2494,7 @@ function TicketsPage() {
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                   }}
                 >
-                  {TICKET_STATUSES.filter(s => s !== 'Approval Pending').map((s) => (
+                  {TICKET_STATUSES.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
@@ -2667,29 +2653,6 @@ function TicketsPage() {
                       ))}
                     </select>
                   </label>
-                  <div className="tickets-form-group">
-                  <label className="tickets-field tickets-field--full">
-                    <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      Status
-                      <select 
-                        value={status} 
-                        onChange={(e) => setStatus(e.target.value)}
-                        style={{ 
-                          padding: '4px 12px', 
-                          borderRadius: '8px', 
-                          border: '1px solid #e2e8f0', 
-                          fontSize: '12px', 
-                          fontWeight: '700',
-                          background: '#f8fafc',
-                          outline: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {TICKET_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </span>
-                  </label>
-                </div>
                   <label className="tickets-field tickets-field--full">
                     <span>Client Name</span>
                     <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter client name" />
