@@ -1671,32 +1671,53 @@ function TicketsPage() {
     if (!resolvingTicket) return;
     try {
       setLoading(true);
+      setError(null);
       
-      // 1. Update Status to Resolved
+      // 1. Update Status to Resolved with full financial sync
       const res = await fetch(`${API_BASE_URL}/tickets/${resolvingTicket.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Resolved' }),
+        body: JSON.stringify({ 
+          ...resolvingTicket,
+          status: 'Resolved',
+          billingStatus: resolvingTicket.billingStatus || 'Unbilled'
+        }),
         credentials: 'include'
       });
 
-      if (!res.ok) throw new Error('Failed to resolve ticket');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to resolve ticket');
+      }
 
       // 2. Add Closing Note if provided
       if (closingNote.trim()) {
-        await fetch(`${API_BASE_URL}/tickets/${resolvingTicket.id}/notes`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: `FINAL CLOSING NOTE: ${closingNote}`, authorType: 'admin' }),
-          credentials: 'include'
-        });
+        try {
+          await fetch(`${API_BASE_URL}/tickets/${resolvingTicket.id}/notes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: `FINAL CLOSING NOTE: ${closingNote}`, authorType: 'admin' }),
+            credentials: 'include'
+          });
+        } catch (noteErr) {
+          console.warn('Closing note failed to save:', noteErr);
+        }
       }
 
-      setSuccess(`Ticket #${resolvingTicket.id} has been resolved and moved to billing.`);
+      // 3. Cleanup and Refresh
       setResolvingTicket(null);
+      setClosingNote('');
+      setSuccess(`Success! Ticket #${resolvingTicket.id} is now Resolved.`);
+      
+      // Force immediate refresh
       await loadTickets();
+      
+      // Auto-clear success message
+      setTimeout(() => setSuccess(''), 5000);
+
     } catch (err) {
       setError(err.message);
+      console.error('Resolution Error:', err);
     } finally {
       setLoading(false);
     }
