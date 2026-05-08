@@ -1632,17 +1632,10 @@ function TicketsPage() {
   };
 
   const handleUpdateStatus = async (tId, newStatus) => {
-    if (newStatus === 'Resolved') {
-      const t = tickets.find(x => x.id === tId);
-      if (t) {
-        setResolvingTicket(t);
-        setClosingNote('');
-        return;
-      }
-    }
-
     try {
       setLoading(true);
+      setError(null);
+      
       const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1655,11 +1648,14 @@ function TicketsPage() {
         throw new Error(data.message || 'Failed to update status');
       }
 
-      setSuccess(`Ticket status updated to ${newStatus}`);
+      setSuccess(`Success! Ticket #${tId} status is now ${newStatus}.`);
       await loadTickets();
       if (selectedTicket && selectedTicket.id === tId) {
         await openTicketModal(tId);
       }
+      
+      // Auto-clear success message
+      setTimeout(() => setSuccess(''), 4000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -2671,14 +2667,7 @@ function TicketsPage() {
                       Status
                       <select 
                         value={status} 
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === 'Resolved') {
-                            handleUpdateStatus(editingTicketId, 'Resolved');
-                          } else {
-                            setStatus(val);
-                          }
-                        }}
+                        onChange={(e) => setStatus(e.target.value)}
                         style={{ 
                           padding: '4px 12px', 
                           borderRadius: '8px', 
@@ -4089,60 +4078,6 @@ function TicketsPage() {
         </div>
       )}
 
-      {/* Ticket Resolution Confirmation Modal */}
-      {resolvingTicket && (
-        <div className="ticket-modal-overlay" onClick={() => setResolvingTicket(null)}>
-          <div className="ticket-modal" style={{ maxWidth: '500px', padding: '32px' }} onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{ background: '#ecfdf5', color: '#10b981', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 16px' }}>
-                <FiCheckCircle />
-              </div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#1e293b', margin: '0 0 8px 0' }}>Resolve Ticket?</h2>
-              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Please review the financial summary for Ticket <span style={{ fontWeight: '700', color: '#6366f1' }}>#AIM-T-{resolvingTicket.id}</span> before closing.</p>
-            </div>
-
-            <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                  <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Revenue</label>
-                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{resolvingTicket.currency} {parseFloat(resolvingTicket.totalCost || 0).toFixed(2)}</div>
-                </div>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                  <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Payout</label>
-                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#64748b' }}>{resolvingTicket.engCurrency || resolvingTicket.currency} {parseFloat(resolvingTicket.engTotalCost || 0).toFixed(2)}</div>
-                </div>
-                <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', padding: '12px', borderRadius: '12px', border: '1px solid #10b981', gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '10px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Net Profit (Estimated)</label>
-                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#059669' }}>
-                    {resolvingTicket.currency} {(parseFloat(resolvingTicket.totalCost || 0) - parseFloat(resolvingTicket.engTotalCost || 0)).toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Final Closing Note (Optional)</label>
-              <textarea 
-                value={closingNote}
-                onChange={(e) => setClosingNote(e.target.value)}
-                placeholder="E.g. Task completed, pending invoice generation..."
-                style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '14px', minHeight: '80px', outline: 'none' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-wow-secondary" onClick={() => setResolvingTicket(null)} style={{ flex: 1 }}>Cancel</button>
-              <button 
-                className="btn-wow-primary" 
-                onClick={finalizeResolution}
-                style={{ flex: 2, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
-              >
-                <FiCheckCircle /> Confirm & Resolve
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   )
 }
