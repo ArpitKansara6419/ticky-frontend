@@ -2794,6 +2794,16 @@ function TicketsPage() {
                                   const ag = eng ? (eng.agreedRate ?? eng.agreed_rate ?? 0) : engAgreedRate;
                                   const bt = eng ? (eng.billingType ?? eng.billing_type ?? 'Hourly') : engBillingType;
 
+                                  const dObj = new Date(`${dStr}T00:00:00Z`);
+                                  const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
+                                  const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
+                                  const isHoliday = activeHols.includes(dStr);
+                                  
+                                  // Don't show a cost estimate for weekends/holidays unless the user has explicitly interacted with it
+                                  if ((isWeekend || isHoliday) && (!existingLog.start_time && !existingLog.startTime)) {
+                                    return '0.00';
+                                  }
+
                                   const calc = calculateTicketTotal({
                                     startTime: `${dStr}T${lStart}:00`, 
                                     endTime: `${dStr}T${lEnd}:00`, 
