@@ -2475,9 +2475,8 @@ function TicketsPage() {
                   onChange={(e) => {
                     const nextStatus = e.target.value;
                     setStatus(nextStatus);
-                    if (editingTicketId) {
-                      handleUpdateStatus(editingTicketId, nextStatus);
-                    }
+                    // If we are NOT in edit mode (just viewing), we can sync immediately.
+                    // But in edit mode, let the user click "Save Changes" at the bottom.
                   }}
                   style={{
                     padding: '8px 32px 8px 16px', 
