@@ -3305,6 +3305,8 @@ function TicketsPage() {
 
                               const isDispatch = (ticket.leadType === 'Dispatch') || (parsedLogs.length > 0);
                               const isExpanded = expandedTicketRows.has(ticket.id);
+                              const isResolved = ticket.status === 'Resolved';
+                              const billingStatus = ticket.billingStatus || ticket.billing_status || 'Unbilled';
 
                               // Check if any single day exceeds 8hrs
                               const hasExceeded8h = parsedLogs.some(log => {
@@ -3314,7 +3316,10 @@ function TicketsPage() {
                               });
 
                               const mainRow = (
-                                <tr key={ticket.id} style={{ background: isExpanded ? 'rgba(99,102,241,0.04)' : undefined }}>
+                                <tr key={ticket.id} style={{ 
+                                  background: isResolved ? '#fcfcfd' : (isExpanded ? 'rgba(99,102,241,0.04)' : undefined),
+                                  opacity: isResolved ? 0.75 : 1
+                                }}>
                                   <td style={{ paddingLeft: '24px' }}>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                       {isDispatch && (
