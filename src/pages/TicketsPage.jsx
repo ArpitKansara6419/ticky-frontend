@@ -1666,6 +1666,15 @@ function TicketsPage() {
       }));
     }
 
+    // Mirror into main tickets array so List View expanded rows stay in sync
+    setTickets(prev => prev.map(t => {
+      if (Number(t.id) === Number(ticketId)) {
+        const currentLogs = Array.isArray(t.time_logs) ? t.time_logs : (typeof t.time_logs === 'string' ? JSON.parse(t.time_logs) : []);
+        return { ...t, time_logs: applyPatch(currentLogs) };
+      }
+      return t;
+    }));
+
     // ── CREATE MODE — no DB call ─────────────────────────────────────────────
     if (isFillingForm && !editingTicketId) {
       if (!logId) {
@@ -3180,6 +3189,7 @@ function TicketsPage() {
                               <th>Service Date</th>
                               <th>Status</th>
                               <th>Reference</th>
+                              <th>Total (USD)</th>
                               <th>Location</th>
                               <th style={{ paddingRight: '24px' }}>Actions</th>
                             </tr>
@@ -3259,6 +3269,14 @@ function TicketsPage() {
                                     >
                                       <FiEye /> View Detail
                                     </button>
+                                  </td>
+                                  <td>
+                                    <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '14px' }}>
+                                      {currency} {parseFloat(ticket.totalCost || 0).toFixed(2)}
+                                    </div>
+                                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>
+                                      Receivable
+                                    </div>
                                   </td>
                                   <td>
                                     <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
