@@ -2665,6 +2665,36 @@ function TicketsPage() {
                       ))}
                     </select>
                   </label>
+                  <div className="tickets-form-group">
+                  <label className="tickets-field tickets-field--full">
+                    <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      Status
+                      <select 
+                        value={status} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'Resolved') {
+                            handleUpdateStatus(editingTicketId, 'Resolved');
+                          } else {
+                            setStatus(val);
+                          }
+                        }}
+                        style={{ 
+                          padding: '4px 12px', 
+                          borderRadius: '8px', 
+                          border: '1px solid #e2e8f0', 
+                          fontSize: '12px', 
+                          fontWeight: '700',
+                          background: '#f8fafc',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {TICKET_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </span>
+                  </label>
+                </div>
                   <label className="tickets-field tickets-field--full">
                     <span>Client Name</span>
                     <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter client name" />
