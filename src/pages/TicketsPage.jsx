@@ -1636,10 +1636,16 @@ function TicketsPage() {
       setLoading(true);
       setError(null);
       
+      const ticket = tickets.find(t => t.id === tId);
+      if (!ticket) throw new Error('Ticket data not found localy.');
+
       const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ 
+          ...ticket,
+          status: newStatus 
+        }),
         credentials: 'include'
       });
 
