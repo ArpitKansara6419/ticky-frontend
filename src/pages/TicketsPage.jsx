@@ -1627,6 +1627,33 @@ function TicketsPage() {
     }
   };
 
+  const handleUpdateStatus = async (tId, newStatus) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to update status');
+      }
+
+      setSuccess(`Ticket status updated to ${newStatus}`);
+      await loadTickets();
+      if (selectedTicket && selectedTicket.id === tId) {
+        await openTicketModal(tId);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchTicketExtras = async (ticketId) => {
     if (!ticketId) return;
     try {
@@ -3278,10 +3305,26 @@ function TicketsPage() {
                                   </td>
                                   <td>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                      <button type="button" className={`status-badge status-badge--${(ticket.status || 'open').toLowerCase().replace(' ', '-')}`}>
-                                        <span className="status-dot"></span>
-                                        {ticket.status}
-                                      </button>
+                                      <select
+                                        className={`status-badge status-badge--${(ticket.status || 'open').toLowerCase().replace(' ', '-')}`}
+                                        value={ticket.status}
+                                        onChange={(e) => handleUpdateStatus(ticket.id, e.target.value)}
+                                        style={{ 
+                                          cursor: 'pointer', 
+                                          appearance: 'none', 
+                                          paddingRight: '24px', 
+                                          backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")',
+                                          backgroundRepeat: 'no-repeat',
+                                          backgroundPosition: 'right 8px center',
+                                          border: 'none',
+                                          outline: 'none',
+                                          fontWeight: '700'
+                                        }}
+                                      >
+                                        {TICKET_STATUSES.map(s => (
+                                          <option key={s} value={s} style={{ background: '#fff', color: '#1e293b' }}>{s}</option>
+                                        ))}
+                                      </select>
                                     </div>
                                   </td>
                                   <td>
