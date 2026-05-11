@@ -3524,42 +3524,27 @@ function TicketsPage() {
                                             });
                                           }}
                                           style={{
-                                            background: isExpanded ? 'rgba(99, 102, 241, 0.1)' : '#fff',
-                                            border: '1.5px solid ' + (isExpanded ? '#6366f1' : '#e2e8f0'),
-                                            color: isExpanded ? '#4338ca' : '#64748b',
-                                            borderRadius: '10px',
-                                            padding: '6px 12px',
+                                            background: isExpanded ? '#fee2e2' : '#f0f9ff',
+                                            border: 'none',
+                                            color: isExpanded ? '#ef4444' : '#0ea5e9',
+                                            borderRadius: '50%',
+                                            width: '36px',
+                                            height: '36px',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '6px',
-                                            fontSize: '12px',
-                                            fontWeight: '800',
+                                            justifyContent: 'center',
                                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                            boxShadow: isExpanded ? '0 4px 12px rgba(99, 102, 241, 0.15)' : '0 2px 4px rgba(0,0,0,0.02)'
+                                            boxShadow: isExpanded ? '0 4px 12px rgba(239, 68, 68, 0.2)' : '0 4px 12px rgba(14, 165, 233, 0.15)',
+                                            margin: '0 4px'
                                           }}
-                                          onMouseEnter={(e) => {
-                                            if (!isExpanded) {
-                                              e.currentTarget.style.borderColor = '#6366f1';
-                                              e.currentTarget.style.color = '#6366f1';
-                                              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
-                                            }
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            if (!isExpanded) {
-                                              e.currentTarget.style.borderColor = '#e2e8f0';
-                                              e.currentTarget.style.color = '#64748b';
-                                              e.currentTarget.style.background = '#fff';
-                                            }
-                                          }}
+                                          title={isExpanded ? 'Hide Logs' : 'View Daily Shift Logs'}
                                         >
-                                          <FiClock size={14} style={{ 
-                                            transition: 'transform 0.5s ease',
-                                            transform: isExpanded ? 'rotate(180deg)' : 'none' 
-                                          }} />
-                                          <span style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                                            {isExpanded ? 'Hide Logs' : 'View Logs'}
-                                          </span>
+                                          {isExpanded ? (
+                                            <FiMinusCircle size={20} style={{ animation: 'fadeIn 0.3s ease' }} />
+                                          ) : (
+                                            <FiClock size={18} />
+                                          )}
                                         </button>
                                       )}
                                       <button className="action-btn edit" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
