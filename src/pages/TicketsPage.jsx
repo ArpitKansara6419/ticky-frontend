@@ -3524,23 +3524,42 @@ function TicketsPage() {
                                             });
                                           }}
                                           style={{
-                                            background: isExpanded ? 'linear-gradient(135deg, #e0e7ff, #c7d2fe)' : '#f8fafc',
-                                            border: '1px solid ' + (isExpanded ? '#818cf8' : '#e2e8f0'),
-                                            color: isExpanded ? '#4338ca' : '#6366f1',
-                                            borderRadius: '8px',
-                                            padding: '6px 8px',
+                                            background: isExpanded ? 'rgba(99, 102, 241, 0.1)' : '#fff',
+                                            border: '1.5px solid ' + (isExpanded ? '#6366f1' : '#e2e8f0'),
+                                            color: isExpanded ? '#4338ca' : '#64748b',
+                                            borderRadius: '10px',
+                                            padding: '6px 12px',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '4px',
+                                            gap: '6px',
                                             fontSize: '12px',
-                                            fontWeight: '700',
-                                            transition: 'all 0.2s ease',
-                                            boxShadow: isExpanded ? '0 2px 8px rgba(99,102,241,0.2)' : 'none'
+                                            fontWeight: '800',
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            boxShadow: isExpanded ? '0 4px 12px rgba(99, 102, 241, 0.15)' : '0 2px 4px rgba(0,0,0,0.02)'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            if (!isExpanded) {
+                                              e.currentTarget.style.borderColor = '#6366f1';
+                                              e.currentTarget.style.color = '#6366f1';
+                                              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
+                                            }
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            if (!isExpanded) {
+                                              e.currentTarget.style.borderColor = '#e2e8f0';
+                                              e.currentTarget.style.color = '#64748b';
+                                              e.currentTarget.style.background = '#fff';
+                                            }
                                           }}
                                         >
-                                          <FiClock size={16} style={{ animation: isExpanded ? 'spin 3s linear infinite' : 'none' }} />
-                                          {isExpanded && <span style={{ fontSize: '10px', marginLeft: '2px' }}>Hide</span>}
+                                          <FiClock size={14} style={{ 
+                                            transition: 'transform 0.5s ease',
+                                            transform: isExpanded ? 'rotate(180deg)' : 'none' 
+                                          }} />
+                                          <span style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                            {isExpanded ? 'Hide Logs' : 'View Logs'}
+                                          </span>
                                         </button>
                                       )}
                                       <button className="action-btn edit" onClick={() => startEditTicket(ticket.id)} title="Edit"><FiEdit2 /></button>
@@ -3557,7 +3576,12 @@ function TicketsPage() {
                                 displayLogs = parsedLogs
                                   .filter(l => {
                                     const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
-                                    return !!dStr;
+                                    if (!dStr) return false;
+                                    
+                                    // Only show working days (hide Sat/Sun)
+                                    const dObj = new Date(`${dStr}T00:00:00Z`);
+                                    const day = dObj.getUTCDay();
+                                    return day !== 0 && day !== 6;
                                   })
                                   .map((l, sidx) => {
                                     const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
