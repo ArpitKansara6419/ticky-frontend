@@ -243,6 +243,8 @@ function TicketsPage() {
   const [engHolidayRate, setEngHolidayRate] = useState('')
 
   const [status, setStatus] = useState('Assigned')
+  const [closureReason, setClosureReason] = useState('')
+  const [resolveDate, setResolveDate] = useState('')
   const [billingType, setBillingType] = useState('Hourly')
   const [isFillingForm, setIsFillingForm] = useState(false)
 
@@ -1347,7 +1349,9 @@ function TicketsPage() {
         credentials: 'include',
         body: JSON.stringify({
           ...payload,
-          status: status // Force the current local status state
+          status: status, // Force the current local status state
+          reason: closureReason,
+          resolveDate: resolveDate
         }),
       })
 
@@ -2486,9 +2490,23 @@ function TicketsPage() {
                   value={status} 
                   onChange={(e) => {
                     const nextStatus = e.target.value;
+                    if (nextStatus === 'Resolved') {
+                      const today = new Date().toISOString().split('T')[0];
+                      const end = taskEndDate ? taskEndDate.split('T')[0] : '';
+                      if (end && today < end) {
+                        const reason = window.prompt(`This ticket's scheduled end date is ${new Date(end).toLocaleDateString()}. To resolve it early, please provide a reason for the Approval queue:`);
+                        if (reason) {
+                          setStatus('Approval Pending');
+                          setClosureReason(reason);
+                          setResolveDate(today);
+                          alert('Status updated to Approval Pending. Please click "Save Changes" below to submit for approval.');
+                        } else {
+                          // User cancelled prompt
+                        }
+                        return;
+                      }
+                    }
                     setStatus(nextStatus);
-                    // If we are NOT in edit mode (just viewing), we can sync immediately.
-                    // But in edit mode, let the user click "Save Changes" at the bottom.
                   }}
                   style={{
                     padding: '8px 32px 8px 16px', 
@@ -2509,15 +2527,14 @@ function TicketsPage() {
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-                {/* Custom indicator arrow/dot */}
                 <div style={{ 
                   position: 'absolute', 
                   right: '12px', 
                   width: '8px', 
                   height: '8px', 
                   borderRadius: '50%', 
-                  background: status === 'Resolved' ? '#10b981' : (status === 'In Progress' ? '#f59e0b' : '#3b82f6'),
-                  boxShadow: `0 0 8px ${status === 'Resolved' ? '#10b981' : (status === 'In Progress' ? '#f59e0b' : '#3b82f6')}`
+                  background: status === 'Resolved' ? '#10b981' : (status === 'In Progress' ? '#f59e0b' : (status === 'Approval Pending' ? '#8b5cf6' : '#3b82f6')),
+                  boxShadow: `0 0 8px ${status === 'Resolved' ? '#10b981' : (status === 'In Progress' ? '#f59e0b' : (status === 'Approval Pending' ? '#8b5cf6' : '#3b82f6'))}`
                 }}></div>
               </div>
             </div>
@@ -3390,13 +3407,53 @@ function TicketsPage() {
                                   <td>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
                                       <select
-                                        className={`status-badge status-badge--${(ticket.status || 'open').toLowerCase().replace(' ', '-')}`}
                                         value={ticket.status}
-                                        onChange={(e) => handleUpdateStatus(ticket.id, e.target.value)}
-                                        style={{ 
-                                          cursor: 'pointer', 
-                                          appearance: 'none', 
-                                          paddingRight: '24px', 
+                                        onChange={async (e) => {
+                                          const nextStatus = e.target.value;
+                                          const tId = ticket.id;
+                                          let finalStatus = nextStatus;
+                                          let reason = '';
+                                          let rDate = '';
+
+                                          if (nextStatus === 'Resolved') {
+                                            const today = new Date().toISOString().split('T')[0];
+                                            const end = ticket.taskEndDate ? String(ticket.taskEndDate).split('T')[0] : '';
+                                            if (end && today < end) {
+                                              const r = window.prompt(`Ticket #AIM-T-${tId} scheduled end date is ${new Date(end).toLocaleDateString()}. Provide reason for Early Closure:`);
+                                              if (r) {
+                                                finalStatus = 'Approval Pending';
+                                                reason = r;
+                                                rDate = today;
+                                              } else {
+                                                return; // Cancel
+                                              }
+                                            }
+                                          }
+
+                                          try {
+                                            const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
+                                              method: 'PUT',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              credentials: 'include',
+                                              body: JSON.stringify({ ...ticket, status: finalStatus, reason, resolveDate: rDate })
+                                            });
+                                            if (res.ok) {
+                                              await loadTickets();
+                                              if (finalStatus === 'Approval Pending') {
+                                                alert('Ticket sent to Approval queue for Early Closure.');
+                                              }
+                                            }
+                                          } catch (err) {
+                                            console.error('Quick status update failed', err);
+                                          }
+                                        }}
+                                        style={{
+                                          width: '100%',
+                                          padding: '6px 12px',
+                                          borderRadius: '8px',
+                                          fontSize: '12px',
+                                          appearance: 'none',
+                                          background: '#fff',
                                           backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")',
                                           backgroundRepeat: 'no-repeat',
                                           backgroundPosition: 'right 8px center',
