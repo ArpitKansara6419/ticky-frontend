@@ -582,10 +582,10 @@ const CustomerReceivablePage = () => {
         doc.text('https://linkedin.com/company/aimbizit', 40, 20);
         doc.text('www.aimbizit.com', 40, 26);
 
-        // Invoice label top-right
-        doc.setFontSize(22);
+        // Invoice label — positioned to the left of the Total box
+        doc.setFontSize(20);
         doc.setFont('helvetica', 'bold');
-        doc.text('Invoice', 230, 22);
+        doc.text('Invoice', 215, 24);
 
         // ─── DATE + INVOICE NUMBER ROW ────────────────────────────────────────
         doc.setTextColor(50, 50, 50);
@@ -596,20 +596,25 @@ const CustomerReceivablePage = () => {
         doc.text('Invoice number', 205, 54);
         doc.text(`#${ticket.id}`, 240, 54);
 
-        // ─── TOTAL BOX (top-right, matching screenshot green Total box) ───────
+        // ─── TOTAL BOX (top-right corner) ────────────────────────────────────
+        const totalAmount = `${cur} ${parseFloat(bd.totalReceivable).toFixed(2)}`;
+
+        // Green 'Total' label box
         doc.setFillColor(93, 177, 100);
-        doc.rect(262, 8, 28, 10, 'F');
+        doc.rect(255, 4, 36, 10, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('Total', 268, 15);
+        doc.text('Total', 273, 11, { align: 'center' });
 
-        doc.setFillColor(240, 240, 240);
-        doc.rect(262, 18, 28, 12, 'F');
-        doc.setTextColor(50, 50, 50);
-        doc.setFontSize(10);
-        doc.text(`${cur}`, 264, 26);
-        doc.text(parseFloat(bd.totalReceivable).toFixed(2), 270, 26);
+        // White amount box below
+        doc.setFillColor(248, 248, 248);
+        doc.setDrawColor(220, 220, 220);
+        doc.rect(255, 14, 36, 14, 'FD');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(totalAmount, 273, 23, { align: 'center' });
 
         // ─── DATA TABLE ──────────────────────────────────────────────────────
         let logs = [];
@@ -1697,7 +1702,7 @@ const CustomerReceivablePage = () => {
                                             <>
                                                 <div className="breakdown-row highlight-premium">
                                                     <div>
-                                                        <span>Labor &amp; Service Subtotal</span>
+                                                        <span>Engineer &amp; Service Subtotal</span>
                                                         <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>{bd.baseBreakdown}</div>
                                                     </div>
                                                     <span>{cur} {parseFloat(bd.baseCost || 0).toFixed(2)}</span>
