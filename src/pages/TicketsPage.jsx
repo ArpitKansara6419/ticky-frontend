@@ -562,11 +562,9 @@ function TicketsPage() {
           bMins = existing.break_time_mins || existing.breakTime || 0;
         } else {
           const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.padStart(5, '0') : '09:00';
+          const cleanEndTime = (taskEndTime && taskEndTime.includes(':')) ? taskEndTime.padStart(5, '0') : '17:00';
           sTime = `${d}T${cleanTime}:00Z`;
-          const sDate = new Date(sTime);
-          if (isNaN(sDate.getTime())) return;
-          const eTimeDate = new Date(sDate.getTime() + (8 * 3600 * 1000));
-          eTime = eTimeDate.toISOString().replace('Z', '');
+          eTime = `${d}T${cleanEndTime}:00Z`;
         }
 
         const dayMonthlyDivisor = getWorkingDaysInMonth(d, country);
@@ -971,6 +969,7 @@ function TicketsPage() {
     if (!editingTicketId && (leadType === 'Dispatch' || billingType.includes('Monthly') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate))) {
       const dates = getDatesInRange(taskStartDate, taskEndDate);
       const ct = (taskTime || '09:00').slice(0, 5);
+      const cet = (taskEndTime || '17:00').slice(0, 5);
 
       const validDates = dates.filter(dStr => {
         const dObj = new Date(`${dStr}T00:00:00Z`);
@@ -987,14 +986,18 @@ function TicketsPage() {
 
       const newLogs = validDates.map(dStr => {
         const existing = timeLogs.find(l => (l.task_date || '').split('T')[0] === dStr);
-        if (existing) return existing;
-
+        
         const sTime = `${dStr}T${ct}:00.000Z`;
-        const startD = new Date(sTime);
-        let eTime = '';
-        if (!isNaN(startD.getTime())) {
-          eTime = new Date(startD.getTime() + (8 * 3600 * 1000)).toISOString();
+        const eTime = `${dStr}T${cet}:00.000Z`;
+
+        if (existing) {
+          return {
+            ...existing,
+            start_time: sTime,
+            end_time: eTime
+          };
         }
+
         return {
           task_date: dStr,
           start_time: sTime,
@@ -1004,14 +1007,15 @@ function TicketsPage() {
         };
       });
 
-      // Simple deep equality check or just check length/dates to avoid infinite loops
-      const currentDates = timeLogs.filter(l => l.task_date).map(l => l.task_date.split('T')[0]).join(',');
-      const targetDates = validDates.join(',');
-      if (currentDates !== targetDates) {
+      // Avoid infinite loop: only update if the serialized logs have actually changed
+      const currentStr = JSON.stringify(timeLogs.map(l => ({ d: l.task_date, s: l.start_time, e: l.end_time, eng: l.engineer_id })));
+      const nextStr = JSON.stringify(newLogs.map(l => ({ d: l.task_date, s: l.start_time, e: l.end_time, eng: l.engineer_id })));
+
+      if (currentStr !== nextStr) {
         setTimeLogs(newLogs);
       }
     }
-  }, [taskStartDate, taskEndDate, taskTime, editingTicketId, leadType, engineerId]);
+  }, [taskStartDate, taskEndDate, taskTime, taskEndTime, editingTicketId, leadType, engineerId, country, billingType]);
 
   const loadDropdowns = async () => {
     try {
@@ -2774,8 +2778,8 @@ function TicketsPage() {
                       <tbody>
                         {workingDays.map((dStr) => {
                           const existingLog = timeLogs.find(l => (l.task_date || '').split('T')[0] === dStr) || {};
-                          const lStart = safeExtractTime(existingLog.start_time || existingLog.startTime) || taskTime;
-                          const lEnd = safeExtractTime(existingLog.end_time || existingLog.endTime) || '17:00';
+                          const lStart = safeExtractTime(existingLog.start_time || existingLog.startTime) || (taskTime || '09:00');
+                          const lEnd = safeExtractTime(existingLog.end_time || existingLog.endTime) || (taskEndTime || '17:00');
                           const lBreak = existingLog.break_time_mins || 0;
                           const lEngId = existingLog.engineer_id || existingLog.engineerId || engineerId;
                           
