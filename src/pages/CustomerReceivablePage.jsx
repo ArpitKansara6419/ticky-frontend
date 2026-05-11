@@ -558,73 +558,188 @@ const CustomerReceivablePage = () => {
     };
 
     const generateBreakdownPDF = (ticket, bd) => {
-        const doc = new jsPDF();
+        const doc = new jsPDF('l', 'mm', 'a4'); // Landscape A4
         const cur = ticket.currency || 'USD';
 
-        // Header
-        doc.setFillColor(30, 41, 59);
-        doc.rect(0, 0, 210, 35, 'F');
+        // ─── HEADER ───────────────────────────────────────────────────────────
+        doc.setFillColor(79, 55, 139);  // Deep purple matching screenshot
+        doc.rect(0, 0, 297, 38, 'F');
+
+        // Logo box placeholder
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(8, 6, 26, 26, 3, 3, 'F');
+        doc.setTextColor(79, 55, 139);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('AIM', 12, 19);
+        doc.text('BOT', 12, 25);
+
+        // Brand text
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.text('COST BREAKDOWN REPORT', 20, 22);
-        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('WhatsApp link: https://wa.me/message/TEZRFLWAIRIEC1', 40, 14);
+        doc.text('https://linkedin.com/company/aimbizit', 40, 20);
+        doc.text('www.aimbizit.com', 40, 26);
+
+        // Invoice label top-right
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Invoice', 230, 22);
+
+        // ─── DATE + INVOICE NUMBER ROW ────────────────────────────────────────
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Date', 210, 48);
+        doc.text(new Date().toLocaleDateString(), 240, 48);
+        doc.text('Invoice number', 205, 54);
+        doc.text(`#${ticket.id}`, 240, 54);
+
+        // ─── TOTAL BOX (top-right, matching screenshot green Total box) ───────
+        doc.setFillColor(93, 177, 100);
+        doc.rect(262, 8, 28, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total', 268, 15);
+
+        doc.setFillColor(240, 240, 240);
+        doc.rect(262, 18, 28, 12, 'F');
+        doc.setTextColor(50, 50, 50);
         doc.setFontSize(10);
-        doc.text(`Ticket #${ticket.id}`, 160, 22);
+        doc.text(`${cur}`, 264, 26);
+        doc.text(parseFloat(bd.totalReceivable).toFixed(2), 270, 26);
 
-        // Details Table
-        doc.setTextColor(30, 41, 59);
-        autoTable(doc, {
-            startY: 45,
-            head: [['Property', 'Details']],
-            body: [
-                ['Customer', ticket.customer_name || '-'],
-                ['Engineer', ticket.engineer_name || '-'],
-                ['Task Name', ticket.task_name || '-'],
-                ['Service Date', (ticket.task_start_date || '') + ' to ' + (ticket.task_end_date || '')],
-                ['Billing Model', ticket.billing_type || 'Hourly'],
-                ['Location', [ticket.city, ticket.country].filter(Boolean).join(', ') || '-']
-            ],
-            theme: 'striped',
-            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105] }
-        });
+        // ─── DATA TABLE ──────────────────────────────────────────────────────
+        let logs = [];
+        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
 
-        // Time Logs Section
-        if (ticket.start_time) {
-            doc.setFontSize(12);
-            doc.text('Activity Time Log', 20, doc.lastAutoTable.finalY + 15);
-            autoTable(doc, {
-                startY: doc.lastAutoTable.finalY + 20,
-                head: [['Clock In', 'Clock Out', 'Break', 'Billable Hours']],
-                body: [[
-                    new Date(ticket.start_time).toLocaleString(),
-                    new Date(ticket.end_time).toLocaleString(),
-                    `${ticket.break_time || 0}s`,
-                    bd.formattedHours
-                ]],
-                theme: 'grid'
-            });
+        if (logs.length === 0) {
+            logs = [{
+                task_date: ticket.task_start_date,
+                start_time: ticket.start_time,
+                end_time: ticket.end_time
+            }];
         }
 
-        // Financial Breakdown
-        doc.setFontSize(12);
-        doc.text('Financial Breakdown', 20, doc.lastAutoTable.finalY + 15);
-        const rows = [
-            ['Labor Base Cost', bd.baseBreakdown, `${cur} ${bd.baseCost}`],
-            ['Overtime Premium', bd.otBreakdown || '-', `${cur} ${bd.otPremium}`],
-            ['OOH Premium', bd.oohBreakdown || '-', `${cur} ${bd.oohPremium}`],
-            ['Special Day Premium', bd.spBreakdown || '-', `${cur} ${bd.specialDayPremium}`],
-            ['Travel Logistics', '-', `${cur} ${bd.travelCost.toFixed(2)}`],
-            ['Tools & Materials', '-', `${cur} ${bd.toolCost.toFixed(2)}`]
+        const tableRows = logs.map(log => {
+            const d = (log.task_date || ticket.task_start_date || '').split('T')[0];
+
+            // Format Check In / Check Out
+            const checkIn = log.start_time
+                ? new Date(log.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : ticket.task_time || '-';
+            const checkOut = log.end_time
+                ? new Date(log.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '-';
+
+            // Per-day cost calculation
+            const logRes = calculateTicketCostFrontend({
+                ...ticket,
+                time_logs: [],
+                start_time: log.start_time,
+                end_time: log.end_time,
+                task_start_date: d,
+                is_recursive_call: true
+            }, calcTimezone, cur);
+
+            // Description cell — multi-line with sub-details
+            const description = [
+                `Engineer: ${ticket.engineer_name || '-'}`,
+                `Location: ${ticket.city || '-'}, ${ticket.country || '-'}`,
+                `Task: ${ticket.task_name || '-'}`,
+                `Ticket #: ${ticket.id}`
+            ].join('\n');
+
+            return [
+                d,
+                description,
+                checkIn,
+                checkOut,
+                parseFloat(logRes.baseCost || 0).toFixed(2),
+                parseFloat(logRes.travelCost || 0).toFixed(2),
+                parseFloat(logRes.toolCost || 0).toFixed(2),
+                parseFloat(logRes.totalReceivable || 0).toFixed(2)
+            ];
+        });
+
+        autoTable(doc, {
+            startY: 62,
+            head: [[
+                { content: 'DATE\n[Date]', styles: { halign: 'center' } },
+                { content: 'DESCRIPTION\n[Brief Description of Task]', styles: { halign: 'center' } },
+                { content: 'CHECK IN', styles: { halign: 'center' } },
+                { content: 'CHECK OUT', styles: { halign: 'center' } },
+                { content: `RATE\n[Agreed Rate]\n(${cur})`, styles: { halign: 'right' } },
+                { content: `TRAVEL\n[Agreed Rate]\n(${cur})`, styles: { halign: 'right' } },
+                { content: `TOOLS\n(${cur})`, styles: { halign: 'right' } },
+                { content: `AMOUNT\nIn ${cur}`, styles: { halign: 'right' } }
+            ]],
+            body: tableRows,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [79, 55, 139],
+                textColor: [255, 255, 255],
+                fontSize: 7,
+                fontStyle: 'bold',
+                cellPadding: 3
+            },
+            bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59], cellPadding: 3 },
+            columnStyles: {
+                0: { cellWidth: 22 },
+                1: { cellWidth: 70 },
+                2: { cellWidth: 20, halign: 'center' },
+                3: { cellWidth: 20, halign: 'center' },
+                4: { cellWidth: 25, halign: 'right' },
+                5: { cellWidth: 25, halign: 'right' },
+                6: { cellWidth: 25, halign: 'right' },
+                7: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
+            },
+            foot: [[
+                { content: '', colSpan: 6 },
+                { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'right' } },
+                { content: `${cur} ${parseFloat(bd.totalReceivable).toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' } }
+            ]],
+            footStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontSize: 9 }
+        });
+
+        // ─── THANK YOU ────────────────────────────────────────────────────────
+        const finalY = doc.lastAutoTable.finalY;
+        doc.setFillColor(79, 55, 139);
+        doc.rect(8, finalY + 8, 281, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.text('Thank You', 140, finalY + 14, { align: 'center' });
+
+        // ─── BANK DETAILS ─────────────────────────────────────────────────────
+        const bankY = finalY + 22;
+        doc.setFillColor(79, 55, 139);
+        doc.rect(8, bankY, 130, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('BANK Details for Payment', 11, bankY + 5.5);
+
+        const bankRows = [
+            ['Bank Name *', ''],
+            ['Bank Address *', ''],
+            ['Account Holder Name *', ''],
+            ['Account Number *', ''],
+            ['IBAN *', ''],
+            ['BIC / Swift Code *', ''],
+            ['Sort Code (UK ONLY)', ''],
+            ['Country *', '']
         ];
 
         autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 20,
-            head: [['Component', 'Description', 'Amount']],
-            body: rows,
+            startY: bankY + 8,
+            body: bankRows,
             theme: 'grid',
-            headStyles: { fillColor: [79, 70, 229] },
-            foot: [['TOTAL RECEIVABLE', '', `${cur} ${bd.totalReceivable}`]],
-            footStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold' }
+            styles: { fontSize: 7.5, cellPadding: 2 },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 }, 1: { cellWidth: 85 } },
+            margin: { left: 8 }
         });
 
         doc.save(`Breakdown_Ticket_${ticket.id}.pdf`);
@@ -632,29 +747,104 @@ const CustomerReceivablePage = () => {
 
     const generateBreakdownExcel = (ticket, bd) => {
         const cur = ticket.currency || 'USD';
-        const data = [
-            ["TICKET COST BREAKDOWN"],
-            ["Ticket ID", ticket.id],
-            ["Customer", ticket.customer_name],
-            ["Engineer", ticket.engineer_name],
-            ["Task", ticket.task_name],
+
+        // ─── Prepare log rows ─────────────────────────────────────────────────
+        let logs = [];
+        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
+
+        if (logs.length === 0) {
+            logs = [{
+                task_date: ticket.task_start_date,
+                start_time: ticket.start_time,
+                end_time: ticket.end_time
+            }];
+        }
+
+        const dataRows = logs.map(log => {
+            const d = (log.task_date || ticket.task_start_date || '').split('T')[0];
+
+            const checkIn = log.start_time
+                ? new Date(log.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : ticket.task_time || '-';
+            const checkOut = log.end_time
+                ? new Date(log.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '-';
+
+            const logRes = calculateTicketCostFrontend({
+                ...ticket,
+                time_logs: [],
+                start_time: log.start_time,
+                end_time: log.end_time,
+                task_start_date: d,
+                is_recursive_call: true
+            }, calcTimezone, cur);
+
+            // Description cell content
+            const description = `Engineer: ${ticket.engineer_name || '-'} | Location: ${ticket.city || '-'}, ${ticket.country || '-'} | Task: ${ticket.task_name || '-'} | Ticket #: ${ticket.id}`;
+
+            return [
+                d,
+                description,
+                checkIn,
+                checkOut,
+                parseFloat(logRes.baseCost || 0),
+                parseFloat(logRes.travelCost || 0),
+                parseFloat(logRes.toolCost || 0),
+                parseFloat(logRes.totalReceivable || 0)
+            ];
+        });
+
+        // ─── Build sheet data ─────────────────────────────────────────────────
+        const wsData = [
+            // Row 1: Branding
+            ['AIMBOT IT SUPPORT', '', '', 'WhatsApp: https://wa.me/message/TEZRFLWAIRIEC1'],
+            ['', '', '', 'LinkedIn: linkedin.com/company/aimbizit'],
+            ['', '', '', 'Web: www.aimbizit.com'],
             [],
-            ["FINANCIAL SUMMARY"],
-            ["Base Labor", parseFloat(bd.baseCost), cur],
-            ["Overtime", parseFloat(bd.otPremium), cur],
-            ["Special Premiums", parseFloat(bd.specialDayPremium) + parseFloat(bd.oohPremium), cur],
-            ["Travel", parseFloat(bd.travelCost), cur],
-            ["Tools", parseFloat(bd.toolCost), cur],
-            ["TOTAL NET", parseFloat(bd.totalReceivable), cur],
+            // Invoice meta
+            ['Date', new Date().toLocaleDateString(), '', 'Invoice', ''],
+            ['Invoice Number', `#${ticket.id}`],
+            ['Customer', ticket.customer_name],
             [],
-            ["TIME DETAILS"],
-            ["Total Billable Hours", bd.totalHours],
-            ["Clock In", ticket.start_time],
-            ["Clock Out", ticket.end_time]
+            // Column Headers
+            ['DATE', 'DESCRIPTION', 'CHECK IN', 'CHECK OUT', `RATE (${cur})`, `TRAVEL (${cur})`, `TOOLS (${cur})`, `AMOUNT (${cur})`],
+            // Data rows
+            ...dataRows,
+            // Footer total
+            [],
+            ['', '', '', '', '', '', 'TOTAL', parseFloat(bd.totalReceivable)],
+            [],
+            // Thank You
+            ['Thank You'],
+            [],
+            // Bank Details
+            ['BANK Details for Payment'],
+            ['Bank Name *', ''],
+            ['Bank Address *', ''],
+            ['Account Holder Name *', ''],
+            ['Account Number *', ''],
+            ['IBAN *', ''],
+            ['BIC / Swift Code *', ''],
+            ['Sort Code (UK ONLY)', ''],
+            ['Country *', '']
         ];
-        const ws = XLSX.utils.aoa_to_sheet(data);
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+        // Column widths
+        ws['!cols'] = [
+            { wch: 14 },  // DATE
+            { wch: 60 },  // DESCRIPTION
+            { wch: 12 },  // CHECK IN
+            { wch: 12 },  // CHECK OUT
+            { wch: 14 },  // RATE
+            { wch: 14 },  // TRAVEL
+            { wch: 14 },  // TOOLS
+            { wch: 16 }   // AMOUNT
+        ];
+
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Breakdown");
+        XLSX.utils.book_append_sheet(wb, ws, 'Invoice');
         XLSX.writeFile(wb, `Breakdown_Ticket_${ticket.id}.xlsx`);
     };
 
