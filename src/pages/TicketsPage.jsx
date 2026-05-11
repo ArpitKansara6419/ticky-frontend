@@ -3514,7 +3514,6 @@ function TicketsPage() {
                                       {isDispatch && (
                                         <button
                                           className="action-btn"
-                                          title={isExpanded ? 'Collapse Shift Logs' : 'View Daily Shift Logs'}
                                           onClick={() => {
                                             setExpandedTicketRows(prev => {
                                               const next = new Set(prev);
