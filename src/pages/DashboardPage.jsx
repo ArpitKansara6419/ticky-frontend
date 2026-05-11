@@ -447,14 +447,12 @@ function DashboardHome({ onNavigate, insightsLayout }) {
                   <button
                     key={date.toISOString()}
                     type="button"
-                    className={`ticket-calendar-cell ${isActive ? 'ticket-calendar-cell--active' : ''} ${hasTickets ? 'ticket-calendar-cell--has-ticket' : ''}`}
+                    className={`ticket-calendar-cell ${isActive ? 'ticket-calendar-cell--active' : ''} ${isToday ? 'ticket-calendar-cell--today' : ''} ${hasTickets ? 'ticket-calendar-cell--has-ticket' : ''}`}
                     onClick={() => setSelectedDate(date)}
-                    style={isToday ? { fontWeight: 'bold', color: '#7c3aed' } : {}}
                   >
                     <span>{date.getDate()}</span>
                     {hasTickets && (
                       <span className="ticket-count-badge">{ticketCount}</span>
-                      // Or simple dot: <span className="ticket-indicator-dot" />
                     )}
                   </button>
                 )

@@ -276,7 +276,20 @@ function TicketsPage() {
   const [activeCostTab, setActiveCostTab] = useState('Customer'); // 'Customer' | 'Engineer'
   
   const workingDays = useMemo(() => {
-    return getDatesInRange(taskStartDate, taskEndDate);
+    const all = getDatesInRange(taskStartDate, taskEndDate);
+    const hasWeekdays = all.some(d => {
+      const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+      return dw !== 0 && dw !== 6;
+    });
+
+    return all.filter(d => {
+      const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+      const isWeekend = dw === 0 || dw === 6;
+      // If there are no weekdays in the whole range, show everything (weekend ticket case)
+      if (!hasWeekdays) return true;
+      // Otherwise, hide weekends by default to keep the view clean
+      return !isWeekend;
+    });
   }, [taskStartDate, taskEndDate]);
 
   const isMultiDay = useMemo(() => workingDays.length > 1 || leadType === 'Dispatch' || (billingType && billingType.includes('Monthly')), [workingDays, leadType, billingType]);

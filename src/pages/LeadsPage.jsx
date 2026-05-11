@@ -753,6 +753,10 @@ function LeadsPage() {
     if (l) {
       fillFormFromLead(l)
       
+      // Reset dates for a fresh clone as per user request
+      setTaskStartDate('')
+      setTaskEndDate('')
+      
       // Reset status to BID for a fresh clone
       setStatus('BID')
       setEditingLeadId(null) // Clear ID to represent a new clone
