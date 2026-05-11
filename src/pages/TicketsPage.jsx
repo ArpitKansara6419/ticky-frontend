@@ -2503,7 +2503,11 @@ function TicketsPage() {
                           setStatus('Approval Pending');
                           setClosureReason(reason);
                           setResolveDate(today);
-                          alert('Status updated to Approval Pending. Please click "Save Changes" below to submit for approval.');
+                          
+                          // Short delay to ensure state updates before submission
+                          setTimeout(() => {
+                             handleSubmitTicket();
+                          }, 100);
                         } else {
                           // User cancelled prompt
                         }

@@ -723,7 +723,7 @@ function ApprovalsModal({ isOpen, onClose, onViewTicket }) {
 
   return (
     <div className="profile-modal-backdrop" role="dialog" aria-modal="true">
-      <div className="profile-modal" style={{ maxWidth: '800px', width: '90%' }}>
+      <div className="profile-modal" style={{ maxWidth: '1100px', width: '95%' }}>
         <header className="profile-modal-header">
           <div>
             <h2 className="section-title">Approval Requests</h2>
