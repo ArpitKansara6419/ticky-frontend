@@ -493,7 +493,7 @@ const CustomerReceivablePage = () => {
         doc.setFontSize(9);
         doc.setTextColor(60, 60, 60);
         doc.setFont('helvetica', 'normal');
-        doc.text('Invoice nr:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(invoicePoNumber || `INV-${ticket.id}`, rx + 28, 16);
+        doc.text('Invoice No:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(invoicePoNumber || `INV-${ticket.id}`, rx + 28, 16);
         doc.setFont('helvetica', 'normal');
         doc.text('Place of issue:', rx, 22); doc.text('Warsaw', rx + 28, 22);
         doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
@@ -528,31 +528,72 @@ const CustomerReceivablePage = () => {
             columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 1: { cellWidth: 142 } }
         });
 
-        // ── Service Table ──────────────────────────────────────────────────────
-        const serviceRows = logs.map(log => {
-            const d = (log.task_date || ticket.task_start_date || '').split('T')[0];
-            const logRes = calculateTicketCostFrontend({ ...ticket, time_logs: [], start_time: log.start_time, end_time: log.end_time, task_start_date: d, is_recursive_call: true }, calcTimezone, cur);
-            const desc = `${ticket.task_name || '-'}\nEngineer: ${ticket.engineer_name || '-'} | Ticket #${ticket.id}\nDate: ${d}`;
-            return [desc, `${ticket.city || '-'}, ${ticket.country || '-'}`, `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`];
+        // ── Service Table (Detailed Breakdown per Log) ─────────────────────────
+        const serviceRows = [];
+        const displayLogs = logs.length > 0 ? logs : [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
+        
+        displayLogs.forEach(log => {
+            const d = new Date(log.task_date || ticket.task_start_date).toLocaleDateString('en-GB');
+            
+            // Detailed Description
+            const desc = `Engineer: ${ticket.engineer_name || '-'}\nLoc: ${ticket.city || '-'}\nTask: ${ticket.task_name || '-'}\nTkt: #${ticket.id}`;
+            
+            // Times
+            const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+            const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+
+            const logRes = calculateTicketCostFrontend({
+                ...ticket,
+                time_logs: [], 
+                start_time: log.start_time,
+                end_time: log.end_time,
+                task_start_date: log.task_date,
+                is_recursive_call: true
+            }, calcTimezone, cur);
+
+            serviceRows.push([
+                d,
+                desc,
+                checkIn,
+                checkOut,
+                `${parseFloat(logRes.baseCost || 0).toFixed(2)}`,
+                `${parseFloat(logRes.toolCost || 0).toFixed(2)}`,
+                `${parseFloat(logRes.travelCost || 0).toFixed(2)}`,
+                `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`
+            ]);
         });
 
         autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 5,
             head: [[
-                { content: 'Description of service', styles: { halign: 'center' } },
-                { content: 'Location', styles: { halign: 'center' } },
-                { content: `Amount in ${cur}`, styles: { halign: 'right' } }
+                { content: 'Date', styles: { halign: 'center' } },
+                { content: 'Description', styles: { halign: 'left' } },
+                { content: 'In', styles: { halign: 'center' } },
+                { content: 'Out', styles: { halign: 'center' } },
+                { content: 'Rate', styles: { halign: 'right' } },
+                { content: 'Tools', styles: { halign: 'right' } },
+                { content: 'Travel', styles: { halign: 'right' } },
+                { content: 'Amount', styles: { halign: 'right' } }
             ]],
             body: serviceRows,
             theme: 'grid',
-            headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold', cellPadding: 3 },
-            bodyStyles: { fontSize: 8.5, textColor: [40, 40, 40], cellPadding: 4 },
-            columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 45, halign: 'center' }, 2: { cellWidth: 45, halign: 'right' } },
+            headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold', cellPadding: 2 },
+            bodyStyles: { fontSize: 7, textColor: [40, 40, 40], cellPadding: 2 },
+            columnStyles: { 
+                0: { cellWidth: 18, halign: 'center' }, 
+                1: { cellWidth: 55 }, 
+                2: { cellWidth: 15, halign: 'center' },
+                3: { cellWidth: 15, halign: 'center' },
+                4: { cellWidth: 20, halign: 'right' },
+                5: { cellWidth: 15, halign: 'right' },
+                6: { cellWidth: 15, halign: 'right' },
+                7: { cellWidth: 22, halign: 'right', fontStyle: 'bold' } 
+            },
             foot: [[
-                { content: 'TOTAL', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: `${cur}   ${parseFloat(bd.totalReceivable).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+                { content: 'TOTAL', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: `${cur} ${parseFloat(bd.totalReceivable).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
             ]],
-            footStyles: { fillColor: [245, 245, 245], fontSize: 9 }
+            footStyles: { fillColor: [245, 245, 245], fontSize: 8 }
         });
 
         // ── Footer ─────────────────────────────────────────────────────────────
@@ -937,7 +978,7 @@ const CustomerReceivablePage = () => {
             doc.setFontSize(9);
             doc.setTextColor(60, 60, 60);
             doc.setFont('helvetica', 'normal');
-            doc.text('Invoice nr:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(data.invoice.invoice_number || 'XXXXXXXX', rx + 28, 16);
+            doc.text('Invoice No:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(data.invoice.invoice_number || 'XXXXXXXX', rx + 28, 16);
             doc.setFont('helvetica', 'normal');
             doc.text('Place of issue:', rx, 22); doc.text(data.invoice.place_of_issue || 'Warsaw', rx + 28, 22);
             doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
