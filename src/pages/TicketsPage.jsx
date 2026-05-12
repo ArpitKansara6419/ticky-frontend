@@ -93,11 +93,27 @@ const HOLIDAYS_CALC = {
 const getDatesInRange = (start, end) => {
   const dates = [];
   if (!start || !end) return dates;
-  let curr = new Date(`${start}T00:00:00Z`);
-  const stop = new Date(`${end}T00:00:00Z`);
+  
+  const parseFlexible = (s) => {
+    if (!s) return new Date(NaN);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(`${s.split('T')[0]}T00:00:00Z`);
+    if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
+      const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
+      return new Date(`${y}-${m}-${d}T00:00:00Z`);
+    }
+    return new Date(s.includes('T') ? s : `${s}T00:00:00Z`);
+  };
+
+  let curr = parseFlexible(start);
+  const stop = parseFlexible(end);
+  if (isNaN(curr.getTime()) || isNaN(stop.getTime())) return dates;
+
   let count = 0;
   while (curr <= stop && count < 366) {
-    dates.push(curr.toISOString().split('T')[0]);
+    const y = curr.getUTCFullYear();
+    const m = String(curr.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(curr.getUTCDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${d}`);
     curr.setUTCDate(curr.getUTCDate() + 1);
     count++;
   }
@@ -107,22 +123,34 @@ const getDatesInRange = (start, end) => {
 const getWorkingDaysInMonth = (dateStr, countryName) => {
   if (!dateStr) return 22;
   const holidays = HOLIDAYS_CALC[countryName] || HOLIDAYS_CALC['India'] || [];
-  const d = new Date(`${dateStr}T00:00:00Z`);
+  
+  const parseFlexible = (s) => {
+    if (!s) return new Date(NaN);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(`${s.split('T')[0]}T00:00:00Z`);
+    if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
+      const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
+      return new Date(`${y}-${m}-${d}T00:00:00Z`);
+    }
+    return new Date(s.includes('T') ? s : `${s}T00:00:00Z`);
+  };
+
+  const d = parseFlexible(dateStr);
+  if (isNaN(d.getTime())) return 22;
   const year = d.getUTCFullYear();
   const month = d.getUTCMonth();
   const firstDay = new Date(Date.UTC(year, month, 1));
   const lastDay  = new Date(Date.UTC(year, month + 1, 0));
-  let workingDays = 0;
+  let workingDaysCount = 0;
   let cur = new Date(firstDay);
   while (cur <= lastDay) {
     const dayOfWeek = cur.getUTCDay();
     const iso = cur.toISOString().split('T')[0];
     if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(iso)) {
-      workingDays++;
+      workingDaysCount++;
     }
     cur.setUTCDate(cur.getUTCDate() + 1);
   }
-  return workingDays || 22;
+  return workingDaysCount || 22;
 };
 
 
@@ -280,19 +308,38 @@ function TicketsPage() {
   const workingDays = useMemo(() => {
     const all = getDatesInRange(taskStartDate, taskEndDate);
     const hasWeekdays = all.some(d => {
-      const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+      const dObj = parseWallClockDate(d);
+      const dw = dObj.getUTCDay();
       return dw !== 0 && dw !== 6;
     });
 
     return all.filter(d => {
-      const dw = new Date(`${d}T00:00:00Z`).getUTCDay();
+      const dObj = parseWallClockDate(d);
+      const dw = dObj.getUTCDay();
       const isWeekend = dw === 0 || dw === 6;
       // If there are no weekdays in the whole range, show everything (weekend ticket case)
       if (!hasWeekdays) return true;
       // Otherwise, hide weekends by default to keep the view clean
       return !isWeekend;
     });
-  }, [taskStartDate, taskEndDate]);
+  }, [taskStartDate, taskEndDate, parseWallClockDate]);
+
+  const parseWallClockDate = (str) => {
+    if (!str) return new Date(NaN);
+    const s = String(str).trim();
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
+    }
+    // DD-MM-YYYY
+    if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
+      const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
+      const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : '00:00:00');
+      const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
+      return new Date(iso);
+    }
+    return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
+  };
 
   const isMultiDay = useMemo(() => workingDays.length > 1 || leadType === 'Dispatch' || (billingType && billingType.includes('Monthly')), [workingDays, leadType, billingType]);
 
@@ -367,24 +414,8 @@ function TicketsPage() {
       const sStr = String(sParam);
       const eStr = String(eParam);
 
-      const parseFlexibleDate = (str) => {
-        if (!str) return new Date(NaN);
-        // If it's already ISO-ish (starts with YYYY-)
-        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-          return new Date(str.includes('Z') || str.includes('+') ? str : str.replace(' ', 'T') + 'Z');
-        }
-        // If it's DD-MM-YYYY format
-        if (/^\d{2}-\d{2}-\d{4}/.test(str)) {
-          const [d, m, y] = str.split('T')[0].split('-');
-          const timePart = str.includes('T') ? str.split('T')[1] : (str.includes(' ') ? str.split(' ')[1] : '00:00:00');
-          const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
-          return new Date(iso);
-        }
-        return new Date(str.includes('Z') || str.includes('+') ? str : str.replace(' ', 'T') + 'Z');
-      };
-
-      const s = parseFlexibleDate(sStr);
-      const e = parseFlexibleDate(eStr);
+      const s = parseWallClockDate(sStr);
+      const e = parseWallClockDate(eStr);
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
 
       const brkSec = (parseInt(bParam) || 0) * 60;
