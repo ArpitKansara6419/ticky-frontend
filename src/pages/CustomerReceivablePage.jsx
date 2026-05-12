@@ -972,30 +972,79 @@ const CustomerReceivablePage = () => {
                 columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 1: { cellWidth: 142 } }
             });
 
-            // ── Service Table (Consolidated Tickets) ────────────────────────────────
-            const serviceRows = data.tickets.map(t => {
-                const d = new Date(t.task_start_date).toLocaleDateString('en-GB');
-                const desc = `${t.task_name || '-'}\nEngineer: ${t.engineer_name || '-'} | Ticket #${t.id}\nDate: ${d}`;
-                return [desc, `${t.city || '-'}, ${t.country || '-'}`, `${parseFloat(t.breakdown.totalReceivable || 0).toFixed(2)}`];
+            // ── Service Table (Detailed Breakdown per Log) ─────────────────────────
+            const serviceRows = [];
+            data.tickets.forEach(t => {
+                const logs = t.logs || [];
+                // If no logs, fallback to ticket header dates
+                const displayLogs = logs.length > 0 ? logs : [{ task_date: t.task_start_date, start_time: t.start_time, end_time: t.end_time }];
+                
+                displayLogs.forEach(log => {
+                    const d = new Date(log.task_date || t.task_start_date).toLocaleDateString('en-GB');
+                    
+                    // Detailed Description
+                    const desc = `Engineer: ${t.engineer_name || '-'}\nLoc: ${t.city || '-'}\nTask: ${t.task_name || '-'}\nTkt: #${t.id}`;
+                    
+                    // Times
+                    const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                    const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+
+                    // Use the breakdown for THIS log (if available) or approximate
+                    // For now, we can calculate it using the same logic or use pre-calculated if backend supports per-log breakdown
+                    // Since backend calculateTicketCostBreakdown returns an aggregate, we'll do a mini-calc here for the premiums
+                    const logBreakdown = calculateTicketCostFrontend({
+                        ...t,
+                        time_logs: [], // Empty to force single-day calc
+                        start_time: log.start_time,
+                        end_time: log.end_time,
+                        task_start_date: log.task_date,
+                        is_recursive_call: true
+                    }, 'UTC', cur);
+
+                    serviceRows.push([
+                        d,
+                        desc,
+                        checkIn,
+                        checkOut,
+                        `${parseFloat(logBreakdown.baseCost || 0).toFixed(2)}`,
+                        `${parseFloat(logBreakdown.toolCost || 0).toFixed(2)}`,
+                        `${parseFloat(logBreakdown.travelCost || 0).toFixed(2)}`,
+                        `${parseFloat(logBreakdown.totalReceivable || 0).toFixed(2)}`
+                    ]);
+                });
             });
 
             autoTable(doc, {
                 startY: doc.lastAutoTable.finalY + 5,
                 head: [[
-                    { content: 'Description of service', styles: { halign: 'center' } },
-                    { content: 'Location', styles: { halign: 'center' } },
-                    { content: `Amount in ${cur}`, styles: { halign: 'right' } }
+                    { content: 'Date', styles: { halign: 'center' } },
+                    { content: 'Description', styles: { halign: 'left' } },
+                    { content: 'In', styles: { halign: 'center' } },
+                    { content: 'Out', styles: { halign: 'center' } },
+                    { content: 'Rate', styles: { halign: 'right' } },
+                    { content: 'Tools', styles: { halign: 'right' } },
+                    { content: 'Travel', styles: { halign: 'right' } },
+                    { content: 'Amount', styles: { halign: 'right' } }
                 ]],
                 body: serviceRows,
                 theme: 'grid',
-                headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold', cellPadding: 3 },
-                bodyStyles: { fontSize: 8.5, textColor: [40, 40, 40], cellPadding: 4 },
-                columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 45, halign: 'center' }, 2: { cellWidth: 45, halign: 'right' } },
+                headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold', cellPadding: 2 },
+                bodyStyles: { fontSize: 7, textColor: [40, 40, 40], cellPadding: 2 },
+                columnStyles: { 
+                    0: { cellWidth: 18, halign: 'center' }, 
+                    1: { cellWidth: 55 }, 
+                    2: { cellWidth: 15, halign: 'center' },
+                    3: { cellWidth: 15, halign: 'center' },
+                    4: { cellWidth: 20, halign: 'right' },
+                    5: { cellWidth: 15, halign: 'right' },
+                    6: { cellWidth: 15, halign: 'right' },
+                    7: { cellWidth: 22, halign: 'right', fontStyle: 'bold' } 
+                },
                 foot: [[
-                    { content: 'TOTAL', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
-                    { content: `${cur}   ${parseFloat(data.totals.grandTotal).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+                    { content: 'TOTAL', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: `${cur} ${parseFloat(data.totals.grandTotal).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
                 ]],
-                footStyles: { fillColor: [245, 245, 245], fontSize: 9 }
+                footStyles: { fillColor: [245, 245, 245], fontSize: 8 }
             });
 
             // ── Footer ─────────────────────────────────────────────────────────────
