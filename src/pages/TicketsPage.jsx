@@ -2650,7 +2650,13 @@ function TicketsPage() {
                   </label>
                   <label className="tickets-field">
                     <span>Lead Type</span>
-                    <select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
+                    <select 
+                      value={leadType} 
+                      onChange={(e) => setLeadType(e.target.value)}
+                      disabled={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Lead Type, please edit the originating Lead.`)}
+                    >
                       <option value="Onsite">Onsite</option>
                       <option value="Dispatch">Dispatch (Multi-day)</option>
                     </select>
@@ -2702,31 +2708,83 @@ function TicketsPage() {
                 <div className="tickets-grid">
                   <label className="tickets-field tickets-field--full">
                     <span>Task Name <span className="field-required">*</span></span>
-                    <input type="text" value={taskName} onChange={(e) => setTaskName(e.target.value)} placeholder="Enter task name" />
+                    <input 
+                      type="text" 
+                      value={taskName} 
+                      onChange={(e) => setTaskName(e.target.value)} 
+                      placeholder="Enter task name"
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Task Name, please edit the originating Lead.`)}
+                    />
                   </label>
                   <label className="tickets-field">
                     <span>Start Date <span className="field-required">*</span></span>
-                    <input type="date" value={taskStartDate} onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime, taskEndTime); }} />
+                    <input 
+                      type="date" 
+                      value={taskStartDate} 
+                      onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime, taskEndTime); }} 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Start Date, please edit the originating Lead.`)}
+                    />
                   </label>
                   <label className="tickets-field">
                     <span>End Date <span className="field-required">*</span></span>
-                    <input type="date" value={taskEndDate} onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime, taskEndTime); }} />
+                    <input 
+                      type="date" 
+                      value={taskEndDate} 
+                      onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime, taskEndTime); }} 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the End Date, please edit the originating Lead.`)}
+                    />
                   </label>
                   <label className="tickets-field">
                     <span>Start Time <span className="field-required">*</span></span>
-                    <input type="time" value={taskTime} onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value, taskEndTime); }} />
+                    <input 
+                      type="time" 
+                      value={taskTime} 
+                      onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value, taskEndTime); }} 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Start Time, please edit the originating Lead.`)}
+                    />
                   </label>
                   <label className="tickets-field">
                     <span>End Time <span className="field-required">*</span></span>
-                    <input type="time" value={taskEndTime} onChange={(e) => { setTaskEndTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, taskTime, e.target.value); }} />
+                    <input 
+                      type="time" 
+                      value={taskEndTime} 
+                      onChange={(e) => { setTaskEndTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, taskTime, e.target.value); }} 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the End Time, please edit the originating Lead.`)}
+                    />
                   </label>
                   <label className="tickets-field tickets-field--full">
                     <span>Scope of Work <span className="field-required">*</span></span>
-                    <textarea rows={3} value={scopeOfWork} onChange={(e) => setScopeOfWork(e.target.value)} placeholder="Describe the scope of work" />
+                    <textarea 
+                      rows={3} 
+                      value={scopeOfWork} 
+                      onChange={(e) => setScopeOfWork(e.target.value)} 
+                      placeholder="Describe the scope of work"
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Scope of Work, please edit the originating Lead.`)}
+                    />
                   </label>
                   <label className="tickets-field tickets-field--full">
                     <span>Tools Required</span>
-                    <input type="text" value={tools} onChange={(e) => setTools(e.target.value)} placeholder="e.g. Drill, Laptop, Console cable" />
+                    <input 
+                      type="text" 
+                      value={tools} 
+                      onChange={(e) => setTools(e.target.value)} 
+                      placeholder="e.g. Drill, Laptop, Console cable" 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Tools Required, please edit the originating Lead.`)}
+                    />
                   </label>
                 </div>
               </section>
@@ -2744,16 +2802,52 @@ function TicketsPage() {
                       style={{ width: '100%', height: '42px', padding: '0 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px', outline: 'none', background: '#fff' }}
                     />
                   </label>
-                  <label className="tickets-field"><span>Address Line 1 <span className="field-required">*</span></span><input type="text" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} /></label>
-                  <label className="tickets-field"><span>City <span className="field-required">*</span></span><input type="text" value={city} onChange={(e) => setCity(e.target.value)} /></label>
+                  <label className="tickets-field">
+                    <span>Address Line 1 <span className="field-required">*</span></span>
+                    <input 
+                      type="text" 
+                      value={addressLine1} 
+                      onChange={(e) => setAddressLine1(e.target.value)} 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Address, please edit the originating Lead.`)}
+                    />
+                  </label>
+                  <label className="tickets-field">
+                    <span>City <span className="field-required">*</span></span>
+                    <input 
+                      type="text" 
+                      value={city} 
+                      onChange={(e) => setCity(e.target.value)} 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the City, please edit the originating Lead.`)}
+                    />
+                  </label>
                   <label className="tickets-field">
                     <span>Country <span className="field-required">*</span></span>
-                    <select value={country} onChange={(e) => handleCountryChange(e.target.value)} disabled={loadingCountries}>
+                    <select 
+                      value={country} 
+                      onChange={(e) => handleCountryChange(e.target.value)} 
+                      disabled={loadingCountries || !!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Country, please edit the originating Lead.`)}
+                    >
                       <option value="">Select country...</option>
                       {countriesList.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
                     </select>
                   </label>
-                  <label className="tickets-field"><span>Zip Code <span className="field-required">*</span></span><input type="text" value={zipCode} onChange={(e) => setZipCode(e.target.value)} /></label>
+                  <label className="tickets-field">
+                    <span>Zip Code <span className="field-required">*</span></span>
+                    <input 
+                      type="text" 
+                      value={zipCode} 
+                      onChange={(e) => setZipCode(e.target.value)} 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Zip Code, please edit the originating Lead.`)}
+                    />
+                  </label>
                 </div>
               </section>
 
@@ -3021,6 +3115,12 @@ function TicketsPage() {
                     <label className="tickets-field"><span>Half Day Rate</span><input type="number" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} /></label>
                     <label className="tickets-field"><span>Full Day Rate</span><input type="number" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} /></label>
                     <label className="tickets-field"><span>Monthly Rate</span><input type="number" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} /></label>
+                    {billingType === 'Agreed Rate' && (
+                      <label className="tickets-field"><span>Agreed Rate</span><input type="number" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} /></label>
+                    )}
+                    {billingType === 'Cancellation' && (
+                      <label className="tickets-field"><span>Cancellation Fee</span><input type="number" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} /></label>
+                    )}
                     <label className="tickets-field"><span>Travel Cost / Day</span><input type="number" value={travelCostPerDay} onChange={(e) => setTravelCostPerDay(e.target.value)} /></label>
                     <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} /></label>
                   </div>
@@ -3039,8 +3139,12 @@ function TicketsPage() {
                     </label>
                     <label className="tickets-field">
                       <span>Payout Currency</span>
-                      <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)}>
-                        {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)} disabled={!!engineerId}>
+                        {CURRENCIES.filter(c => {
+                          const eng = engineers.find(e => String(e.id) === String(engineerId));
+                          const engCur = eng ? (eng.currency || eng.payout_currency || 'USD') : 'USD';
+                          return !engineerId || c.value === engCur;
+                        }).map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                       </select>
                     </label>
                     {engPayType === 'Custom' && (
@@ -3055,6 +3159,9 @@ function TicketsPage() {
                         </label>
                         <label className="tickets-field"><span>Payout Hourly</span><input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} /></label>
                         <label className="tickets-field"><span>Payout Full Day</span><input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} /></label>
+                        {engBillingType === 'Agreed Rate' && (
+                          <label className="tickets-field" style={{ gridColumn: 'span 2' }}><span>Payout Agreed Rate</span><input type="number" value={engAgreedRate} onChange={(e) => setEngAgreedRate(e.target.value)} /></label>
+                        )}
                       </>
                     )}
                   </div>
