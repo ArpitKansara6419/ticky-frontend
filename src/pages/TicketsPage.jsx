@@ -367,9 +367,24 @@ function TicketsPage() {
       const sStr = String(sParam);
       const eStr = String(eParam);
 
-      // Parse as UTC to treat as 'wall-clock' time
-      const s = new Date(sStr.includes('Z') || sStr.includes('+') ? sStr : sStr.replace(' ', 'T') + 'Z');
-      const e = new Date(eStr.includes('Z') || eStr.includes('+') ? eStr : eStr.replace(' ', 'T') + 'Z');
+      const parseFlexibleDate = (str) => {
+        if (!str) return new Date(NaN);
+        // If it's already ISO-ish (starts with YYYY-)
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+          return new Date(str.includes('Z') || str.includes('+') ? str : str.replace(' ', 'T') + 'Z');
+        }
+        // If it's DD-MM-YYYY format
+        if (/^\d{2}-\d{2}-\d{4}/.test(str)) {
+          const [d, m, y] = str.split('T')[0].split('-');
+          const timePart = str.includes('T') ? str.split('T')[1] : (str.includes(' ') ? str.split(' ')[1] : '00:00:00');
+          const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
+          return new Date(iso);
+        }
+        return new Date(str.includes('Z') || str.includes('+') ? str : str.replace(' ', 'T') + 'Z');
+      };
+
+      const s = parseFlexibleDate(sStr);
+      const e = parseFlexibleDate(eStr);
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
 
       const brkSec = (parseInt(bParam) || 0) * 60;
@@ -2809,9 +2824,20 @@ function TicketsPage() {
                     <span>Address Search</span>
                     <Autocomplete
                       onPlaceSelected={handleGoogleAddressSelect}
-                      options={GOOGLE_AUTOCOMPLETE_OPTIONS}
-                      placeholder="Type to search global address..."
-                      style={{ width: '100%', height: '42px', padding: '0 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px', outline: 'none', background: '#fff' }}
+                      options={leadId ? [] : GOOGLE_AUTOCOMPLETE_OPTIONS}
+                      placeholder={leadId ? "Address is synced from Lead" : "Type to search global address..."}
+                      style={{ 
+                        width: '100%', 
+                        height: '42px', 
+                        padding: '0 12px', 
+                        borderRadius: '10px', 
+                        border: '1px solid #e2e8f0', 
+                        fontSize: '13px', 
+                        outline: 'none', 
+                        background: leadId ? '#f8fafc' : '#fff',
+                        cursor: leadId ? 'not-allowed' : 'text'
+                      }}
+                      disabled={!!leadId}
                     />
                   </label>
                   <label className="tickets-field">
