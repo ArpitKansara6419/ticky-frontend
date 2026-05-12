@@ -468,287 +468,119 @@ const CustomerReceivablePage = () => {
         setIsInvoiceOptionsModalOpen(true);
     };
 
-    const generateProfessionalPDF = (ticket, bd) => {
+    // Helper to build the aimbizit-format PDF (shared by both Invoice and Breakdown)
+    const buildAimbizitPDF = (ticket, bd, logs, filename) => {
         const doc = new jsPDF();
         const cur = ticket.currency || 'USD';
+        const today = new Date().toLocaleDateString('en-GB');
+        const startDate = ticket.task_start_date ? new Date(ticket.task_start_date).toLocaleDateString('en-GB') : 'XX/XX/XXXX';
+        const endDate = ticket.task_end_date ? new Date(ticket.task_end_date).toLocaleDateString('en-GB') : 'XX/XX/XXXX';
 
-        // Header Background
-        doc.setFillColor(79, 70, 229);
-        doc.rect(0, 0, 210, 40, 'F');
-
-        // Branding
+        // ── Logo (top-left) ────────────────────────────────────────────────────
+        doc.setFillColor(100, 80, 200);
+        doc.ellipse(22, 20, 12, 10, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
-        doc.text('Awokta.', 20, 25);
-        
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('PROFESSIONAL SERVICE INVOICE', 140, 25);
-
-        // Ticket Header Info
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Invoice for Ticket #${ticket.id}`, 20, 55);
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Task: ${ticket.task_name}`, 20, 62);
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 160, 55);
-        if (invoicePoNumber) doc.text(`PO Number: ${invoicePoNumber}`, 160, 62);
-        if (invoiceServiceNumber) doc.text(`Service Number: ${invoiceServiceNumber}`, 160, 67);
-
-        // Client & Project Info
-        autoTable(doc, {
-            startY: 75,
-            head: [['Client Details', 'Project Details']],
-            body: [[
-                `Customer: ${ticket.customer_name}\nLocation: ${ticket.city || '-'}, ${ticket.country || '-'}`,
-                `Engineer: ${ticket.engineer_name}\nBilling Model: ${ticket.billing_type}`
-            ]],
-            theme: 'striped',
-            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
-            bodyStyles: { textColor: [30, 41, 59] }
-        });
-
-        // Financial Breakdown
-        const breakdownRows = [
-            ['Labor & Service Base', bd.baseBreakdown || 'Standard Shift', `${cur} ${parseFloat(bd.baseCost).toFixed(2)}`],
-        ];
-
-        if (parseFloat(bd.otPremium) > 0) breakdownRows.push(['Overtime Premium', bd.otBreakdown || 'OT Rates Applied', `+ ${cur} ${parseFloat(bd.otPremium).toFixed(2)}`]);
-        if (parseFloat(bd.oohPremium) > 0) breakdownRows.push(['OOH Premium', bd.oohBreakdown || 'Outside regular hours', `+ ${cur} ${parseFloat(bd.oohPremium).toFixed(2)}`]);
-        if (parseFloat(bd.specialDayPremium) > 0) breakdownRows.push(['Special Day Premium', bd.spBreakdown || 'Weekend/Holiday rate', `+ ${cur} ${parseFloat(bd.specialDayPremium).toFixed(2)}`]);
-        if (parseFloat(bd.travelCost) > 0) breakdownRows.push(['Travel & Logistics', 'Per day travel allowance', `+ ${cur} ${parseFloat(bd.travelCost).toFixed(2)}`]);
-        if (parseFloat(bd.toolCost) > 0) breakdownRows.push(['Tools & Materials', 'Total equipment usage', `+ ${cur} ${parseFloat(bd.toolCost).toFixed(2)}`]);
-
-        autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 15,
-            head: [['Description', 'Notes', 'Amount']],
-            body: breakdownRows,
-            theme: 'grid',
-            headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
-            columnStyles: {
-                2: { halign: 'right', fontStyle: 'bold' }
-            }
-        });
-
-        // Summary Total Box
-        const finalY = doc.lastAutoTable.finalY + 10;
-        doc.setFillColor(248, 250, 252);
-        doc.rect(130, finalY, 60, 20, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(130, finalY, 60, 20);
-
-        doc.setTextColor(79, 70, 229);
-        doc.setFontSize(10);
-        doc.text('NET PAYABLE', 135, finalY + 8);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${cur} ${bd.totalReceivable}`, 135, finalY + 16);
-
-        // Footer
+        doc.text('aimbizit', 14, 21);
+        doc.setTextColor(80, 80, 80);
         doc.setFontSize(9);
-        doc.setTextColor(148, 163, 184);
-        doc.text('Thank you for your business. Please process payment within 30 days.', 20, 280);
-        doc.text('Automated Invoice generated via Awokta Financial Suite.', 130, 280);
+        doc.setFont('helvetica', 'normal');
+        doc.text('aimbizit.com', 14, 33);
 
-        doc.save(`Invoice_Ticket_${ticket.id}.pdf`);
+        // ── Invoice Details (top-right) ────────────────────────────────────────
+        const rx = 115;
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Invoice nr:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(invoicePoNumber || `INV-${ticket.id}`, rx + 28, 16);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Place of issue:', rx, 22); doc.text('Warsaw', rx + 28, 22);
+        doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
+
+        // ── Supplier / Client ──────────────────────────────────────────────────
+        autoTable(doc, {
+            startY: 42,
+            head: [['Supplier', 'Client']],
+            body: [[
+                'AIMBOT BUSINESS SERVICES\nAleja Jana Pawla II\nNumber 43A, Lokal 37B, Warszawa 01-001\nKRS: 0000933886',
+                `${ticket.customer_name || '-'}\n${[ticket.city, ticket.country].filter(Boolean).join(', ')}`
+            ]],
+            theme: 'plain',
+            headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
+            bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50], cellPadding: 3 },
+            columnStyles: { 0: { cellWidth: 90 }, 1: { cellWidth: 90 } }
+        });
+
+        // ── Account Details ────────────────────────────────────────────────────
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 3,
+            head: [['Account Details', '']],
+            body: [
+                ['Account Name:', 'AIMBOT BUSINESS SERVICES'],
+                ['Bank Name:', 'ING Bank'],
+                ['Swift:', 'INGBPLPW'],
+                ['IBAN:', 'PL 93 1050 1012 1000 0090 3264 5138'],
+            ],
+            theme: 'plain',
+            headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
+            bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50], cellPadding: 2 },
+            columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 1: { cellWidth: 142 } }
+        });
+
+        // ── Service Table ──────────────────────────────────────────────────────
+        const serviceRows = logs.map(log => {
+            const d = (log.task_date || ticket.task_start_date || '').split('T')[0];
+            const logRes = calculateTicketCostFrontend({ ...ticket, time_logs: [], start_time: log.start_time, end_time: log.end_time, task_start_date: d, is_recursive_call: true }, calcTimezone, cur);
+            const desc = `${ticket.task_name || '-'}\nEngineer: ${ticket.engineer_name || '-'} | Ticket #${ticket.id}\nDate: ${d}`;
+            return [desc, `${ticket.city || '-'}, ${ticket.country || '-'}`, `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`];
+        });
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 5,
+            head: [[
+                { content: 'Description of service', styles: { halign: 'center' } },
+                { content: 'Location', styles: { halign: 'center' } },
+                { content: `Amount in ${cur}`, styles: { halign: 'right' } }
+            ]],
+            body: serviceRows,
+            theme: 'grid',
+            headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold', cellPadding: 3 },
+            bodyStyles: { fontSize: 8.5, textColor: [40, 40, 40], cellPadding: 4 },
+            columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 45, halign: 'center' }, 2: { cellWidth: 45, halign: 'right' } },
+            foot: [[
+                { content: 'TOTAL', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: `${cur}   ${parseFloat(bd.totalReceivable).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+            ]],
+            footStyles: { fillColor: [245, 245, 245], fontSize: 9 }
+        });
+
+        // ── Footer ─────────────────────────────────────────────────────────────
+        const footY = doc.lastAutoTable.finalY + 8;
+        doc.setFontSize(8.5);
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Service duration: ${startDate} - ${endDate}`, 14, footY);
+        doc.text('Terms of Payment: Bank transfer', 14, footY + 6);
+        doc.text('Date of Payment: XX/XX/XXXX', 14, footY + 12);
+
+        doc.save(filename);
+    };
+
+    const generateProfessionalPDF = (ticket, bd) => {
+        let logs = [];
+        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) {}
+        if (logs.length === 0) logs = [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
+        buildAimbizitPDF(ticket, bd, logs, `Invoice_Ticket_${ticket.id}.pdf`);
     };
 
     const generateBreakdownPDF = (ticket, bd) => {
-        const doc = new jsPDF('l', 'mm', 'a4'); // Landscape A4
-        const cur = ticket.currency || 'USD';
-
-        // ─── HEADER ───────────────────────────────────────────────────────────
-        doc.setFillColor(79, 55, 139);  // Deep purple matching screenshot
-        doc.rect(0, 0, 297, 38, 'F');
-
-        // Logo box placeholder
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(8, 6, 26, 26, 3, 3, 'F');
-        doc.setTextColor(79, 55, 139);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text('AIM', 12, 19);
-        doc.text('BOT', 12, 25);
-
-        // Brand text
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.text('WhatsApp link: https://wa.me/message/TEZRFLWAIRIEC1', 40, 14);
-        doc.text('https://linkedin.com/company/aimbizit', 40, 20);
-        doc.text('www.aimbizit.com', 40, 26);
-
-        // Invoice label — positioned to the left of the Total box
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Invoice', 215, 24);
-
-        // ─── DATE + INVOICE NUMBER ROW ────────────────────────────────────────
-        doc.setTextColor(50, 50, 50);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Date', 210, 48);
-        doc.text(new Date().toLocaleDateString(), 240, 48);
-        doc.text('Invoice number', 205, 54);
-        doc.text(`#${ticket.id}`, 240, 54);
-
-        // ─── TOTAL BOX (top-right corner) ────────────────────────────────────
-        const totalAmount = `${cur} ${parseFloat(bd.totalReceivable).toFixed(2)}`;
-
-        // Green 'Total' label box
-        doc.setFillColor(93, 177, 100);
-        doc.rect(255, 4, 36, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Total', 273, 11, { align: 'center' });
-
-        // White amount box below
-        doc.setFillColor(248, 248, 248);
-        doc.setDrawColor(220, 220, 220);
-        doc.rect(255, 14, 36, 14, 'FD');
-        doc.setTextColor(40, 40, 40);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.text(totalAmount, 273, 23, { align: 'center' });
-
-        // ─── DATA TABLE ──────────────────────────────────────────────────────
         let logs = [];
-        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) { }
-
-        if (logs.length === 0) {
-            logs = [{
-                task_date: ticket.task_start_date,
-                start_time: ticket.start_time,
-                end_time: ticket.end_time
-            }];
-        }
-
-        const tableRows = logs.map(log => {
-            const d = (log.task_date || ticket.task_start_date || '').split('T')[0];
-
-            // Format Check In / Check Out
-            const checkIn = log.start_time
-                ? new Date(log.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : ticket.task_time || '-';
-            const checkOut = log.end_time
-                ? new Date(log.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : '-';
-
-            // Per-day cost calculation
-            const logRes = calculateTicketCostFrontend({
-                ...ticket,
-                time_logs: [],
-                start_time: log.start_time,
-                end_time: log.end_time,
-                task_start_date: d,
-                is_recursive_call: true
-            }, calcTimezone, cur);
-
-            // Description cell — multi-line with sub-details
-            const description = [
-                `Engineer: ${ticket.engineer_name || '-'}`,
-                `Location: ${ticket.city || '-'}, ${ticket.country || '-'}`,
-                `Task: ${ticket.task_name || '-'}`,
-                `Ticket #: ${ticket.id}`
-            ].join('\n');
-
-            return [
-                d,
-                description,
-                checkIn,
-                checkOut,
-                parseFloat(logRes.baseCost || 0).toFixed(2),
-                parseFloat(logRes.travelCost || 0).toFixed(2),
-                parseFloat(logRes.toolCost || 0).toFixed(2),
-                parseFloat(logRes.totalReceivable || 0).toFixed(2)
-            ];
-        });
-
-        autoTable(doc, {
-            startY: 62,
-            head: [[
-                { content: 'DATE\n[Date]', styles: { halign: 'center' } },
-                { content: 'DESCRIPTION\n[Brief Description of Task]', styles: { halign: 'center' } },
-                { content: 'CHECK IN', styles: { halign: 'center' } },
-                { content: 'CHECK OUT', styles: { halign: 'center' } },
-                { content: `RATE\n[Agreed Rate]\n(${cur})`, styles: { halign: 'right' } },
-                { content: `TRAVEL\n[Agreed Rate]\n(${cur})`, styles: { halign: 'right' } },
-                { content: `TOOLS\n(${cur})`, styles: { halign: 'right' } },
-                { content: `AMOUNT\nIn ${cur}`, styles: { halign: 'right' } }
-            ]],
-            body: tableRows,
-            theme: 'grid',
-            headStyles: {
-                fillColor: [79, 55, 139],
-                textColor: [255, 255, 255],
-                fontSize: 7,
-                fontStyle: 'bold',
-                cellPadding: 3
-            },
-            bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59], cellPadding: 3 },
-            columnStyles: {
-                0: { cellWidth: 22 },
-                1: { cellWidth: 70 },
-                2: { cellWidth: 20, halign: 'center' },
-                3: { cellWidth: 20, halign: 'center' },
-                4: { cellWidth: 25, halign: 'right' },
-                5: { cellWidth: 25, halign: 'right' },
-                6: { cellWidth: 25, halign: 'right' },
-                7: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
-            },
-            foot: [[
-                { content: '', colSpan: 6 },
-                { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'right' } },
-                { content: `${cur} ${parseFloat(bd.totalReceivable).toFixed(2)}`, styles: { fontStyle: 'bold', halign: 'right' } }
-            ]],
-            footStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontSize: 9 }
-        });
-
-        // ─── THANK YOU ────────────────────────────────────────────────────────
-        const finalY = doc.lastAutoTable.finalY;
-        doc.setFillColor(79, 55, 139);
-        doc.rect(8, finalY + 8, 281, 8, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'italic');
-        doc.text('Thank You', 140, finalY + 14, { align: 'center' });
-
-        // ─── BANK DETAILS ─────────────────────────────────────────────────────
-        const bankY = finalY + 22;
-        doc.setFillColor(79, 55, 139);
-        doc.rect(8, bankY, 130, 8, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text('BANK Details for Payment', 11, bankY + 5.5);
-
-        const bankRows = [
-            ['Bank Name *', ''],
-            ['Bank Address *', ''],
-            ['Account Holder Name *', ''],
-            ['Account Number *', ''],
-            ['IBAN *', ''],
-            ['BIC / Swift Code *', ''],
-            ['Sort Code (UK ONLY)', ''],
-            ['Country *', '']
-        ];
-
-        autoTable(doc, {
-            startY: bankY + 8,
-            body: bankRows,
-            theme: 'grid',
-            styles: { fontSize: 7.5, cellPadding: 2 },
-            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 }, 1: { cellWidth: 85 } },
-            margin: { left: 8 }
-        });
-
-        doc.save(`Breakdown_Ticket_${ticket.id}.pdf`);
+        try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) {}
+        if (logs.length === 0) logs = [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
+        buildAimbizitPDF(ticket, bd, logs, `Breakdown_Ticket_${ticket.id}.pdf`);
     };
+
 
     const generateBreakdownExcel = (ticket, bd) => {
         const cur = ticket.currency || 'USD';
@@ -785,7 +617,7 @@ const CustomerReceivablePage = () => {
             }, calcTimezone, cur);
 
             // Description cell content
-            const description = `Engineer: ${ticket.engineer_name || '-'} | Location: ${ticket.city || '-'}, ${ticket.country || '-'} | Task: ${ticket.task_name || '-'} | Ticket #: ${ticket.id}`;
+            const description = `Engineer: ${ticket.engineer_name || '-'} | Location: ${ticket.city || '-'}, ${ticket.country || '-'} | Task: ${ticket.task_name || '-'} | Ticket #: ${ticket.id} | Date: ${d}`;
 
             return [
                 d,
@@ -802,9 +634,10 @@ const CustomerReceivablePage = () => {
         // ─── Build sheet data ─────────────────────────────────────────────────
         const wsData = [
             // Row 1: Branding
-            ['AIMBOT IT SUPPORT', '', '', 'WhatsApp: https://wa.me/message/TEZRFLWAIRIEC1'],
-            ['', '', '', 'LinkedIn: linkedin.com/company/aimbizit'],
-            ['', '', '', 'Web: www.aimbizit.com'],
+            ['AIMBOT BUSINESS SERVICES', '', '', 'WhatsApp: https://wa.me/message/TEZRFLWAIRIEC1'],
+            ['Aleja Jana Pawla II', '', '', 'LinkedIn: linkedin.com/company/aimbizit'],
+            ['Number 43A, Lokal 37B, Warszawa 01-001', '', '', 'Web: www.aimbizit.com'],
+            ['KRS: 0000933886'],
             [],
             // Invoice meta
             ['Date', new Date().toLocaleDateString(), '', 'Invoice', ''],
@@ -824,14 +657,14 @@ const CustomerReceivablePage = () => {
             [],
             // Bank Details
             ['BANK Details for Payment'],
-            ['Bank Name *', ''],
-            ['Bank Address *', ''],
-            ['Account Holder Name *', ''],
-            ['Account Number *', ''],
-            ['IBAN *', ''],
-            ['BIC / Swift Code *', ''],
-            ['Sort Code (UK ONLY)', ''],
-            ['Country *', '']
+            ['Bank Name', 'ING Bank'],
+            ['Bank Address', 'Warsaw, Poland'],
+            ['Account Holder Name', 'AIMBOT BUSINESS SERVICES'],
+            ['Account Number', 'PL 93 1050 1012 1000 0090 3264 5138'],
+            ['IBAN', 'PL 93 1050 1012 1000 0090 3264 5138'],
+            ['BIC / Swift Code', 'INGBPLPW'],
+            ['Sort Code (UK ONLY)', '-'],
+            ['Country', 'Poland']
         ];
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -1071,68 +904,115 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error("Error updating rates:", e); }
     };
 
-    const handlePrintInvoice = (invoice) => {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>Invoice #${invoice.invoice_number}</title>
-                <style>
-                    body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
-                    .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-                    .logo { font-size: 24px; font-weight: bold; color: #4f46e5; }
-                    .invoice-title { font-size: 32px; font-weight: bold; text-align: right; }
-                    .meta { text-align: right; color: #666; font-size: 14px; margin-top: 10px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-                    th { text-align: left; border-bottom: 2px solid #ddd; padding: 10px; color: #555; }
-                    td { border-bottom: 1px solid #eee; padding: 10px; }
-                    .total-box { margin-top: 30px; text-align: right; font-size: 20px; font-weight: bold; }
-                    .footer { margin-top: 50px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <div class="logo">Awokta.</div>
-                    <div>
-                        <div class="invoice-title">INVOICE</div>
-                        <div class="meta">#${invoice.invoice_number}<br>Date: ${new Date(invoice.issue_date).toLocaleDateString()}</div>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 40px;">
-                    <strong>Bill To:</strong><br>
-                    ${invoice.customer_name}<br>
-                    ${invoice.customer_company || ''}
-                </div>
+    const handlePrintInvoice = async (inv) => {
+        try {
+            // Fetch detailed print data from the new backend endpoint
+            const res = await fetch(`${API_BASE_URL}/invoices/${inv.id}/print`);
+            if (!res.ok) throw new Error('Failed to fetch invoice details');
+            const data = await res.json();
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Professional Services (Consolidated)</td>
-                            <td>${selectedCurrency} ${parseFloat(invoice.amount).toFixed(2)}</td>
-                        </tr>
-                    </tbody>
-                </table>
+            const doc = new jsPDF();
+            const cur = data.invoice.currency || 'EUR'; // Default to EUR as per user image
+            const today = new Date(data.invoice.issue_date).toLocaleDateString('en-GB');
+            
+            // Get date range from tickets
+            const allDates = data.tickets.map(t => new Date(t.task_start_date)).sort((a,b) => a-b);
+            const startDate = allDates.length > 0 ? allDates[0].toLocaleDateString('en-GB') : 'XX/XX/XXXX';
+            const endDate = allDates.length > 0 ? allDates[allDates.length - 1].toLocaleDateString('en-GB') : 'XX/XX/XXXX';
 
-                <div class="total-box">
-                    Total: ${selectedCurrency} ${parseFloat(invoice.amount).toFixed(2)}
-                </div>
+            // ── Logo (top-left) ────────────────────────────────────────────────────
+            doc.setFillColor(100, 80, 200);
+            doc.ellipse(22, 20, 12, 10, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            doc.text('aimbizit', 14, 21);
+            doc.setTextColor(80, 80, 80);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('aimbizit.com', 14, 33);
 
-                <div class="footer">
-                    Thank you for your business.<br>
-                    Payment is due within 30 days.
-                </div>
-                <script>window.print();</script>
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
+            // ── Invoice Details (top-right) ────────────────────────────────────────
+            const rx = 115;
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Invoice nr:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(data.invoice.invoice_number || 'XXXXXXXX', rx + 28, 16);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Place of issue:', rx, 22); doc.text(data.invoice.place_of_issue || 'Warsaw', rx + 28, 22);
+            doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
+
+            // ── Supplier / Client ──────────────────────────────────────────────────
+            autoTable(doc, {
+                startY: 42,
+                head: [['Supplier', 'Client']],
+                body: [[
+                    `${data.supplier.name}\n${data.supplier.address}\nKRS: ${data.supplier.krs}`,
+                    `${data.customer.name || '-'}\n${[data.customer.city, data.customer.country].filter(Boolean).join(', ')}`
+                ]],
+                theme: 'plain',
+                headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
+                bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50], cellPadding: 3 },
+                columnStyles: { 0: { cellWidth: 90 }, 1: { cellWidth: 90 } }
+            });
+
+            // ── Account Details ────────────────────────────────────────────────────
+            autoTable(doc, {
+                startY: doc.lastAutoTable.finalY + 3,
+                head: [['Account Details', '']],
+                body: [
+                    ['Account Name:', data.supplier.accountName],
+                    ['Bank Name:', data.supplier.bankName],
+                    ['Swift:', data.supplier.swift],
+                    ['IBAN:', data.supplier.iban],
+                ],
+                theme: 'plain',
+                headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
+                bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50], cellPadding: 2 },
+                columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 1: { cellWidth: 142 } }
+            });
+
+            // ── Service Table (Consolidated Tickets) ────────────────────────────────
+            const serviceRows = data.tickets.map(t => {
+                const d = new Date(t.task_start_date).toLocaleDateString('en-GB');
+                const desc = `${t.task_name || '-'}\nEngineer: ${t.engineer_name || '-'} | Ticket #${t.id}\nDate: ${d}`;
+                return [desc, `${t.city || '-'}, ${t.country || '-'}`, `${parseFloat(t.breakdown.totalReceivable || 0).toFixed(2)}`];
+            });
+
+            autoTable(doc, {
+                startY: doc.lastAutoTable.finalY + 5,
+                head: [[
+                    { content: 'Description of service', styles: { halign: 'center' } },
+                    { content: 'Location', styles: { halign: 'center' } },
+                    { content: `Amount in ${cur}`, styles: { halign: 'right' } }
+                ]],
+                body: serviceRows,
+                theme: 'grid',
+                headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold', cellPadding: 3 },
+                bodyStyles: { fontSize: 8.5, textColor: [40, 40, 40], cellPadding: 4 },
+                columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 45, halign: 'center' }, 2: { cellWidth: 45, halign: 'right' } },
+                foot: [[
+                    { content: 'TOTAL', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: `${cur}   ${parseFloat(data.totals.grandTotal).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+                ]],
+                footStyles: { fillColor: [245, 245, 245], fontSize: 9 }
+            });
+
+            // ── Footer ─────────────────────────────────────────────────────────────
+            const footY = doc.lastAutoTable.finalY + 8;
+            doc.setFontSize(8.5);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Service duration: ${startDate} - ${endDate}`, 14, footY);
+            doc.text('Terms of Payment: Bank transfer', 14, footY + 6);
+            doc.text('Date of Payment: XX/XX/XXXX', 14, footY + 12);
+
+            doc.save(`Invoice_${data.invoice.invoice_number}.pdf`);
+
+        } catch (e) {
+            console.error('Print error:', e);
+            alert('Could not generate PDF: ' + e.message);
+        }
     };
 
     // Reset pagination when filters or tab changes
