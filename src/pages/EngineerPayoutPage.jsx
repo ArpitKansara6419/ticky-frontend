@@ -6,6 +6,8 @@ import {
     FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload,
     FiCreditCard, FiCheck, FiRefreshCw
 } from 'react-icons/fi';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './EngineerPayoutPage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -135,6 +137,138 @@ const EngineerPayoutPage = () => {
     // Modal Helper
     const handleOpenDetails = (ticket) => setDetailTicket(ticket);
     const handleCloseDetails = () => setDetailTicket(null);
+
+    const generatePayoutPDF = (engId) => {
+        const engineer = engineersList.find(e => e.id === engId);
+        if (!engineer || unpaidTickets.length === 0) return;
+
+        const doc = new jsPDF();
+        const cur = selectedCurrency;
+        const today = new Date().toLocaleDateString('en-GB');
+        
+        // ── Logo ─────────────────────────────────────────────────────────────
+        doc.setFillColor(100, 80, 200);
+        doc.ellipse(22, 20, 12, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('aimbizit', 14, 21);
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('aimbizit.com', 14, 33);
+
+        // ── Header Details ───────────────────────────────────────────────────
+        const rx = 115;
+        doc.setFontSize(14);
+        doc.setTextColor(100, 80, 200);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAYOUT SHEET', rx, 14);
+        
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Payout Ref:', rx, 22);  doc.setFont('helvetica', 'bold'); doc.text(`PAY-${engId}-${new Date().getTime().toString().slice(-6)}`, rx + 28, 22);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
+
+        // ── Supplier / Engineer ──────────────────────────────────────────────
+        autoTable(doc, {
+            startY: 42,
+            head: [['Payer', 'Engineer']],
+            body: [[
+                'AIMBOT BUSINESS SERVICES\nAleja Jana Pawla II\nNumber 43A, Lokal 37B, Warszawa 01-001\nKRS: 0000933886',
+                `${engineer.name}\n${engineer.email}\n${engineer.phone || ''}\n${engineer.city || ''}`
+            ]],
+            theme: 'plain',
+            headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
+            bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50], cellPadding: 3 },
+            columnStyles: { 0: { cellWidth: 90 }, 1: { cellWidth: 90 } }
+        });
+
+        // ── Service Table (Detailed Breakdown per Log) ─────────────────────────
+        const serviceRows = [];
+        let grandTotal = 0;
+
+        unpaidTickets.forEach(t => {
+            const logs = t.time_logs || [];
+            const displayLogs = logs.length > 0 ? logs : [{ task_date: t.task_start_date, start_time: t.start_time, end_time: t.end_time }];
+            
+            displayLogs.forEach(log => {
+                const d = new Date(log.task_date || t.task_start_date).toLocaleDateString('en-GB');
+                
+                // Detailed Description
+                const desc = `Customer: ${t.customer_name || '-'}\nTask: ${t.task_name || '-'}\nTkt: #${t.id}`;
+                
+                // Times
+                const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+
+                const pd = calculateEngineerPayoutFrontend({
+                    ...t,
+                    time_logs: [], 
+                    start_time: log.start_time,
+                    end_time: log.end_time,
+                    task_start_date: log.task_date,
+                    _is_log_aggregation: false 
+                }, calcTimezone);
+
+                serviceRows.push([
+                    d,
+                    desc,
+                    checkIn,
+                    checkOut,
+                    `${parseFloat(pd.base || 0).toFixed(2)}`,
+                    `${parseFloat(pd.ot || 0).toFixed(2)}`,
+                    `${parseFloat(pd.sp || 0).toFixed(2)}`,
+                    `${parseFloat(pd.totalPayout || 0).toFixed(2)}`
+                ]);
+                grandTotal += parseFloat(pd.totalPayout || 0);
+            });
+        });
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 8,
+            head: [[
+                { content: 'Date', styles: { halign: 'center' } },
+                { content: 'Description', styles: { halign: 'left' } },
+                { content: 'In', styles: { halign: 'center' } },
+                { content: 'Out', styles: { halign: 'center' } },
+                { content: 'Base', styles: { halign: 'right' } },
+                { content: 'OT', styles: { halign: 'right' } },
+                { content: 'Bonus', styles: { halign: 'right' } },
+                { content: 'Amount', styles: { halign: 'right' } }
+            ]],
+            body: serviceRows,
+            theme: 'grid',
+            headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold', cellPadding: 2 },
+            bodyStyles: { fontSize: 7, textColor: [40, 40, 40], cellPadding: 2 },
+            columnStyles: { 
+                0: { cellWidth: 18, halign: 'center' }, 
+                1: { cellWidth: 55 }, 
+                2: { cellWidth: 15, halign: 'center' },
+                3: { cellWidth: 15, halign: 'center' },
+                4: { cellWidth: 20, halign: 'right' },
+                5: { cellWidth: 15, halign: 'right' },
+                6: { cellWidth: 15, halign: 'right' },
+                7: { cellWidth: 22, halign: 'right', fontStyle: 'bold' } 
+            },
+            foot: [[
+                { content: 'TOTAL PAYOUT', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: `${cur} ${grandTotal.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+            ]],
+            footStyles: { fillColor: [245, 245, 245], fontSize: 8 }
+        });
+
+        // ── Footer ─────────────────────────────────────────────────────────────
+        const footY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(8.5);
+        doc.setTextColor(100, 100, 100);
+        doc.text('This is an automated payout breakdown sheet.', 14, footY);
+        doc.text('Generated by Ticky ERP System.', 14, footY + 5);
+
+        doc.save(`Payout_Sheet_${engineer.name.replace(/\s+/g, '_')}.pdf`);
+    };
 
     // Filtering logic for the list of engineers
     const filteredEngineers = engineersList.filter(eng => 
@@ -368,6 +502,15 @@ const EngineerPayoutPage = () => {
                     >
                         <FiRefreshCw className={loading ? 'spin' : ''} />
                     </button>
+                    {selectedEngineerId && unpaidTickets.length > 0 && (
+                        <button 
+                            className="btn-download-premium" 
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '10px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)' }}
+                            onClick={() => generatePayoutPDF(selectedEngineerId)}
+                        >
+                            <FiDownload /> Payout Breakdown
+                        </button>
+                    )}
                 </div>
                 <div className="header-stats">
                     <div className="stat-card blue">

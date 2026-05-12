@@ -1724,7 +1724,7 @@ const CustomerReceivablePage = () => {
                                         </div>
                                         {detailTicket.total_cost && parseFloat(detailTicket.total_cost) !== parseFloat(bd.totalReceivable) && (
                                             <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8', textAlign: 'right' }}>
-                                                Note: Includes manually saved adjustments ({cur} {parseFloat(detailTicket.total_cost).toFixed(2)})
+                                                {/* Note Removed */}
                                             </p>
                                         )}
                                     </div>
