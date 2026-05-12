@@ -422,7 +422,7 @@ function TicketsPage() {
       const hr = parseFloat(opts.hourlyRate) || 0;
       const hd = parseFloat(opts.halfDayRate) || 0;
       const fd = parseFloat(opts.fullDayRate) || 0;
-      const bil = opts.billingType;
+      const bil = (opts.billingType || '').trim();
 
       // Rate Overrides from opts if provided
       const customOTRate = parseFloat(overtimeRate) || (hr * 1.5);
@@ -430,24 +430,26 @@ function TicketsPage() {
       const customWeekendRate = parseFloat(weekendRate) || (hr * 2.0);
       const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
 
-      if (bil.includes('Hourly')) {
+      const bilMatch = (target) => bil === target;
+
+      if (bilMatch('Hourly')) {
         const b = Math.max(2, hrs);
         base = b * hr;
 
-      } else if (bil.includes('Half Day + Hourly')) {
+      } else if (bilMatch('Half Day + Hourly')) {
         if (hrs <= 4) {
           base = hd;
         } else {
           base = hd + ((hrs - 4) * hr);
         }
 
-      } else if (bil.includes('Full Day + OT')) {
+      } else if (bilMatch('Full Day + OT')) {
         base = fd;
         if (hrs > 8) {
           ot = (hrs - 8) * customOTRate;
         }
 
-      } else if (bil.includes('Mixed Mode')) {
+      } else if (bilMatch('Mixed Mode')) {
         if (hrs <= 4) {
           base = hd;
         } else if (hrs <= 8) {
@@ -467,10 +469,10 @@ function TicketsPage() {
         opts._workingDays   = divisor;
         opts._monthlyFull   = fullRate;
 
-      } else if (bil.includes('Agreed Rate')) {
+      } else if (bilMatch('Agreed Rate')) {
         base = parseFloat(opts.agreedRate) || 0;
 
-      } else if (bil.includes('Cancellation')) {
+      } else if (bilMatch('Cancellation')) {
         base = parseFloat(opts.cancellationFee) || 0;
       }
 
@@ -2678,7 +2680,9 @@ function TicketsPage() {
                         const cust = customers.find(c => String(c.id) === String(val));
                         setClientName(cust ? cust.name : '');
                       }} 
-                      disabled={loadingDropdowns}
+                      disabled={loadingDropdowns || !!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Customer, please edit the originating Lead.`)}
                     >
                       <option value="">Choose a customer...</option>
                       {customers.map((c) => (
@@ -2697,7 +2701,15 @@ function TicketsPage() {
                   </label>
                   <label className="tickets-field tickets-field--full">
                     <span>Client Name</span>
-                    <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter client name" />
+                    <input 
+                      type="text" 
+                      value={clientName} 
+                      onChange={(e) => setClientName(e.target.value)} 
+                      placeholder="Enter client name" 
+                      readOnly={!!leadId}
+                      className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Client Name, please edit the originating Lead.`)}
+                    />
                   </label>
                 </div>
               </section>
@@ -3095,13 +3107,25 @@ function TicketsPage() {
                   <div className="tickets-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                     <label className="tickets-field">
                       <span>Currency</span>
-                      <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                      <select 
+                        value={currency} 
+                        onChange={(e) => setCurrency(e.target.value)}
+                        disabled={!!leadId}
+                        className={leadId ? 'synced-field' : ''}
+                        onClick={() => leadId && alert(`Currency is synced from Lead #L-${leadId}.`)}
+                      >
                         {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                       </select>
                     </label>
                     <label className="tickets-field">
                       <span>Billing Type</span>
-                      <select value={billingType} onChange={(e) => setBillingType(e.target.value)}>
+                      <select 
+                        value={billingType} 
+                        onChange={(e) => setBillingType(e.target.value)}
+                        disabled={!!leadId}
+                        className={leadId ? 'synced-field' : ''}
+                        onClick={() => leadId && alert(`Financial details are synced from Lead #L-${leadId}. Please edit the Lead to change billing configurations.`)}
+                      >
                         <option value="Hourly">Hourly Only</option>
                         <option value="Half Day + Hourly">Half Day + Hourly</option>
                         <option value="Full Day + OT">Full Day + OT</option>
@@ -3111,18 +3135,18 @@ function TicketsPage() {
                         <option value="Cancellation">Cancellation Fee</option>
                       </select>
                     </label>
-                    <label className="tickets-field"><span>Hourly Rate</span><input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} /></label>
-                    <label className="tickets-field"><span>Half Day Rate</span><input type="number" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} /></label>
-                    <label className="tickets-field"><span>Full Day Rate</span><input type="number" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} /></label>
-                    <label className="tickets-field"><span>Monthly Rate</span><input type="number" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} /></label>
+                    <label className="tickets-field"><span>Hourly Rate</span><input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
+                    <label className="tickets-field"><span>Half Day Rate</span><input type="number" value={halfDayRate} onChange={(e) => setHalfDayRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
+                    <label className="tickets-field"><span>Full Day Rate</span><input type="number" value={fullDayRate} onChange={(e) => setFullDayRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
+                    <label className="tickets-field"><span>Monthly Rate</span><input type="number" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
                     {billingType === 'Agreed Rate' && (
-                      <label className="tickets-field"><span>Agreed Rate</span><input type="number" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Agreed Rate</span><input type="number" value={agreedRate} onChange={(e) => setAgreedRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
                     )}
                     {billingType === 'Cancellation' && (
-                      <label className="tickets-field"><span>Cancellation Fee</span><input type="number" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} /></label>
+                      <label className="tickets-field"><span>Cancellation Fee</span><input type="number" value={cancellationFee} onChange={(e) => setCancellationFee(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
                     )}
-                    <label className="tickets-field"><span>Travel Cost / Day</span><input type="number" value={travelCostPerDay} onChange={(e) => setTravelCostPerDay(e.target.value)} /></label>
-                    <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} /></label>
+                    <label className="tickets-field"><span>Travel Cost / Day</span><input type="number" value={travelCostPerDay} onChange={(e) => setTravelCostPerDay(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
+                    <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
                   </div>
                 </section>
 
@@ -3132,14 +3156,20 @@ function TicketsPage() {
                   <div className="tickets-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                     <label className="tickets-field">
                       <span>Pay Type</span>
-                      <select value={engPayType} onChange={(e) => setEngPayType(e.target.value)}>
+                      <select 
+                        value={engPayType} 
+                        onChange={(e) => setEngPayType(e.target.value)}
+                        disabled={!!leadId}
+                        className={leadId ? 'synced-field' : ''}
+                        onClick={() => leadId && alert(`Payout configurations are synced from Lead #L-${leadId}.`)}
+                      >
                         <option value="Default">Use Profile Rates</option>
                         <option value="Custom">Custom Ticket Rates</option>
                       </select>
                     </label>
                     <label className="tickets-field">
                       <span>Payout Currency</span>
-                      <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)} disabled={!!engineerId}>
+                      <select value={engCurrency} onChange={(e) => setEngCurrency(e.target.value)} disabled={!!engineerId || !!leadId} className={leadId ? 'synced-field' : ''}>
                         {CURRENCIES.filter(c => {
                           const eng = engineers.find(e => String(e.id) === String(engineerId));
                           const engCur = eng ? (eng.currency || eng.payout_currency || 'USD') : 'USD';
@@ -3151,16 +3181,22 @@ function TicketsPage() {
                       <>
                         <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
                           <span>Payout Billing Type</span>
-                          <select value={engBillingType} onChange={(e) => setEngBillingType(e.target.value)}>
+                          <select 
+                            value={engBillingType} 
+                            onChange={(e) => setEngBillingType(e.target.value)}
+                            disabled={!!leadId}
+                            className={leadId ? 'synced-field' : ''}
+                            onClick={() => leadId && alert(`Payout configurations are synced from Lead #L-${leadId}.`)}
+                          >
                             <option value="Hourly">Hourly Only</option>
                             <option value="Full Day + OT">Full Day + OT</option>
                             <option value="Agreed Rate">Agreed Rate</option>
                           </select>
                         </label>
-                        <label className="tickets-field"><span>Payout Hourly</span><input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} /></label>
-                        <label className="tickets-field"><span>Payout Full Day</span><input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} /></label>
+                        <label className="tickets-field"><span>Payout Hourly</span><input type="number" value={engHourlyRate} onChange={(e) => setEngHourlyRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Payout rates are synced from Lead #L-${leadId}.`)} /></label>
+                        <label className="tickets-field"><span>Payout Full Day</span><input type="number" value={engFullDayRate} onChange={(e) => setEngFullDayRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Payout rates are synced from Lead #L-${leadId}.`)} /></label>
                         {engBillingType === 'Agreed Rate' && (
-                          <label className="tickets-field" style={{ gridColumn: 'span 2' }}><span>Payout Agreed Rate</span><input type="number" value={engAgreedRate} onChange={(e) => setEngAgreedRate(e.target.value)} /></label>
+                          <label className="tickets-field" style={{ gridColumn: 'span 2' }}><span>Payout Agreed Rate</span><input type="number" value={engAgreedRate} onChange={(e) => setEngAgreedRate(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Payout rates are synced from Lead #L-${leadId}.`)} /></label>
                         )}
                       </>
                     )}
