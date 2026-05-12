@@ -305,6 +305,23 @@ function TicketsPage() {
   const [activeMainTab, setActiveMainTab] = useState('Tickets'); // 'Tickets' | 'Cost & Breakdown'
   const [activeCostTab, setActiveCostTab] = useState('Customer'); // 'Customer' | 'Engineer'
   
+  const parseWallClockDate = useCallback((str) => {
+    if (!str) return new Date(NaN);
+    const s = String(str).trim();
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
+    }
+    // DD-MM-YYYY
+    if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
+      const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
+      const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : '00:00:00');
+      const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
+      return new Date(iso);
+    }
+    return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
+  }, []);
+
   const workingDays = useMemo(() => {
     const all = getDatesInRange(taskStartDate, taskEndDate);
     const hasWeekdays = all.some(d => {
@@ -323,23 +340,6 @@ function TicketsPage() {
       return !isWeekend;
     });
   }, [taskStartDate, taskEndDate, parseWallClockDate]);
-
-  const parseWallClockDate = (str) => {
-    if (!str) return new Date(NaN);
-    const s = String(str).trim();
-    // YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-      return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
-    }
-    // DD-MM-YYYY
-    if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
-      const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
-      const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : '00:00:00');
-      const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
-      return new Date(iso);
-    }
-    return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
-  };
 
   const isMultiDay = useMemo(() => workingDays.length > 1 || leadType === 'Dispatch' || (billingType && billingType.includes('Monthly')), [workingDays, leadType, billingType]);
 
