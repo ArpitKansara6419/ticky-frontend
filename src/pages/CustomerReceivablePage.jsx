@@ -457,6 +457,7 @@ const CustomerReceivablePage = () => {
     });
 
     const [detailTicket, setDetailTicket] = useState(null);
+    const [isInvoiceOptionsModalOpen, setIsInvoiceOptionsModalOpen] = useState(false);
     const [invoicePoNumber, setInvoicePoNumber] = useState('');
     const [invoiceServiceNumber, setInvoiceServiceNumber] = useState('');
     const [vatPercent, setVatPercent] = useState(0);
