@@ -8,6 +8,35 @@ import './TicketsPage.css'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDLND9h_AWApPg9gQVYZhhsPmIHMuN-6fg'
 
+const parseWallClockDate = (s) => {
+  if (!s) return new Date(NaN);
+  if (s instanceof Date) return s;
+  const str = String(s).trim();
+  if (!str) return new Date(NaN);
+  
+  // Handle ISO format or space instead of T
+  let clean = str.replace(' ', 'T');
+  // If it doesn't have a timezone, treat as UTC wall-clock
+  if (!clean.includes('Z') && !clean.includes('+') && clean.includes('T')) {
+    clean += 'Z';
+  } else if (!clean.includes('T') && clean.includes('-')) {
+     // YYYY-MM-DD format
+     clean += 'T00:00:00Z';
+  }
+  
+  const d = new Date(clean);
+  if (!isNaN(d.getTime())) return d;
+  
+  // Fallback for DD-MM-YYYY
+  if (/^\d{2}-\d{2}-\d{4}/.test(str)) {
+    const [dd, mm, yyyy] = str.split('T')[0].split(' ')[0].split('-');
+    const timePart = str.includes('T') ? str.split('T')[1] : (str.includes(' ') ? str.split(' ')[1] : '00:00:00');
+    return new Date(`${yyyy}-${mm}-${dd}T${timePart.replace('Z', '')}Z`);
+  }
+  
+  return d;
+};
+
 const calculateDuration = (start, end, breakMins = 0) => {
   if (!start || !end) return 0;
   try {
@@ -3373,7 +3402,7 @@ function TicketsPage() {
               <section className="tickets-card" style={{ padding: '0', overflow: 'hidden' }}>
                 <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #1e293b, #334155)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FiActivity /> Financial Breakdown Summary
+                    <FiActivity /> Financial Breakdown Summary (v2.1)
                   </h2>
                   <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px' }}>
                     Based on {liveBreakdown?.days || 0} working days
