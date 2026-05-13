@@ -1360,7 +1360,7 @@ function TicketsPage() {
         taskEndTime: taskEndTime,
         scopeOfWork,
         tools,
-        engineerName,
+        engineerName: engineerName || 'Unassigned',
         engineerId: engineerId ? Number(engineerId) : null,
         apartment,
         addressLine1,
@@ -1445,6 +1445,7 @@ function TicketsPage() {
       const data = await res.json()
       if (!res.ok) {
         const errMsg = data.details ? `${data.message}: ${data.details}` : (data.message || 'Error occurred');
+        alert('Creation Error: ' + errMsg);
         throw new Error(errMsg);
       }
 
