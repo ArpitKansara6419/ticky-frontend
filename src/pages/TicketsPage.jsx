@@ -476,7 +476,13 @@ function TicketsPage() {
       const customWeekendRate = parseFloat(weekendRate) || (hr * 2.0);
       const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
 
-      const bilMatch = (target) => bil === target;
+      const bilMatch = (target) => {
+        const b = bil.toLowerCase();
+        const t = target.toLowerCase();
+        if (b === t) return true;
+        if (t === 'full day + ot' && b === 'full day') return true;
+        return false;
+      };
 
       if (bilMatch('Hourly')) {
         const b = Math.max(2, hrs);
@@ -567,8 +573,8 @@ function TicketsPage() {
     // Enable live calculations for both view mode AND creation/editing mode
     // if (isFillingForm) return; <--- REMOVED TO ALLOW LIVE SUMMARIES WHILE FILLING FORM
     // Also treat Monthly billing as multi-day calendar view even if start==end
-    const isMultiDayEffect = (taskStartDate && taskEndDate && taskStartDate !== taskEndDate) || (billingType.includes('Monthly') && taskStartDate && taskEndDate);
-    const daysArr = isMultiDayEffect ? workingDays : [];
+    const isMultiDayEffect = isMultiDay;
+    const daysArr = isMultiDayEffect ? (workingDays.length > 0 ? workingDays : [taskStartDate]) : [];
     const numDays = daysArr.length || 1;
 
     if (isMultiDay) {
