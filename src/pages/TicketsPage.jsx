@@ -426,6 +426,8 @@ function TicketsPage() {
       eParamFinal = `${dateOnly}T17:00:00Z`;
     }
 
+    const isEng = (opts.isEngineer === true);
+    
     try {
       // Parse rates early to prevent ReferenceErrors in catch/fallback blocks
       hr = parseFloat(opts.hourlyRate) || 0;
@@ -434,6 +436,12 @@ function TicketsPage() {
       ar = parseFloat(opts.agreedRate) || 0;
       cf = parseFloat(opts.cancellationFee) || 0;
       mr = parseFloat(opts.monthlyRate) || 0;
+
+      const tCostRaw = Number(opts.travelCostPerDay || travelCostPerDay || 0);
+      const toolRaw = Number(opts.toolCost || toolCostInput || 0);
+
+      const travelVal = isEng ? 0 : tCostRaw;
+      const toolsVal = isEng ? 0 : toolRaw;
 
       // Never return null - use defaults to keep UI alive
       const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
@@ -693,7 +701,8 @@ function TicketsPage() {
           monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
           travelCostPerDay, toolCost: toolCostInput, billingType: rRates.bt, 
           timezone, calcTimezone, country, monthlyDivisor: dayMonthlyDivisor,
-          _isLogAggregation: true
+          _isLogAggregation: true,
+          isEngineer: false
         });
 
         // ENGINEER
@@ -827,7 +836,8 @@ function TicketsPage() {
         hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
         travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
         monthlyDivisor: singleDayDivisor, country,
-        overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0
+        overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0,
+        isEngineer: false
       });
       setLiveBreakdown({ 
         ...res, 
