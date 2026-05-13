@@ -431,12 +431,12 @@ function TicketsPage() {
     
     try {
       // Parse rates early to prevent ReferenceErrors in catch/fallback blocks
-      hr = parseFloat(opts.hourlyRate) || 0;
-      hd = parseFloat(opts.halfDayRate) || 0;
-      fd = parseFloat(opts.fullDayRate) || 0;
-      ar = parseFloat(opts.agreedRate) || 0;
-      cf = parseFloat(opts.cancellationFee) || 0;
-      mr = parseFloat(opts.monthlyRate) || 0;
+      hr = parseFloat(hrParam) || 0;
+      hd = parseFloat(hdParam) || 0;
+      fd = parseFloat(fdParam) || 0;
+      ar = parseFloat(arParam) || 0;
+      cf = parseFloat(cfParam) || 0;
+      mr = parseFloat(mrParam) || 0;
 
       const tCostRaw = Number(opts.travelCostPerDay || travelCostPerDay || 0);
       const toolRaw = Number(opts.toolCost || toolCostInput || 0);
@@ -500,13 +500,6 @@ function TicketsPage() {
         endHr = parseInt(opts.endTime.split('T')[1].split(':')[0], 10);
       }
       const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
-
-      // Parse rates
-      const hr = parseFloat(hrParam) || 0;
-      const hd = parseFloat(hdParam) || 0;
-      const fd = parseFloat(fdParam) || 0;
-      const ar = parseFloat(arParam) || 0;
-      const cf = parseFloat(cfParam) || 0;
 
       const customOTRate = parseFloat(otParam) || (hr * 1.5);
       const customOOHRate = parseFloat(oohParam) || (hr * 1.5);
