@@ -3377,7 +3377,7 @@ function TicketsPage() {
               <section className="tickets-card" style={{ padding: '0', overflow: 'hidden' }}>
                 <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #1e293b, #334155)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FiActivity /> Financial Breakdown Summary (v2.1)
+                    <FiActivity /> Financial Breakdown Summary (v2.2 - T:{liveBreakdown?.travel || '0'} L:{liveBreakdown?.tools || '0'})
                   </h2>
                   <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px' }}>
                     Based on {liveBreakdown?.days || 0} working days
