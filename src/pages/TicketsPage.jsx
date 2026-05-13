@@ -877,7 +877,7 @@ function TicketsPage() {
         taskTime &&
         taskEndTime &&
         scopeOfWork &&
-        engineerName
+        (engineerName || engineerId)
       ),
     [
       customerId,
@@ -2355,8 +2355,15 @@ function TicketsPage() {
         setLeadType(parsedLead.leadType || 'Full time')
 
         // Engineer Payout Configuration from LeadsPage assignment modal
-        setEngineerId(parsedLead.engineerId ? String(parsedLead.engineerId) : '')
-        setEngineerName(parsedLead.engineerName || '')
+        const eId = parsedLead.engineerId || parsedLead.engineer_id || '';
+        setEngineerId(eId ? String(eId) : '')
+        
+        let eName = parsedLead.engineerName || '';
+        if (!eName && eId && engineers.length > 0) {
+          const matchedEng = engineers.find(e => String(e.id) === String(eId));
+          if (matchedEng) eName = matchedEng.name;
+        }
+        setEngineerName(eName)
         setEngPayType(parsedLead.engPayType || 'Default')
         setEngBillingType(parsedLead.engBillingType || 'Hourly')
         setEngMonthlyRate(parsedLead.engMonthlyRate || '')
