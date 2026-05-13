@@ -477,11 +477,17 @@ function TicketsPage() {
       const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
 
       const bilMatch = (target) => {
-        const b = (bil || '').toLowerCase().replace(/\s+/g, '');
-        const t = (target || '').toLowerCase().replace(/\s+/g, '');
+        const b = (bil || '').toLowerCase().replace(/[^a-z0-9+]/g, ' ').replace(/\s+/g, ' ').trim();
+        const t = (target || '').toLowerCase().replace(/[^a-z0-9+]/g, ' ').replace(/\s+/g, ' ').trim();
         if (b === t) return true;
-        // Aliases
-        if (t === 'fullday+ot' && (b === 'fullday' || b === 'fulltime')) return true;
+        // Keyword-based matching for descriptive billing type strings (e.g. "3) Full Day 1 GT (OT = Rate x 1.5)")
+        if (t === 'full day + ot') return b.includes('full day') || b.includes('full time');
+        if (t === 'full day') return (b.includes('full day') || b.includes('full time')) && !b.includes('monthly');
+        if (t === 'half day + hourly') return b.includes('half day');
+        if (t === 'hourly') return b === 'hourly' || b.startsWith('hourly');
+        if (t === 'mixed mode') return b.includes('mixed');
+        if (t === 'agreed rate') return b.includes('agreed');
+        if (t === 'cancellation') return b.includes('cancellation');
         return false;
       };
 
@@ -512,7 +518,7 @@ function TicketsPage() {
           ot = (hrs - 8) * customOTRate;
         }
 
-      } else if (bil.includes('Monthly')) {
+      } else if (bil.toLowerCase().includes('monthly')) {
         const fullRate = parseFloat(opts.monthlyRate) || 0;
         const divisor = (opts.monthlyDivisor && opts.monthlyDivisor > 0) ? opts.monthlyDivisor : 22; 
         base = fullRate / divisor;
