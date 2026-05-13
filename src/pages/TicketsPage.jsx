@@ -569,9 +569,11 @@ function TicketsPage() {
       if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
         ooh = hrs * customOOHRate;
       }
-      const travelVal = isEngineer ? 0 : parseFloat(opts.travelCostPerDay || 0);
-      const toolCostRaw = isEngineer ? 0 : parseFloat(opts.toolCost || 0);
-      const toolsVal = toolCostRaw; // Tools applied per day like travel
+      const tCostRaw = parseFloat(travelCostPerDay) || 0;
+      const toolRaw = parseFloat(toolCost) || 0;
+
+      const travelVal = isEngineer ? 0 : tCostRaw;
+      const toolsVal = isEngineer ? 0 : toolRaw;
 
       // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
       let effectiveBase = base;
@@ -579,7 +581,7 @@ function TicketsPage() {
         effectiveBase = 0;
       }
 
-      const grand = effectiveBase + ot + ooh + special + travelVal + toolsVal;
+      const grand = parseFloat(effectiveBase) + parseFloat(ot) + parseFloat(ooh) + parseFloat(specialDay || 0) + travelVal + toolsVal;
 
       return {
         hrs: hrs.toFixed(2),
