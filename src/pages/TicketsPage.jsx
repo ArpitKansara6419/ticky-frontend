@@ -363,7 +363,7 @@ function TicketsPage() {
           let h = parseInt(hStr, 10) + 8;
           let d = endDate;
           if (h >= 24) {
-            const baseDate = new Date(`${endDate}T00:00:00Z`);
+            const baseDate = parseWallClockDate(endDate);
             baseDate.setUTCDate(baseDate.getUTCDate() + 1);
             d = `${baseDate.getUTCFullYear()}-${pad(baseDate.getUTCMonth() + 1)}-${pad(baseDate.getUTCDate())}`;
             h = h - 24;
@@ -598,7 +598,7 @@ function TicketsPage() {
           return dateOnly === d;
         });
 
-        const dObj = new Date(`${d}T00:00:00Z`);
+        const dObj = parseWallClockDate(d);
         const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
@@ -1026,7 +1026,7 @@ function TicketsPage() {
       const cet = (taskEndTime || '17:00').slice(0, 5);
 
       const validDates = dates.filter(dStr => {
-        const dObj = new Date(`${dStr}T00:00:00Z`);
+        const dObj = parseWallClockDate(dStr);
         const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
         const HOLIDAYS_BY_COUNTRY = {
           'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
@@ -1576,8 +1576,8 @@ function TicketsPage() {
           const stEnd = t.taskEndDate ? String(t.taskEndDate).split('T')[0] : '';
           if (stStart && stEnd && stStart !== stEnd) {
             const viewKeys = new Set();
-            let cur = new Date(stStart + 'T00:00:00Z');
-            const end = new Date(stEnd + 'T00:00:00Z');
+            let cur = parseWallClockDate(stStart);
+            const end = parseWallClockDate(stEnd);
             while (cur <= end) {
               const mKey = cur.toISOString().substring(0, 7) + '-view';
               viewKeys.add(mKey);
@@ -2021,7 +2021,7 @@ function TicketsPage() {
         const eStr = String(e).split('T')[0];
         if (sStr !== eStr) {
           const modalKeys = new Set();
-          let cur = new Date(sStr + 'T00:00:00Z');
+          let cur = parseWallClockDate(sStr);
           const end = new Date(eStr + 'T00:00:00Z');
           while (cur <= end) {
             const mKey = cur.toISOString().substring(0, 7) + '-modal';
