@@ -457,24 +457,49 @@ const CustomerReceivablePage = () => {
     });
 
     const [detailTicket, setDetailTicket] = useState(null);
-    const [isInvoiceOptionsModalOpen, setIsInvoiceOptionsModalOpen] = useState(false);
     const [invoicePoNumber, setInvoicePoNumber] = useState('');
     const [invoiceServiceNumber, setInvoiceServiceNumber] = useState('');
+    const [vatPercent, setVatPercent] = useState(0);
+    const [cgstPercent, setCgstPercent] = useState(0);
+    const [gstPercent, setGstPercent] = useState(0);
+    const [sgstPercent, setSgstPercent] = useState(0);
+    const [discountPercent, setDiscountPercent] = useState(0);
     const [selectedFormat, setSelectedFormat] = useState('pdf');
 
     const handleOpenInvoiceOptions = (ticket) => {
         setInvoicePoNumber('');
         setInvoiceServiceNumber('');
+        setVatPercent(0);
+        setCgstPercent(0);
+        setGstPercent(0);
+        setSgstPercent(0);
+        setDiscountPercent(0);
         setIsInvoiceOptionsModalOpen(true);
     };
 
     // Helper to build the aimbizit-format PDF (shared by both Invoice and Breakdown)
-    const buildAimbizitPDF = (ticket, bd, logs, filename) => {
+    const buildAimbizitPDF = (ticket, bd, logs, filename, isInvoice = false) => {
         const doc = new jsPDF();
         const cur = ticket.currency || 'USD';
-        const today = new Date().toLocaleDateString('en-GB');
-        const startDate = ticket.task_start_date ? new Date(ticket.task_start_date).toLocaleDateString('en-GB') : 'XX/XX/XXXX';
-        const endDate = ticket.task_end_date ? new Date(ticket.task_end_date).toLocaleDateString('en-GB') : 'XX/XX/XXXX';
+        
+        // --- Date Logic ---
+        const issueDateObj = new Date();
+        const today = issueDateObj.toLocaleDateString('en-GB');
+        
+        // Format Invoice No: INV-Month-ID
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const currentMonthName = monthNames[issueDateObj.getMonth()];
+        const customInvoiceNo = `INV-${currentMonthName}-${ticket.id}`;
+        
+        // Service duration: Full Month of task_start_date
+        const taskDate = new Date(ticket.task_start_date || new Date());
+        const firstDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), 1).toLocaleDateString('en-GB');
+        const lastDay = new Date(taskDate.getFullYear(), taskDate.getMonth() + 1, 0).toLocaleDateString('en-GB');
+        const serviceDuration = `${firstDay} - ${lastDay}`;
+        
+        // Date of Payment: Issue Date + 30 days
+        const paymentDateObj = new Date(issueDateObj.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const paymentDate = paymentDateObj.toLocaleDateString('en-GB');
 
         // ── Logo (top-left) ────────────────────────────────────────────────────
         doc.setFillColor(100, 80, 200);
@@ -493,18 +518,28 @@ const CustomerReceivablePage = () => {
         doc.setFontSize(9);
         doc.setTextColor(60, 60, 60);
         doc.setFont('helvetica', 'normal');
-        doc.text('Invoice No:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(invoicePoNumber || `INV-${ticket.id}`, rx + 28, 16);
+        doc.text('Invoice No:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(customInvoiceNo, rx + 28, 16);
         doc.setFont('helvetica', 'normal');
         doc.text('Place of issue:', rx, 22); doc.text('Warsaw', rx + 28, 22);
         doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
 
         // ── Supplier / Client ──────────────────────────────────────────────────
+        // Client details: Name, Email, Company Registration No, VAT Number, Address
+        const clientDetails = [
+            ticket.customer_name || '-',
+            ticket.customer_email ? `Email: ${ticket.customer_email}` : null,
+            ticket.company_registration_no ? `Reg No: ${ticket.company_registration_no}` : null,
+            ticket.customer_vat_number ? `VAT No: ${ticket.customer_vat_number}` : null,
+            ticket.customer_address || null,
+            [ticket.city, ticket.country].filter(Boolean).join(', ')
+        ].filter(Boolean).join('\n');
+
         autoTable(doc, {
             startY: 42,
             head: [['Supplier', 'Client']],
             body: [[
                 'AIMBOT BUSINESS SERVICES\nAleja Jana Pawla II\nNumber 43A, Lokal 37B, Warszawa 01-001\nKRS: 0000933886',
-                `${ticket.customer_name || '-'}\n${[ticket.city, ticket.country].filter(Boolean).join(', ')}`
+                clientDetails
             ]],
             theme: 'plain',
             headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
@@ -528,15 +563,36 @@ const CustomerReceivablePage = () => {
             columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 1: { cellWidth: 142 } }
         });
 
-        // ── Service Table (Detailed Breakdown per Log) ─────────────────────────
+        // PO/Service Info if available
+        if (invoicePoNumber || invoiceServiceNumber) {
+            autoTable(doc, {
+                startY: doc.lastAutoTable.finalY + 2,
+                body: [
+                    [
+                        invoicePoNumber ? `PO Number: ${invoicePoNumber}` : '',
+                        invoiceServiceNumber ? `Service Number: ${invoiceServiceNumber}` : '',
+                        `Billing Type: ${ticket.billing_type || 'Hourly'}`
+                    ]
+                ],
+                theme: 'plain',
+                bodyStyles: { fontSize: 8.5, textColor: [80, 80, 80], fontStyle: 'bold' },
+            });
+        }
+
+        // ── Service Table ─────────────────────────
         const serviceRows = [];
         const displayLogs = logs.length > 0 ? logs : [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
         
         displayLogs.forEach(log => {
             const d = new Date(log.task_date || ticket.task_start_date).toLocaleDateString('en-GB');
             
-            // Detailed Description
-            const desc = `Engineer: ${ticket.engineer_name || '-'}\nLoc: ${ticket.city || '-'}\nTask: ${ticket.task_name || '-'}\nTkt: #${ticket.id}`;
+            // Description: "IT Service" for Invoice, Detailed for Breakdown
+            let desc = "";
+            if (isInvoice) {
+                desc = "IT Service";
+            } else {
+                desc = `Engineer: ${ticket.engineer_name || '-'}\nLoc: ${ticket.city || '-'}\nTask: ${ticket.task_name || '-'}\nTkt: #${ticket.id}`;
+            }
             
             // Times
             const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
@@ -554,6 +610,7 @@ const CustomerReceivablePage = () => {
             serviceRows.push([
                 d,
                 desc,
+                [ticket.city, ticket.country].filter(Boolean).join(', ') || '-',
                 checkIn,
                 checkOut,
                 `${parseFloat(logRes.baseCost || 0).toFixed(2)}`,
@@ -563,11 +620,35 @@ const CustomerReceivablePage = () => {
             ]);
         });
 
+        // Calculations for Invoice (Taxes & Discounts)
+        const subtotal = parseFloat(bd.totalReceivable);
+        const discountAmt = subtotal * (discountPercent / 100);
+        const taxableAmt = subtotal - discountAmt;
+        const vatAmt = taxableAmt * (vatPercent / 100);
+        const cgstAmt = taxableAmt * (cgstPercent / 100);
+        const gstAmt = taxableAmt * (gstPercent / 100);
+        const sgstAmt = taxableAmt * (sgstPercent / 100);
+        const grandTotal = taxableAmt + vatAmt + cgstAmt + gstAmt + sgstAmt;
+
+        const footerRows = [];
+        if (isInvoice) {
+            footerRows.push(['Subtotal', `${cur} ${subtotal.toFixed(2)}`]);
+            if (discountPercent > 0) footerRows.push([`Discount (${discountPercent}%)`, `- ${cur} ${discountAmt.toFixed(2)}`]);
+            if (vatPercent > 0) footerRows.push([`VAT (${vatPercent}%)`, `${cur} ${vatAmt.toFixed(2)}`]);
+            if (cgstPercent > 0) footerRows.push([`CGST (${cgstPercent}%)`, `${cur} ${cgstAmt.toFixed(2)}`]);
+            if (gstPercent > 0) footerRows.push([`GST (${gstPercent}%)`, `${cur} ${gstAmt.toFixed(2)}`]);
+            if (sgstPercent > 0) footerRows.push([`SGST (${sgstPercent}%)`, `${cur} ${sgstAmt.toFixed(2)}`]);
+            footerRows.push(['GRAND TOTAL', `${cur} ${grandTotal.toFixed(2)}`]);
+        } else {
+            footerRows.push(['TOTAL', `${cur} ${subtotal.toFixed(2)}`]);
+        }
+
         autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 5,
             head: [[
                 { content: 'Date', styles: { halign: 'center' } },
                 { content: 'Description', styles: { halign: 'left' } },
+                { content: 'Location', styles: { halign: 'left' } },
                 { content: 'In', styles: { halign: 'center' } },
                 { content: 'Out', styles: { halign: 'center' } },
                 { content: 'Rate', styles: { halign: 'right' } },
@@ -577,22 +658,23 @@ const CustomerReceivablePage = () => {
             ]],
             body: serviceRows,
             theme: 'grid',
-            headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold', cellPadding: 2 },
-            bodyStyles: { fontSize: 7, textColor: [40, 40, 40], cellPadding: 2 },
+            headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', cellPadding: 2 },
+            bodyStyles: { fontSize: 6.5, textColor: [40, 40, 40], cellPadding: 2 },
             columnStyles: { 
-                0: { cellWidth: 18, halign: 'center' }, 
-                1: { cellWidth: 55 }, 
-                2: { cellWidth: 15, halign: 'center' },
-                3: { cellWidth: 15, halign: 'center' },
-                4: { cellWidth: 20, halign: 'right' },
-                5: { cellWidth: 15, halign: 'right' },
-                6: { cellWidth: 15, halign: 'right' },
-                7: { cellWidth: 22, halign: 'right', fontStyle: 'bold' } 
+                0: { cellWidth: 16, halign: 'center' }, 
+                1: { cellWidth: 40 }, 
+                2: { cellWidth: 25 },
+                3: { cellWidth: 12, halign: 'center' },
+                4: { cellWidth: 12, halign: 'center' },
+                5: { cellWidth: 18, halign: 'right' },
+                6: { cellWidth: 12, halign: 'right' },
+                7: { cellWidth: 12, halign: 'right' },
+                8: { cellWidth: 20, halign: 'right', fontStyle: 'bold' } 
             },
-            foot: [[
-                { content: 'TOTAL', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: `${cur} ${parseFloat(bd.totalReceivable).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
-            ]],
+            foot: footerRows.map(row => ([
+                { content: row[0], colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: row[1], styles: { halign: 'right', fontStyle: 'bold' } }
+            ])),
             footStyles: { fillColor: [245, 245, 245], fontSize: 8 }
         });
 
@@ -601,9 +683,9 @@ const CustomerReceivablePage = () => {
         doc.setFontSize(8.5);
         doc.setTextColor(60, 60, 60);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Service duration: ${startDate} - ${endDate}`, 14, footY);
+        doc.text(`Service duration: ${serviceDuration}`, 14, footY);
         doc.text('Terms of Payment: Bank transfer', 14, footY + 6);
-        doc.text('Date of Payment: XX/XX/XXXX', 14, footY + 12);
+        doc.text(`Date of Payment: ${paymentDate}`, 14, footY + 12);
 
         doc.save(filename);
     };
@@ -612,14 +694,14 @@ const CustomerReceivablePage = () => {
         let logs = [];
         try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) {}
         if (logs.length === 0) logs = [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
-        buildAimbizitPDF(ticket, bd, logs, `Invoice_Ticket_${ticket.id}.pdf`);
+        buildAimbizitPDF(ticket, bd, logs, `Invoice_Ticket_${ticket.id}.pdf`, true);
     };
 
     const generateBreakdownPDF = (ticket, bd) => {
         let logs = [];
         try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) {}
         if (logs.length === 0) logs = [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
-        buildAimbizitPDF(ticket, bd, logs, `Breakdown_Ticket_${ticket.id}.pdf`);
+        buildAimbizitPDF(ticket, bd, logs, `Breakdown_Ticket_${ticket.id}.pdf`, false);
     };
 
 
@@ -1795,6 +1877,29 @@ const CustomerReceivablePage = () => {
                                         value={invoiceServiceNumber}
                                         onChange={(e) => setInvoiceServiceNumber(e.target.value)}
                                     />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                                <div className="premium-input-group">
+                                    <label>VAT %</label>
+                                    <input type="number" className="premium-input-sh" value={vatPercent} onChange={(e) => setVatPercent(parseFloat(e.target.value) || 0)} />
+                                </div>
+                                <div className="premium-input-group">
+                                    <label>CGST %</label>
+                                    <input type="number" className="premium-input-sh" value={cgstPercent} onChange={(e) => setCgstPercent(parseFloat(e.target.value) || 0)} />
+                                </div>
+                                <div className="premium-input-group">
+                                    <label>GST %</label>
+                                    <input type="number" className="premium-input-sh" value={gstPercent} onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)} />
+                                </div>
+                                <div className="premium-input-group">
+                                    <label>SGST %</label>
+                                    <input type="number" className="premium-input-sh" value={sgstPercent} onChange={(e) => setSgstPercent(parseFloat(e.target.value) || 0)} />
+                                </div>
+                                <div className="premium-input-group">
+                                    <label>Discount %</label>
+                                    <input type="number" className="premium-input-sh" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} />
                                 </div>
                             </div>
 
