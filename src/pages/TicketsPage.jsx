@@ -398,8 +398,9 @@ function TicketsPage() {
 
   // Pure calculation function for reuse
   const calculateTicketTotal = (opts) => {
-    // Declare rates at the top level to avoid ReferenceErrors in catch block
+    // Declare rates and totals at the top level to avoid ReferenceErrors in catch block
     let hr = 0, hd = 0, fd = 0, ar = 0, cf = 0, mr = 0;
+    let base = 0, ot = 0, ooh = 0, special = 0;
     
     let {
       startTime: sParam, endTime: eParam, breakTime: bParam,
