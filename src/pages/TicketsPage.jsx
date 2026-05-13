@@ -423,9 +423,10 @@ function TicketsPage() {
       eParamFinal = `${dateOnly}T17:00:00Z`;
     }
 
-    // Never return null - use defaults to keep UI alive
-    const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
-    const eStr = String(eParamFinal || '2026-01-01T17:00:00Z');
+    try {
+      // Never return null - use defaults to keep UI alive
+      const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
+      const eStr = String(eParamFinal || '2026-01-01T17:00:00Z');
 
       const s = parseWallClockDate(sStr);
       const e = parseWallClockDate(eStr);
@@ -590,7 +591,6 @@ function TicketsPage() {
         perDayRate:   opts._perDayRate   != null ? parseFloat(opts._perDayRate).toFixed(2)   : null,
         workingDays:  opts._workingDays  != null ? opts._workingDays                          : null,
         monthlyFull:  opts._monthlyFull  != null ? parseFloat(opts._monthlyFull).toFixed(2)   : null,
-      };
       };
     } catch (err) { 
        console.error("Calculation Engine Error:", err);
