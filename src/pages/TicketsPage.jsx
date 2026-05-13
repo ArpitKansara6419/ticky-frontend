@@ -775,24 +775,28 @@ function TicketsPage() {
         totalReceivable += cf; combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + cf).toFixed(2);
       }
 
+      const finalLiveTravel = (parseFloat(travelCostPerDay) * numDays).toFixed(2);
+      const finalLiveTools = (parseFloat(toolCostInput) * numDays).toFixed(2);
+      const finalGrandTotal = (parseFloat(totalReceivable) + parseFloat(finalLiveTravel) + parseFloat(finalLiveTools)).toFixed(2);
+
       setLiveBreakdown({ 
         base: Number(combinedBreakdown.base).toFixed(2),
         ot: Number(combinedBreakdown.ot).toFixed(2),
         ooh: Number(combinedBreakdown.ooh).toFixed(2),
-        specialDay: Number(combinedBreakdown.special).toFixed(2),
-        travel: Number(combinedBreakdown.travel).toFixed(2),
-        tools: Number(combinedBreakdown.tools).toFixed(2),
+        specialDay: Number(combinedBreakdown.specialDay).toFixed(2),
+        travel: finalLiveTravel,
+        tools: finalLiveTools,
         hrs: totalHrs.toFixed(2), 
-        grandTotal: totalReceivable.toFixed(2), 
-        days: validDaysCount,
-        effectiveRate: validDaysCount > 0 ? (parseFloat(combinedBreakdown.base) / validDaysCount).toFixed(2) : '0.00'
+        grandTotal: finalGrandTotal, 
+        days: numDays,
+        effectiveRate: numDays > 0 ? (parseFloat(combinedBreakdown.base) / numDays).toFixed(2) : '0.00'
       });
-      setTotalCost(totalReceivable.toFixed(2));
+      setTotalCost(finalGrandTotal);
       setPayoutLiveBreakdown({ 
         ...engBreakdown, 
         grandTotal: totalPayout.toFixed(2), 
         engSummary: Object.values(engSummaryMap),
-        effectiveRate: validDaysCount > 0 ? (parseFloat(engBreakdown.base) / validDaysCount).toFixed(2) : '0.00'
+        effectiveRate: numDays > 0 ? (parseFloat(engBreakdown.base) / numDays).toFixed(2) : '0.00'
       });
 
     } else {
@@ -824,15 +828,20 @@ function TicketsPage() {
         overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0,
         isEngineer: false
       });
+      const finalLiveTravel = (parseFloat(travelCostPerDay) || 0).toFixed(2);
+      const finalLiveTools = (parseFloat(toolCostInput) || 0).toFixed(2);
+      const finalGrandTotal = (parseFloat(res?.grandTotal || 0) + parseFloat(finalLiveTravel) + parseFloat(finalLiveTools)).toFixed(2);
+
       setLiveBreakdown({ 
         ...res, 
+        travel: finalLiveTravel,
+        tools: finalLiveTools,
+        grandTotal: finalGrandTotal,
         days: 1, 
         monthlyRecords: [{ month: taskStartDate.substring(0, 7), divisor: singleDayDivisor, rate: monthlyRate }],
         effectiveRate: res?.base || '0.00'
       });
-      if (res && res.grandTotal) {
-        setTotalCost(res.grandTotal);
-      }
+      setTotalCost(finalGrandTotal);
 
       // Find rates for the main engineer if using Default or Custom
       let pRates = { 
@@ -3377,7 +3386,7 @@ function TicketsPage() {
               <section className="tickets-card" style={{ padding: '0', overflow: 'hidden' }}>
                 <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #1e293b, #334155)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FiActivity /> Financial Breakdown Summary (v2.3 - ST:{travelCostPerDay || 'empty'} SL:{toolCostInput || 'empty'})
+                    <FiActivity /> Financial Breakdown Summary
                   </h2>
                   <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px' }}>
                     Based on {liveBreakdown?.days || 0} working days
