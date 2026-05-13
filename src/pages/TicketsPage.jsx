@@ -182,6 +182,185 @@ const getWorkingDaysInMonth = (dateStr, countryName) => {
   return workingDaysCount || 22;
 };
 
+// Pure calculation function moved outside component to prevent stale closure issues
+const calculateTicketTotal = (opts) => {
+  // Declare rates and totals at the top level to avoid ReferenceErrors in catch block
+  let hr = 0, hd = 0, fd = 0, ar = 0, cf = 0, mr = 0;
+  let base = 0, ot = 0, ooh = 0, special = 0;
+  
+  let {
+    startTime: sParam, endTime: eParam, breakTime: bParam,
+    hourlyRate: hrParam, halfDayRate: hdParam, fullDayRate: fdParam, monthlyRate: mrParam, agreedRate: arParam, cancellationFee: cfParam,
+    billingType: bilParam, timezone: tzParam, calcTimezone: ctzParam, country: cntParam,
+    overtimeRate: otParam, oohRate: oohParam, weekendRate: weParam, holidayRate: holParam,
+    isEngineer: isEngParam,
+    _isLogAggregation
+  } = opts;
+
+  // For flat-fee billing types (Full Day, Half Day, Agreed Rate, Cancellation),
+  // we do NOT need valid start/end times — use synthetic times if missing.
+  const billingTypeLower = (opts.billingType || '').toLowerCase();
+  const isFlatFee = billingTypeLower.includes('full day') || billingTypeLower.includes('full time') ||
+                    billingTypeLower.includes('half day') || billingTypeLower.includes('agreed') ||
+                    billingTypeLower.includes('cancellation');
+
+  // Build synthetic times from date fields if actual times not provided
+  let sParamFinal = sParam;
+  let eParamFinal = eParam;
+  if ((!sParamFinal || !eParamFinal) && isFlatFee && opts.startTime) {
+    const dateOnly = String(opts.startTime).split('T')[0].split(' ')[0];
+    sParamFinal = `${dateOnly}T09:00:00Z`;
+    eParamFinal = `${dateOnly}T17:00:00Z`;
+  }
+
+  const isEng = (opts.isEngineer === true);
+  
+  try {
+    // Parse rates early to prevent ReferenceErrors in catch/fallback blocks
+    hr = parseFloat(hrParam) || 0;
+    hd = parseFloat(hdParam) || 0;
+    fd = parseFloat(fdParam) || 0;
+    ar = parseFloat(arParam) || 0;
+    cf = parseFloat(cfParam) || 0;
+    mr = parseFloat(mrParam) || 0;
+
+    // Never return null - use defaults to keep UI alive
+    const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
+    const eStr = String(eParamFinal || '2026-01-01T17:00:00Z');
+
+    const s = parseWallClockDate(sStr);
+    const e = parseWallClockDate(eStr);
+    // Fallback if dates are invalid
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+       return { totalHours: '8.00', base: (fd || hr*8 || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) };
+    }
+
+    const brkSec = (parseInt(bParam) || 0) * 60;
+    const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
+    const hrs = totSec / 3600;
+
+    const targetTZ = (ctzParam && ctzParam !== 'Ticket Local') ? ctzParam : (tzParam || Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+    const getZonedInfo = (date) => {
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: targetTZ,
+          hour12: false,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+        const localDay = new Date(`${parts.year}-${parts.month}-${parts.day}`).getDay();
+        return { dateStr: `${parts.year}-${parts.month}-${parts.day}`, day: localDay, hour: parseInt(parts.hour) };
+      } catch (err) {
+        return { dateStr: '', day: date.getDay(), hour: date.getHours() };
+      }
+    };
+
+    const startInfo = getZonedInfo(s);
+    const endInfo = getZonedInfo(e);
+
+    const HOLIDAYS_BY_COUNTRY = {
+      'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
+      'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
+      'Other': []
+    };
+    const activeHols = HOLIDAYS_BY_COUNTRY[cntParam] || HOLIDAYS_BY_COUNTRY['India'] || [];
+    const isHoliday = activeHols.includes(startInfo.dateStr) || activeHols.includes(endInfo.dateStr);
+    const dSafe = new Date(`${startInfo.dateStr}T00:00:00Z`);
+    const isWeekend = dSafe.getUTCDay() === 0 || dSafe.getUTCDay() === 6;
+    
+    let startHr = startInfo.hour;
+    let endHr = endInfo.hour;
+    if (opts.startTime && opts.startTime.includes('T')) {
+      startHr = parseInt(opts.startTime.split('T')[1].split(':')[0], 10);
+    }
+    if (opts.endTime && opts.endTime.includes('T')) {
+      endHr = parseInt(opts.endTime.split('T')[1].split(':')[0], 10);
+    }
+    const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
+
+    const customOTRate = parseFloat(otParam) || (hr * 1.5);
+    const customOOHRate = parseFloat(oohParam) || (hr * 1.5);
+    const customWeekendRate = parseFloat(weParam) || (hr * 2.0);
+    const customHolidayRate = parseFloat(holParam) || (hr * 2.0);
+
+    const bil = (bilParam || '').trim();
+    const bilMatch = (target) => {
+      const b = bil.toLowerCase();
+      const t = target.toLowerCase();
+      if (b === t || b.includes(t)) return true;
+      if (t === 'full day + ot') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
+      if (t === 'full day') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
+      if (t === 'half day + hourly') return b.includes('half');
+      if (t === 'hourly') return b.includes('hourly') || (!b.includes('full') && !b.includes('half') && !b.includes('monthly') && !b.includes('agreed'));
+      if (t === 'mixed mode') return b.includes('mixed');
+      if (t === 'agreed rate') return b.includes('agreed');
+      if (t === 'cancellation') return b.includes('cancellation');
+      return false;
+    };
+
+    if (bilMatch('Hourly')) {
+      const b = Math.max(2, hrs);
+      base = b * hr;
+    } else if (bilMatch('Half Day + Hourly')) {
+      base = hrs <= 4 ? hd : hd + ((hrs - 4) * hr);
+    } else if (bilMatch('Full Day')) {
+      base = fd;
+    } else if (bilMatch('Full Day + OT')) {
+      base = fd;
+      if (hrs > 8) ot = (hrs - 8) * customOTRate;
+    } else if (bilMatch('Mixed Mode')) {
+      if (hrs <= 4) base = hd;
+      else if (hrs <= 8) base = fd;
+      else { base = fd; ot = (hrs - 8) * customOTRate; }
+    } else if (bil.toLowerCase().includes('monthly')) {
+      const fullRate = parseFloat(mrParam) || 0;
+      const divisor = (opts.monthlyDivisor && opts.monthlyDivisor > 0) ? opts.monthlyDivisor : 22; 
+      base = fullRate / divisor;
+      if (hrs > 8) ot = (hrs - 8) * customOTRate;
+    } else if (bilMatch('Agreed Rate')) {
+      base = ar;
+    } else if (bilMatch('Cancellation')) {
+      base = cf;
+    }
+
+    if (isWeekend) special = customWeekendRate;
+    else if (isHoliday) special = customHolidayRate;
+
+    if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
+      ooh = hrs * customOOHRate;
+    }
+    let effectiveBase = Number(base) || 0;
+    if (_isLogAggregation && (bilMatch('Agreed Rate') || bilMatch('Cancellation'))) {
+      effectiveBase = 0;
+    }
+
+    const finalTravel = isEngParam ? 0 : (parseFloat(opts.travelCostPerDay) || 0);
+    const finalTools = isEngParam ? 0 : (parseFloat(opts.toolCost) || 0);
+
+    const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(special || 0) + finalTravel + finalTools;
+
+    return {
+      hrs: hrs.toFixed(2),
+      base: base.toFixed(2),
+      ot: ot.toFixed(2),
+      ooh: ooh.toFixed(2),
+      specialDay: special.toFixed(2),
+      tools: finalTools.toFixed(2),
+      travel: finalTravel.toFixed(2),
+      grandTotal: grand.toFixed(2),
+      isOOH: workIsOOH,
+      isSpecialDay: isWeekend || isHoliday,
+      perDayRate:   opts._perDayRate   != null ? parseFloat(opts._perDayRate).toFixed(2)   : null,
+      workingDays:  opts._workingDays  != null ? opts._workingDays                          : null,
+      monthlyFull:  opts._monthlyFull  != null ? parseFloat(opts._monthlyFull).toFixed(2)   : null,
+    };
+  } catch (err) { 
+     console.error("Calculation Engine Error:", err);
+     return { totalHours: '0.00', base: (fd || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) }; 
+  }
+};
+
 
 const TICKET_STATUSES = ['Open', 'Assigned', 'On Route', 'In Progress', 'Resolved', 'Break', 'Approval Pending']
 
@@ -424,210 +603,6 @@ function TicketsPage() {
     }
   }, [startTime, endTime, viewMode]);
 
-
-  // Pure calculation function for reuse
-  const calculateTicketTotal = (opts) => {
-    // Declare rates and totals at the top level to avoid ReferenceErrors in catch block
-    let hr = 0, hd = 0, fd = 0, ar = 0, cf = 0, mr = 0;
-    let base = 0, ot = 0, ooh = 0, special = 0;
-    
-    let {
-      startTime: sParam, endTime: eParam, breakTime: bParam,
-      hourlyRate: hrParam, halfDayRate: hdParam, fullDayRate: fdParam, monthlyRate: mrParam, agreedRate: arParam, cancellationFee: cfParam,
-      billingType: bilParam, timezone: tzParam, calcTimezone: ctzParam, country: cntParam,
-      overtimeRate: otParam, oohRate: oohParam, weekendRate: weParam, holidayRate: holParam,
-      isEngineer: isEngParam,
-      _isLogAggregation
-    } = opts;
-
-    // For flat-fee billing types (Full Day, Half Day, Agreed Rate, Cancellation),
-    // we do NOT need valid start/end times — use synthetic times if missing.
-    const billingTypeLower = (opts.billingType || '').toLowerCase();
-    const isFlatFee = billingTypeLower.includes('full day') || billingTypeLower.includes('full time') ||
-                      billingTypeLower.includes('half day') || billingTypeLower.includes('agreed') ||
-                      billingTypeLower.includes('cancellation');
-
-    // Build synthetic times from date fields if actual times not provided
-    let sParamFinal = sParam;
-    let eParamFinal = eParam;
-    if ((!sParamFinal || !eParamFinal) && isFlatFee && opts.startTime) {
-      const dateOnly = String(opts.startTime).split('T')[0].split(' ')[0];
-      sParamFinal = `${dateOnly}T09:00:00Z`;
-      eParamFinal = `${dateOnly}T17:00:00Z`;
-    }
-
-    const isEng = (opts.isEngineer === true);
-    
-    try {
-      // Parse rates early to prevent ReferenceErrors in catch/fallback blocks
-      hr = parseFloat(hrParam) || 0;
-      hd = parseFloat(hdParam) || 0;
-      fd = parseFloat(fdParam) || 0;
-      ar = parseFloat(arParam) || 0;
-      cf = parseFloat(cfParam) || 0;
-      mr = parseFloat(mrParam) || 0;
-
-      const tCostRaw = Number(opts.travelCostPerDay || travelCostPerDay || 0);
-      const toolRaw = Number(opts.toolCost || toolCostInput || 0);
-
-      const travelVal = isEng ? 0 : tCostRaw;
-      const toolsVal = isEng ? 0 : toolRaw;
-
-      // Never return null - use defaults to keep UI alive
-      const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
-      const eStr = String(eParamFinal || '2026-01-01T17:00:00Z');
-
-      const s = parseWallClockDate(sStr);
-      const e = parseWallClockDate(eStr);
-      // Fallback if dates are invalid
-      if (isNaN(s.getTime()) || isNaN(e.getTime())) {
-         return { totalHours: '8.00', base: (fd || hr*8 || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) };
-      }
-
-      const brkSec = (parseInt(bParam) || 0) * 60;
-      const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
-      const hrs = totSec / 3600;
-
-      const targetTZ = (calcTimezone && calcTimezone !== 'Ticket Local') ? calcTimezone : (timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-
-      const getZonedInfo = (date) => {
-        try {
-          const parts = new Intl.DateTimeFormat('en-US', {
-            timeZone: targetTZ,
-            hour12: false,
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-          }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
-          const localDay = new Date(`${parts.year}-${parts.month}-${parts.day}`).getDay();
-          return { dateStr: `${parts.year}-${parts.month}-${parts.day}`, day: localDay, hour: parseInt(parts.hour) };
-        } catch (err) {
-          return { dateStr: '', day: date.getDay(), hour: date.getHours() };
-        }
-      };
-
-      const startInfo = getZonedInfo(s);
-      const endInfo = getZonedInfo(e);
-
-      const HOLIDAYS_BY_COUNTRY = {
-        'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
-        'Poland': ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'],
-        'Other': []
-      };
-      const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
-      const isHoliday = activeHols.includes(startInfo.dateStr) || activeHols.includes(endInfo.dateStr);
-      // FORCE UTC check for deterministic weekend logic
-      const dSafe = new Date(`${startInfo.dateStr}T00:00:00Z`);
-      const isWeekend = dSafe.getUTCDay() === 0 || dSafe.getUTCDay() === 6;
-      
-      // Visual hours check for OOH
-      let startHr = startInfo.hour;
-      let endHr = endInfo.hour;
-      if (opts.startTime && opts.startTime.includes('T')) {
-        startHr = parseInt(opts.startTime.split('T')[1].split(':')[0], 10);
-      }
-      if (opts.endTime && opts.endTime.includes('T')) {
-        endHr = parseInt(opts.endTime.split('T')[1].split(':')[0], 10);
-      }
-      const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
-
-      const customOTRate = parseFloat(otParam) || (hr * 1.5);
-      const customOOHRate = parseFloat(oohParam) || (hr * 1.5);
-      const customWeekendRate = parseFloat(weParam) || (hr * 2.0);
-      const customHolidayRate = parseFloat(holParam) || (hr * 2.0);
-
-      const bil = (bilParam || '').trim();
-      const bilMatch = (target) => {
-        const b = bil.toLowerCase();
-        const t = target.toLowerCase();
-        if (b === t || b.includes(t)) return true;
-        if (t === 'full day + ot') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
-        if (t === 'full day') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
-        if (t === 'half day + hourly') return b.includes('half');
-        if (t === 'hourly') return b.includes('hourly') || (!b.includes('full') && !b.includes('half') && !b.includes('monthly') && !b.includes('agreed'));
-        if (t === 'mixed mode') return b.includes('mixed');
-        if (t === 'agreed rate') return b.includes('agreed');
-        if (t === 'cancellation') return b.includes('cancellation');
-        return false;
-      };
-
-      if (bilMatch('Hourly')) {
-        const b = Math.max(2, hrs);
-        base = b * hr;
-
-      } else if (bilMatch('Half Day + Hourly')) {
-        base = hrs <= 4 ? hd : hd + ((hrs - 4) * hr);
-
-      } else if (bilMatch('Full Day')) {
-        base = fd;
-
-      } else if (bilMatch('Full Day + OT')) {
-        base = fd;
-        if (hrs > 8) ot = (hrs - 8) * customOTRate;
-
-      } else if (bilMatch('Mixed Mode')) {
-        if (hrs <= 4) base = hd;
-        else if (hrs <= 8) base = fd;
-        else { base = fd; ot = (hrs - 8) * customOTRate; }
-
-      } else if (bil.toLowerCase().includes('monthly')) {
-        const fullRate = parseFloat(mrParam) || 0;
-        const divisor = (opts.monthlyDivisor && opts.monthlyDivisor > 0) ? opts.monthlyDivisor : 22; 
-        base = fullRate / divisor;
-        if (hrs > 8) ot = (hrs - 8) * customOTRate;
-        
-      } else if (bilMatch('Agreed Rate')) {
-        base = ar;
-
-      } else if (bilMatch('Cancellation')) {
-        base = cf;
-      }
-
-      // Add Special Day premium if applicable
-      if (isWeekend) {
-        special = customWeekendRate;
-      } else if (isHoliday) {
-        special = customHolidayRate;
-      }
-
-      // Add OOH premium if applicable
-      if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
-        ooh = hrs * customOOHRate;
-      }
-      // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
-      let effectiveBase = Number(base) || 0;
-      if (_isLogAggregation && (bilMatch('Agreed Rate') || bilMatch('Cancellation'))) {
-        effectiveBase = 0;
-      }
-
-      // Final consolidated values for travel and tools for Customer
-      const finalTravel = isEngParam ? 0 : (parseFloat(opts.travelCostPerDay) || 0);
-      const finalTools = isEngParam ? 0 : (parseFloat(opts.toolCost) || 0);
-
-      // Final grand total including everything
-      const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(special || 0) + finalTravel + finalTools;
-
-      console.log(`[CalcEngine] Base:${effectiveBase}, Travel:${finalTravel}, Tools:${finalTools}, Grand:${grand}`);
-
-      return {
-        hrs: hrs.toFixed(2),
-        base: base.toFixed(2),
-        ot: ot.toFixed(2),
-        ooh: ooh.toFixed(2),
-        specialDay: special.toFixed(2),
-        tools: finalTools.toFixed(2),
-        travel: finalTravel.toFixed(2),
-        grandTotal: grand.toFixed(2),
-        isOOH: workIsOOH,
-        isSpecialDay: isWeekend || isHoliday,
-        perDayRate:   opts._perDayRate   != null ? parseFloat(opts._perDayRate).toFixed(2)   : null,
-        workingDays:  opts._workingDays  != null ? opts._workingDays                          : null,
-        monthlyFull:  opts._monthlyFull  != null ? parseFloat(opts._monthlyFull).toFixed(2)   : null,
-      };
-    } catch (err) { 
-       console.error("Calculation Engine Error:", err);
-       return { totalHours: '0.00', base: (fd || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) }; 
-    }
-  };
 
   useEffect(() => {
     // Enable live calculations for both view mode AND creation/editing mode
