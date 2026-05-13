@@ -401,7 +401,7 @@ function TicketsPage() {
     // Declare rates at the top level to avoid ReferenceErrors in catch block
     let hr = 0, hd = 0, fd = 0, ar = 0, cf = 0, mr = 0;
     
-    const {
+    let {
       startTime: sParam, endTime: eParam, breakTime: bParam,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
       travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country,
@@ -572,11 +572,11 @@ function TicketsPage() {
       if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
         ooh = hrs * customOOHRate;
       }
-      const tCostRaw = parseFloat(travelCostPerDay) || 0;
-      const toolRaw = parseFloat(toolCost) || 0;
+      const tCostRaw = Number(travelCostPerDay) || 0;
+      const toolRaw = Number(toolCost) || 0;
 
-      const travelVal = isEngineer ? 0 : tCostRaw;
-      const toolsVal = isEngineer ? 0 : toolRaw;
+      const travelVal = (isEngineer === true) ? 0 : tCostRaw;
+      const toolsVal = (isEngineer === true) ? 0 : toolRaw;
 
       // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
       let effectiveBase = base;
@@ -584,7 +584,8 @@ function TicketsPage() {
         effectiveBase = 0;
       }
 
-      const grand = parseFloat(effectiveBase) + parseFloat(ot) + parseFloat(ooh) + parseFloat(specialDay || 0) + travelVal + toolsVal;
+      // Ensure all parts are numbers before adding to grand
+      const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(specialDay || 0) + travelVal + toolsVal;
 
       return {
         hrs: hrs.toFixed(2),
