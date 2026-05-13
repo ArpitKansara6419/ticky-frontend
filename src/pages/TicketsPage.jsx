@@ -398,6 +398,9 @@ function TicketsPage() {
 
   // Pure calculation function for reuse
   const calculateTicketTotal = (opts) => {
+    // Declare rates at the top level to avoid ReferenceErrors in catch block
+    let hr = 0, hd = 0, fd = 0, ar = 0, cf = 0, mr = 0;
+    
     const {
       startTime: sParam, endTime: eParam, breakTime: bParam,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
@@ -425,12 +428,12 @@ function TicketsPage() {
 
     try {
       // Parse rates early to prevent ReferenceErrors in catch/fallback blocks
-      const hr = parseFloat(opts.hourlyRate) || 0;
-      const hd = parseFloat(opts.halfDayRate) || 0;
-      const fd = parseFloat(opts.fullDayRate) || 0;
-      const ar = parseFloat(opts.agreedRate) || 0;
-      const cf = parseFloat(opts.cancellationFee) || 0;
-      const mr = parseFloat(opts.monthlyRate) || 0;
+      hr = parseFloat(opts.hourlyRate) || 0;
+      hd = parseFloat(opts.halfDayRate) || 0;
+      fd = parseFloat(opts.fullDayRate) || 0;
+      ar = parseFloat(opts.agreedRate) || 0;
+      cf = parseFloat(opts.cancellationFee) || 0;
+      mr = parseFloat(opts.monthlyRate) || 0;
 
       // Never return null - use defaults to keep UI alive
       const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
