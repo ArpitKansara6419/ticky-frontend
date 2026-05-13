@@ -684,7 +684,7 @@ function TicketsPage() {
           startTime: dayStartTime, endTime: eTime, breakTime: bMins,
           hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
           monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
-          travelCostPerDay: travelCostPerDay, toolCost: toolCostInput, billingType: rRates.bt, 
+          travelCostPerDay: String(travelCostPerDay), toolCost: String(toolCostInput), billingType: rRates.bt, 
           timezone, calcTimezone, country, monthlyDivisor: dayMonthlyDivisor,
           _isLogAggregation: true,
           isEngineer: false
@@ -819,7 +819,7 @@ function TicketsPage() {
       const res = calculateTicketTotal({
         startTime: calcStartTime, endTime: calcEndTime, breakTime,
         hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-        travelCostPerDay: travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
+        travelCostPerDay: String(travelCostPerDay), toolCost: String(toolCostInput), billingType, timezone, calcTimezone,
         monthlyDivisor: singleDayDivisor, country,
         overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0,
         isEngineer: false
@@ -3377,7 +3377,7 @@ function TicketsPage() {
               <section className="tickets-card" style={{ padding: '0', overflow: 'hidden' }}>
                 <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #1e293b, #334155)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FiActivity /> Financial Breakdown Summary (v2.2 - T:{liveBreakdown?.travel || '0'} L:{liveBreakdown?.tools || '0'})
+                    <FiActivity /> Financial Breakdown Summary (v2.3 - ST:{travelCostPerDay || 'empty'} SL:{toolCostInput || 'empty'})
                   </h2>
                   <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px' }}>
                     Based on {liveBreakdown?.days || 0} working days
