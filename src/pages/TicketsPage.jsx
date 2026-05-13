@@ -405,7 +405,6 @@ function TicketsPage() {
     let {
       startTime: sParam, endTime: eParam, breakTime: bParam,
       hourlyRate: hrParam, halfDayRate: hdParam, fullDayRate: fdParam, monthlyRate: mrParam, agreedRate: arParam, cancellationFee: cfParam,
-      travelCostPerDay: travelParam, toolCost: toolParam,
       billingType: bilParam, timezone: tzParam, calcTimezone: ctzParam, country: cntParam,
       overtimeRate: otParam, oohRate: oohParam, weekendRate: weParam, holidayRate: holParam,
       isEngineer: isEngParam,
@@ -572,8 +571,8 @@ function TicketsPage() {
       }
 
       // Final consolidated values for travel and tools for Customer
-      const finalTravel = isEngParam ? 0 : (parseFloat(travelParam) || 0);
-      const finalTools = isEngParam ? 0 : (parseFloat(toolParam) || 0);
+      const finalTravel = isEngParam ? 0 : (parseFloat(opts.travelCostPerDay) || 0);
+      const finalTools = isEngParam ? 0 : (parseFloat(opts.toolCost) || 0);
 
       // Final grand total including everything
       const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(special || 0) + finalTravel + finalTools;
