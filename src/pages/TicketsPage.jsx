@@ -407,7 +407,7 @@ function TicketsPage() {
       travelCostPerDay: travelParam, toolCost: toolParam,
       billingType: bilParam, timezone: tzParam, calcTimezone: ctzParam, country: cntParam,
       overtimeRate: otParam, oohRate: oohParam, weekendRate: weParam, holidayRate: holParam,
-      isEngineer,
+      isEngineer: isEngParam,
       _isLogAggregation
     } = opts;
 
@@ -571,8 +571,8 @@ function TicketsPage() {
       }
 
       // Final consolidated values for travel and tools for Customer
-      const finalTravel = isEngineer ? 0 : (Number(travelParam) || 0);
-      const finalTools = isEngineer ? 0 : (Number(toolParam) || 0);
+      const finalTravel = isEngParam ? 0 : (parseFloat(travelParam) || 0);
+      const finalTools = isEngParam ? 0 : (parseFloat(toolParam) || 0);
 
       // Final grand total including everything
       const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(special || 0) + finalTravel + finalTools;
@@ -731,8 +731,8 @@ function TicketsPage() {
           combinedBreakdown.ot = (parseFloat(combinedBreakdown.ot) + parseFloat(res.ot)).toFixed(2);
           combinedBreakdown.ooh = (parseFloat(combinedBreakdown.ooh) + parseFloat(res.ooh)).toFixed(2);
           combinedBreakdown.specialDay = (parseFloat(combinedBreakdown.specialDay) + parseFloat(res.specialDay)).toFixed(2);
-          combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + parseFloat(res.travel)).toFixed(2);
-          combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + parseFloat(res.tools)).toFixed(2);
+          combinedBreakdown.travel = (parseFloat(combinedBreakdown.travel) + (parseFloat(res.travel) || 0)).toFixed(2);
+          combinedBreakdown.tools = (parseFloat(combinedBreakdown.tools) + (parseFloat(res.tools) || 0)).toFixed(2);
           validDaysCount += 1;
         }
         if (payRes) {
