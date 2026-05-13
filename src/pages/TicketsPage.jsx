@@ -404,7 +404,7 @@ function TicketsPage() {
     let {
       startTime: sParam, endTime: eParam, breakTime: bParam,
       hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-      travelCostPerDay, toolCost, billingType, timezone, calcTimezone, country,
+      billingType, timezone, calcTimezone, country,
       overtimeRate, oohRate, weekendRate, holidayRate,
       isEngineer,
       _isLogAggregation
@@ -586,10 +586,15 @@ function TicketsPage() {
         effectiveBase = 0;
       }
 
-      // Force-add travel and tools to the grand total
-      const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(specialDay || 0) + travelVal + toolsVal;
+      // Final consolidated values for travel and tools for Customer
+      // Final consolidated values for travel and tools for Customer
+      const finalTravel = isEng ? 0 : (Number(opts.travelCostPerDay || travelCostPerDay) || 0);
+      const finalTools = isEng ? 0 : (Number(opts.toolCost || toolCostInput) || 0);
 
-      console.log(`[CalcEngine] Base:${effectiveBase}, Travel:${travelVal}, Tools:${toolsVal}, Grand:${grand}`);
+      // Final grand total including everything
+      const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(special || 0) + finalTravel + finalTools;
+
+      console.log(`[CalcEngine] Base:${effectiveBase}, Travel:${finalTravel}, Tools:${finalTools}, Grand:${grand}`);
 
       return {
         hrs: hrs.toFixed(2),
@@ -597,8 +602,8 @@ function TicketsPage() {
         ot: ot.toFixed(2),
         ooh: ooh.toFixed(2),
         specialDay: special.toFixed(2),
-        tools: toolsVal.toFixed(2),
-        travel: travelVal.toFixed(2),
+        tools: finalTools.toFixed(2),
+        travel: finalTravel.toFixed(2),
         grandTotal: grand.toFixed(2),
         isOOH: workIsOOH,
         isSpecialDay: isWeekend || isHoliday,
