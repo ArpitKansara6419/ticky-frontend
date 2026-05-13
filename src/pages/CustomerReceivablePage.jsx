@@ -487,10 +487,9 @@ const CustomerReceivablePage = () => {
         const issueDateObj = new Date();
         const today = issueDateObj.toLocaleDateString('en-GB');
         
-        // Format Invoice No: INV-Month-ID
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const currentMonthName = monthNames[issueDateObj.getMonth()];
-        const customInvoiceNo = `INV-${currentMonthName}-${ticket.id}`;
+        // Format Invoice No: INV-MonthNumber-ID
+        const currentMonthNum = String(issueDateObj.getMonth() + 1).padStart(2, '0');
+        const customInvoiceNo = `INV-${currentMonthNum}-${ticket.id}`;
         
         // Service duration: Full Month of task_start_date
         const taskDate = new Date(ticket.task_start_date || new Date());
@@ -564,21 +563,19 @@ const CustomerReceivablePage = () => {
             columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 1: { cellWidth: 142 } }
         });
 
-        // PO/Service Info if available
-        if (invoicePoNumber || invoiceServiceNumber) {
-            autoTable(doc, {
-                startY: doc.lastAutoTable.finalY + 2,
-                body: [
-                    [
-                        invoicePoNumber ? `PO Number: ${invoicePoNumber}` : '',
-                        invoiceServiceNumber ? `Service Number: ${invoiceServiceNumber}` : '',
-                        `Billing Type: ${ticket.billing_type || 'Hourly'}`
-                    ]
-                ],
-                theme: 'plain',
-                bodyStyles: { fontSize: 8.5, textColor: [80, 80, 80], fontStyle: 'bold' },
-            });
-        }
+        // PO/Service Info (Always show Billing Type)
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 2,
+            body: [
+                [
+                    invoicePoNumber ? `PO Number: ${invoicePoNumber}` : '',
+                    invoiceServiceNumber ? `Service Number: ${invoiceServiceNumber}` : '',
+                    `Billing Type: ${ticket.billing_type || 'Hourly'}`
+                ]
+            ],
+            theme: 'plain',
+            bodyStyles: { fontSize: 8.5, textColor: [80, 80, 80], fontStyle: 'bold' },
+        });
 
         // ── Service Table ─────────────────────────
         const serviceRows = [];
