@@ -677,10 +677,10 @@ function TicketsPage() {
         const dayEndTime = eTime;
 
         const res = calculateTicketTotal({
-          startTime: dayStartTime, endTime: dayEndTime, breakTime: bMins,
+          startTime: dayStartTime, endTime: eTime, breakTime: bMins,
           hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
           monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
-          travelCostPerDay, toolCost: toolCostInput, billingType: rRates.bt, 
+          travelCostPerDay: travelCostPerDay, toolCost: toolCostInput, billingType: rRates.bt, 
           timezone, calcTimezone, country, monthlyDivisor: dayMonthlyDivisor,
           _isLogAggregation: true,
           isEngineer: false
@@ -815,7 +815,7 @@ function TicketsPage() {
       const res = calculateTicketTotal({
         startTime: calcStartTime, endTime: calcEndTime, breakTime,
         hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
-        travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
+        travelCostPerDay: travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
         monthlyDivisor: singleDayDivisor, country,
         overtimeRate: 0, oohRate: 0, weekendRate: 0, holidayRate: 0,
         isEngineer: false
