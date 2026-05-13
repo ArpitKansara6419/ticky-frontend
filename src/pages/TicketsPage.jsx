@@ -777,7 +777,7 @@ function TicketsPage() {
 
       const finalLiveTravel = (parseFloat(travelCostPerDay) * numDays).toFixed(2);
       const finalLiveTools = (parseFloat(toolCostInput) * numDays).toFixed(2);
-      const finalGrandTotal = (parseFloat(totalReceivable) + parseFloat(finalLiveTravel) + parseFloat(finalLiveTools)).toFixed(2);
+      const finalGrandTotal = totalReceivable.toFixed(2);
 
       setLiveBreakdown({ 
         base: Number(combinedBreakdown.base).toFixed(2),
@@ -830,7 +830,7 @@ function TicketsPage() {
       });
       const finalLiveTravel = (parseFloat(travelCostPerDay) || 0).toFixed(2);
       const finalLiveTools = (parseFloat(toolCostInput) || 0).toFixed(2);
-      const finalGrandTotal = (parseFloat(res?.grandTotal || 0) + parseFloat(finalLiveTravel) + parseFloat(finalLiveTools)).toFixed(2);
+      const finalGrandTotal = (parseFloat(res?.grandTotal || 0)).toFixed(2);
 
       setLiveBreakdown({ 
         ...res, 
