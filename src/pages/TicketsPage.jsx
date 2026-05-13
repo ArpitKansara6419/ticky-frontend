@@ -580,13 +580,6 @@ function TicketsPage() {
       if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
         ooh = hrs * customOOHRate;
       }
-      // Final safety check for travel/tool costs - use opts if provided, otherwise fallback to local scope
-      const tCostRaw = Number(opts.travelCostPerDay || travelCostPerDay || 0);
-      const toolRaw = Number(opts.toolCost || toolCostInput || 0);
-
-      const travelVal = (isEngineer === true) ? 0 : tCostRaw;
-      const toolsVal = (isEngineer === true) ? 0 : toolRaw;
-
       // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
       let effectiveBase = Number(base) || 0;
       if (_isLogAggregation && (bilMatch('Agreed Rate') || bilMatch('Cancellation'))) {
