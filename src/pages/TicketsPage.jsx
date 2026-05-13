@@ -403,10 +403,10 @@ function TicketsPage() {
     
     let {
       startTime: sParam, endTime: eParam, breakTime: bParam,
-      hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
+      hourlyRate: hrParam, halfDayRate: hdParam, fullDayRate: fdParam, monthlyRate: mrParam, agreedRate: arParam, cancellationFee: cfParam,
       travelCostPerDay: travelParam, toolCost: toolParam,
-      billingType, timezone, calcTimezone, country,
-      overtimeRate, oohRate, weekendRate, holidayRate,
+      billingType: bilParam, timezone: tzParam, calcTimezone: ctzParam, country: cntParam,
+      overtimeRate: otParam, oohRate: oohParam, weekendRate: weParam, holidayRate: holParam,
       isEngineer,
       _isLogAggregation
     } = opts;
@@ -501,21 +501,23 @@ function TicketsPage() {
       }
       const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
-      let base = 0, ot = 0, ooh = 0, special = 0;
-      const bil = (opts.billingType || '').trim();
+      // Parse rates
+      const hr = parseFloat(hrParam) || 0;
+      const hd = parseFloat(hdParam) || 0;
+      const fd = parseFloat(fdParam) || 0;
+      const ar = parseFloat(arParam) || 0;
+      const cf = parseFloat(cfParam) || 0;
 
-      // Rate Overrides from opts if provided
-      const customOTRate = parseFloat(overtimeRate) || (hr * 1.5);
-      const customOOHRate = parseFloat(oohRate) || (hr * 1.5);
-      const customWeekendRate = parseFloat(weekendRate) || (hr * 2.0);
-      const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
+      const customOTRate = parseFloat(otParam) || (hr * 1.5);
+      const customOOHRate = parseFloat(oohParam) || (hr * 1.5);
+      const customWeekendRate = parseFloat(weParam) || (hr * 2.0);
+      const customHolidayRate = parseFloat(holParam) || (hr * 2.0);
 
+      const bil = (bilParam || '').trim();
       const bilMatch = (target) => {
-        const b = (bil || '').toLowerCase().trim();
-        const t = (target || '').toLowerCase().trim();
+        const b = bil.toLowerCase();
+        const t = target.toLowerCase();
         if (b === t || b.includes(t)) return true;
-        
-        // Specific loose matches for descriptive Lead strings
         if (t === 'full day + ot') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
         if (t === 'full day') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
         if (t === 'half day + hourly') return b.includes('half');
@@ -531,43 +533,31 @@ function TicketsPage() {
         base = b * hr;
 
       } else if (bilMatch('Half Day + Hourly')) {
-        if (hrs <= 4) {
-          base = hd;
-        } else {
-          base = hd + ((hrs - 4) * hr);
-        }
+        base = hrs <= 4 ? hd : hd + ((hrs - 4) * hr);
+
+      } else if (bilMatch('Full Day')) {
+        base = fd;
 
       } else if (bilMatch('Full Day + OT')) {
         base = fd;
-        if (hrs > 8) {
-          ot = (hrs - 8) * customOTRate;
-        }
+        if (hrs > 8) ot = (hrs - 8) * customOTRate;
 
       } else if (bilMatch('Mixed Mode')) {
-        if (hrs <= 4) {
-          base = hd;
-        } else if (hrs <= 8) {
-          base = fd;
-        } else {
-          base = fd;
-          ot = (hrs - 8) * customOTRate;
-        }
+        if (hrs <= 4) base = hd;
+        else if (hrs <= 8) base = fd;
+        else { base = fd; ot = (hrs - 8) * customOTRate; }
 
       } else if (bil.toLowerCase().includes('monthly')) {
-        const fullRate = parseFloat(opts.monthlyRate) || 0;
+        const fullRate = parseFloat(mrParam) || 0;
         const divisor = (opts.monthlyDivisor && opts.monthlyDivisor > 0) ? opts.monthlyDivisor : 22; 
         base = fullRate / divisor;
         if (hrs > 8) ot = (hrs - 8) * customOTRate;
         
-        opts._perDayRate    = base;
-        opts._workingDays   = divisor;
-        opts._monthlyFull   = fullRate;
-
       } else if (bilMatch('Agreed Rate')) {
-        base = parseFloat(opts.agreedRate) || 0;
+        base = ar;
 
       } else if (bilMatch('Cancellation')) {
-        base = parseFloat(opts.cancellationFee) || 0;
+        base = cf;
       }
 
       // Add Special Day premium if applicable
@@ -588,8 +578,8 @@ function TicketsPage() {
       }
 
       // Final consolidated values for travel and tools for Customer
-      const finalTravel = isEng ? 0 : (Number(travelParam ?? travelCostPerDay) || 0);
-      const finalTools = isEng ? 0 : (Number(toolParam ?? toolCostInput) || 0);
+      const finalTravel = isEngineer ? 0 : (Number(travelParam) || 0);
+      const finalTools = isEngineer ? 0 : (Number(toolParam) || 0);
 
       // Final grand total including everything
       const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(special || 0) + finalTravel + finalTools;
