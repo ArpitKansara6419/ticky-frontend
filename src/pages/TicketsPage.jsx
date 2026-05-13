@@ -424,6 +424,14 @@ function TicketsPage() {
     }
 
     try {
+      // Parse rates early to prevent ReferenceErrors in catch/fallback blocks
+      const hr = parseFloat(opts.hourlyRate) || 0;
+      const hd = parseFloat(opts.halfDayRate) || 0;
+      const fd = parseFloat(opts.fullDayRate) || 0;
+      const ar = parseFloat(opts.agreedRate) || 0;
+      const cf = parseFloat(opts.cancellationFee) || 0;
+      const mr = parseFloat(opts.monthlyRate) || 0;
+
       // Never return null - use defaults to keep UI alive
       const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
       const eStr = String(eParamFinal || '2026-01-01T17:00:00Z');
@@ -432,7 +440,6 @@ function TicketsPage() {
       const e = parseWallClockDate(eStr);
       // Fallback if dates are invalid
       if (isNaN(s.getTime()) || isNaN(e.getTime())) {
-         const now = new Date();
          return { totalHours: '8.00', base: (fd || hr*8 || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) };
       }
 
@@ -483,9 +490,6 @@ function TicketsPage() {
       const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
-      const hr = parseFloat(opts.hourlyRate) || 0;
-      const hd = parseFloat(opts.halfDayRate) || 0;
-      const fd = parseFloat(opts.fullDayRate) || 0;
       const bil = (opts.billingType || '').trim();
 
       // Rate Overrides from opts if provided
