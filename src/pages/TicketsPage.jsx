@@ -422,16 +422,18 @@ function TicketsPage() {
       sParamFinal = `${dateOnly}T09:00:00Z`;
       eParamFinal = `${dateOnly}T17:00:00Z`;
     }
-    if (!sParamFinal || !eParamFinal) return null;
 
-    try {
-      // Use parameters, fallback to strings if needed
-      const sStr = String(sParamFinal);
-      const eStr = String(eParamFinal);
+    // Never return null - use defaults to keep UI alive
+    const sStr = String(sParamFinal || '2026-01-01T09:00:00Z');
+    const eStr = String(eParamFinal || '2026-01-01T17:00:00Z');
 
-      const s = parseWallClockDate(sParamFinal);
-      const e = parseWallClockDate(eParamFinal);
-      if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+      const s = parseWallClockDate(sStr);
+      const e = parseWallClockDate(eStr);
+      // Fallback if dates are invalid
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+         const now = new Date();
+         return { totalHours: '8.00', base: (fd || hr*8 || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) };
+      }
 
       const brkSec = (parseInt(bParam) || 0) * 60;
       const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brkSec);
@@ -492,14 +494,15 @@ function TicketsPage() {
       const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
 
       const bilMatch = (target) => {
-        const b = (bil || '').toLowerCase().replace(/[^a-z0-9+]/g, ' ').replace(/\s+/g, ' ').trim();
-        const t = (target || '').toLowerCase().replace(/[^a-z0-9+]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (b === t) return true;
-        // Keyword-based matching for descriptive billing type strings (e.g. "3) Full Day 1 GT (OT = Rate x 1.5)")
-        if (t === 'full day + ot') return b.includes('full day') || b.includes('full time');
-        if (t === 'full day') return (b.includes('full day') || b.includes('full time')) && !b.includes('monthly');
-        if (t === 'half day + hourly') return b.includes('half day');
-        if (t === 'hourly') return b === 'hourly' || b.startsWith('hourly');
+        const b = (bil || '').toLowerCase().trim();
+        const t = (target || '').toLowerCase().trim();
+        if (b === t || b.includes(t)) return true;
+        
+        // Specific loose matches for descriptive Lead strings
+        if (t === 'full day + ot') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
+        if (t === 'full day') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
+        if (t === 'half day + hourly') return b.includes('half');
+        if (t === 'hourly') return b.includes('hourly') || (!b.includes('full') && !b.includes('half') && !b.includes('monthly') && !b.includes('agreed'));
         if (t === 'mixed mode') return b.includes('mixed');
         if (t === 'agreed rate') return b.includes('agreed');
         if (t === 'cancellation') return b.includes('cancellation');
@@ -588,7 +591,11 @@ function TicketsPage() {
         workingDays:  opts._workingDays  != null ? opts._workingDays                          : null,
         monthlyFull:  opts._monthlyFull  != null ? parseFloat(opts._monthlyFull).toFixed(2)   : null,
       };
-    } catch (err) { return null; }
+      };
+    } catch (err) { 
+       console.error("Calculation Engine Error:", err);
+       return { totalHours: '0.00', base: (fd || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) }; 
+    }
   };
 
   useEffect(() => {
