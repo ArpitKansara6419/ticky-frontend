@@ -477,10 +477,11 @@ function TicketsPage() {
       const customHolidayRate = parseFloat(holidayRate) || (hr * 2.0);
 
       const bilMatch = (target) => {
-        const b = bil.toLowerCase();
-        const t = target.toLowerCase();
+        const b = (bil || '').toLowerCase().replace(/\s+/g, '');
+        const t = (target || '').toLowerCase().replace(/\s+/g, '');
         if (b === t) return true;
-        if (t === 'full day + ot' && b === 'full day') return true;
+        // Aliases
+        if (t === 'fullday+ot' && (b === 'fullday' || b === 'fulltime')) return true;
         return false;
       };
 
@@ -3191,6 +3192,7 @@ function TicketsPage() {
                       >
                         <option value="Hourly">Hourly Only</option>
                         <option value="Half Day + Hourly">Half Day + Hourly</option>
+                        <option value="Full Day">Full Day</option>
                         <option value="Full Day + OT">Full Day + OT</option>
                         <option value="Mixed Mode">Mixed Mode</option>
                         <option value="Monthly + OT + Weekend">Monthly + OT + Weekend</option>
