@@ -1314,17 +1314,27 @@ function TicketsPage() {
       let finalEndTime = endTime;
 
       if (!finalStartTime && taskStartDate && taskTime) {
-        finalStartTime = `${taskStartDate}T${taskTime.padStart(5, '0')}`;
+        const dObj = parseWallClockDate(taskStartDate);
+        const y = dObj.getUTCFullYear();
+        const m = String(dObj.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(dObj.getUTCDate()).padStart(2, '0');
+        finalStartTime = `${y}-${m}-${d}T${taskTime.padStart(5, '0')}`;
       }
       if (!finalEndTime) {
         if (taskEndDate && taskEndTime) {
-          finalEndTime = `${taskEndDate}T${taskEndTime.padStart(5, '0')}`;
+          const dObj = parseWallClockDate(taskEndDate);
+          const y = dObj.getUTCFullYear();
+          const m = String(dObj.getUTCMonth() + 1).padStart(2, '0');
+          const d = String(dObj.getUTCDate()).padStart(2, '0');
+          finalEndTime = `${y}-${m}-${d}T${taskEndTime.padStart(5, '0')}`;
         } else if (taskEndDate && taskTime) {
           // Default to finish same day + 8 hours if no explicit end time
-          const d = new Date(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
-          d.setHours(d.getHours() + 8);
-          const pad = (n) => String(n).padStart(2, '0');
-          finalEndTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          const d = parseWallClockDate(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
+          if (!isNaN(d.getTime())) {
+            d.setUTCHours(d.getUTCHours() + 8);
+            const pad = (n) => String(n).padStart(2, '0');
+            finalEndTime = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+          }
         }
       }
 
@@ -1376,10 +1386,28 @@ function TicketsPage() {
         leadType,
         cancellationFee: cancellationFee !== '' && cancellationFee !== null ? Number(cancellationFee) : 0,
         status: status,
-        taskStartDate: finalTaskStartDate ? String(finalTaskStartDate).split('T')[0] : null,
-        taskEndDate: finalTaskEndDate ? String(finalTaskEndDate).split('T')[0] : null,
-        startTime: finalStartTime,
-        endTime: finalEndTime,
+        taskStartDate: (() => {
+          const d = parseWallClockDate(finalTaskStartDate);
+          if (isNaN(d.getTime())) return null;
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        })(),
+        taskEndDate: (() => {
+          const d = parseWallClockDate(finalTaskEndDate);
+          if (isNaN(d.getTime())) return null;
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        })(),
+        startTime: (() => {
+          const d = parseWallClockDate(finalStartTime);
+          if (isNaN(d.getTime())) return finalStartTime;
+          const timePart = finalStartTime.includes('T') ? finalStartTime.split('T')[1] : (finalStartTime.includes(' ') ? finalStartTime.split(' ')[1] : '00:00:00');
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}T${timePart.replace('Z', '')}`;
+        })(),
+        endTime: (() => {
+          const d = parseWallClockDate(finalEndTime);
+          if (isNaN(d.getTime())) return finalEndTime;
+          const timePart = finalEndTime.includes('T') ? finalEndTime.split('T')[1] : (finalEndTime.includes(' ') ? finalEndTime.split(' ')[1] : '00:00:00');
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}T${timePart.replace('Z', '')}`;
+        })(),
         breakTime: Number(breakTime) || 0,
         latitude,
         longitude,
