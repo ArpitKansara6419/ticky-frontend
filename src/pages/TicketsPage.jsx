@@ -407,15 +407,30 @@ function TicketsPage() {
       _isLogAggregation
     } = opts;
 
-    if (!sParam || !eParam) return null;
+    // For flat-fee billing types (Full Day, Half Day, Agreed Rate, Cancellation),
+    // we do NOT need valid start/end times — use synthetic times if missing.
+    const billingTypeLower = (opts.billingType || '').toLowerCase();
+    const isFlatFee = billingTypeLower.includes('full day') || billingTypeLower.includes('full time') ||
+                      billingTypeLower.includes('half day') || billingTypeLower.includes('agreed') ||
+                      billingTypeLower.includes('cancellation');
+
+    // Build synthetic times from date fields if actual times not provided
+    let sParamFinal = sParam;
+    let eParamFinal = eParam;
+    if ((!sParamFinal || !eParamFinal) && isFlatFee && opts.startTime) {
+      const dateOnly = String(opts.startTime).split('T')[0].split(' ')[0];
+      sParamFinal = `${dateOnly}T09:00:00Z`;
+      eParamFinal = `${dateOnly}T17:00:00Z`;
+    }
+    if (!sParamFinal || !eParamFinal) return null;
 
     try {
       // Use parameters, fallback to strings if needed
-      const sStr = String(sParam);
-      const eStr = String(eParam);
+      const sStr = String(sParamFinal);
+      const eStr = String(eParamFinal);
 
-      const s = parseWallClockDate(sStr);
-      const e = parseWallClockDate(eStr);
+      const s = parseWallClockDate(sParamFinal);
+      const e = parseWallClockDate(eParamFinal);
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
 
       const brkSec = (parseInt(bParam) || 0) * 60;
@@ -766,8 +781,24 @@ function TicketsPage() {
       const estEndTime = endTime || (taskEndDate && taskEndTime ? `${taskEndDate}T${taskEndTime.padStart(5, '0')}` : '');
       const singleDayDivisor = getWorkingDaysInMonth(taskStartDate, country);
 
+      // For flat-fee billing types, ensure we always have valid times
+      const flatBil = billingType.toLowerCase();
+      const isFlatBil = flatBil.includes('full day') || flatBil.includes('full time') ||
+                         flatBil.includes('half day') || flatBil.includes('agreed') ||
+                         flatBil.includes('cancellation');
+      let calcStartTime = estStartTime;
+      let calcEndTime = estEndTime;
+      if ((!calcStartTime || !calcEndTime) && taskStartDate) {
+        const tDate = taskStartDate.includes('-') ? taskStartDate.split('T')[0] : taskStartDate;
+        const cleanTime = (taskTime && taskTime.includes(':')) ? taskTime.slice(0, 5) : '09:00';
+        const cleanEndT = (taskEndTime && taskEndTime.includes(':')) ? taskEndTime.slice(0, 5) : '17:00';
+        const endTDate = (taskEndDate && taskEndDate.split('T')[0]) || tDate;
+        calcStartTime = `${tDate}T${cleanTime}:00Z`;
+        calcEndTime = `${endTDate}T${cleanEndT}:00Z`;
+      }
+
       const res = calculateTicketTotal({
-        startTime: estStartTime, endTime: estEndTime, breakTime,
+        startTime: calcStartTime, endTime: calcEndTime, breakTime,
         hourlyRate, halfDayRate, fullDayRate, monthlyRate, agreedRate, cancellationFee,
         travelCostPerDay, toolCost: toolCostInput, billingType, timezone, calcTimezone,
         monthlyDivisor: singleDayDivisor, country,
@@ -904,7 +935,7 @@ function TicketsPage() {
     setTaskName('')
     setTaskStartDate('')
     setTaskEndDate('')
-    setTaskTime('00:00')
+    setTaskTime('09:00')
     setScopeOfWork('')
     setTools('')
     setEngineerName('')
@@ -2316,7 +2347,6 @@ function TicketsPage() {
         setTaskTime(parsedLead.taskTime?.slice(0, 5) || '09:00')
         setTaskEndTime(parsedLead.taskEndTime?.slice(0, 5) || '17:00')
 
-        setTaskTime(parsedLead.taskTime || '00:00')
         setScopeOfWork(parsedLead.scopeOfWork || '')
 
         // Address & Location
