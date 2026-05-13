@@ -505,11 +505,9 @@ const CustomerReceivablePage = () => {
         const paymentDate = paymentDateObj.toLocaleDateString('en-GB');
 
         // ── Header Section ───────────────────────────────────────────────────
-        // Background strip at the very top
         doc.setFillColor(...PRIMARY_COLOR);
         doc.rect(0, 0, 210, 10, 'F');
 
-        // Logo & Title
         doc.setFillColor(...ACCENT_COLOR);
         doc.ellipse(25, 25, 10, 10, 'F');
         doc.setTextColor(255, 255, 255);
@@ -518,26 +516,24 @@ const CustomerReceivablePage = () => {
         doc.text('aimbizit', 18, 26);
         
         doc.setTextColor(...PRIMARY_COLOR);
-        doc.setFontSize(24);
+        doc.setFontSize(22);
         doc.text(isInvoice ? 'INVOICE' : 'SERVICE BREAKDOWN', 200, 30, { align: 'right' });
 
-        // Metadata box (Clean & Separated)
         doc.setDrawColor(230, 230, 230);
-        doc.line(14, 42, 196, 42); // Horizontal Divider
+        doc.line(14, 42, 196, 42);
 
-        let mx = 145;
-        doc.setFontSize(9);
+        // Metadata positioned carefully to the far right
+        let mx = 150;
+        doc.setFontSize(8.5);
         doc.setTextColor(...TEXT_DIM);
         doc.setFont('helvetica', 'normal');
-        doc.text('Invoice Number:', mx, 48); doc.setTextColor(...TEXT_MAIN); doc.setFont('helvetica', 'bold'); doc.text(customInvoiceNo, mx + 30, 48);
-        
+        doc.text('Invoice Number:', mx, 48); doc.setTextColor(...TEXT_MAIN); doc.setFont('helvetica', 'bold'); doc.text(customInvoiceNo, mx + 26, 48);
         doc.setTextColor(...TEXT_DIM); doc.setFont('helvetica', 'normal');
-        doc.text('Issue Date:', mx, 54); doc.setTextColor(...TEXT_MAIN); doc.text(today, mx + 30, 54);
-        
+        doc.text('Issue Date:', mx, 53); doc.setTextColor(...TEXT_MAIN); doc.text(today, mx + 26, 53);
         doc.setTextColor(...TEXT_DIM);
-        doc.text('Due Date:', mx, 60); doc.setTextColor(220, 38, 38); doc.text(paymentDate, mx + 30, 60); // Red for due date
+        doc.text('Due Date:', mx, 58); doc.setTextColor(220, 38, 38); doc.text(paymentDate, mx + 26, 58);
 
-        // ── Parties Section (Supplier & Client) ──────────────────────────────
+        // ── Parties Section (Shifted Left to avoid Metadata overlap) ─────────
         const clientDetails = [
             ticket.customer_name || '-',
             ticket.customer_email ? `Email: ${ticket.customer_email}` : null,
@@ -556,29 +552,28 @@ const CustomerReceivablePage = () => {
             ]],
             theme: 'plain',
             headStyles: { textColor: ACCENT_COLOR, fontSize: 8, fontStyle: 'bold', cellPadding: { top: 0, bottom: 2 } },
-            bodyStyles: { fontSize: 9, textColor: TEXT_MAIN, cellPadding: 2, lineHeight: 1.3 },
-            columnStyles: { 0: { cellWidth: 90 }, 1: { cellWidth: 90 } }
+            bodyStyles: { fontSize: 8.5, textColor: TEXT_MAIN, cellPadding: 2, lineHeight: 1.2 },
+            columnStyles: { 0: { cellWidth: 65 }, 1: { cellWidth: 65 } } // Reduced widths to prevent overlap
         });
 
-        // ── Bank Section (Ultra Clean Box) ──────────────────────────────────
-        const bankY = doc.lastAutoTable.finalY + 8;
+        // ── Bank Section ─────────────────────────────────────────────────────
+        const bankY = doc.lastAutoTable.finalY + 6;
         doc.setFillColor(...LIGHT_BG);
-        doc.roundedRect(14, bankY, 182, 32, 2, 2, 'F');
+        doc.roundedRect(14, bankY, 182, 30, 2, 2, 'F');
         
         doc.setFontSize(8);
         doc.setTextColor(...ACCENT_COLOR);
         doc.setFont('helvetica', 'bold');
-        doc.text('PAYMENT INFORMATION', 20, bankY + 8);
+        doc.text('PAYMENT INFORMATION', 20, bankY + 7);
         
-        doc.setFontSize(9);
+        doc.setFontSize(8.5);
         doc.setTextColor(...TEXT_MAIN);
         doc.setFont('helvetica', 'normal');
-        doc.text('Bank:', 20, bankY + 16); doc.setFont('helvetica', 'bold'); doc.text('ING Bank (Warsaw, Poland)', 45, bankY + 16);
-        doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 130, bankY + 16); doc.text('INGBPLPW', 150, bankY + 16);
-        
-        doc.text('IBAN:', 20, bankY + 24); doc.setFont('helvetica', 'bold'); doc.text('PL 93 1050 1012 1000 0090 3264 5138', 45, bankY + 24);
+        doc.text('Bank:', 20, bankY + 15); doc.setFont('helvetica', 'bold'); doc.text('ING Bank (Warsaw, Poland)', 40, bankY + 15);
+        doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 125, bankY + 15); doc.text('INGBPLPW', 142, bankY + 15);
+        doc.text('IBAN:', 20, bankY + 22); doc.setFont('helvetica', 'bold'); doc.text('PL 93 1050 1012 1000 0090 3264 5138', 40, bankY + 22);
 
-        // ── Service Table (Spaced Out) ───────────────────────────────────────
+        // ── Service Table (Larger and Spaced) ────────────────────────────────
         const serviceRows = [];
         const displayLogs = logs.length > 0 ? logs : [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
         
@@ -610,15 +605,11 @@ const CustomerReceivablePage = () => {
             ]);
         });
 
-        // Totals Calculations
         const subtotal = parseFloat(bd.totalReceivable);
         const discountAmt = subtotal * (discountPercent / 100);
         const taxableAmt = subtotal - discountAmt;
         const taxes = [
-            { name: 'VAT', pct: vatPercent },
-            { name: 'CGST', pct: cgstPercent },
-            { name: 'GST', pct: gstPercent },
-            { name: 'SGST', pct: sgstPercent }
+            { name: 'VAT', pct: vatPercent }, { name: 'CGST', pct: cgstPercent }, { name: 'GST', pct: gstPercent }, { name: 'SGST', pct: sgstPercent }
         ];
         
         const activeTaxes = taxes.filter(t => t.pct > 0);
@@ -638,55 +629,35 @@ const CustomerReceivablePage = () => {
         }
 
         autoTable(doc, {
-            startY: bankY + 40,
-            head: [[
-                'DATE', 'DESCRIPTION / SERVICE', 'TYPE', 'LOCATION', 'IN', 'OUT', `RATE (${cur})`, `AMOUNT (${cur})`
-            ]],
+            startY: bankY + 38,
+            head: [['DATE', 'DESCRIPTION / SERVICE', 'TYPE', 'LOCATION', 'IN', 'OUT', `RATE (${cur})`, `AMOUNT (${cur})`]],
             body: serviceRows,
             theme: 'plain',
-            headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
-            bodyStyles: { fontSize: 8, textColor: TEXT_MAIN, cellPadding: 3, borderBottom: { color: [240, 240, 240], width: 0.1 } },
+            headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold', cellPadding: 4 },
+            bodyStyles: { fontSize: 8.5, textColor: TEXT_MAIN, cellPadding: 4, borderBottom: { color: [240, 240, 240], width: 0.1 } },
             columnStyles: { 
-                0: { cellWidth: 18 }, 
-                1: { cellWidth: 45 }, 
-                2: { cellWidth: 20 },
-                3: { cellWidth: 25 },
-                4: { cellWidth: 12, halign: 'center' },
-                5: { cellWidth: 12, halign: 'center' },
-                6: { cellWidth: 20, halign: 'right' },
-                7: { cellWidth: 24, halign: 'right', fontStyle: 'bold' } 
+                0: { cellWidth: 20 }, 1: { cellWidth: 45 }, 2: { cellWidth: 22 }, 3: { cellWidth: 25 },
+                4: { cellWidth: 12, halign: 'center' }, 5: { cellWidth: 12, halign: 'center' },
+                6: { cellWidth: 20, halign: 'right' }, 7: { cellWidth: 26, halign: 'right', fontStyle: 'bold' } 
             },
             foot: footerRows.map((row, idx) => ([
                 { 
-                    content: row[0], 
-                    colSpan: 7, 
-                    styles: { 
-                        halign: 'right', 
-                        fontStyle: idx === footerRows.length - 1 ? 'bold' : 'normal',
-                        fontSize: idx === footerRows.length - 1 ? 10 : 8,
-                        textColor: idx === footerRows.length - 1 ? PRIMARY_COLOR : TEXT_DIM
-                    } 
+                    content: row[0], colSpan: 7, 
+                    styles: { halign: 'right', fontStyle: idx === footerRows.length - 1 ? 'bold' : 'normal', fontSize: idx === footerRows.length - 1 ? 10 : 9, textColor: idx === footerRows.length - 1 ? PRIMARY_COLOR : TEXT_DIM } 
                 },
                 { 
                     content: row[1], 
-                    styles: { 
-                        halign: 'right', 
-                        fontStyle: 'bold', 
-                        fontSize: idx === footerRows.length - 1 ? 11 : 9, 
-                        textColor: idx === footerRows.length - 1 ? ACCENT_COLOR : TEXT_MAIN 
-                    } 
+                    styles: { halign: 'right', fontStyle: 'bold', fontSize: idx === footerRows.length - 1 ? 11 : 10, textColor: idx === footerRows.length - 1 ? ACCENT_COLOR : TEXT_MAIN } 
                 }
             ])),
             footStyles: { fillColor: [255, 255, 255], cellPadding: 3 }
         });
 
-        // ── Professional Footer ──────────────────────────────────────────────
         const footY = 270;
-        doc.setFontSize(8);
+        doc.setFontSize(8.5);
         doc.setTextColor(...TEXT_DIM);
         doc.text(`Service Period: ${serviceDuration}`, 14, footY);
-        doc.text('This is a computer-generated document. No signature is required.', 14, footY + 5);
-        
+        doc.text('Computer-generated document. No signature required.', 14, footY + 5);
         doc.setTextColor(...PRIMARY_COLOR);
         doc.setFont('helvetica', 'bold');
         doc.text('Thank you for your business!', 105, footY + 15, { align: 'center' });
