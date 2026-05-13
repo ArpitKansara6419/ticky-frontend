@@ -572,20 +572,23 @@ function TicketsPage() {
       if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
         ooh = hrs * customOOHRate;
       }
-      const tCostRaw = Number(travelCostPerDay) || 0;
-      const toolRaw = Number(toolCost) || 0;
+      // Final safety check for travel/tool costs - use opts if provided, otherwise fallback to local scope
+      const tCostRaw = Number(opts.travelCostPerDay || travelCostPerDay || 0);
+      const toolRaw = Number(opts.toolCost || toolCostInput || 0);
 
       const travelVal = (isEngineer === true) ? 0 : tCostRaw;
       const toolsVal = (isEngineer === true) ? 0 : toolRaw;
 
       // If this is a log entry in a multi-day job, Agreed Rate and Cancellation Fee are calculated once in the parent loop
-      let effectiveBase = base;
-      if (_isLogAggregation && (bil === 'Agreed Rate' || bil === 'Cancellation')) {
+      let effectiveBase = Number(base) || 0;
+      if (_isLogAggregation && (bilMatch('Agreed Rate') || bilMatch('Cancellation'))) {
         effectiveBase = 0;
       }
 
-      // Ensure all parts are numbers before adding to grand
+      // Force-add travel and tools to the grand total
       const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(specialDay || 0) + travelVal + toolsVal;
+
+      console.log(`[CalcEngine] Base:${effectiveBase}, Travel:${travelVal}, Tools:${toolsVal}, Grand:${grand}`);
 
       return {
         hrs: hrs.toFixed(2),
@@ -779,7 +782,12 @@ function TicketsPage() {
       }
 
       setLiveBreakdown({ 
-        ...combinedBreakdown, 
+        base: Number(combinedBreakdown.base).toFixed(2),
+        ot: Number(combinedBreakdown.ot).toFixed(2),
+        ooh: Number(combinedBreakdown.ooh).toFixed(2),
+        specialDay: Number(combinedBreakdown.special).toFixed(2),
+        travel: Number(combinedBreakdown.travel).toFixed(2),
+        tools: Number(combinedBreakdown.tools).toFixed(2),
         hrs: totalHrs.toFixed(2), 
         grandTotal: totalReceivable.toFixed(2), 
         days: validDaysCount,
