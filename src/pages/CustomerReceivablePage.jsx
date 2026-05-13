@@ -483,48 +483,53 @@ const CustomerReceivablePage = () => {
         const doc = new jsPDF();
         const cur = ticket.currency || 'USD';
         
+        // --- Colors & Styles ---
+        const PRIMARY_COLOR = [99, 102, 241]; // Indigo-500
+        const SECONDARY_COLOR = [31, 41, 55]; // Gray-800
+        const ACCENT_COLOR = [243, 244, 246]; // Gray-100
+        
         // --- Date Logic ---
         const issueDateObj = new Date();
         const today = issueDateObj.toLocaleDateString('en-GB');
-        
-        // Format Invoice No: INV-MonthNumber-ID
         const currentMonthNum = String(issueDateObj.getMonth() + 1).padStart(2, '0');
         const customInvoiceNo = `INV-${currentMonthNum}-${ticket.id}`;
         
-        // Service duration: Full Month of task_start_date
         const taskDate = new Date(ticket.task_start_date || new Date());
         const firstDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), 1).toLocaleDateString('en-GB');
         const lastDay = new Date(taskDate.getFullYear(), taskDate.getMonth() + 1, 0).toLocaleDateString('en-GB');
         const serviceDuration = `${firstDay} - ${lastDay}`;
         
-        // Date of Payment: Issue Date + 30 days
         const paymentDateObj = new Date(issueDateObj.getTime() + 30 * 24 * 60 * 60 * 1000);
         const paymentDate = paymentDateObj.toLocaleDateString('en-GB');
 
-        // ── Logo (top-left) ────────────────────────────────────────────────────
-        doc.setFillColor(100, 80, 200);
-        doc.ellipse(22, 20, 12, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(7);
+        // ── Header Background Design ──────────────────────────────────────────
+        doc.setFillColor(...PRIMARY_COLOR);
+        doc.rect(0, 0, 210, 40, 'F');
+
+        // ── Logo ──────────────────────────────────────────────────────────────
+        doc.setFillColor(255, 255, 255);
+        doc.ellipse(25, 20, 12, 10, 'F');
+        doc.setTextColor(...PRIMARY_COLOR);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
-        doc.text('aimbizit', 14, 21);
-        doc.setTextColor(80, 80, 80);
+        doc.text('aimbizit', 17, 21);
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.text(isInvoice ? 'INVOICE' : 'BREAKDOWN', 195, 25, { align: 'right' });
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text('aimbizit.com', 14, 33);
+        doc.text('aimbizit.com', 17, 34);
 
-        // ── Invoice Details (top-right) ────────────────────────────────────────
-        const rx = 115;
+        // ── Invoice Meta Info (Right Side) ────────────────────────────────────
+        const rx = 140;
         doc.setFontSize(9);
-        doc.setTextColor(60, 60, 60);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Invoice No:', rx, 16);  doc.setFont('helvetica', 'bold'); doc.text(customInvoiceNo, rx + 28, 16);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Place of issue:', rx, 22); doc.text('Warsaw', rx + 28, 22);
-        doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`No: ${customInvoiceNo}`, rx, 15);
+        doc.text(`Date: ${today}`, rx, 21);
+        doc.text(`Due: ${paymentDate}`, rx, 27);
 
-        // ── Supplier / Client ──────────────────────────────────────────────────
-        // Client details: Name, Email, Company Registration No, VAT Number, Address
+        // ── Client & Supplier Section ─────────────────────────────────────────
         const clientDetails = [
             ticket.customer_name || '-',
             ticket.customer_email ? `Email: ${ticket.customer_email}` : null,
@@ -535,64 +540,46 @@ const CustomerReceivablePage = () => {
         ].filter(Boolean).join('\n');
 
         autoTable(doc, {
-            startY: 42,
-            head: [['Supplier', 'Client']],
+            startY: 45,
+            head: [['SUPPLIER', 'CLIENT']],
             body: [[
                 'AIMBOT BUSINESS SERVICES\nAleja Jana Pawla II\nNumber 43A, Lokal 37B, Warszawa 01-001\nKRS: 0000933886',
                 clientDetails
             ]],
             theme: 'plain',
-            headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
-            bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50], cellPadding: 3 },
-            columnStyles: { 0: { cellWidth: 90 }, 1: { cellWidth: 90 } }
+            headStyles: { textColor: PRIMARY_COLOR, fontSize: 10, fontStyle: 'bold', cellPadding: { top: 5, bottom: 2 } },
+            bodyStyles: { fontSize: 9, textColor: SECONDARY_COLOR, cellPadding: 2, lineHeight: 1.4 },
+            columnStyles: { 0: { cellWidth: 95 }, 1: { cellWidth: 95 } }
         });
 
-        // ── Account Details ────────────────────────────────────────────────────
-        autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 3,
-            head: [['Account Details', '']],
-            body: [
-                ['Account Name:', 'AIMBOT BUSINESS SERVICES'],
-                ['Bank Name:', 'ING Bank'],
-                ['Swift:', 'INGBPLPW'],
-                ['IBAN:', 'PL 93 1050 1012 1000 0090 3264 5138'],
-            ],
-            theme: 'plain',
-            headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
-            bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50], cellPadding: 2 },
-            columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 1: { cellWidth: 142 } }
-        });
+        // ── Account Details (Box Style) ───────────────────────────────────────
+        doc.setDrawColor(...ACCENT_COLOR);
+        doc.setFillColor(...ACCENT_COLOR);
+        doc.roundedRect(14, doc.lastAutoTable.finalY + 5, 182, 35, 3, 3, 'F');
+        
+        doc.setFontSize(9);
+        doc.setTextColor(...PRIMARY_COLOR);
+        doc.setFont('helvetica', 'bold');
+        doc.text('BANK ACCOUNT DETAILS', 20, doc.lastAutoTable.finalY + 12);
+        
+        doc.setTextColor(...SECONDARY_COLOR);
+        doc.setFont('helvetica', 'normal');
+        let ay = doc.lastAutoTable.finalY + 18;
+        doc.text('Account Name:', 20, ay); doc.setFont('helvetica', 'bold'); doc.text('AIMBOT BUSINESS SERVICES', 50, ay); doc.setFont('helvetica', 'normal');
+        ay += 6;
+        doc.text('Bank Name:', 20, ay); doc.text('ING Bank', 50, ay);
+        doc.text('Swift:', 110, ay); doc.text('INGBPLPW', 130, ay);
+        ay += 6;
+        doc.text('IBAN:', 20, ay); doc.setFont('helvetica', 'bold'); doc.text('PL 93 1050 1012 1000 0090 3264 5138', 50, ay);
 
-        // PO/Service Info (Always show Billing Type)
-        autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 2,
-            body: [
-                [
-                    invoicePoNumber ? `PO Number: ${invoicePoNumber}` : '',
-                    invoiceServiceNumber ? `Service Number: ${invoiceServiceNumber}` : '',
-                    `Billing Type: ${ticket.billing_type || 'Hourly'}`
-                ]
-            ],
-            theme: 'plain',
-            bodyStyles: { fontSize: 8.5, textColor: [80, 80, 80], fontStyle: 'bold' },
-        });
-
-        // ── Service Table ─────────────────────────
+        // ── Service Table (Billing Type moved to Column) ──────────────────────
         const serviceRows = [];
         const displayLogs = logs.length > 0 ? logs : [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
         
         displayLogs.forEach(log => {
             const d = new Date(log.task_date || ticket.task_start_date).toLocaleDateString('en-GB');
+            const desc = isInvoice ? "IT Service" : `Engineer: ${ticket.engineer_name || '-'}\nTask: ${ticket.task_name || '-'}\nTkt: #${ticket.id}`;
             
-            // Description: "IT Service" for Invoice, Detailed for Breakdown
-            let desc = "";
-            if (isInvoice) {
-                desc = "IT Service";
-            } else {
-                desc = `Engineer: ${ticket.engineer_name || '-'}\nLoc: ${ticket.city || '-'}\nTask: ${ticket.task_name || '-'}\nTkt: #${ticket.id}`;
-            }
-            
-            // Times
             const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
             const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
 
@@ -608,6 +595,7 @@ const CustomerReceivablePage = () => {
             serviceRows.push([
                 d,
                 desc,
+                ticket.billing_type || 'Hourly',
                 [ticket.city, ticket.country].filter(Boolean).join(', ') || '-',
                 checkIn,
                 checkOut,
@@ -618,34 +606,39 @@ const CustomerReceivablePage = () => {
             ]);
         });
 
-        // Calculations for Invoice (Taxes & Discounts)
+        // Totals Calculations
         const subtotal = parseFloat(bd.totalReceivable);
         const discountAmt = subtotal * (discountPercent / 100);
         const taxableAmt = subtotal - discountAmt;
-        const vatAmt = taxableAmt * (vatPercent / 100);
-        const cgstAmt = taxableAmt * (cgstPercent / 100);
-        const gstAmt = taxableAmt * (gstPercent / 100);
-        const sgstAmt = taxableAmt * (sgstPercent / 100);
-        const grandTotal = taxableAmt + vatAmt + cgstAmt + gstAmt + sgstAmt;
+        const taxes = [
+            { name: 'VAT', pct: vatPercent },
+            { name: 'CGST', pct: cgstPercent },
+            { name: 'GST', pct: gstPercent },
+            { name: 'SGST', pct: sgstPercent }
+        ];
+        
+        const activeTaxes = taxes.filter(t => t.pct > 0);
+        const taxTotal = activeTaxes.reduce((acc, t) => acc + (taxableAmt * (t.pct / 100)), 0);
+        const grandTotal = taxableAmt + taxTotal;
 
         const footerRows = [];
         if (isInvoice) {
             footerRows.push(['Subtotal', `${cur} ${subtotal.toFixed(2)}`]);
             if (discountPercent > 0) footerRows.push([`Discount (${discountPercent}%)`, `- ${cur} ${discountAmt.toFixed(2)}`]);
-            if (vatPercent > 0) footerRows.push([`VAT (${vatPercent}%)`, `${cur} ${vatAmt.toFixed(2)}`]);
-            if (cgstPercent > 0) footerRows.push([`CGST (${cgstPercent}%)`, `${cur} ${cgstAmt.toFixed(2)}`]);
-            if (gstPercent > 0) footerRows.push([`GST (${gstPercent}%)`, `${cur} ${gstAmt.toFixed(2)}`]);
-            if (sgstPercent > 0) footerRows.push([`SGST (${sgstPercent}%)`, `${cur} ${sgstAmt.toFixed(2)}`]);
+            activeTaxes.forEach(t => {
+                footerRows.push([`${t.name} (${t.pct}%)`, `${cur} ${(taxableAmt * (t.pct / 100)).toFixed(2)}`]);
+            });
             footerRows.push(['GRAND TOTAL', `${cur} ${grandTotal.toFixed(2)}`]);
         } else {
             footerRows.push(['TOTAL', `${cur} ${subtotal.toFixed(2)}`]);
         }
 
         autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 5,
+            startY: ay + 15,
             head: [[
                 { content: 'Date', styles: { halign: 'center' } },
                 { content: 'Description', styles: { halign: 'left' } },
+                { content: 'Type', styles: { halign: 'center' } },
                 { content: 'Location', styles: { halign: 'left' } },
                 { content: 'In', styles: { halign: 'center' } },
                 { content: 'Out', styles: { halign: 'center' } },
@@ -655,35 +648,43 @@ const CustomerReceivablePage = () => {
                 { content: 'Amount', styles: { halign: 'right' } }
             ]],
             body: serviceRows,
-            theme: 'grid',
-            headStyles: { fillColor: [100, 80, 200], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', cellPadding: 2 },
-            bodyStyles: { fontSize: 6.5, textColor: [40, 40, 40], cellPadding: 2 },
+            theme: 'striped',
+            headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', cellPadding: 3 },
+            bodyStyles: { fontSize: 7, textColor: SECONDARY_COLOR, cellPadding: 2.5 },
             columnStyles: { 
                 0: { cellWidth: 16, halign: 'center' }, 
-                1: { cellWidth: 40 }, 
-                2: { cellWidth: 25 },
-                3: { cellWidth: 12, halign: 'center' },
+                1: { cellWidth: 35 }, 
+                2: { cellWidth: 18, halign: 'center' },
+                3: { cellWidth: 20 },
                 4: { cellWidth: 12, halign: 'center' },
-                5: { cellWidth: 18, halign: 'right' },
-                6: { cellWidth: 12, halign: 'right' },
+                5: { cellWidth: 12, halign: 'center' },
+                6: { cellWidth: 16, halign: 'right' },
                 7: { cellWidth: 12, halign: 'right' },
-                8: { cellWidth: 20, halign: 'right', fontStyle: 'bold' } 
+                8: { cellWidth: 12, halign: 'right' },
+                9: { cellWidth: 18, halign: 'right', fontStyle: 'bold' } 
             },
             foot: footerRows.map(row => ([
-                { content: row[0], colSpan: 8, styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: row[1], styles: { halign: 'right', fontStyle: 'bold' } }
+                { content: row[0], colSpan: 9, styles: { halign: 'right', fontStyle: 'bold', fontSize: 9 } },
+                { content: row[1], styles: { halign: 'right', fontStyle: 'bold', fontSize: 9, textColor: PRIMARY_COLOR } }
             ])),
-            footStyles: { fillColor: [245, 245, 245], fontSize: 8 }
+            footStyles: { fillColor: [255, 255, 255], cellPadding: 3 }
         });
 
         // ── Footer ─────────────────────────────────────────────────────────────
-        const footY = doc.lastAutoTable.finalY + 8;
-        doc.setFontSize(8.5);
-        doc.setTextColor(60, 60, 60);
-        doc.setFont('helvetica', 'normal');
+        const footY = Math.max(doc.lastAutoTable.finalY + 15, 260);
+        doc.setDrawColor(...ACCENT_COLOR);
+        doc.line(14, footY - 5, 196, footY - 5);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
         doc.text(`Service duration: ${serviceDuration}`, 14, footY);
-        doc.text('Terms of Payment: Bank transfer', 14, footY + 6);
-        doc.text(`Date of Payment: ${paymentDate}`, 14, footY + 12);
+        doc.text('Notes: Please make payment by the due date to avoid any penalties.', 14, footY + 5);
+        
+        doc.setTextColor(...PRIMARY_COLOR);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Authorized Signatory', 196, footY + 15, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.text('AIMBOT BUSINESS SERVICES', 196, footY + 20, { align: 'right' });
 
         doc.save(filename);
     };
