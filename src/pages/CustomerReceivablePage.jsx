@@ -574,17 +574,23 @@ const CustomerReceivablePage = () => {
         doc.setFontSize(8.5);
         doc.setTextColor(...TEXT_MAIN);
         doc.setFont('helvetica', 'normal');
-        doc.text('Bank:', 20, bankY + 15); doc.setFont('helvetica', 'bold'); doc.text('ING Bank (Warsaw, Poland)', 40, bankY + 15);
+        doc.text('Bank:', 20, bankY + 15); doc.setFont('helvetica', 'bold'); doc.text('ING Bank', 40, bankY + 15);
         doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 125, bankY + 15); doc.text('INGBPLPW', 142, bankY + 15);
         doc.text('IBAN:', 20, bankY + 22); doc.setFont('helvetica', 'bold'); doc.text('PL 93 1050 1012 1000 0090 3264 5138', 40, bankY + 22);
 
-        // ── Service Table (Larger and Spaced) ────────────────────────────────
+        // ── Service Table (Optimized Columns) ────────────────────────────────
         const serviceRows = [];
         const displayLogs = logs.length > 0 ? logs : [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
         
+        let totalTools = 0;
+        let totalTravel = 0;
+
         displayLogs.forEach(log => {
             const d = new Date(log.task_date || ticket.task_start_date).toLocaleDateString('en-GB');
-            const desc = isInvoice ? "IT Service Provisioning" : `Engineer: ${ticket.engineer_name || '-'}\nTask: ${ticket.task_name || '-'}\nTkt: #${ticket.id}`;
+            const location = [ticket.city, ticket.country].filter(Boolean).join(', ');
+            const desc = isInvoice 
+                ? `IT Service Provisioning - ${location}` 
+                : `Engineer: ${ticket.engineer_name || '-'}\nTask: ${ticket.task_name || '-'}\nLocation: ${location}\nTkt: #${ticket.id}`;
             
             const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
             const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
@@ -598,17 +604,34 @@ const CustomerReceivablePage = () => {
                 is_recursive_call: true
             }, calcTimezone, cur);
 
-            serviceRows.push([
-                d,
+            totalTools += parseFloat(logRes.toolCost || 0);
+            totalTravel += parseFloat(logRes.travelCost || 0);
+
+            const row = [
                 desc,
-                ticket.billing_type || 'Hourly',
-                [ticket.city, ticket.country].filter(Boolean).join(', '),
                 checkIn,
                 checkOut,
                 `${parseFloat(logRes.baseCost || 0).toFixed(2)}`,
                 `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`
-            ]);
+            ];
+            
+            // Add Date only for Breakdown
+            if (!isInvoice) row.unshift(d);
+            
+            serviceRows.push(row);
         });
+
+        // Add Tool and Travel Costs if they exist
+        if (totalTravel > 0) {
+            const row = ['Travel Expenses', '-', '-', '-', totalTravel.toFixed(2)];
+            if (!isInvoice) row.unshift('-');
+            serviceRows.push(row);
+        }
+        if (totalTools > 0) {
+            const row = ['Tools & Equipment', '-', '-', '-', totalTools.toFixed(2)];
+            if (!isInvoice) row.unshift('-');
+            serviceRows.push(row);
+        }
 
         const subtotal = parseFloat(bd.totalReceivable);
         const discountAmt = subtotal * (discountPercent / 100);
@@ -633,21 +656,28 @@ const CustomerReceivablePage = () => {
             footerRows.push(['NET BREAKDOWN TOTAL', `${cur} ${subtotal.toFixed(2)}`]);
         }
 
+        const headers = [['DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, `AMOUNT (${cur})`]];
+        if (!isInvoice) headers[0].unshift('DATE');
+
         autoTable(doc, {
             startY: bankY + 38,
-            head: [['DATE', 'DESCRIPTION / SERVICE', 'TYPE', 'LOCATION', 'IN', 'OUT', `RATE (${cur})`, `AMOUNT (${cur})`]],
+            head: headers,
             body: serviceRows,
             theme: 'plain',
             headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold', cellPadding: 4 },
             bodyStyles: { fontSize: 8.5, textColor: TEXT_MAIN, cellPadding: 4, borderBottom: { color: [240, 240, 240], width: 0.1 } },
-            columnStyles: { 
-                0: { cellWidth: 20 }, 1: { cellWidth: 45 }, 2: { cellWidth: 22 }, 3: { cellWidth: 25 },
-                4: { cellWidth: 12, halign: 'center' }, 5: { cellWidth: 12, halign: 'center' },
-                6: { cellWidth: 20, halign: 'right' }, 7: { cellWidth: 26, halign: 'right', fontStyle: 'bold' } 
+            columnStyles: isInvoice ? { 
+                0: { cellWidth: 100 },
+                1: { cellWidth: 18, halign: 'center' }, 2: { cellWidth: 18, halign: 'center' },
+                3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 28, halign: 'right', fontStyle: 'bold' } 
+            } : { 
+                0: { cellWidth: 26 }, 1: { cellWidth: 80 },
+                2: { cellWidth: 16, halign: 'center' }, 3: { cellWidth: 16, halign: 'center' },
+                4: { cellWidth: 20, halign: 'right' }, 5: { cellWidth: 26, halign: 'right', fontStyle: 'bold' } 
             },
             foot: footerRows.map((row, idx) => ([
                 { 
-                    content: row[0], colSpan: 7, 
+                    content: row[0], colSpan: isInvoice ? 4 : 5, 
                     styles: { halign: 'right', fontStyle: idx === footerRows.length - 1 ? 'bold' : 'normal', fontSize: idx === footerRows.length - 1 ? 10 : 9, textColor: idx === footerRows.length - 1 ? PRIMARY_COLOR : TEXT_DIM } 
                 },
                 { 
@@ -1392,11 +1422,46 @@ const CustomerReceivablePage = () => {
                 <div className="table-card-premium">
                     {activeTab === 'unbilled' ? (
                         <>
+                            <div className="cr-section-header">
+                                <div className="cr-header-left">
+                                    <FiLayout className="cr-section-icon" />
+                                    <h3>Unbilled Work <span className="cr-badge">{filteredUnbilled.length}</span></h3>
+                                </div>
+                                <div className="cr-header-actions">
+                                    {selectedTicketIds.length > 0 && (
+                                        <div className="cr-bulk-actions">
+                                            <button 
+                                                className="cr-btn-bulk cr-btn-breakdown"
+                                                onClick={() => {
+                                                    selectedTicketIds.forEach(id => {
+                                                        const t = unbilledList.find(x => x.id === id);
+                                                        if (t) generateBreakdownPDF(t, calculateTicketCostFrontend(t, calcTimezone));
+                                                    });
+                                                }}
+                                            >
+                                                <FiFileText /> Bulk Breakdown ({selectedTicketIds.length})
+                                            </button>
+                                            <button 
+                                                className="cr-btn-bulk cr-btn-invoice"
+                                                onClick={() => {
+                                                    selectedTicketIds.forEach(id => {
+                                                        const t = unbilledList.find(x => x.id === id);
+                                                        if (t) generateProfessionalPDF(t, calculateTicketCostFrontend(t, calcTimezone));
+                                                    });
+                                                }}
+                                            >
+                                                <FiFile /> Bulk Invoice ({selectedTicketIds.length})
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="table-wrapper-premium">
                                 <table className="table-premium">
                                     <thead>
                                         <tr>
-                                            <th style={{ width: '40px' }}>
+                                            <th style={{ width: '40px', paddingLeft: '15px' }}>
                                                 <input type="checkbox"
                                                     checked={selectedTicketIds.length === filteredUnbilled.length && filteredUnbilled.length > 0}
                                                     onChange={(e) => setSelectedTicketIds(e.target.checked ? filteredUnbilled.map(t => t.id) : [])}
