@@ -714,6 +714,210 @@ const CustomerReceivablePage = () => {
         buildAimbizitPDF(ticket, bd, logs, `Breakdown_Ticket_${ticket.id}.pdf`, false);
     };
 
+    // --- CONSOLIDATED GENERATORS (New Features) ---
+    const generateConsolidatedPDF = (ticketIds, isInvoice = false) => {
+        if (!ticketIds || ticketIds.length === 0) return;
+        
+        // Find all ticket objects
+        const selectedTickets = ticketIds.map(id => unbilledList.find(t => t.id === id)).filter(Boolean);
+        if (selectedTickets.length === 0) return;
+
+        // Base the header/client info on the first ticket in the selection
+        const baseTicket = selectedTickets[0];
+        
+        // Aggregate all logs
+        let allLogs = [];
+        let totalReceivable = 0;
+        
+        selectedTickets.forEach(ticket => {
+            const bd = calculateTicketCostFrontend(ticket, calcTimezone);
+            totalReceivable += parseFloat(bd.totalReceivable || 0);
+            
+            let logs = [];
+            try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) {}
+            if (logs.length === 0) logs = [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
+            
+            // Tag each log with ticket context for the combined table
+            logs.forEach(l => {
+                allLogs.push({
+                    ...l,
+                    _ticketContext: ticket,
+                    _logCalculated: calculateTicketCostFrontend({ ...ticket, time_logs: [], start_time: l.start_time, end_time: l.end_time, task_start_date: l.task_date, is_recursive_call: true }, calcTimezone)
+                });
+            });
+        });
+
+        const filename = isInvoice ? `Consolidated_Invoice_${selectedTickets.length}_Tickets.pdf` : `Consolidated_Breakdown_${selectedTickets.length}_Tickets.pdf`;
+        
+        // Use a modified version of buildAimbizitPDF for consolidation
+        const doc = new jsPDF();
+        const cur = baseTicket.currency || 'USD';
+        const PRIMARY_COLOR = [47, 54, 114];
+        const ACCENT_COLOR = [99, 102, 241];
+        const LIGHT_BG = [248, 250, 252];
+        const TEXT_MAIN = [30, 41, 59];
+        const TEXT_DIM = [100, 116, 139];
+        
+        const issueDateObj = new Date();
+        const today = issueDateObj.toLocaleDateString('en-GB');
+        const customInvoiceNo = `CINV-${String(issueDateObj.getMonth()+1).padStart(2,'0')}-${baseTicket.id}`;
+        const paymentDate = new Date(issueDateObj.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB');
+
+        // Header
+        doc.setFillColor(...PRIMARY_COLOR);
+        doc.rect(0, 0, 210, 10, 'F');
+        doc.setFillColor(...ACCENT_COLOR);
+        doc.ellipse(25, 25, 10, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('aimbizit', 18, 26);
+        doc.setTextColor(...PRIMARY_COLOR);
+        doc.setFontSize(22);
+        doc.text(isInvoice ? 'CONSOLIDATED INVOICE' : 'CONSOLIDATED BREAKDOWN', 200, 30, { align: 'right' });
+
+        doc.setDrawColor(230, 230, 230);
+        doc.line(14, 42, 196, 42);
+
+        // Metadata
+        doc.setFontSize(8.5);
+        doc.setTextColor(...TEXT_DIM);
+        doc.text('Invoice Number:', 150, 48); doc.setTextColor(...TEXT_MAIN); doc.text(customInvoiceNo, 176, 48);
+        doc.setTextColor(...TEXT_DIM); doc.text('Issue Date:', 150, 53); doc.setTextColor(...TEXT_MAIN); doc.text(today, 176, 53);
+        doc.setTextColor(...TEXT_DIM); doc.text('Due Date:', 150, 58); doc.setTextColor(220, 38, 38); doc.text(paymentDate, 176, 58);
+
+        // Client Info
+        const clientDetails = [
+            baseTicket.customer_name || '-',
+            baseTicket.customer_email ? `Email: ${baseTicket.customer_email}` : null,
+            baseTicket.customer_address || null,
+            [baseTicket.city, baseTicket.country].filter(Boolean).join(', ')
+        ].filter(Boolean).join('\n');
+
+        autoTable(doc, {
+            startY: 45,
+            head: [['SUPPLIER / FROM', 'CLIENT / BILL TO']],
+            body: [['AIMBOT BUSINESS SERVICES\nAleja Jana Pawla II\nWarszawa 01-001, Poland\nKRS: 0000933886', clientDetails]],
+            theme: 'plain',
+            headStyles: { textColor: ACCENT_COLOR, fontSize: 8, fontStyle: 'bold' },
+            bodyStyles: { fontSize: 8.5, textColor: TEXT_MAIN },
+            columnStyles: { 0: { cellWidth: 65 }, 1: { cellWidth: 65 } }
+        });
+
+        // Bank Section
+        const bankY = doc.lastAutoTable.finalY + 6;
+        doc.setFillColor(...LIGHT_BG);
+        doc.roundedRect(14, bankY, 182, 30, 2, 2, 'F');
+        doc.setFontSize(8); doc.setTextColor(...ACCENT_COLOR); doc.text('PAYMENT INFORMATION', 20, bankY + 7);
+        doc.setFontSize(8.5); doc.setTextColor(...TEXT_MAIN); doc.text('Bank:', 20, bankY + 15); doc.setFont('helvetica', 'bold'); doc.text('ING Bank', 40, bankY + 15);
+        doc.setFont('helvetica', 'normal'); doc.text('IBAN:', 20, bankY + 22); doc.setFont('helvetica', 'bold'); doc.text('PL 93 1050 1012 1000 0090 3264 5138', 40, bankY + 22);
+
+        // Consolidated Table
+        const serviceRows = [];
+        let grandTotalTools = 0;
+        let grandTotalTravel = 0;
+
+        allLogs.forEach(log => {
+            const ticket = log._ticketContext;
+            const logRes = log._logCalculated;
+            const d = new Date(log.task_date || ticket.task_start_date).toLocaleDateString('en-GB');
+            const loc = [ticket.city, ticket.country].filter(Boolean).join(', ');
+            
+            const desc = isInvoice 
+                ? `Tkt #${ticket.id}: ${ticket.task_name} - ${loc}`
+                : `Tkt #${ticket.id}\nTask: ${ticket.task_name}\nEng: ${ticket.engineer_name}\nLoc: ${loc}`;
+            
+            const cin = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+            const cout = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+
+            grandTotalTools += parseFloat(logRes.toolCost || 0);
+            grandTotalTravel += parseFloat(logRes.travelCost || 0);
+
+            const row = [desc, cin, cout, `${parseFloat(logRes.baseCost || 0).toFixed(2)}`, `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}` ];
+            if (!isInvoice) row.unshift(d);
+            serviceRows.push(row);
+        });
+
+        if (grandTotalTravel > 0) {
+            const row = ['Aggregate Travel Expenses', '-', '-', '-', grandTotalTravel.toFixed(2)];
+            if (!isInvoice) row.unshift('-');
+            serviceRows.push(row);
+        }
+        if (grandTotalTools > 0) {
+            const row = ['Aggregate Tools & Equipment', '-', '-', '-', grandTotalTools.toFixed(2)];
+            if (!isInvoice) row.unshift('-');
+            serviceRows.push(row);
+        }
+
+        const headers = [['DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, `AMOUNT (${cur})`]];
+        if (!isInvoice) headers[0].unshift('DATE');
+
+        autoTable(doc, {
+            startY: bankY + 38,
+            head: headers,
+            body: serviceRows,
+            theme: 'plain',
+            headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontSize: 8.5 },
+            bodyStyles: { fontSize: 8.5, textColor: TEXT_MAIN, cellPadding: 4 },
+            columnStyles: isInvoice ? { 0: { cellWidth: 100 }, 1: { cellWidth: 18, halign: 'center' }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 28, halign: 'right', fontStyle: 'bold' } } 
+                         : { 0: { cellWidth: 26 }, 1: { cellWidth: 80 }, 2: { cellWidth: 16, halign: 'center' }, 3: { cellWidth: 16, halign: 'center' }, 4: { cellWidth: 20, halign: 'right' }, 5: { cellWidth: 26, halign: 'right', fontStyle: 'bold' } },
+            foot: [[{ content: 'CONSOLIDATED TOTAL', colSpan: isInvoice ? 4 : 5, styles: { halign: 'right', fontStyle: 'bold' } }, { content: `${cur} ${totalReceivable.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: ACCENT_COLOR, fontSize: 11 } }]],
+            footStyles: { fillColor: [255, 255, 255] }
+        });
+
+        doc.save(filename);
+    };
+
+    const generateConsolidatedExcel = (ticketIds) => {
+        if (!ticketIds || ticketIds.length === 0) return;
+        const selectedTickets = ticketIds.map(id => unbilledList.find(t => t.id === id)).filter(Boolean);
+        const cur = selectedTickets[0]?.currency || 'USD';
+        
+        const allDataRows = [];
+        let grandTotal = 0;
+
+        selectedTickets.forEach(ticket => {
+            let logs = [];
+            try { logs = typeof ticket.time_logs === 'string' ? JSON.parse(ticket.time_logs) : (ticket.time_logs || []); } catch (e) {}
+            if (logs.length === 0) logs = [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
+            
+            logs.forEach(log => {
+                const logRes = calculateTicketCostFrontend({ ...ticket, time_logs: [], start_time: log.start_time, end_time: log.end_time, task_start_date: log.task_date, is_recursive_call: true }, calcTimezone, cur);
+                grandTotal += parseFloat(logRes.totalReceivable);
+                
+                allDataRows.push([
+                    (log.task_date || '').split('T')[0],
+                    `Tkt #${ticket.id}: ${ticket.task_name} (${ticket.customer_name})`,
+                    ticket.engineer_name,
+                    `${ticket.city}, ${ticket.country}`,
+                    log.start_time ? new Date(log.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-',
+                    log.end_time ? new Date(log.end_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-',
+                    parseFloat(logRes.baseCost),
+                    parseFloat(logRes.travelCost),
+                    parseFloat(logRes.toolCost),
+                    parseFloat(logRes.totalReceivable)
+                ]);
+            });
+        });
+
+        const wsData = [
+            ['AIMBOT BUSINESS SERVICES - CONSOLIDATED REPORT'],
+            ['Date Generated', new Date().toLocaleDateString()],
+            ['Total Tickets', selectedTickets.length],
+            [],
+            ['DATE', 'TASK / CUSTOMER', 'ENGINEER', 'LOCATION', 'IN', 'OUT', `RATE (${cur})`, `TRAVEL (${cur})`, `TOOLS (${cur})`, `AMOUNT (${cur})`],
+            ...allDataRows,
+            [],
+            ['', '', '', '', '', '', '', '', 'GRAND TOTAL', grandTotal.toFixed(2)]
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{wch:14}, {wch:40}, {wch:20}, {wch:25}, {wch:12}, {wch:12}, {wch:14}, {wch:14}, {wch:14}, {wch:16}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Consolidated Report');
+        XLSX.writeFile(wb, `Consolidated_Report_${selectedTickets.length}_Tickets.xlsx`);
+    };
+
 
     const generateBreakdownExcel = (ticket, bd) => {
         const cur = ticket.currency || 'USD';
@@ -1585,12 +1789,20 @@ const CustomerReceivablePage = () => {
                                     </div>
                                     <div style={{ display: 'flex', gap: '12px', marginLeft: 'auto' }}>
                                         <button className="btn-wow-secondary" onClick={() => setSelectedTicketIds([])}>Cancel</button>
+                                        
+                                        <button 
+                                            className="btn-wow-secondary" 
+                                            style={{ color: '#6366f1', borderColor: '#6366f1' }}
+                                            onClick={() => generateConsolidatedPDF(selectedTicketIds, false)}
+                                        >
+                                            <FiFileText /> Consolidated Breakdown
+                                        </button>
+
                                         <button
                                             className="btn-generate-premium"
-                                            onClick={handleCreateInvoice}
-                                            disabled={selectedTicketIds.length === 0}
+                                            onClick={() => generateConsolidatedPDF(selectedTicketIds, true)}
                                         >
-                                            {creating ? 'Creating Invoice...' : 'Generate Invoice'}
+                                            <FiFile /> Consolidated Invoice
                                         </button>
                                     </div>
                                 </div>
