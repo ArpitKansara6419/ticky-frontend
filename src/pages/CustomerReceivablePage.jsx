@@ -98,15 +98,8 @@ const CustomerReceivablePage = () => {
         if (logs.length > 0 && !ticket.is_recursive_call) {
             let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
             logs.forEach(log => {
-                const logDate = (log.task_date || '').split('T')[0];
-                if (logDate) {
-                    const dObj = new Date(`${logDate}T00:00:00Z`);
-                    const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
-                    const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
-                    const isHoliday = activeHols.includes(logDate);
-                    if ((isWeekend || isHoliday) && (!log.start_time || !log.endTime)) return;
-                }
-
+                // No early skip for weekend/holiday — backend processes all logs the same way.
+                // Missing times are defaulted to 8h shift below.
                 let sTime = log.start_time;
                 let eTime = log.end_time;
                 let brk = (log.break_time_mins || 0) * 60;
@@ -247,6 +240,25 @@ const CustomerReceivablePage = () => {
             }
         }
 
+        // ── Special Day & OOH Premiums (were missing in single-day path) ──────
+        const customWeekendRate = parseFloat(ticket.weekend_rate) || (hr * 2.0);
+        const customHolidayRate = parseFloat(ticket.holiday_rate) || (hr * 2.0);
+        const customOOHRate    = parseFloat(ticket.ooh_rate)     || (hr * 1.5);
+
+        if (!bType.includes('agreed') && !bType.includes('cancellation')) {
+            if (isWK) {
+                sp = customWeekendRate;
+                spBreakdown = `Weekend Shift Premium = ${cur} ${customWeekendRate.toFixed(2)}`;
+            } else if (isH) {
+                sp = customHolidayRate;
+                spBreakdown = `Holiday Shift Premium = ${cur} ${customHolidayRate.toFixed(2)}`;
+            }
+            if (isO) {
+                ooh = hrs * customOOHRate;
+                oohBreakdown = `${hrs.toFixed(2)}h Out of Hours @ ${cur} ${customOOHRate.toFixed(2)}`;
+            }
+        }
+
         const trav = parseFloat(ticket.travel_cost_per_day || ticket.travelCostPerDay || 0);
         const tool = parseFloat(ticket.tool_cost || ticket.toolCost || 0);
         const total = base + ot + ooh + sp + trav + tool;
@@ -304,14 +316,7 @@ const CustomerReceivablePage = () => {
         if (logs.length > 0 && !ticket.is_recursive_call) {
             let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
             logs.forEach(log => {
-                const logDate = (log.task_date || '').split('T')[0];
-                if (logDate) {
-                    const dObj = new Date(`${logDate}T00:00:00Z`);
-                    const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
-                    const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
-                    const isHoliday = activeHols.includes(logDate);
-                    if ((isWeekend || isHoliday) && (!log.start_time || !log.endTime)) return;
-                }
+                // No early skip for weekend/holiday — missing times are defaulted to 8h below.
 
                 let sTime = log.start_time;
                 let eTime = log.end_time;
