@@ -811,7 +811,7 @@ function DashboardPage() {
     const interval = setInterval(() => {
       fetchApprovalsCount()
       fetchUnreadNotesCount()
-    }, 30000) // update every 30s
+    }, 10000) // update every 10s
     return () => clearInterval(interval)
   }, [])
   const [profileForm, setProfileForm] = useState(() => {

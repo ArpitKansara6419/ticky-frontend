@@ -1978,9 +1978,35 @@ function TicketsPage() {
         }
       );
 
+      const resData = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'Server update failed');
+        throw new Error(resData.message || 'Server update failed');
+      }
+
+      // Update the ticket total in the main state if the server returned it
+      if (resData.total_cost !== undefined || resData.eng_total_cost !== undefined) {
+        setTickets(prev => prev.map(t => {
+           if (Number(t.id) === Number(ticketId)) {
+              return { 
+                ...t, 
+                totalCost: resData.total_cost ?? t.totalCost,
+                total_cost: resData.total_cost ?? t.total_cost,
+                engTotalCost: resData.eng_total_cost ?? t.engTotalCost,
+                eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost
+              };
+           }
+           return t;
+        }));
+        if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
+           setSelectedTicket(prev => ({
+              ...prev,
+              totalCost: resData.total_cost ?? prev.totalCost,
+              total_cost: resData.total_cost ?? prev.total_cost,
+              engTotalCost: resData.eng_total_cost ?? prev.engTotalCost,
+              eng_total_cost: resData.eng_total_cost ?? prev.eng_total_cost
+           }));
+        }
       }
 
       // ── RE-FETCH & NORMALISE ─────────────────────────────────────────────

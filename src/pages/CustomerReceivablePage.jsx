@@ -1631,7 +1631,7 @@ const CustomerReceivablePage = () => {
 
                 return (
                     <div className="modal-overlay-premium" onClick={() => setDetailTicket(null)}>
-                        <div className="modal-content-premium" style={{ maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-content-premium" style={{ maxWidth: '850px', width: '95%', maxHeight: '92vh', overflowY: 'auto', padding: '0' }} onClick={e => e.stopPropagation()}>
                             <div className="modal-header-premium">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div className="title-icon-glow" style={{ padding: '8px' }}><FiFileText size={20} /></div>
@@ -1718,8 +1718,8 @@ const CustomerReceivablePage = () => {
 
                                 {/* Section 4: Cost Breakdown */}
                                 <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px' }}>📊 Cost Breakdown</div>
-                                    <div className="breakdown-list-premium">
+                                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>📊 Detailed Cost Breakdown</div>
+                                    <div className="breakdown-list-premium" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {detailTicket.billing_type === 'Cancellation' ? (
                                             <div className="breakdown-row highlight-premium">
                                                 <span>Cancellation Penalty</span>
