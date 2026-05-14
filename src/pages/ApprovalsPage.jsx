@@ -90,25 +90,25 @@ const ApprovalsPage = ({ onViewTicket }) => {
         return (
             <div className="approvals-list">
                 {pending.map((item) => (
-                    <div key={item.id} className="approval-card clickable" onClick={() => onViewTicket?.(item.ticket_id)}>
+                    <div key={item.id} className="approval-card clickable" onClick={() => onViewTicket?.(item.ticketId)}>
                         <header className="approval-card-header">
-                            <span className={`type-badge type-${item.request_type.toLowerCase().replace(' ', '-')}`}>
-                                {item.request_type}
+                            <span className={`type-badge type-${(item.approvalType || '').toLowerCase().replace(' ', '-')}`}>
+                                {item.approvalType}
                             </span>
                             <span className="approval-date">
-                                <FiClock /> {formatDate(item.created_at)}
+                                <FiClock /> {formatDate(item.requestedAt)}
                             </span>
                         </header>
                         <div className="approval-card-content">
                             <div className="content-main">
                                 <h4 className="task-title">
-                                    <span className="ticket-id">#{item.ticket_id}</span>
-                                    {item.task_name || 'Service Task'}
+                                    <span className="ticket-id">#{item.ticketId}</span>
+                                    {item.taskName || 'Service Task'}
                                 </h4>
                                 <div className="info-grid">
                                     <div className="info-item">
                                         <FiUser className="icon-subtle" />
-                                        <strong>Eng:</strong> {item.engineer_name}
+                                        <strong>Eng:</strong> {item.engineerName}
                                     </div>
                                     <div className="info-item">
                                         <FiGlobe className="icon-subtle" />
@@ -116,16 +116,16 @@ const ApprovalsPage = ({ onViewTicket }) => {
                                     </div>
                                 </div>
 
-                                {item.request_type === 'Early Closure' && (
+                                {item.approvalType === 'Early Closure' && (
                                     <div className="date-highlight-section">
                                         <div className="date-item">
                                             <label>Original End</label>
-                                            <span className="date-val original">{formatDate(item.original_date)}</span>
+                                            <span className="date-val original">{formatDate(item.currentEndDate)}</span>
                                         </div>
                                         <FiChevronRight className="date-arrow" />
                                         <div className="date-item">
                                             <label>Requested End</label>
-                                            <span className="date-val proposed">{formatDate(item.new_date)}</span>
+                                            <span className="date-val proposed">{formatDate(item.newDate)}</span>
                                         </div>
                                     </div>
                                 )}
@@ -139,14 +139,14 @@ const ApprovalsPage = ({ onViewTicket }) => {
                                 <button
                                     className="btn-action btn-approve"
                                     disabled={processingId === item.id}
-                                    onClick={() => handleAction(item.id, 'Approved', item.ticket_id)}
+                                    onClick={() => handleAction(item.id, 'Approved', item.ticketId)}
                                 >
                                     <FiCheckCircle /> {processingId === item.id ? '...' : 'Approve'}
                                 </button>
                                 <button
                                     className="btn-action btn-reject"
                                     disabled={processingId === item.id}
-                                    onClick={() => handleAction(item.id, 'Rejected', item.ticket_id)}
+                                    onClick={() => handleAction(item.id, 'Rejected', item.ticketId)}
                                 >
                                     <FiXCircle /> {processingId === item.id ? '...' : 'Reject'}
                                 </button>
@@ -191,20 +191,20 @@ const ApprovalsPage = ({ onViewTicket }) => {
                     </thead>
                     <tbody>
                         {history.map((item) => (
-                            <tr key={item.id} className="history-row" onClick={() => onViewTicket?.(item.ticket_id)}>
-                                <td className="cell-date">{formatDate(item.updated_at)}</td>
-                                <td><span className="table-ticket-id">#{item.ticket_id}</span></td>
-                                <td className="cell-name">{item.engineer_name}</td>
+                            <tr key={item.id} className="history-row" onClick={() => onViewTicket?.(item.ticketId)}>
+                                <td className="cell-date">{formatDate(item.processedAt)}</td>
+                                <td><span className="table-ticket-id">#{item.ticketId}</span></td>
+                                <td className="cell-name">{item.engineerName}</td>
                                 <td>
-                                    <span className="table-badge">{item.request_type}</span>
+                                    <span className="table-badge">{item.approvalType}</span>
                                 </td>
                                 <td>
-                                    <span className={`status-badge ${item.status.toLowerCase()}`}>
-                                        {item.status === 'Approved' ? <FiCheckCircle /> : <FiXCircle />}
-                                        {item.status}
+                                    <span className={`status-badge ${(item.requestStatus || '').toLowerCase()}`}>
+                                        {item.requestStatus === 'Approved' ? <FiCheckCircle /> : <FiXCircle />}
+                                        {item.requestStatus}
                                     </span>
                                 </td>
-                                <td style={{ fontSize: '12px', color: '#64748b' }}>{item.processed_by || 'System'}</td>
+                                <td style={{ fontSize: '12px', color: '#64748b' }}>{item.processedBy || 'System'}</td>
                             </tr>
                         ))}
                     </tbody>
