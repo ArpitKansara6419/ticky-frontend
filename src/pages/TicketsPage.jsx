@@ -331,9 +331,9 @@ const calculateTicketTotal = (opts) => {
       ooh = hrs * customOOHRate;
     }
     let effectiveBase = Number(base) || 0;
-    if (_isLogAggregation && (bilMatch('Agreed Rate') || bilMatch('Cancellation'))) {
-      effectiveBase = 0;
-    }
+    // Removed the _isLogAggregation zero-out logic for Agreed Rate/Cancellation.
+    // We now handle one-time fee logic in the aggregation loop itself if needed,
+    // but for most cases, if a log exists, its base cost should be included in its grand total.
 
     const finalTravel = isEngParam ? 0 : (parseFloat(opts.travelCostPerDay) || 0);
     const finalTools = isEngParam ? 0 : (parseFloat(opts.toolCost) || 0);
@@ -777,7 +777,17 @@ function TicketsPage() {
 
       const finalLiveTravel = (parseFloat(travelCostPerDay) * numDays).toFixed(2);
       const finalLiveTools = (parseFloat(toolCostInput) * numDays).toFixed(2);
-      const finalGrandTotal = totalReceivable.toFixed(2);
+      
+      // FIX: Calculate Grand Total as the sum of all aggregated components.
+      // This ensures the Grand Total always matches the sum of the breakdown rows.
+      const finalGrandTotal = (
+        parseFloat(combinedBreakdown.base) + 
+        parseFloat(combinedBreakdown.ot) + 
+        parseFloat(combinedBreakdown.ooh) + 
+        parseFloat(combinedBreakdown.specialDay) + 
+        parseFloat(finalLiveTravel) + 
+        parseFloat(finalLiveTools)
+      ).toFixed(2);
 
       setLiveBreakdown({ 
         base: Number(combinedBreakdown.base).toFixed(2),
@@ -792,9 +802,18 @@ function TicketsPage() {
         effectiveRate: numDays > 0 ? (parseFloat(combinedBreakdown.base) / numDays).toFixed(2) : '0.00'
       });
       setTotalCost(finalGrandTotal);
+      
+      const finalEngGrandTotal = (
+        parseFloat(engBreakdown.base) + 
+        parseFloat(engBreakdown.ot) + 
+        parseFloat(engBreakdown.ooh) + 
+        parseFloat(engBreakdown.special) + 
+        parseFloat(engBreakdown.agreed || 0)
+      ).toFixed(2);
+
       setPayoutLiveBreakdown({ 
         ...engBreakdown, 
-        grandTotal: totalPayout.toFixed(2), 
+        grandTotal: finalEngGrandTotal, 
         engSummary: Object.values(engSummaryMap),
         effectiveRate: numDays > 0 ? (parseFloat(engBreakdown.base) / numDays).toFixed(2) : '0.00'
       });
