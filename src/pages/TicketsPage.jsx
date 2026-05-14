@@ -830,7 +830,10 @@ function TicketsPage() {
       });
       const finalLiveTravel = (parseFloat(travelCostPerDay) || 0).toFixed(2);
       const finalLiveTools = (parseFloat(toolCostInput) || 0).toFixed(2);
-      const finalGrandTotal = (parseFloat(res?.grandTotal || 0)).toFixed(2);
+      // FIX: Strip travel/tools that calculateTicketTotal may have included (or missed in fallback),
+      // then re-add from state so Grand Total is always correct even on catch-block returns.
+      const resBaseOnly = parseFloat(res?.grandTotal || 0) - parseFloat(res?.travel || 0) - parseFloat(res?.tools || 0);
+      const finalGrandTotal = (resBaseOnly + parseFloat(finalLiveTravel) + parseFloat(finalLiveTools)).toFixed(2);
 
       setLiveBreakdown({ 
         ...res, 
@@ -3460,7 +3463,7 @@ function TicketsPage() {
                   </thead>
                   <tbody>
                     {[
-                      { label: 'Base Labor Cost', cust: liveBreakdown?.base, eng: payoutLiveBreakdown?.base },
+                      { label: engineerName || 'Engineer', isBaseRow: true, cust: liveBreakdown?.base, eng: payoutLiveBreakdown?.base },
                       { label: 'Overtime (OT)', cust: liveBreakdown?.ot, eng: payoutLiveBreakdown?.ot },
                       { label: 'OOH / Special Premiums', cust: (parseFloat(liveBreakdown?.specialDay || 0) + parseFloat(liveBreakdown?.ooh || 0)).toFixed(2), eng: (parseFloat(payoutLiveBreakdown?.special || 0) + parseFloat(payoutLiveBreakdown?.ooh || 0)).toFixed(2) },
                       { label: 'Travel Expenses', cust: liveBreakdown?.travel, eng: '0.00' },
@@ -3473,15 +3476,15 @@ function TicketsPage() {
                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '16px 24px', fontWeight: '600', color: '#1e293b' }}>
                             {row.label}
-                            {row.label === 'Base Labor Cost' && (
+                            {row.isBaseRow && (
                               <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '400', marginTop: '4px', fontStyle: 'italic' }}>
-                                Calculation Basis: {liveBreakdown?.days || 0} Working Days
+                                {billingType} · {liveBreakdown?.days || 0} Working Days
                               </div>
                             )}
                           </td>
                           <td style={{ padding: '16px 24px', textAlign: 'right', color: '#1e293b' }}>
                             <div style={{ fontWeight: '700' }}>{c.toFixed(2)}</div>
-                            {row.label === 'Base Labor Cost' && c > 0 && (
+                            {row.isBaseRow && c > 0 && (
                               <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '500' }}>
                                 {currency} {liveBreakdown?.effectiveRate || '0.00'} × {liveBreakdown?.days || 0}d
                               </div>
@@ -3489,7 +3492,7 @@ function TicketsPage() {
                           </td>
                           <td style={{ padding: '16px 24px', textAlign: 'right', color: '#dc2626' }}>
                             <div style={{ fontWeight: '700' }}>{p.toFixed(2)}</div>
-                            {row.label === 'Base Labor Cost' && p > 0 && (
+                            {row.isBaseRow && p > 0 && (
                               <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '500' }}>
                                 {engCurrency || currency} {payoutLiveBreakdown?.effectiveRate || '0.00'} × {liveBreakdown?.days || 0}d
                               </div>
