@@ -3112,9 +3112,39 @@ function TicketsPage() {
                               </td>
                               <td style={{ padding: '12px' }}>
                                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                  <input type="time" value={lStart} style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} onChange={(e) => { if (existingLog.id) handleUpdateLog(existingLog.id, { startTime: `${dStr}T${e.target.value}:00` }); else setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, start_time: `${dStr}T${e.target.value}:00` } : l)); }} />
+                                  <input 
+                                    type="time" 
+                                    value={lStart} 
+                                    style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
+                                    onChange={(e) => { 
+                                      const newVal = e.target.value;
+                                      if (existingLog.id) handleUpdateLog(existingLog.id, { startTime: `${dStr}T${newVal}:00` }); 
+                                      else {
+                                        setTimeLogs(prev => {
+                                          const exists = prev.find(l => (l.task_date || '').split('T')[0] === dStr);
+                                          if (exists) return prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, start_time: `${dStr}T${newVal}:00` } : l);
+                                          return [...prev, { task_date: dStr, engineer_id: Number(lEngId), start_time: `${dStr}T${newVal}:00`, end_time: `${dStr}T${lEnd}:00`, break_time_mins: lBreak }];
+                                        });
+                                      }
+                                    }} 
+                                  />
                                   <span>-</span>
-                                  <input type="time" value={lEnd} style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} onChange={(e) => { if (existingLog.id) handleUpdateLog(existingLog.id, { endTime: `${dStr}T${e.target.value}:00` }); else setTimeLogs(prev => prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, end_time: `${dStr}T${e.target.value}:00` } : l)); }} />
+                                  <input 
+                                    type="time" 
+                                    value={lEnd} 
+                                    style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
+                                    onChange={(e) => { 
+                                      const newVal = e.target.value;
+                                      if (existingLog.id) handleUpdateLog(existingLog.id, { endTime: `${dStr}T${newVal}:00` }); 
+                                      else {
+                                        setTimeLogs(prev => {
+                                          const exists = prev.find(l => (l.task_date || '').split('T')[0] === dStr);
+                                          if (exists) return prev.map(l => (l.task_date || '').split('T')[0] === dStr ? { ...l, end_time: `${dStr}T${newVal}:00` } : l);
+                                          return [...prev, { task_date: dStr, engineer_id: Number(lEngId), start_time: `${dStr}T${lStart}:00`, end_time: `${dStr}T${newVal}:00`, break_time_mins: lBreak }];
+                                        });
+                                      }
+                                    }} 
+                                  />
                                 </div>
                               </td>
                               <td style={{ padding: '12px', textAlign: 'center', fontWeight: '700', color: '#6366f1' }}>{dur.toFixed(1)}h</td>
