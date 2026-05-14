@@ -338,7 +338,8 @@ const calculateTicketTotal = (opts) => {
     const finalTravel = isEngParam ? 0 : (parseFloat(opts.travelCostPerDay) || 0);
     const finalTools = isEngParam ? 0 : (parseFloat(opts.toolCost) || 0);
 
-    const grand = Number(effectiveBase) + Number(ot) + Number(ooh) + Number(special || 0) + finalTravel + finalTools;
+    // Safety: ensure all components are valid numbers before summing to prevent NaN
+    const grand = (Number(effectiveBase) || 0) + (Number(ot) || 0) + (Number(ooh) || 0) + (Number(special) || 0) + (finalTravel || 0) + (finalTools || 0);
 
     return {
       hrs: hrs.toFixed(2),
@@ -849,10 +850,16 @@ function TicketsPage() {
       });
       const finalLiveTravel = (parseFloat(travelCostPerDay) || 0).toFixed(2);
       const finalLiveTools = (parseFloat(toolCostInput) || 0).toFixed(2);
-      // FIX: Strip travel/tools that calculateTicketTotal may have included (or missed in fallback),
-      // then re-add from state so Grand Total is always correct even on catch-block returns.
-      const resBaseOnly = parseFloat(res?.grandTotal || 0) - parseFloat(res?.travel || 0) - parseFloat(res?.tools || 0);
-      const finalGrandTotal = (resBaseOnly + parseFloat(finalLiveTravel) + parseFloat(finalLiveTools)).toFixed(2);
+
+      // Robust sum of parts logic for single day
+      const finalGrandTotal = (
+        (parseFloat(res?.base) || 0) + 
+        (parseFloat(res?.ot) || 0) + 
+        (parseFloat(res?.ooh) || 0) + 
+        (parseFloat(res?.specialDay) || 0) + 
+        (parseFloat(finalLiveTravel) || 0) + 
+        (parseFloat(finalLiveTools) || 0)
+      ).toFixed(2);
 
       setLiveBreakdown({ 
         ...res, 
