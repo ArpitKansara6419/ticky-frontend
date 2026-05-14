@@ -2875,12 +2875,26 @@ function TicketsPage() {
                   </label>
                   <label className="tickets-field">
                     <span>Select Lead</span>
-                    <select value={leadId} onChange={(e) => setLeadId(e.target.value)} disabled={loadingDropdowns || filteredLeads.length === 0}>
-                      <option value="">Choose a lead...</option>
-                      {filteredLeads.map((lead) => (
-                        <option key={lead.id} value={lead.id}>{lead.taskName}</option>
-                      ))}
-                    </select>
+                    {leadId ? (
+                      <input 
+                        type="text" 
+                        value={`#L-${leadId}`} 
+                        readOnly 
+                        className="synced-field" 
+                        onClick={() => alert(`This ticket is permanently linked to Lead #L-${leadId}.`)} 
+                      />
+                    ) : (
+                      <select 
+                        value={leadId} 
+                        onChange={(e) => setLeadId(e.target.value)} 
+                        disabled={loadingDropdowns || filteredLeads.length === 0}
+                      >
+                        <option value="">Choose a lead...</option>
+                        {filteredLeads.map((lead) => (
+                          <option key={lead.id} value={lead.id}>{lead.taskName}</option>
+                        ))}
+                      </select>
+                    )}
                   </label>
                   <label className="tickets-field tickets-field--full">
                     <span>Client Name</span>
