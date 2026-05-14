@@ -1395,9 +1395,22 @@ function TicketsPage() {
 
   const handleSubmitTicket = async (event) => {
     event.preventDefault()
-    if (!canSubmit) {
-      setError('Please fill all required fields.')
-      return
+    
+    // Detailed validation to inform user exactly what is missing
+    const missingFields = [];
+    if (!customerId) missingFields.push("Customer");
+    if (!taskName) missingFields.push("Task Name");
+    if (!taskStartDate) missingFields.push("Start Date");
+    if (!taskEndDate) missingFields.push("End Date");
+    if (!taskTime) missingFields.push("Task Start Time");
+    if (!taskEndTime) missingFields.push("Task End Time");
+    if (!scopeOfWork) missingFields.push("Scope of Work");
+    if (!engineerName && !engineerId) missingFields.push("Engineer Selection");
+
+    if (missingFields.length > 0) {
+      setError(`Please fill these required fields: ${missingFields.join(', ')}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
 
     try {
@@ -3576,7 +3589,7 @@ function TicketsPage() {
               </section>
               <div className="tickets-form-actions" style={{ marginTop: '32px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
                 <button type="button" className="tickets-secondary-btn" onClick={() => setActiveMainTab('POC')}><FiArrowLeft /> Back to POC</button>
-                <button type="submit" className="tickets-primary-btn" disabled={saving || !canSubmit}>
+                <button type="submit" className="tickets-primary-btn" disabled={saving}>
                   {saving ? (editingTicketId ? 'Saving Changes...' : 'Creating Ticket...') : (editingTicketId ? 'Save Changes' : 'Create Ticket')}
                 </button>
               </div>
