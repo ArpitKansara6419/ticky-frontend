@@ -585,13 +585,7 @@ const CustomerReceivablePage = () => {
         displayLogs.forEach(log => {
             const d = new Date(log.task_date || ticket.task_start_date).toLocaleDateString('en-GB');
             const location = [ticket.city, ticket.country].filter(Boolean).join(', ');
-            const desc = isInvoice 
-                ? `IT Service Provisioning - ${location}` 
-                : `Task: ${ticket.task_name || '-'}\nLoc: ${location}\nTkt: #${ticket.id}`;
             
-            const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
-            const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
-
             const logRes = calculateTicketCostFrontend({
                 ...ticket,
                 time_logs: [], 
@@ -606,18 +600,28 @@ const CustomerReceivablePage = () => {
             if (parseFloat(logRes.toolCost) > 0) otherParts.push(`Tool: ${parseFloat(logRes.toolCost).toFixed(2)}`);
             const otherCostStr = otherParts.join('\n') || '-';
 
-            const row = [
-                desc,
-                checkIn,
-                checkOut,
-                `${parseFloat(logRes.baseCost || 0).toFixed(2)}`,
-                otherCostStr,
-                `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`
-            ];
-            
-            if (!isInvoice) {
-                row.unshift(ticket.billing_type || 'Hourly');
-                row.unshift(d);
+            let row = [];
+            if (isInvoice) {
+                row = [
+                    ticket.task_name || 'IT Service Provisioning',
+                    location,
+                    `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`
+                ];
+            } else {
+                const desc = `Task: ${ticket.task_name || '-'}\nLoc: ${location}\nTkt: #${ticket.id}`;
+                const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                
+                row = [
+                    d,
+                    ticket.billing_type || 'Hourly',
+                    desc,
+                    checkIn,
+                    checkOut,
+                    `${parseFloat(logRes.baseCost || 0).toFixed(2)}`,
+                    otherCostStr,
+                    `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`
+                ];
             }
             
             serviceRows.push(row);
@@ -647,7 +651,7 @@ const CustomerReceivablePage = () => {
         }
 
         const headers = isInvoice 
-            ? [['DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, 'OTHER COST', `AMOUNT (${cur})`]]
+            ? [['DESCRIPTION', 'LOCATION', `AMOUNT (${cur})`]]
             : [['DATE', 'TYPE', 'DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, 'OTHER COST', `AMOUNT (${cur})`]];
 
         autoTable(doc, {
@@ -658,9 +662,9 @@ const CustomerReceivablePage = () => {
             headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold', cellPadding: 3 },
             bodyStyles: { fontSize: 8, textColor: TEXT_MAIN, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.1 },
             columnStyles: isInvoice ? { 
-                0: { cellWidth: 80 },
-                1: { cellWidth: 18, halign: 'center' }, 2: { cellWidth: 18, halign: 'center' },
-                3: { cellWidth: 20, halign: 'right' }, 4: { cellWidth: 24, halign: 'center' }, 5: { cellWidth: 22, halign: 'right', fontStyle: 'bold' } 
+                0: { cellWidth: 90 },
+                1: { cellWidth: 60 },
+                2: { cellWidth: 32, halign: 'right', fontStyle: 'bold' } 
             } : { 
                 0: { cellWidth: 20 }, 1: { cellWidth: 20 }, 2: { cellWidth: 50 },
                 3: { cellWidth: 16, halign: 'center' }, 4: { cellWidth: 16, halign: 'center' },
@@ -668,7 +672,7 @@ const CustomerReceivablePage = () => {
             },
             foot: footerRows.map((row, idx) => ([
                 { 
-                    content: row[0], colSpan: isInvoice ? 5 : 7, 
+                    content: row[0], colSpan: isInvoice ? 2 : 7, 
                     styles: { halign: 'right', fontStyle: idx === footerRows.length - 1 ? 'bold' : 'normal', fontSize: idx === footerRows.length - 1 ? 10 : 9, textColor: idx === footerRows.length - 1 ? PRIMARY_COLOR : TEXT_DIM } 
                 },
                 { 
@@ -822,31 +826,28 @@ const CustomerReceivablePage = () => {
             const cin = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
             const cout = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
 
-            const toolVal = parseFloat(logRes.toolCost || 0);
-            const travelVal = parseFloat(logRes.travelCost || 0);
-            const fullTotal = parseFloat(logRes.totalReceivable || 0);
-            const serviceOnly = fullTotal - toolVal - travelVal;
-
-            grandTotalTools += toolVal;
-            grandTotalTravel += travelVal;
-            grandTotalService += serviceOnly;
-
             const otherParts = [];
             if (travelVal > 0) otherParts.push(`Travel: ${travelVal.toFixed(2)}`);
             if (toolVal > 0) otherParts.push(`Tool: ${toolVal.toFixed(2)}`);
             const otherCostStr = otherParts.join('\n') || '-';
 
-            const row = [
-                desc, 
-                cin, cout, 
-                `${parseFloat(logRes.baseCost || 0).toFixed(2)}`, 
-                otherCostStr,
-                `${fullTotal.toFixed(2)}` 
-            ];
-            
-            if (!isInvoice) {
-                row.unshift(ticket.billing_type || 'Hourly');
-                row.unshift(d);
+            let row = [];
+            if (isInvoice) {
+                row = [
+                    `Tkt #${ticket.id}: ${ticket.task_name}`,
+                    loc,
+                    `${fullTotal.toFixed(2)}`
+                ];
+            } else {
+                row = [
+                    d,
+                    ticket.billing_type || 'Hourly',
+                    `Tkt #${ticket.id}\nTask: ${ticket.task_name}\nLoc: ${loc}`,
+                    cin, cout, 
+                    `${parseFloat(logRes.baseCost || 0).toFixed(2)}`, 
+                    otherCostStr,
+                    `${fullTotal.toFixed(2)}` 
+                ];
             }
             serviceRows.push(row);
         });
@@ -854,7 +855,7 @@ const CustomerReceivablePage = () => {
         const finalGrandTotal = grandTotalService + grandTotalTravel + grandTotalTools;
 
         const headers = isInvoice
-            ? [['DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, 'OTHER COST', `AMOUNT (${cur})`]]
+            ? [['DESCRIPTION', 'LOCATION', `AMOUNT (${cur})`]]
             : [['DATE', 'TYPE', 'DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, 'OTHER COST', `AMOUNT (${cur})`]];
 
         autoTable(doc, {
@@ -865,11 +866,11 @@ const CustomerReceivablePage = () => {
             headStyles: { fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold', cellPadding: 3 },
             bodyStyles: { fontSize: 8, textColor: TEXT_MAIN, cellPadding: 3, lineColor: [220, 220, 220], lineWidth: 0.1 },
             columnStyles: isInvoice ? { 
-                0: { cellWidth: 80 }, 1: { cellWidth: 18, halign: 'center' }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 20, halign: 'right' }, 4: { cellWidth: 24, halign: 'center' }, 5: { cellWidth: 22, halign: 'right', fontStyle: 'bold' } 
+                0: { cellWidth: 90 }, 1: { cellWidth: 60 }, 2: { cellWidth: 32, halign: 'right', fontStyle: 'bold' } 
             } : { 
                 0: { cellWidth: 20 }, 1: { cellWidth: 20 }, 2: { cellWidth: 50 }, 3: { cellWidth: 16, halign: 'center' }, 4: { cellWidth: 16, halign: 'center' }, 5: { cellWidth: 18, halign: 'right' }, 6: { cellWidth: 22, halign: 'center' }, 7: { cellWidth: 20, halign: 'right', fontStyle: 'bold' } 
             },
-            foot: [[{ content: 'CONSOLIDATED TOTAL', colSpan: isInvoice ? 5 : 7, styles: { halign: 'right', fontStyle: 'bold' } }, { content: `${cur} ${finalGrandTotal.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: ACCENT_COLOR, fontSize: 11 } }]],
+            foot: [[{ content: 'CONSOLIDATED TOTAL', colSpan: isInvoice ? 2 : 7, styles: { halign: 'right', fontStyle: 'bold' } }, { content: `${cur} ${finalGrandTotal.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: ACCENT_COLOR, fontSize: 11 } }]],
             footStyles: { fillColor: [255, 255, 255] }
         });
 
