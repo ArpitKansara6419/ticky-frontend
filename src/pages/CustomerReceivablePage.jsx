@@ -603,12 +603,12 @@ const CustomerReceivablePage = () => {
             let row = [];
             if (isInvoice) {
                 row = [
-                    ticket.task_name || 'IT Service Provisioning',
+                    'I.T. Service',
                     location,
                     `${parseFloat(logRes.totalReceivable || 0).toFixed(2)}`
                 ];
             } else {
-                const desc = `Task: ${ticket.task_name || '-'}\nLoc: ${location}\nTkt: #${ticket.id}`;
+                const desc = `I.T. Service\nLoc: ${location}\nTkt: #${ticket.id}`;
                 const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
                 const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
                 
@@ -834,7 +834,7 @@ const CustomerReceivablePage = () => {
             let row = [];
             if (isInvoice) {
                 row = [
-                    `Tkt #${ticket.id}: ${ticket.task_name}`,
+                    `Tkt #${ticket.id}: I.T. Service`,
                     loc,
                     `${fullTotal.toFixed(2)}`
                 ];
@@ -842,7 +842,7 @@ const CustomerReceivablePage = () => {
                 row = [
                     d,
                     ticket.billing_type || 'Hourly',
-                    `Tkt #${ticket.id}\nTask: ${ticket.task_name}\nLoc: ${loc}`,
+                    `Tkt #${ticket.id}\nI.T. Service\nLoc: ${loc}`,
                     cin, cout, 
                     `${parseFloat(logRes.baseCost || 0).toFixed(2)}`, 
                     otherCostStr,
