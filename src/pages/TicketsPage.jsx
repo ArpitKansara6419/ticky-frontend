@@ -1529,7 +1529,7 @@ function TicketsPage() {
         engMonthlyRate: engMonthlyRate !== '' ? Number(engMonthlyRate) : null,
         engAgreedRate: engAgreedRate !== '' ? Number(engAgreedRate) : null,
         engCancellationFee: engCancellationFee !== '' ? Number(engCancellationFee) : null,
-        totalCost: Number(totalCost) || 0,
+        totalCost: Number(liveBreakdown?.grandTotal) || 0,
         engTotalCost: Number(payoutLiveBreakdown?.grandTotal) || 0,
         timeLogs: (leadType === 'Dispatch' || (taskStartDate && taskEndDate && (taskStartDate !== taskEndDate || billingType.includes('Monthly')))) ? timeLogs : []
       }
