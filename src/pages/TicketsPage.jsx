@@ -2994,9 +2994,7 @@ function TicketsPage() {
                       type="time" 
                       value={taskTime} 
                       onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value, taskEndTime); }} 
-                      readOnly={!!leadId}
                       className={leadId ? 'synced-field' : ''}
-                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Start Time, please edit the originating Lead.`)}
                     />
                   </label>
                   <label className="tickets-field">
@@ -3005,9 +3003,7 @@ function TicketsPage() {
                       type="time" 
                       value={taskEndTime} 
                       onChange={(e) => { setTaskEndTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, taskTime, e.target.value); }} 
-                      readOnly={!!leadId}
                       className={leadId ? 'synced-field' : ''}
-                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the End Time, please edit the originating Lead.`)}
                     />
                   </label>
                   <label className="tickets-field tickets-field--full">
@@ -3425,6 +3421,48 @@ function TicketsPage() {
                     )}
                     <label className="tickets-field"><span>Travel Cost / Day</span><input type="number" value={travelCostPerDay} onChange={(e) => setTravelCostPerDay(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
                     <label className="tickets-field"><span>Tool Cost / Day</span><input type="number" value={toolCostInput} onChange={(e) => setToolCostInput(e.target.value)} readOnly={!!leadId} className={leadId ? 'synced-field' : ''} onClick={() => leadId && alert(`Rates are synced from Lead #L-${leadId}.`)} /></label>
+                  </div>
+
+                  {/* LIVE BREAKDOWN SUMMARY CARD (NEW) */}
+                  <div style={{ marginTop: '24px', padding: '16px', background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live Breakdown Summary</span>
+                      <span style={{ fontSize: '10px', color: '#94a3b8', background: '#fff', padding: '2px 8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>{billingType}</span>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#64748b' }}>Total Hours:</span>
+                        <span style={{ fontWeight: '700', color: '#1e293b' }}>{liveBreakdown?.hrs || '0.00'} hrs</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#64748b' }}>Base Service Cost:</span>
+                        <span style={{ fontWeight: '700', color: '#1e293b' }}>{currency} {liveBreakdown?.base || '0.00'}</span>
+                      </div>
+                      {(parseFloat(liveBreakdown?.ot || 0) > 0) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#64748b' }}>Overtime (OT):</span>
+                          <span style={{ fontWeight: '700', color: '#f59e0b' }}>+ {currency} {liveBreakdown?.ot}</span>
+                        </div>
+                      )}
+                      {(parseFloat(liveBreakdown?.ooh || 0) > 0) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#64748b' }}>Out of Hours (OOH):</span>
+                          <span style={{ fontWeight: '700', color: '#f59e0b' }}>+ {currency} {liveBreakdown?.ooh}</span>
+                        </div>
+                      )}
+                      {(parseFloat(liveBreakdown?.specialDay || 0) > 0) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#64748b' }}>Weekend/Holiday:</span>
+                          <span style={{ fontWeight: '700', color: '#ef4444' }}>+ {currency} {liveBreakdown?.specialDay}</span>
+                        </div>
+                      )}
+                      <div style={{ margin: '8px 0', borderTop: '1px dashed #cbd5e1' }}></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '900' }}>
+                        <span style={{ color: '#1e293b' }}>Final Total:</span>
+                        <span style={{ color: '#6366f1' }}>{currency} {liveBreakdown?.grandTotal || '0.00'}</span>
+                      </div>
+                    </div>
                   </div>
                 </section>
 
