@@ -288,15 +288,15 @@ const calculateTicketTotal = (opts) => {
     const bilMatch = (target) => {
       const b = bil.toLowerCase();
       const t = target.toLowerCase();
-      if (b === t || b.includes(t)) return true;
-      if (t === 'full day + ot') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
-      if (t === 'full day') return b.includes('full') && !b.includes('half') && !b.includes('monthly');
-      if (t === 'half day + hourly') return b.includes('half');
-      if (t === 'hourly') return b.includes('hourly') || (!b.includes('full') && !b.includes('half') && !b.includes('monthly') && !b.includes('agreed'));
+      if (b === t) return true;
+      if (t === 'full day + ot') return b.includes('full') && b.includes('ot');
+      if (t === 'full day') return b.includes('full') && !b.includes('ot') && !b.includes('half') && !b.includes('monthly');
+      if (t === 'half day + hourly') return b.includes('half') && b.includes('hourly');
+      if (t === 'hourly') return (b === 'hourly') || (b.includes('hourly') && !b.includes('half') && !b.includes('full') && !b.includes('monthly'));
       if (t === 'mixed mode') return b.includes('mixed');
       if (t === 'agreed rate') return b.includes('agreed');
       if (t === 'cancellation') return b.includes('cancellation');
-      return false;
+      return b.includes(t);
     };
 
     if (bilMatch('Hourly')) {
