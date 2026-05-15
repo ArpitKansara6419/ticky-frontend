@@ -585,11 +585,21 @@ function LeadsPage() {
       loadLeads()
 
       // Auto-navigate to Create Ticket if confirmed
-      if (status === 'Confirm') {
-        // Find lead name from the modal state that we just updated
+      if (newStatus === 'Confirm') {
         if (window.confirm('Lead confirmed! Would you like to create a ticket now?')) {
-          localStorage.setItem('selectedLeadForTicket', JSON.stringify({ ...lead, status: 'Confirm' }))
-          navigate('/dashboard', { state: { openTickets: true } })
+          const leadToSync = leads.find(l => l.id === leadId);
+          if (leadToSync) {
+            const syncedLead = {
+              ...leadToSync,
+              status: 'Confirm',
+              taskStartDate: followUpDate || leadToSync.taskStartDate,
+              taskEndDate: statusChangeEndDate || leadToSync.taskEndDate || followUpDate || leadToSync.taskStartDate,
+              taskTime: statusChangeStartTime || '09:00',
+              taskEndTime: statusChangeEndTime || '17:00'
+            };
+            localStorage.setItem('selectedLeadForTicket', JSON.stringify(syncedLead));
+            navigate('/dashboard', { state: { openTickets: true } });
+          }
         }
       }
     } catch (e) { alert(e.message) }

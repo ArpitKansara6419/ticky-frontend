@@ -2519,7 +2519,8 @@ function TicketsPage() {
         if (lDate && lTime) {
           const sDateOnly = String(lDate).split('T')[0];
           const eDateOnly = String(lEndDate).split('T')[0];
-          autoSyncTime(sDateOnly, eDateOnly, lTime);
+          const lEndTime = parsedLead.taskEndTime || '17:00';
+          autoSyncTime(sDateOnly, eDateOnly, lTime, lEndTime);
         }
 
         setViewMode('form')
@@ -2575,7 +2576,7 @@ function TicketsPage() {
       if (lDate && lTime) {
         const sDateOnly = String(lDate).split('T')[0];
         const eDateOnly = String(lEndDate).split('T')[0];
-        autoSyncTime(sDateOnly, eDateOnly, lTime);
+        autoSyncTime(sDateOnly, eDateOnly, lTime, lead.taskEndTime || '17:00');
       }
     }
   }, [leads, leadId])
