@@ -1974,8 +1974,6 @@ function TicketsPage() {
     if (!ticketId) return;
 
     // ── NORMALISE PATCH ─────────────────────────────────────────────────────
-    // The DB stores snake_case; the UI sends camelCase. We must mirror BOTH
-    // directions so that every renderer (Edit form, View modal) updates instantly.
     const patch = { ...data };
     if ('engineerId'    in data) patch.engineer_id      = Number(data.engineerId);
     if ('startTime'     in data) patch.start_time       = data.startTime;
@@ -1983,46 +1981,20 @@ function TicketsPage() {
     if ('breakTimeMins' in data) patch.break_time_mins  = Number(data.breakTimeMins);
     if ('taskDate'      in data) patch.task_date        = data.taskDate;
 
-    // ── OPTIMISTIC LOCAL UPDATE ──────────────────────────────────────────────
-    // Apply normalised patch immediately so the UI reflects the change with
-    // no flicker and no focus loss.
-    const applyPatch = prev =>
-      (prev || []).map(l => l.id === logId ? { ...l, ...patch } : l);
+    // Helper to apply the patch to a logs array
+    const applyPatch = prev => (prev || []).map(l => Number(l.id) === Number(logId) ? { ...l, ...patch } : l);
 
-    setTimeLogs(applyPatch);
-
-    // Mirror into selectedTicket so View Details modal stays in sync
-    if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
-      setSelectedTicket(prev => ({
-        ...prev,
-        time_logs: applyPatch(prev.time_logs || [])
-      }));
-    }
-
-    // Mirror into main tickets array so List View expanded rows stay in sync
-    setTickets(prev => prev.map(t => {
-      if (Number(t.id) === Number(ticketId)) {
-        const currentLogs = Array.isArray(t.time_logs) ? t.time_logs : (typeof t.time_logs === 'string' ? JSON.parse(t.time_logs) : []);
-        return { ...t, time_logs: applyPatch(currentLogs) };
-      }
-      return t;
-    }));
-
-    // ── CREATE MODE — no DB call ─────────────────────────────────────────────
+    // ── CREATE MODE (isFillingForm) ──────────────────────────────────────────
     if (isFillingForm && !editingTicketId) {
-      if (!logId) {
-        setTimeLogs(prev => {
-          const next = [...prev];
-          const dMatch = patch.task_date;
-          if (!dMatch) return prev;
-          const idx = next.findIndex(l =>
-            (l.task_date || '').split('T')[0] === dMatch.split('T')[0]
-          );
-          if (idx > -1) next[idx] = { ...next[idx], ...patch };
-          else next.push({ ...patch });
-          return next;
-        });
-      }
+      setTimeLogs(prev => {
+        const next = [...prev];
+        const dMatch = patch.task_date || (data.startTime ? data.startTime.split('T')[0] : '');
+        if (!dMatch) return prev;
+        const idx = next.findIndex(l => (l.task_date || '').split('T')[0] === dMatch.split('T')[0]);
+        if (idx > -1) next[idx] = { ...next[idx], ...patch };
+        else next.push({ ...patch });
+        return next;
+      });
       return;
     }
 
@@ -2030,134 +2002,127 @@ function TicketsPage() {
     if (!logId) return;
 
     // ── OPTIMISTIC UI UPDATE ────────────────────────────────────────────────
-    // Update local state immediately so UI feels "wow" and responsive
-    if (ticketId) {
-      const updateData = (prevLogs) => {
-        const exists = prevLogs.find(l => Number(l.id) === Number(logId));
-        if (exists) {
-          // Map camelCase from 'data' to snake_case for consistency with state
-          const patch = {};
-          if (data.engineerId !== undefined) patch.engineer_id = data.engineerId;
-          if (data.startTime !== undefined)  patch.start_time  = data.startTime;
-          if (data.endTime !== undefined)    patch.end_time    = data.endTime;
-          if (data.breakTimeMins !== undefined) patch.break_time_mins = data.breakTimeMins;
-          
-          return prevLogs.map(l => Number(l.id) === Number(logId) ? { ...l, ...patch } : l);
-        }
-        return prevLogs;
-      };
-
-      setTimeLogs(prev => updateData(prev));
-      
-      if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
-        setSelectedTicket(prev => ({
-          ...prev,
-          time_logs: updateData(prev.time_logs || [])
-        }));
-      }
-
-      setTickets(prev => prev.map(t => {
-        if (Number(t.id) === Number(ticketId)) {
-          return { ...t, time_logs: updateData(t.time_logs || []) };
-        }
-        return t;
-      }));
+    // 1. Update Modal Logs
+    setTimeLogs(applyPatch);
+    
+    // 2. Update selectedTicket logs if it's the one open
+    if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
+      setSelectedTicket(prev => ({ ...prev, time_logs: applyPatch(prev.time_logs || []) }));
     }
+
+    // 3. Update main tickets array (LIST VIEW) and RE-CALCULATE TOTAL
+    setTickets(prev => prev.map(t => {
+      if (Number(t.id) === Number(ticketId)) {
+        const nextLogs = applyPatch(t.time_logs || []);
+        
+        // Optimistic Total Recalculation
+        let newTotal = 0;
+        nextLogs.forEach(log => {
+           const dStr = log.task_date ? String(log.task_date).split('T')[0] : '';
+           const sTime = log.start_time || `${dStr}T09:00:00Z`;
+           const eTime = log.end_time || `${dStr}T17:00:00Z`;
+           
+           let rRates = { hr: t.hourlyRate, hd: t.halfDayRate, fd: t.fullDayRate, mr: t.monthlyRate, ar: t.agreedRate, cf: t.cancellationFee, bt: t.billingType };
+           const currentLogEngId = log.engineer_id || t.engineer_id;
+           if (String(currentLogEngId) === '0') rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
+           else if (currentLogEngId && String(currentLogEngId) !== String(t.engineer_id)) {
+              const subE = engineers.find(en => String(en.id) === String(currentLogEngId));
+              if (subE) {
+                rRates = {
+                  hr: subE.hourlyRate ?? subE.hourly_rate ?? 0,
+                  hd: subE.halfDayRate ?? subE.half_day_rate ?? 0,
+                  fd: subE.fullDayRate ?? subE.full_day_rate ?? 0,
+                  mr: subE.monthlyRate ?? subE.monthly_rate ?? 0,
+                  ar: subE.agreedRate ?? subE.agreed_rate ?? 0,
+                  cf: subE.cancellationFee ?? subE.cancellation_fee ?? 0,
+                  bt: subE.billingType ?? subE.billing_type ?? t.billingType
+                };
+              }
+           }
+
+           const res = calculateTicketTotal({
+              startTime: sTime, endTime: eTime, breakTime: log.break_time_mins || 0,
+              hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
+              monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
+              travelCostPerDay: t.travelCostPerDay, toolCost: t.toolCost, billingType: rRates.bt, 
+              timezone: t.timezone, country: t.country, monthlyDivisor: getWorkingDaysInMonth(dStr, t.country),
+              _isLogAggregation: true
+           });
+           newTotal += parseFloat(res?.grandTotal || 0);
+        });
+
+        if (t.billingType === 'Agreed Rate') newTotal += parseFloat(t.agreedRate || 0);
+        else if (t.billingType === 'Cancellation') newTotal += parseFloat(t.cancellationFee || 0);
+
+        return { 
+          ...t, 
+          time_logs: nextLogs,
+          totalCost: newTotal.toFixed(2),
+          total_cost: newTotal.toFixed(2)
+        };
+      }
+      return t;
+    }));
 
     setIsUpdatingLog(logId);
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(data)   // send original camelCase to API
-        }
-      );
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data) // Original camelCase for server
+      });
 
       const resData = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(resData.message || 'Server update failed');
 
-      if (!res.ok) {
-        throw new Error(resData.message || 'Server update failed');
-      }
-
-      // Update the ticket total in the main state if the server returned it
-      if (resData.total_cost !== undefined || resData.eng_total_cost !== undefined) {
+      // Final server sync for costs
+      if (resData.total_cost !== undefined) {
         setTickets(prev => prev.map(t => {
            if (Number(t.id) === Number(ticketId)) {
               return { 
                 ...t, 
-                totalCost: resData.total_cost ?? t.totalCost,
-                total_cost: resData.total_cost ?? t.total_cost,
+                totalCost: resData.total_cost,
+                total_cost: resData.total_cost,
                 engTotalCost: resData.eng_total_cost ?? t.engTotalCost,
                 eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost
               };
            }
            return t;
         }));
-        if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
-           setSelectedTicket(prev => ({
-              ...prev,
-              totalCost: resData.total_cost ?? prev.totalCost,
-              total_cost: resData.total_cost ?? prev.total_cost,
-              engTotalCost: resData.eng_total_cost ?? prev.engTotalCost,
-              eng_total_cost: resData.eng_total_cost ?? prev.eng_total_cost
-           }));
-        }
       }
 
-      // ── RE-FETCH & NORMALISE ─────────────────────────────────────────────
-      // After a successful save, pull fresh logs from the server so that
-      // engineer rates, times, etc. are perfectly up-to-date in BOTH the
-      // Edit form AND the View Details modal.
-      const refreshRes = await fetch(
-        `${API_BASE_URL}/tickets/${ticketId}/time-logs`,
-        { credentials: 'include' }
-      );
+      // Background logs refresh
+      const refreshRes = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs`, { credentials: 'include' });
       if (refreshRes.ok) {
         const raw = await refreshRes.json();
-        const freshLogs = Array.isArray(raw)
-          ? raw
-          : (raw.timeLogs || raw.logs || []);
-
+        const freshLogs = Array.isArray(raw) ? raw : (raw.timeLogs || raw.logs || []);
         const normalized = freshLogs.map(l => ({
           ...l,
-          // Guarantee both snake_case and camelCase exist for every renderer
           engineer_id:     l.engineer_id     != null ? Number(l.engineer_id)     : (l.engineerId != null ? Number(l.engineerId) : null),
           start_time:      l.start_time      ?? l.startTime      ?? null,
           end_time:        l.end_time        ?? l.endTime        ?? null,
           break_time_mins: l.break_time_mins ?? l.breakTimeMins  ?? l.breakTime  ?? 0,
           task_date:       l.task_date       ?? l.taskDate       ?? null,
         }));
-
         setTimeLogs(normalized);
-
-        // Sync into View Details modal if it is open
-        if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
-          setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
-        }
-
-        // Sync into Main List View (Clock View)
-        setTickets(prev => prev.map(t => 
-          Number(t.id) === Number(ticketId) ? { ...t, time_logs: normalized } : t
-        ));
+        if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
+        setTickets(prev => prev.map(t => Number(t.id) === Number(ticketId) ? { ...t, time_logs: normalized } : t));
       }
 
-      // Auto-hold: silently flag ticket if shift > 8 h
+      // Auto-hold logic if shift > 8h
       if (data.startTime && data.endTime) {
-        const hrs =
-          (new Date(data.endTime) - new Date(data.startTime)) / 3_600_000
-          - ((data.breakTimeMins || 0) / 60);
-        if (hrs > 8) {
-          fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ status: 'On Hold' })
-          });
-        }
+        const h = (new Date(data.endTime) - new Date(data.startTime)) / 3600000 - ((data.breakTimeMins || 0) / 60);
+        if (h > 8) fetch(`${API_BASE_URL}/tickets/${ticketId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ status: 'On Hold' }) });
       }
+
+      loadTickets();
+    } catch (e) {
+      console.error('Log update error:', e);
+    } finally {
+      setIsUpdatingLog(null);
+    }
+  };
 
       loadTickets(); // background list refresh (non-blocking)
     } catch (e) {
