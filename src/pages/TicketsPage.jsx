@@ -1135,6 +1135,27 @@ function TicketsPage() {
     }
   }
 
+  const loadTicketLogs = async (tId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/tickets/${tId}/time-logs`, { credentials: 'include' });
+      if (res.ok) {
+        const raw = await res.json();
+        const logs = Array.isArray(raw) ? raw : (raw.logs || raw.timeLogs || []);
+        const normalized = logs.map(l => ({
+          ...l,
+          engineer_id: l.engineer_id != null ? Number(l.engineer_id) : (l.engineerId != null ? Number(l.engineerId) : null),
+          start_time: l.start_time ?? l.startTime ?? null,
+          end_time: l.end_time ?? l.endTime ?? null,
+          task_date: l.task_date ?? l.taskDate ?? null,
+          break_time_mins: l.break_time_mins ?? l.breakTimeMins ?? l.breakTime ?? 0
+        }));
+        setTickets(prev => prev.map(t => Number(t.id) === Number(tId) ? { ...t, time_logs: normalized } : t));
+      }
+    } catch (e) {
+      console.error('Error loading ticket logs for list view:', e);
+    }
+  }
+
   // Initialize/Sync Time Logs during CREATE mode for Dispatch or Monthly tickets
   useEffect(() => {
     if (!editingTicketId && (leadType === 'Dispatch' || billingType.includes('Monthly') || (taskStartDate && taskEndDate && taskStartDate !== taskEndDate))) {
@@ -3929,6 +3950,8 @@ function TicketsPage() {
                                         <button
                                           className="action-btn"
                                           onClick={() => {
+                                            const isExpanding = !expandedTicketRows.has(ticket.id);
+                                            if (isExpanding) loadTicketLogs(ticket.id);
                                             setExpandedTicketRows(prev => {
                                               const next = new Set(prev);
                                               if (next.has(ticket.id)) next.delete(ticket.id);
