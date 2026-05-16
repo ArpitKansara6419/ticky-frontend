@@ -1140,8 +1140,10 @@ function TicketsPage() {
       const res = await fetch(`${API_BASE_URL}/tickets/${tId}/time-logs`, { credentials: 'include' });
       if (res.ok) {
         const raw = await res.json();
-        const logs = Array.isArray(raw) ? raw : (raw.logs || raw.timeLogs || []);
-        const normalized = logs.map(l => ({
+        // Handle both { logs: [] } and [] formats
+        const logsArray = Array.isArray(raw) ? raw : (raw.logs || raw.timeLogs || []);
+        
+        const normalized = logsArray.map(l => ({
           ...l,
           engineer_id: l.engineer_id != null ? Number(l.engineer_id) : (l.engineerId != null ? Number(l.engineerId) : null),
           start_time: l.start_time ?? l.startTime ?? null,
@@ -1149,7 +1151,15 @@ function TicketsPage() {
           task_date: l.task_date ?? l.taskDate ?? null,
           break_time_mins: l.break_time_mins ?? l.breakTimeMins ?? l.breakTime ?? 0
         }));
+        
+        console.log(`[DEBUG] Loaded ${normalized.length} logs for ticket ${tId}`);
+        
         setTickets(prev => prev.map(t => Number(t.id) === Number(tId) ? { ...t, time_logs: normalized } : t));
+        
+        // Also update selectedTicket if it's currently open in modal
+        if (selectedTicket && Number(selectedTicket.id) === Number(tId)) {
+          setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
+        }
       }
     } catch (e) {
       console.error('Error loading ticket logs for list view:', e);
@@ -3789,7 +3799,8 @@ function TicketsPage() {
                                 }
                               } catch (e) { parsedLogs = []; }
 
-                              const isDispatch = (ticket.leadType === 'Dispatch') || (parsedLogs.length > 0);
+                              const isMultiDay = ticket.taskStartDate && ticket.taskEndDate && String(ticket.taskStartDate).split('T')[0] !== String(ticket.taskEndDate).split('T')[0];
+                              const isDispatch = (ticket.leadType === 'Dispatch') || isMultiDay || (parsedLogs.length > 0);
                               const isExpanded = expandedTicketRows.has(ticket.id);
                               const isResolved = ticket.status === 'Resolved';
                               const billingStatus = ticket.billingStatus || ticket.billing_status || 'Unbilled';
@@ -3810,7 +3821,7 @@ function TicketsPage() {
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                       {isDispatch && (
                                         <span style={{ flexShrink: 0, marginTop: '3px', background: isExpanded ? '#e0e7ff' : '#f1f5f9', border: '1px solid ' + (isExpanded ? '#818cf8' : '#e2e8f0'), borderRadius: '6px', padding: '2px 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', lineHeight: 1.4 }}>
-                                          {parsedLogs.length}d
+                                          {parsedLogs.length || (isMultiDay ? '?' : '0')}d
                                         </span>
                                       )}
                                       <div>
@@ -3996,8 +4007,9 @@ function TicketsPage() {
                                 // Consistency: Only show working days (hide weekends) and sort by date
                                 displayLogs = parsedLogs
                                   .filter(l => {
-                                    const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
-                                    if (!dStr) return false;
+                                    const dRaw = l.task_date || l.taskDate;
+                                    if (!dRaw) return false;
+                                    const dStr = typeof dRaw === 'string' ? dRaw.split('T')[0] : new Date(dRaw).toISOString().split('T')[0];
                                     
                                     // Only show working days (hide Sat/Sun)
                                     const dObj = new Date(`${dStr}T00:00:00Z`);
@@ -4005,7 +4017,8 @@ function TicketsPage() {
                                     return day !== 0 && day !== 6;
                                   })
                                   .map((l, sidx) => {
-                                    const dStr = l.task_date ? (typeof l.task_date === 'string' ? l.task_date.split('T')[0] : new Date(l.task_date).toISOString().split('T')[0]) : '';
+                                    const dRaw = l.task_date || l.taskDate;
+                                    const dStr = dRaw ? (typeof dRaw === 'string' ? dRaw.split('T')[0] : new Date(dRaw).toISOString().split('T')[0]) : '';
                                     return { ...l, logDateStr: dStr || `Day ${sidx + 1}` };
                                   });
                                 
