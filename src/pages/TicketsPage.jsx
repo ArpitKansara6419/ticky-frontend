@@ -2035,9 +2035,11 @@ function TicketsPage() {
       const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(data) });
       const resData = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(resData.message || 'Update failed');
+      
       if (resData.total_cost !== undefined) {
         setTickets(prev => prev.map(t => Number(t.id) === Number(ticketId) ? { ...t, totalCost: resData.total_cost, total_cost: resData.total_cost, engTotalCost: resData.eng_total_cost ?? t.engTotalCost, eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost } : t));
       }
+
       const refreshRes = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs`, { credentials: 'include' });
       if (refreshRes.ok) {
         const raw = await refreshRes.json();
@@ -2047,17 +2049,17 @@ function TicketsPage() {
         if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
         setTickets(prev => prev.map(t => Number(t.id) === Number(ticketId) ? { ...t, time_logs: normalized } : t));
       }
+
       if (data.startTime && data.endTime) {
         const h = (new Date(data.endTime) - new Date(data.startTime)) / 3600000 - ((data.breakTimeMins || 0) / 60);
         if (h > 8) fetch(`${API_BASE_URL}/tickets/${ticketId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ status: 'On Hold' }) });
       }
-      loadTickets();
     } catch (e) {
       console.error('Log update error:', e);
     } finally {
       setIsUpdatingLog(null);
     }
-  }
+  };
 
   const handleResolveEarly = async (date) => {
     const tId = selectedTicket?.id || editingTicketId;
