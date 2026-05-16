@@ -1981,10 +1981,9 @@ function TicketsPage() {
     if ('breakTimeMins' in data) patch.break_time_mins  = Number(data.breakTimeMins);
     if ('taskDate'      in data) patch.task_date        = data.taskDate;
 
-    // Helper to apply the patch to a logs array
     const applyPatch = prev => (prev || []).map(l => Number(l.id) === Number(logId) ? { ...l, ...patch } : l);
 
-    // ── CREATE MODE (isFillingForm) ──────────────────────────────────────────
+    // ── CREATE MODE ──────────────────────────────────────────────────────────
     if (isFillingForm && !editingTicketId) {
       setTimeLogs(prev => {
         const next = [...prev];
@@ -1998,135 +1997,63 @@ function TicketsPage() {
       return;
     }
 
-    // ── EDIT MODE — persist to server ────────────────────────────────────────
+    // ── EDIT MODE ────────────────────────────────────────────────────────────
     if (!logId) return;
 
-    // ── OPTIMISTIC UI UPDATE ────────────────────────────────────────────────
-    // 1. Update Modal Logs
+    // ── OPTIMISTIC UI ──
     setTimeLogs(applyPatch);
-    
-    // 2. Update selectedTicket logs if it's the one open
     if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
       setSelectedTicket(prev => ({ ...prev, time_logs: applyPatch(prev.time_logs || []) }));
     }
-
-    // 3. Update main tickets array (LIST VIEW) and RE-CALCULATE TOTAL
     setTickets(prev => prev.map(t => {
       if (Number(t.id) === Number(ticketId)) {
         const nextLogs = applyPatch(t.time_logs || []);
-        
-        // Optimistic Total Recalculation
         let newTotal = 0;
         nextLogs.forEach(log => {
            const dStr = log.task_date ? String(log.task_date).split('T')[0] : '';
            const sTime = log.start_time || `${dStr}T09:00:00Z`;
            const eTime = log.end_time || `${dStr}T17:00:00Z`;
-           
            let rRates = { hr: t.hourlyRate, hd: t.halfDayRate, fd: t.fullDayRate, mr: t.monthlyRate, ar: t.agreedRate, cf: t.cancellationFee, bt: t.billingType };
-           const currentLogEngId = log.engineer_id || t.engineer_id;
-           if (String(currentLogEngId) === '0') rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
-           else if (currentLogEngId && String(currentLogEngId) !== String(t.engineer_id)) {
-              const subE = engineers.find(en => String(en.id) === String(currentLogEngId));
-              if (subE) {
-                rRates = {
-                  hr: subE.hourlyRate ?? subE.hourly_rate ?? 0,
-                  hd: subE.halfDayRate ?? subE.half_day_rate ?? 0,
-                  fd: subE.fullDayRate ?? subE.full_day_rate ?? 0,
-                  mr: subE.monthlyRate ?? subE.monthly_rate ?? 0,
-                  ar: subE.agreedRate ?? subE.agreed_rate ?? 0,
-                  cf: subE.cancellationFee ?? subE.cancellation_fee ?? 0,
-                  bt: subE.billingType ?? subE.billing_type ?? t.billingType
-                };
-              }
+           const curEng = log.engineer_id || t.engineer_id;
+           if (String(curEng) === '0') rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
+           else if (curEng && String(curEng) !== String(t.engineer_id)) {
+              const sub = engineers.find(en => String(en.id) === String(curEng));
+              if (sub) rRates = { hr: sub.hourlyRate ?? sub.hourly_rate ?? 0, hd: sub.halfDayRate ?? sub.half_day_rate ?? 0, fd: sub.fullDayRate ?? sub.full_day_rate ?? 0, mr: sub.monthlyRate ?? sub.monthly_rate ?? 0, ar: sub.agreedRate ?? sub.agreed_rate ?? 0, cf: sub.cancellationFee ?? sub.cancellation_fee ?? 0, bt: sub.billingType ?? sub.billing_type ?? t.billingType };
            }
-
-           const res = calculateTicketTotal({
-              startTime: sTime, endTime: eTime, breakTime: log.break_time_mins || 0,
-              hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, 
-              monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf,
-              travelCostPerDay: t.travelCostPerDay, toolCost: t.toolCost, billingType: rRates.bt, 
-              timezone: t.timezone, country: t.country, monthlyDivisor: getWorkingDaysInMonth(dStr, t.country),
-              _isLogAggregation: true
-           });
+           const res = calculateTicketTotal({ startTime: sTime, endTime: eTime, breakTime: log.break_time_mins || 0, hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf, travelCostPerDay: t.travelCostPerDay, toolCost: t.toolCost, billingType: rRates.bt, timezone: t.timezone, country: t.country, monthlyDivisor: getWorkingDaysInMonth(dStr, t.country), _isLogAggregation: true });
            newTotal += parseFloat(res?.grandTotal || 0);
         });
-
         if (t.billingType === 'Agreed Rate') newTotal += parseFloat(t.agreedRate || 0);
         else if (t.billingType === 'Cancellation') newTotal += parseFloat(t.cancellationFee || 0);
-
-        return { 
-          ...t, 
-          time_logs: nextLogs,
-          totalCost: newTotal.toFixed(2),
-          total_cost: newTotal.toFixed(2)
-        };
+        return { ...t, time_logs: nextLogs, totalCost: newTotal.toFixed(2), total_cost: newTotal.toFixed(2) };
       }
       return t;
     }));
 
     setIsUpdatingLog(logId);
     try {
-      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data) // Original camelCase for server
-      });
-
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs/${logId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(data) });
       const resData = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(resData.message || 'Server update failed');
-
-      // Final server sync for costs
+      if (!res.ok) throw new Error(resData.message || 'Update failed');
       if (resData.total_cost !== undefined) {
-        setTickets(prev => prev.map(t => {
-           if (Number(t.id) === Number(ticketId)) {
-              return { 
-                ...t, 
-                totalCost: resData.total_cost,
-                total_cost: resData.total_cost,
-                engTotalCost: resData.eng_total_cost ?? t.engTotalCost,
-                eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost
-              };
-           }
-           return t;
-        }));
+        setTickets(prev => prev.map(t => Number(t.id) === Number(ticketId) ? { ...t, totalCost: resData.total_cost, total_cost: resData.total_cost, engTotalCost: resData.eng_total_cost ?? t.engTotalCost, eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost } : t));
       }
-
-      // Background logs refresh
       const refreshRes = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs`, { credentials: 'include' });
       if (refreshRes.ok) {
         const raw = await refreshRes.json();
         const freshLogs = Array.isArray(raw) ? raw : (raw.timeLogs || raw.logs || []);
-        const normalized = freshLogs.map(l => ({
-          ...l,
-          engineer_id:     l.engineer_id     != null ? Number(l.engineer_id)     : (l.engineerId != null ? Number(l.engineerId) : null),
-          start_time:      l.start_time      ?? l.startTime      ?? null,
-          end_time:        l.end_time        ?? l.endTime        ?? null,
-          break_time_mins: l.break_time_mins ?? l.breakTimeMins  ?? l.breakTime  ?? 0,
-          task_date:       l.task_date       ?? l.taskDate       ?? null,
-        }));
+        const normalized = freshLogs.map(l => ({ ...l, engineer_id: l.engineer_id != null ? Number(l.engineer_id) : (l.engineerId != null ? Number(l.engineerId) : null), start_time: l.start_time ?? l.startTime ?? null, end_time: l.end_time ?? l.endTime ?? null, break_time_mins: l.break_time_mins ?? l.breakTimeMins ?? l.breakTime ?? 0, task_date: l.task_date ?? l.taskDate ?? null }));
         setTimeLogs(normalized);
         if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
         setTickets(prev => prev.map(t => Number(t.id) === Number(ticketId) ? { ...t, time_logs: normalized } : t));
       }
-
-      // Auto-hold logic if shift > 8h
       if (data.startTime && data.endTime) {
         const h = (new Date(data.endTime) - new Date(data.startTime)) / 3600000 - ((data.breakTimeMins || 0) / 60);
         if (h > 8) fetch(`${API_BASE_URL}/tickets/${ticketId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ status: 'On Hold' }) });
       }
-
       loadTickets();
     } catch (e) {
       console.error('Log update error:', e);
-    } finally {
-      setIsUpdatingLog(null);
-    }
-  };
-
-      loadTickets(); // background list refresh (non-blocking)
-    } catch (e) {
-      console.error('Log sync error:', e);
     } finally {
       setIsUpdatingLog(null);
     }
