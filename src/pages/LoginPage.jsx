@@ -108,15 +108,17 @@ function LoginPage() {
       const storage = rememberMe ? localStorage : sessionStorage
       storage.setItem('authToken', data.token)
 
-      // Persist basic user info so dashboard/profile can use it
-      const userName = data.user?.name || ''
-      const userEmail = data.user?.email || email
-      if (userEmail) {
-        localStorage.setItem('userEmail', userEmail)
-      }
-      if (userName) {
-        localStorage.setItem('userName', userName)
-      }
+      // Persist user info so dashboard/profile can use it
+      const userData = data.user || data.engineer || {}
+      const userName = userData.name || ''
+      const userEmail = userData.email || email
+      const userRole = userData.role || ''
+      const userId = userData.id || ''
+
+      if (userEmail) localStorage.setItem('userEmail', userEmail)
+      if (userName) localStorage.setItem('userName', userName)
+      if (userRole) localStorage.setItem('userRole', userRole)
+      if (userId) localStorage.setItem('userId', String(userId))
 
       // Record the exact time of login to show in Dashboard header
       localStorage.setItem('lastLoginTimestamp', Date.now().toString())

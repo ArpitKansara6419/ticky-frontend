@@ -12,6 +12,7 @@ import MeetingPage from './MeetingPage'
 import AttendancePage from './AttendancePage'
 import ApprovalsPage from './ApprovalsPage'
 import EngineerPayoutPage from './EngineerPayoutPage'
+import LeavesPage from './LeavesPage'
 import {
   FiHome,
   FiUsers,
@@ -1086,6 +1087,10 @@ function DashboardPage() {
     }
 
 
+
+    if (activePage === 'leaves') {
+      return <LeavesPage />
+    }
 
     return <GenericPage pageId={activePage} />
   }
