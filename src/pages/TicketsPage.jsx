@@ -1970,7 +1970,7 @@ function TicketsPage() {
   }
 
   const handleUpdateLog = async (logId, data) => {
-    const ticketId = selectedTicket?.id || editingTicketId;
+    const ticketId = data.ticketId || selectedTicket?.id || editingTicketId;
     if (!ticketId) return;
 
     // ── NORMALISE PATCH ─────────────────────────────────────────────────────
@@ -3096,7 +3096,7 @@ function TicketsPage() {
                                   style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', width: '100%' }}
                                   onChange={(e) => {
                                     const newEngId = e.target.value;
-                                    if (existingLog.id) handleUpdateLog(existingLog.id, { engineerId: Number(newEngId) });
+                                    if (existingLog.id) handleUpdateLog(existingLog.id, { ticketId: id, engineerId: Number(newEngId) });
                                     else {
                                       setTimeLogs(prev => {
                                         const exists = prev.find(l => (l.task_date || '').split('T')[0] === dStr);
@@ -3119,7 +3119,7 @@ function TicketsPage() {
                                     style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
                                     onChange={(e) => { 
                                       const newVal = e.target.value;
-                                      if (existingLog.id) handleUpdateLog(existingLog.id, { startTime: `${dStr}T${newVal}:00` }); 
+                                      if (existingLog.id) handleUpdateLog(existingLog.id, { ticketId: id, startTime: `${dStr}T${newVal}:00` }); 
                                       else {
                                         setTimeLogs(prev => {
                                           const exists = prev.find(l => (l.task_date || '').split('T')[0] === dStr);
@@ -3136,7 +3136,7 @@ function TicketsPage() {
                                     style={{ fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0' }} 
                                     onChange={(e) => { 
                                       const newVal = e.target.value;
-                                      if (existingLog.id) handleUpdateLog(existingLog.id, { endTime: `${dStr}T${newVal}:00` }); 
+                                      if (existingLog.id) handleUpdateLog(existingLog.id, { ticketId: id, endTime: `${dStr}T${newVal}:00` }); 
                                       else {
                                         setTimeLogs(prev => {
                                           const exists = prev.find(l => (l.task_date || '').split('T')[0] === dStr);
