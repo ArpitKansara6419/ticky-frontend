@@ -682,23 +682,10 @@ function TicketsPage() {
         const currentEngId = Number(specificEngId || engineerId);
         const isNoEngDay = currentEngId === 0;
 
-        // CUSTOMER
+        // CUSTOMER rates — ALWAYS use ticket-level rates, regardless of which engineer is assigned
+        // Changing the engineer on a day should NOT affect the customer total
         let rRates = { hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, ar: agreedRate, cf: cancellationFee, bt: billingType };
         if (isNoEngDay) rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
-        else if (specificEngId && Number(specificEngId) !== Number(engineerId)) {
-          const subEng = engineers.find(en => Number(en.id) === currentEngId);
-          if (subEng) {
-            rRates = {
-              hr: subEng.hourlyRate ?? subEng.hourly_rate ?? 0,
-              hd: subEng.halfDayRate ?? subEng.half_day_rate ?? 0,
-              fd: subEng.fullDayRate ?? subEng.full_day_rate ?? 0,
-              mr: subEng.monthlyRate ?? subEng.monthly_rate ?? 0,
-              ar: subEng.agreedRate ?? subEng.agreed_rate ?? 0,
-              cf: subEng.cancellationFee ?? subEng.cancellation_fee ?? 0,
-              bt: subEng.billingType ?? subEng.billing_type ?? billingType
-            };
-          }
-        }
         const dayStartTime = sTime;
         const dayEndTime = eTime;
 
@@ -1760,6 +1747,34 @@ function TicketsPage() {
         if (engineers.length === 0) loadDropdowns();
         fetchTicketExtras(ticketId);
 
+        // Auto-recalculate and refresh stored costs whenever the modal is opened
+        // This ensures the Financial Summary always shows the correct engineer payout
+        try {
+          const recalcRes = await fetch(`${API_BASE_URL}/tickets/${ticketId}/recalculate`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+          if (recalcRes.ok) {
+            const recalcData = await recalcRes.json();
+            setSelectedTicket(prev => ({
+              ...prev,
+              totalCost: recalcData.total_cost ?? prev.totalCost,
+              total_cost: recalcData.total_cost ?? prev.total_cost,
+              engTotalCost: recalcData.eng_total_cost ?? prev.engTotalCost,
+              eng_total_cost: recalcData.eng_total_cost ?? prev.eng_total_cost
+            }));
+            setTickets(prev => prev.map(tt => Number(tt.id) === Number(ticketId) ? {
+              ...tt,
+              totalCost: recalcData.total_cost ?? tt.totalCost,
+              total_cost: recalcData.total_cost ?? tt.total_cost,
+              engTotalCost: recalcData.eng_total_cost ?? tt.engTotalCost,
+              eng_total_cost: recalcData.eng_total_cost ?? tt.eng_total_cost
+            } : tt));
+          }
+        } catch (recalcErr) {
+          console.warn('[openTicketModal] recalculate failed silently:', recalcErr);
+        }
+
         // Pre-collapse all month accordions in View modal so they start closed
         try {
           const stStart = t.taskStartDate ? String(t.taskStartDate).split('T')[0] : '';
@@ -2077,7 +2092,16 @@ function TicketsPage() {
         const freshLogs = Array.isArray(raw) ? raw : (raw.timeLogs || raw.logs || []);
         const normalized = freshLogs.map(l => ({ ...l, engineer_id: l.engineer_id != null ? Number(l.engineer_id) : (l.engineerId != null ? Number(l.engineerId) : null), start_time: l.start_time ?? l.startTime ?? null, end_time: l.end_time ?? l.endTime ?? null, break_time_mins: l.break_time_mins ?? l.breakTimeMins ?? l.breakTime ?? 0, task_date: l.task_date ?? l.taskDate ?? null }));
         setTimeLogs(normalized);
-        if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) setSelectedTicket(prev => ({ ...prev, time_logs: normalized }));
+        if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
+          setSelectedTicket(prev => ({ 
+            ...prev, 
+            time_logs: normalized,
+            totalCost: resData.total_cost ?? prev.totalCost,
+            total_cost: resData.total_cost ?? prev.total_cost,
+            engTotalCost: resData.eng_total_cost ?? prev.engTotalCost,
+            eng_total_cost: resData.eng_total_cost ?? prev.eng_total_cost
+          }));
+        }
         setTickets(prev => prev.map(t => Number(t.id) === Number(ticketId) ? { ...t, time_logs: normalized } : t));
       }
 
@@ -2971,7 +2995,7 @@ function TicketsPage() {
                     />
                   </label>
                   <label className="tickets-field">
-                    <span>Start Time <span className="field-required">*</span></span>
+                    <span>Time (Task start time) <span className="field-required">*</span></span>
                     <input 
                       type="time" 
                       value={taskTime} 
