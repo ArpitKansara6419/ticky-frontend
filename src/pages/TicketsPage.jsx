@@ -662,9 +662,9 @@ function TicketsPage() {
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
 
-        // Smart Skip: If it's a weekend, ONLY count it if explicit times are provided.
+        // Smart Skip: If it's a weekend or holiday, ONLY count it if explicit times are provided.
         // This handles long-term tickets correctly while still allowing weekend-only tickets.
-        if (isWeekend && (!existing || (!existing.start_time && !existing.startTime))) return;
+        if ((isWeekend || isHoliday) && (!existing || (!existing.start_time && !existing.startTime))) return;
 
         let sTime, eTime, bMins = 0, specificEngId = null;
         if (existing) specificEngId = existing.engineer_id || existing.engineerId || null;
@@ -3741,18 +3741,21 @@ function TicketsPage() {
                                 if (parsedLogs && parsedLogs.length > 0) {
                                   const logsWithInfo = parsedLogs.map(l => {
                                     const dStr = l.task_date ? String(l.task_date).split('T')[0] : '';
-                                    if (!dStr) return { ...l, isWeekend: false };
+                                    if (!dStr) return { ...l, isWeekend: false, isHoliday: false };
                                     const dObj = parseWallClockDate(dStr);
                                     const dw = dObj.getUTCDay();
                                     const isWeekend = dw === 0 || dw === 6;
-                                    return { ...l, isWeekend };
+                                    const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
+                                     const isHoliday = activeHols.includes(dStr);
+                                     return { ...l, isWeekend, isHoliday };
                                   });
-                                  const hasWeekdays = logsWithInfo.some(l => !l.isWeekend);
+                                  const hasWeekdays = logsWithInfo.some(l => !l.isWeekend && !l.isHoliday);
                                   return logsWithInfo.filter(l => {
-                                    // Exclude "No Engineer" days (engineer_id=0) from day count
-                                    if (Number(l.engineer_id) === 0) return false;
-                                    if (!hasWeekdays) return true;
-                                    return !l.isWeekend;
+                                    // Exclude "No Engineer" / Absent days
+                                    if (Number(l.engineer_id) === 0 || l.status === 'Absent') return false;
+                                    // If weekend or holiday, ONLY count if they worked (explicit times exist)
+                                    if (l.isWeekend || l.isHoliday) return !!(l.start_time && l.end_time);
+                                    return true;
                                   }).length;
                                 }
                                 if (ticket.taskStartDate && ticket.taskEndDate) {
