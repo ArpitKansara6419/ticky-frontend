@@ -2023,11 +2023,12 @@ function TicketsPage() {
 
     // ── NORMALISE PATCH ─────────────────────────────────────────────────────
     const patch = { ...data };
-    if ('engineerId'    in data) patch.engineer_id      = Number(data.engineerId);
+    if ('engineerId'    in data) patch.engineer_id      = data.engineerId === null ? null : Number(data.engineerId);
     if ('startTime'     in data) patch.start_time       = data.startTime;
     if ('endTime'       in data) patch.end_time         = data.endTime;
     if ('breakTimeMins' in data) patch.break_time_mins  = Number(data.breakTimeMins);
     if ('taskDate'      in data) patch.task_date        = data.taskDate;
+    if ('status'        in data) patch.status           = data.status;
 
     const applyPatch = prev => (prev || []).map(l => Number(l.id) === Number(logId) ? { ...l, ...patch } : l);
 
@@ -4074,7 +4075,13 @@ function TicketsPage() {
                                             style={{ padding: '4px 8px', borderRadius: '6px', border: `1px solid ${isNoEngineerDay ? '#fca5a5' : '#e2e8f0'}`, fontSize: '12px', width: '160px', background: isNoEngineerDay ? '#fef2f2' : '#fff', color: isNoEngineerDay ? '#dc2626' : undefined, fontWeight: isNoEngineerDay ? '600' : undefined }}
                                             onChange={(e) => {
                                               const newEngId = e.target.value;
-                                              if (logId) handleUpdateLog(logId, { ticketId: ticket.id, engineerId: Number(newEngId) });
+                                              if (logId) {
+                                                 if (Number(newEngId) === 0) {
+                                                   handleUpdateLog(logId, { ticketId: ticket.id, engineerId: null, status: 'Absent' });
+                                                 } else {
+                                                   handleUpdateLog(logId, { ticketId: ticket.id, engineerId: Number(newEngId), status: 'Pending' });
+                                                 }
+                                               }
                                             }}
                                           >
                                             <option value="">Assign Engineer...</option>
