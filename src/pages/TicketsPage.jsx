@@ -2065,10 +2065,6 @@ function TicketsPage() {
            let rRates = { hr: t.hourlyRate, hd: t.halfDayRate, fd: t.fullDayRate, mr: t.monthlyRate, ar: t.agreedRate, cf: t.cancellationFee, bt: t.billingType };
            const curEng = log.engineer_id || t.engineer_id;
            if (String(curEng) === '0') rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
-           else if (curEng && String(curEng) !== String(t.engineer_id)) {
-              const sub = engineers.find(en => String(en.id) === String(curEng));
-              if (sub) rRates = { hr: sub.hourlyRate ?? sub.hourly_rate ?? 0, hd: sub.halfDayRate ?? sub.half_day_rate ?? 0, fd: sub.fullDayRate ?? sub.full_day_rate ?? 0, mr: sub.monthlyRate ?? sub.monthly_rate ?? 0, ar: sub.agreedRate ?? sub.agreed_rate ?? 0, cf: sub.cancellationFee ?? sub.cancellation_fee ?? 0, bt: sub.billingType ?? sub.billing_type ?? t.billingType };
-           }
            const res = calculateTicketTotal({ startTime: sTime, endTime: eTime, breakTime: log.break_time_mins || 0, hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf, travelCostPerDay: t.travelCostPerDay, toolCost: t.toolCost, billingType: rRates.bt, timezone: t.timezone, country: t.country, monthlyDivisor: getWorkingDaysInMonth(dStr, t.country), _isLogAggregation: true });
            newTotal += parseFloat(res?.grandTotal || 0);
         });
