@@ -3706,12 +3706,18 @@ function TicketsPage() {
 
                               const workingDaysCount = (() => {
                                 if (parsedLogs && parsedLogs.length > 0) {
-                                  return parsedLogs.filter(l => !l.is_weekend || l.start_time || l.startTime).length;
+                                  return parsedLogs.filter(l => {
+                                    const dStr = l.task_date ? String(l.task_date).split('T')[0] : '';
+                                    if (!dStr) return false;
+                                    const dObj = parseWallClockDate(dStr);
+                                    const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
+                                    return !isWeekend || l.start_time || l.startTime;
+                                  }).length;
                                 }
                                 if (ticket.taskStartDate && ticket.taskEndDate) {
                                   const dates = getDatesInRange(ticket.taskStartDate, ticket.taskEndDate);
                                   return dates.filter(dStr => {
-                                    const dObj = new Date(`${dStr}T00:00:00Z`);
+                                    const dObj = parseWallClockDate(dStr);
                                     const day = dObj.getUTCDay();
                                     return day !== 0 && day !== 6;
                                   }).length;
