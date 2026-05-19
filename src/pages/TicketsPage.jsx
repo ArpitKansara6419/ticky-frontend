@@ -2048,6 +2048,9 @@ function TicketsPage() {
     // ── EDIT MODE ────────────────────────────────────────────────────────────
     if (!logId) return;
 
+    // ── Check if ONLY engineer is being changed (Customer Revenue must NOT change) ──
+    const isEngineerOnlyChange = 'engineerId' in data && !('startTime' in data) && !('endTime' in data) && !('breakTimeMins' in data);
+
     // ── OPTIMISTIC UI ──
     setTimeLogs(applyPatch);
     if (selectedTicket && Number(selectedTicket.id) === Number(ticketId)) {
@@ -2056,13 +2059,16 @@ function TicketsPage() {
     setTickets(prev => prev.map(t => {
       if (Number(t.id) === Number(ticketId)) {
         const nextLogs = applyPatch(t.time_logs || []);
+        // If only engineer changed, do NOT recalculate Customer Revenue - keep existing total
+        if (isEngineerOnlyChange) {
+          return { ...t, time_logs: nextLogs };
+        }
         let newTotal = 0;
         nextLogs.forEach(log => {
            const dStr = log.task_date ? String(log.task_date).split('T')[0] : '';
            const sTime = log.start_time || `${dStr}T09:00:00Z`;
            const eTime = log.end_time || `${dStr}T17:00:00Z`;
            let rRates = { hr: t.hourlyRate, hd: t.halfDayRate, fd: t.fullDayRate, mr: t.monthlyRate, ar: t.agreedRate, cf: t.cancellationFee, bt: t.billingType };
-           const curEng = log.engineer_id || t.engineer_id;
            const res = calculateTicketTotal({ startTime: sTime, endTime: eTime, breakTime: log.break_time_mins || 0, hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf, travelCostPerDay: t.travelCostPerDay, toolCost: t.toolCost, billingType: rRates.bt, timezone: t.timezone, country: t.country, monthlyDivisor: getWorkingDaysInMonth(dStr, t.country, true), _isLogAggregation: true });
            newTotal += parseFloat(res?.grandTotal || 0);
         });
@@ -2080,7 +2086,25 @@ function TicketsPage() {
       if (!res.ok) throw new Error(resData.message || 'Update failed');
       
       if (resData.total_cost !== undefined) {
-        setTickets(prev => prev.map(t => Number(t.id) === Number(ticketId) ? { ...t, totalCost: resData.total_cost, total_cost: resData.total_cost, engTotalCost: resData.eng_total_cost ?? t.engTotalCost, eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost } : t));
+        setTickets(prev => prev.map(t => {
+          if (Number(t.id) !== Number(ticketId)) return t;
+          // If only engineer changed, do NOT update Customer Revenue (totalCost)
+          // Only update Engineer Payout (engTotalCost)
+          if (isEngineerOnlyChange) {
+            return {
+              ...t,
+              engTotalCost: resData.eng_total_cost ?? t.engTotalCost,
+              eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost
+            };
+          }
+          return {
+            ...t,
+            totalCost: resData.total_cost,
+            total_cost: resData.total_cost,
+            engTotalCost: resData.eng_total_cost ?? t.engTotalCost,
+            eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost
+          };
+        }));
       }
 
       const refreshRes = await fetch(`${API_BASE_URL}/tickets/${ticketId}/time-logs`, { credentials: 'include' });
