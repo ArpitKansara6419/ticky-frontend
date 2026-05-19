@@ -3740,6 +3740,8 @@ function TicketsPage() {
                                   });
                                   const hasWeekdays = logsWithInfo.some(l => !l.isWeekend);
                                   return logsWithInfo.filter(l => {
+                                    // Exclude "No Engineer" days (engineer_id=0) from day count
+                                    if (Number(l.engineer_id) === 0) return false;
                                     if (!hasWeekdays) return true;
                                     return !l.isWeekend;
                                   }).length;
@@ -3982,12 +3984,16 @@ function TicketsPage() {
                                   : `Day ${sidx + 1}`;
                                 
                                 const logId = log.id;
+                                // No Engineer day
+                                const isNoEngineerDay = Number(log.engineer_id) === 0;
                                 const displayIn = log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : (ticket.taskTime || '09:00');
                                 const displayOut = log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : '17:00';
-                                const rowHrs = calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
+                                const rowHrs = isNoEngineerDay ? 0 : calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
                                 const rowExceeded = rowHrs > 8;
 
                                 const rowCost = (() => {
+                                   // No Engineer = 0 cost
+                                   if (isNoEngineerDay) return '0.00';
                                    let rRates = { 
                                      hr: ticket.hourlyRate, 
                                      hd: ticket.halfDayRate, 
@@ -4019,7 +4025,7 @@ function TicketsPage() {
                                  })();
 
                                 return (
-                                  <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: rowExceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
+                                  <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: isNoEngineerDay ? '#f9fafb' : (rowExceeded ? '#fffcec' : '#f8fafc'), borderLeft: `4px solid ${isNoEngineerDay ? '#cbd5e1' : '#6366f1'}`, opacity: isNoEngineerDay ? 0.6 : 1 }}>
                                     <td style={{ paddingLeft: '36px', fontSize: '12px', verticalAlign: 'middle' }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <span style={{ color: '#6366f1', fontWeight: '700' }}>↳</span>
@@ -4059,16 +4065,20 @@ function TicketsPage() {
                                     <td colSpan={2} style={{ fontSize: '12px', color: '#475569' }}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                           <select
-                                            value={String(log.engineer_id || '')}
-                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', width: '160px', background: '#fff' }}
+                                            value={String(Number(log.engineer_id) === 0 ? '0' : (log.engineer_id || ''))}
+                                            style={{ padding: '4px 8px', borderRadius: '6px', border: `1px solid ${isNoEngineerDay ? '#fca5a5' : '#e2e8f0'}`, fontSize: '12px', width: '160px', background: isNoEngineerDay ? '#fef2f2' : '#fff', color: isNoEngineerDay ? '#dc2626' : undefined, fontWeight: isNoEngineerDay ? '600' : undefined }}
                                             onChange={(e) => {
                                               const newEngId = e.target.value;
                                               if (logId) handleUpdateLog(logId, { ticketId: ticket.id, engineerId: Number(newEngId) });
                                             }}
                                           >
                                             <option value="">Assign Engineer...</option>
+                                            <option value="0">🚫 No Engineer</option>
                                             {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
                                           </select>
+                                          {isNoEngineerDay && (
+                                            <span style={{ fontSize: '10px', color: '#dc2626', fontWeight: '700', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>Absent</span>
+                                          )}
                                         </div>
                                     </td>
                                     
