@@ -4055,68 +4055,41 @@ function TicketsPage() {
                                   : `Day ${sidx + 1}`;
                                 
                                 const logId = log.id;
-                                
-                                // Default values for display if not yet logged (Matches Modal Logic)
                                 const displayIn = log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : (ticket.taskTime || '09:00');
                                 const displayOut = log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : '17:00';
-                                
-                                // Recalculate duration for display
                                 const rowHrs = calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
                                 const rowExceeded = rowHrs > 8;
 
-                                // Calculate Cost Est for this specific row (Matches Modal Logic - using Engineer Rates)
                                 const rowCost = (() => {
-                                  // Find the actual engineer assigned to this specific log row
-                                  const targetEngId = log.engineer_id || ticket.engineer_id;
-                                  
-                                  // MATCH GLOBAL CALCULATION LOGIC:
-                                  // Use specific engineer rates for the log row if it's a sub-engineer
-                                  let rRates = { 
-                                    hr: ticket.hourlyRate, 
-                                    hd: ticket.halfDayRate, 
-                                    fd: ticket.fullDayRate, 
-                                    mr: ticket.monthlyRate, 
-                                    ar: ticket.agreedRate, 
-                                    cf: ticket.cancellationFee, 
-                                    bt: ticket.billingType 
-                                  };
-                                  
-                                  if (String(targetEngId) === '0') {
-                                    rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
-                                  } else if (targetEngId && String(targetEngId) !== String(ticket.engineer_id)) {
-                                    const subEng = engineers.find(en => String(en.id) === String(targetEngId));
-                                    if (subEng) {
-                                      rRates = {
-                                        hr: subEng.hourlyRate ?? subEng.hourly_rate ?? 0,
-                                        hd: subEng.halfDayRate ?? subEng.half_day_rate ?? 0,
-                                        fd: subEng.fullDayRate ?? subEng.full_day_rate ?? 0,
-                                        mr: subEng.monthlyRate ?? subEng.monthly_rate ?? 0,
-                                        ar: subEng.agreedRate ?? subEng.agreed_rate ?? 0,
-                                        cf: subEng.cancellationFee ?? subEng.cancellation_fee ?? 0,
-                                        bt: subEng.billingType ?? subEng.billing_type ?? ticket.billingType
-                                      };
-                                    }
-                                  }
-
-                                  const calc = calculateTicketTotal({
-                                    startTime: `${log.logDateStr}T${displayIn}:00`, 
-                                    endTime: `${log.logDateStr}T${displayOut}:00`, 
-                                    breakTime: log.break_time_mins || 0,
-                                    hourlyRate: rRates.hr, 
-                                    halfDayRate: rRates.hd, 
-                                    fullDayRate: rRates.fd, 
-                                    monthlyRate: rRates.mr, 
-                                    agreedRate: rRates.ar, 
-                                    cancellationFee: rRates.cf, 
-                                    travelCostPerDay: ticket.travelCostPerDay, 
-                                    toolCost: ticket.toolCost,
-                                    billingType: rRates.bt,
-                                    country: ticket.country,
-                                    monthlyDivisor: getWorkingDaysInMonth(log.logDateStr, ticket.country),
-                                    _isLogAggregation: true
-                                  });
-                                  return calc ? calc.grandTotal : '0.00';
-                                })();
+                                   let rRates = { 
+                                     hr: ticket.hourlyRate, 
+                                     hd: ticket.halfDayRate, 
+                                     fd: ticket.fullDayRate, 
+                                     mr: ticket.monthlyRate, 
+                                     ar: ticket.agreedRate, 
+                                     cf: ticket.cancellationFee, 
+                                     bt: ticket.billingType 
+                                   };
+                                   
+                                   const calc = calculateTicketTotal({
+                                     startTime: `${log.logDateStr}T${displayIn}:00`, 
+                                     endTime: `${log.logDateStr}T${displayOut}:00`, 
+                                     breakTime: log.break_time_mins || 0,
+                                     hourlyRate: rRates.hr, 
+                                     halfDayRate: rRates.hd, 
+                                     fullDayRate: rRates.fd, 
+                                     monthlyRate: rRates.mr, 
+                                     agreedRate: rRates.ar, 
+                                     cancellationFee: rRates.cf, 
+                                     travelCostPerDay: ticket.travelCostPerDay, 
+                                     toolCost: ticket.toolCost,
+                                     billingType: rRates.bt,
+                                     country: ticket.country,
+                                     monthlyDivisor: getWorkingDaysInMonth(log.logDateStr, ticket.country),
+                                     _isLogAggregation: true
+                                   });
+                                   return calc ? calc.grandTotal : '0.00';
+                                 })();
 
                                 return (
                                   <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: rowExceeded ? '#fffcec' : '#f8fafc', borderLeft: '4px solid #6366f1' }}>
@@ -4169,7 +4142,7 @@ function TicketsPage() {
                                             <option value="">Assign Engineer...</option>
                                             {engineers.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
                                           </select>
-                                       </div>
+                                        </div>
                                     </td>
                                     
                                     <td style={{ textAlign: 'right', paddingRight: '20px' }}>
@@ -4179,6 +4152,9 @@ function TicketsPage() {
                                         </span>
                                         <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>
                                           {currency} {rowCost}
+                                        </span>
+                                        <span style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                          Cust. Rcvbl
                                         </span>
                                       </div>
                                     </td>
