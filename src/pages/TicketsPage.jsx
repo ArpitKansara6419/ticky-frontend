@@ -680,7 +680,8 @@ function TicketsPage() {
 
         const dayMonthlyDivisor = getWorkingDaysInMonth(d, country);
         const currentEngId = Number(specificEngId || engineerId);
-        const isNoEngDay = currentEngId === 0;
+        const isNoEngDay = currentEngId === 0 || (existing && (existing.status === 'Absent' || Number(existing.engineer_id) === 0));
+        if (isNoEngDay) return;
 
         // CUSTOMER rates — ALWAYS use ticket-level rates, regardless of which engineer is assigned
         // Changing the engineer on a day should NOT affect the customer total
@@ -783,8 +784,8 @@ function TicketsPage() {
         totalReceivable += cf; combinedBreakdown.base = (parseFloat(combinedBreakdown.base) + cf).toFixed(2);
       }
 
-      const finalLiveTravel = (parseFloat(travelCostPerDay) * numDays).toFixed(2);
-      const finalLiveTools = (parseFloat(toolCostInput) * numDays).toFixed(2);
+      const finalLiveTravel = (parseFloat(travelCostPerDay) * validDaysCount).toFixed(2);
+      const finalLiveTools = (parseFloat(toolCostInput) * validDaysCount).toFixed(2);
       
       // FIX: Calculate Grand Total as the sum of all aggregated components.
       // This ensures the Grand Total always matches the sum of the breakdown rows.
@@ -806,8 +807,8 @@ function TicketsPage() {
         tools: finalLiveTools,
         hrs: totalHrs.toFixed(2), 
         grandTotal: finalGrandTotal, 
-        days: numDays,
-        effectiveRate: numDays > 0 ? (parseFloat(combinedBreakdown.base) / numDays).toFixed(2) : '0.00'
+        days: validDaysCount,
+        effectiveRate: validDaysCount > 0 ? (parseFloat(combinedBreakdown.base) / validDaysCount).toFixed(2) : '0.00'
       });
       setTotalCost(finalGrandTotal);
       
@@ -823,7 +824,7 @@ function TicketsPage() {
         ...engBreakdown, 
         grandTotal: finalEngGrandTotal, 
         engSummary: Object.values(engSummaryMap),
-        effectiveRate: numDays > 0 ? (parseFloat(engBreakdown.base) / numDays).toFixed(2) : '0.00'
+        effectiveRate: validDaysCount > 0 ? (parseFloat(engBreakdown.base) / validDaysCount).toFixed(2) : '0.00'
       });
 
     } else {
