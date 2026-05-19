@@ -660,9 +660,9 @@ function TicketsPage() {
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
 
-        // Smart Skip: If it's a weekend or holiday, ONLY count it if explicit times are provided.
+        // Smart Skip: If it's a weekend, ONLY count it if explicit times are provided.
         // This handles long-term tickets correctly while still allowing weekend-only tickets.
-        if ((isWeekend || isHoliday) && (!existing || (!existing.start_time && !existing.startTime))) return;
+        if (isWeekend && (!existing || (!existing.start_time && !existing.startTime))) return;
 
         let sTime, eTime, bMins = 0, specificEngId = null;
         if (existing) specificEngId = existing.engineer_id || existing.engineerId || null;
@@ -685,7 +685,6 @@ function TicketsPage() {
         // CUSTOMER rates — ALWAYS use ticket-level rates, regardless of which engineer is assigned
         // Changing the engineer on a day should NOT affect the customer total
         let rRates = { hr: hourlyRate, hd: halfDayRate, fd: fullDayRate, mr: monthlyRate, ar: agreedRate, cf: cancellationFee, bt: billingType };
-        if (isNoEngDay) rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
         const dayStartTime = sTime;
         const dayEndTime = eTime;
 
@@ -1170,7 +1169,7 @@ function TicketsPage() {
         };
         const activeHols = HOLIDAYS_BY_COUNTRY[country] || HOLIDAYS_BY_COUNTRY['India'] || [];
         const isHoliday = activeHols.includes(dStr);
-        return !(isWeekend || isHoliday);
+        return !isWeekend;
       });
 
       const newLogs = validDates.map(dStr => {
@@ -2064,8 +2063,7 @@ function TicketsPage() {
            const eTime = log.end_time || `${dStr}T17:00:00Z`;
            let rRates = { hr: t.hourlyRate, hd: t.halfDayRate, fd: t.fullDayRate, mr: t.monthlyRate, ar: t.agreedRate, cf: t.cancellationFee, bt: t.billingType };
            const curEng = log.engineer_id || t.engineer_id;
-           if (String(curEng) === '0') rRates = { hr: 0, hd: 0, fd: 0, mr: 0, ar: 0, cf: 0, bt: 'Hourly' };
-           const res = calculateTicketTotal({ startTime: sTime, endTime: eTime, breakTime: log.break_time_mins || 0, hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf, travelCostPerDay: t.travelCostPerDay, toolCost: t.toolCost, billingType: rRates.bt, timezone: t.timezone, country: t.country, monthlyDivisor: getWorkingDaysInMonth(dStr, t.country), _isLogAggregation: true });
+           const res = calculateTicketTotal({ startTime: sTime, endTime: eTime, breakTime: log.break_time_mins || 0, hourlyRate: rRates.hr, halfDayRate: rRates.hd, fullDayRate: rRates.fd, monthlyRate: rRates.mr, agreedRate: rRates.ar, cancellationFee: rRates.cf, travelCostPerDay: t.travelCostPerDay, toolCost: t.toolCost, billingType: rRates.bt, timezone: t.timezone, country: t.country, monthlyDivisor: getWorkingDaysInMonth(dStr, t.country, true), _isLogAggregation: true });
            newTotal += parseFloat(res?.grandTotal || 0);
         });
         if (t.billingType === 'Agreed Rate') newTotal += parseFloat(t.agreedRate || 0);
@@ -3706,6 +3704,21 @@ function TicketsPage() {
                                 return hrs > 8;
                               });
 
+                              const workingDaysCount = (() => {
+                                if (parsedLogs && parsedLogs.length > 0) {
+                                  return parsedLogs.filter(l => !l.is_weekend || l.start_time || l.startTime).length;
+                                }
+                                if (ticket.taskStartDate && ticket.taskEndDate) {
+                                  const dates = getDatesInRange(ticket.taskStartDate, ticket.taskEndDate);
+                                  return dates.filter(dStr => {
+                                    const dObj = new Date(`${dStr}T00:00:00Z`);
+                                    const day = dObj.getUTCDay();
+                                    return day !== 0 && day !== 6;
+                                  }).length;
+                                }
+                                return isMultiDay ? '?' : '1';
+                              })();
+
                               const mainRow = (
                                 <tr key={ticket.id} style={{ 
                                   background: isResolved ? '#fcfcfd' : (isExpanded ? 'rgba(99,102,241,0.04)' : undefined),
@@ -3715,7 +3728,7 @@ function TicketsPage() {
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                       {isDispatch && (
                                         <span style={{ flexShrink: 0, marginTop: '3px', background: isExpanded ? '#e0e7ff' : '#f1f5f9', border: '1px solid ' + (isExpanded ? '#818cf8' : '#e2e8f0'), borderRadius: '6px', padding: '2px 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', lineHeight: 1.4 }}>
-                                          {parsedLogs.length || (isMultiDay ? '?' : '0')}d
+                                          {workingDaysCount}d
                                         </span>
                                       )}
                                       <div>

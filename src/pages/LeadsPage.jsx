@@ -1126,11 +1126,10 @@ function LeadsPage() {
                 if (taskStartDate && taskEndDate) {
                   let curr = new Date(`${taskStartDate}T00:00:00Z`);
                   const stop = new Date(`${taskEndDate}T00:00:00Z`);
-                  const hols = (country === 'Poland' ? ['2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', '2026-05-01', '2026-05-03', '2026-06-04', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2026-12-26'] : ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25']);
                   while (curr <= stop) {
                     const dw = curr.getUTCDay();
-                    const dStr = curr.toISOString().split('T')[0];
-                    if (dw !== 0 && dw !== 6 && !hols.includes(dStr)) {
+                    if (dw !== 0 && dw !== 6) {
+                      const dStr = curr.toISOString().split('T')[0];
                       days.push(dStr);
                     }
                     curr.setUTCDate(curr.getUTCDate() + 1);
@@ -1171,7 +1170,7 @@ function LeadsPage() {
                       </div>
                     </div>
                     <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px' }}>
-                      * Based on <b>{numWorkingDays} working day(s)</b> (Saturdays, Sundays, and Public Holidays excluded). 
+                      * Based on <b>{numWorkingDays} working day(s)</b> (Saturdays and Sundays excluded). 
                       Estimate assumes standard 8-hour shift per day.
                     </p>
                   </div>
