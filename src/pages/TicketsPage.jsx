@@ -3706,24 +3706,38 @@ function TicketsPage() {
 
                               const workingDaysCount = (() => {
                                 if (parsedLogs && parsedLogs.length > 0) {
-                                  return parsedLogs.filter(l => {
+                                  const logsWithInfo = parsedLogs.map(l => {
                                     const dStr = l.task_date ? String(l.task_date).split('T')[0] : '';
-                                    if (!dStr) return false;
+                                    if (!dStr) return { ...l, isWeekend: false };
                                     const dObj = parseWallClockDate(dStr);
-                                    const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
-                                    return !isWeekend || l.start_time || l.startTime;
+                                    const dw = dObj.getUTCDay();
+                                    const isWeekend = dw === 0 || dw === 6;
+                                    return { ...l, isWeekend };
+                                  });
+                                  const hasWeekdays = logsWithInfo.some(l => !l.isWeekend);
+                                  return logsWithInfo.filter(l => {
+                                    if (!hasWeekdays) return true;
+                                    return !l.isWeekend;
                                   }).length;
                                 }
                                 if (ticket.taskStartDate && ticket.taskEndDate) {
                                   const dates = getDatesInRange(ticket.taskStartDate, ticket.taskEndDate);
+                                  const hasWeekdays = dates.some(dStr => {
+                                    const dObj = parseWallClockDate(dStr);
+                                    const dw = dObj.getUTCDay();
+                                    return dw !== 0 && dw !== 6;
+                                  });
                                   return dates.filter(dStr => {
                                     const dObj = parseWallClockDate(dStr);
-                                    const day = dObj.getUTCDay();
-                                    return day !== 0 && day !== 6;
+                                    const dw = dObj.getUTCDay();
+                                    const isWeekend = dw === 0 || dw === 6;
+                                    if (!hasWeekdays) return true;
+                                    return !isWeekend;
                                   }).length;
                                 }
                                 return isMultiDay ? '?' : '1';
                               })();
+
 
                               const mainRow = (
                                 <tr key={ticket.id} style={{ 
