@@ -1623,6 +1623,9 @@ function TicketsPage() {
       }
       if (payload.leadId) {
         try {
+          const originalLeadObj = leads.find(l => String(l.id) === String(payload.leadId));
+          const originalTaskTime = originalLeadObj ? originalLeadObj.taskTime || originalLeadObj.task_time || payload.taskTime : payload.taskTime;
+          
           const leadSyncRes = await fetch(`${API_BASE_URL}/leads/${payload.leadId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -1634,7 +1637,7 @@ function TicketsPage() {
               clientTicketNumber: payload.clientTicketNumber || '',
               taskStartDate: payload.taskStartDate,
               taskEndDate: payload.taskEndDate,
-              taskTime: payload.taskTime,
+              taskTime: originalTaskTime,
               scopeOfWork: payload.scopeOfWork,
               apartment: payload.apartment || '',
               addressLine1: payload.addressLine1,
@@ -2994,8 +2997,23 @@ function TicketsPage() {
                       onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the End Date, please edit the originating Lead.`)}
                     />
                   </label>
+                  {leadId && (
+                    <label className="tickets-field">
+                      <span>Task Start time</span>
+                      <input 
+                        type="text" 
+                        value={(() => {
+                          const associatedLead = leads.find(l => String(l.id) === String(leadId));
+                          return associatedLead ? associatedLead.taskTime || associatedLead.task_time || '09:00' : '09:00';
+                        })()} 
+                        readOnly 
+                        className="synced-field" 
+                        title="This is the scheduled Task Start time from the Lead."
+                      />
+                    </label>
+                  )}
                   <label className="tickets-field">
-                    <span>Time (Task start time) <span className="field-required">*</span></span>
+                    <span>Actual Start Time <span className="field-required">*</span></span>
                     <input 
                       type="time" 
                       value={taskTime} 
@@ -3004,7 +3022,7 @@ function TicketsPage() {
                     />
                   </label>
                   <label className="tickets-field">
-                    <span>End Time <span className="field-required">*</span></span>
+                    <span>Actual End Time <span className="field-required">*</span></span>
                     <input 
                       type="time" 
                       value={taskEndTime} 
