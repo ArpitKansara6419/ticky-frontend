@@ -189,7 +189,9 @@ function EngineersPage() {
         holidayRate: '',
         monthlyRate: '',
         billingType: 'Hourly',
-        address: ''
+        address: '',
+        allocatedAnnualLeaves: '20',
+        accumulatedLeaves: ''
     });
     const [savingCharges, setSavingCharges] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
@@ -301,7 +303,9 @@ function EngineersPage() {
                     billingType: eng.billingType || 'Hourly',
                     city: eng.city || '',
                     country: eng.country || '',
-                    address: eng.address || ''
+                    address: eng.address || '',
+                    allocatedAnnualLeaves: eng.allocatedAnnualLeaves || '20',
+                    accumulatedLeaves: eng.accumulatedLeaves !== null && eng.accumulatedLeaves !== undefined ? eng.accumulatedLeaves.toString() : ''
                 });
             }
         } catch (e) { console.error(e); }
@@ -507,7 +511,9 @@ function EngineersPage() {
                 billingType: chargesForm.billingType,
                 city: chargesForm.city,
                 country: chargesForm.country,
-                address: chargesForm.address
+                address: chargesForm.address,
+                allocatedAnnualLeaves: chargesForm.allocatedAnnualLeaves,
+                accumulatedLeaves: chargesForm.accumulatedLeaves
             };
 
             const res = await fetch(`${API_BASE_URL}/engineers/${selectedEngineer.id}`, {
@@ -732,6 +738,40 @@ function EngineersPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {selectedEngineer.employmentType === 'Full Time' && (
+                                <div className="profile-info-card" style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', marginTop: '25px' }}>
+                                    <h4 className="section-head" style={{ fontSize: '15px', marginBottom: '15px', border: 'none', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="fas fa-calendar-alt" style={{ color: '#6366f1' }}></i> Leave & Vacation Details
+                                    </h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', background: '#f8fafc', padding: '15px 20px', borderRadius: '12px' }}>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', display: 'block', marginBottom: '3px' }}>ALLOCATED ANNUAL LEAVES</label>
+                                            <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>
+                                                {selectedEngineer.allocatedAnnualLeaves || '0'} days
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', display: 'block', marginBottom: '3px' }}>MONTHLY ACCUMULATION RATE</label>
+                                            <div style={{ fontWeight: '600', color: '#10b981', fontSize: '14px' }}>
+                                                {(() => {
+                                                    const leaves = selectedEngineer.allocatedAnnualLeaves;
+                                                    if (leaves === '20') return '1.66 days';
+                                                    if (leaves === '26') return '2.16 days';
+                                                    const val = parseFloat(leaves) || 0;
+                                                    return `${(val / 12).toFixed(2)} days`;
+                                                })()}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', display: 'block', marginBottom: '3px' }}>TILL DATE ACCUMULATED LEAVES</label>
+                                            <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>
+                                                {selectedEngineer.accumulatedLeaves !== null && selectedEngineer.accumulatedLeaves !== undefined ? parseFloat(selectedEngineer.accumulatedLeaves).toFixed(2) : '0.00'} days
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div style={{ marginTop: '25px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
                                 <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px' }}>
@@ -973,6 +1013,74 @@ function EngineersPage() {
                                         <input type="time" className="form-input" value={chargesForm.checkOutTime} onChange={e => setChargesForm({ ...chargesForm, checkOutTime: e.target.value })} />
                                     </div>
                                 </div>
+
+                                {chargesForm.jobType === 'Full Time' && (
+                                    <>
+                                        <div className="divider-line" style={{ margin: '15px 0' }}></div>
+                                        <h4 className="section-head" style={{ color: '#2563eb', marginBottom: '20px', fontSize: '15px' }}>Leave & Vacation Details</h4>
+                                        <div className="form-row two-col" style={{ marginBottom: '20px' }}>
+                                            <div className="form-group">
+                                                <label>Allocated Annual Leaves <span className="req">*</span></label>
+                                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                    <select
+                                                        className="form-input"
+                                                        value={['20', '26'].includes(chargesForm.allocatedAnnualLeaves) ? chargesForm.allocatedAnnualLeaves : 'Other'}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === '20') {
+                                                                setChargesForm({ ...chargesForm, allocatedAnnualLeaves: '20' });
+                                                            } else if (val === '26') {
+                                                                setChargesForm({ ...chargesForm, allocatedAnnualLeaves: '26' });
+                                                            } else {
+                                                                setChargesForm({ ...chargesForm, allocatedAnnualLeaves: '' });
+                                                            }
+                                                        }}
+                                                        style={{ flex: 1 }}
+                                                    >
+                                                        <option value="20">20 days (Monthly: 1.66)</option>
+                                                        <option value="26">26 days (Monthly: 2.16)</option>
+                                                        <option value="Other">Other (Manual Entry)</option>
+                                                    </select>
+                                                    
+                                                    {!['20', '26'].includes(chargesForm.allocatedAnnualLeaves) && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1 }}>
+                                                            <input
+                                                                type="number"
+                                                                className="form-input"
+                                                                value={chargesForm.allocatedAnnualLeaves}
+                                                                onChange={(e) => setChargesForm({ ...chargesForm, allocatedAnnualLeaves: e.target.value })}
+                                                                placeholder="Enter days"
+                                                                style={{ width: '100px' }}
+                                                            />
+                                                            <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                                                days
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', fontWeight: '500' }}>
+                                                    {(() => {
+                                                        const leaves = parseFloat(chargesForm.allocatedAnnualLeaves) || 0;
+                                                        if (chargesForm.allocatedAnnualLeaves === '20') return "Calculated Monthly Accumulation: 1.66 days";
+                                                        if (chargesForm.allocatedAnnualLeaves === '26') return "Calculated Monthly Accumulation: 2.16 days";
+                                                        return `Calculated Monthly Accumulation: ${(leaves / 12).toFixed(2)} days (Allocated / 12)`;
+                                                    })()}
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Till Date Accumulated Leaves</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    className="form-input"
+                                                    value={chargesForm.accumulatedLeaves}
+                                                    onChange={e => setChargesForm({ ...chargesForm, accumulatedLeaves: e.target.value })}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className="divider-line"></div>
 
