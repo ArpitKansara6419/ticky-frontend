@@ -650,7 +650,7 @@ function TicketsPage() {
       let engBreakdown = { base: '0.00', ot: '0.00', ooh: '0.00', special: '0.00', agreed: '0.00' };
 
       daysArr.forEach((d) => {
-        const existing = (timeLogs || []).find(l => {
+        let existing = (timeLogs || []).find(l => {
           const rawDate = l.task_date || l.taskDate || '';
           if (!rawDate) return false;
           const dateOnly = rawDate.toString().split('T')[0].split(' ')[0].trim();
@@ -661,6 +661,11 @@ function TicketsPage() {
         const isWeekend = dObj.getUTCDay() === 0 || dObj.getUTCDay() === 6;
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
+
+        // If it's a holiday and status is 'Pending', treat the times as null/empty (not worked)
+        if (isHoliday && existing && existing.status === 'Pending') {
+          existing = { ...existing, start_time: null, startTime: null, end_time: null, endTime: null };
+        }
 
         // Smart Skip: If it's a weekend or holiday, ONLY count it if explicit times are provided.
         // This handles long-term tickets correctly while still allowing weekend-only tickets.
@@ -3747,7 +3752,13 @@ function TicketsPage() {
                                     const isWeekend = dw === 0 || dw === 6;
                                     const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
                                      const isHoliday = activeHols.includes(dStr);
-                                     return { ...l, isWeekend, isHoliday };
+                                     let start_time = l.start_time;
+                                     let end_time = l.end_time;
+                                     if (isHoliday && l.status === 'Pending') {
+                                       start_time = null;
+                                       end_time = null;
+                                     }
+                                     return { ...l, isWeekend, isHoliday, start_time, end_time };
                                   });
                                   const hasWeekdays = logsWithInfo.some(l => !l.isWeekend && !l.isHoliday);
                                   return logsWithInfo.filter(l => {
