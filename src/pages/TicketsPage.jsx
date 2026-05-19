@@ -345,8 +345,10 @@ const calculateTicketTotal = (opts) => {
       base = cf;
     }
 
-    if (isWeekend) special = customWeekendRate;
-    else if (isHoliday) special = customHolidayRate;
+    if (hrs > 0) {
+      if (isWeekend) special = customWeekendRate;
+      else if (isHoliday) special = customHolidayRate;
+    }
 
     if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
       ooh = hrs * customOOHRate;
