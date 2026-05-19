@@ -2049,7 +2049,9 @@ function TicketsPage() {
     if (!logId) return;
 
     // ── Check if ONLY engineer is being changed (Customer Revenue must NOT change) ──
-    const isEngineerOnlyChange = 'engineerId' in data && !('startTime' in data) && !('endTime' in data) && !('breakTimeMins' in data);
+    // Exception: if engineer changes TO or FROM "No Engineer" (id=0), cost MUST recalculate
+    const isChangingToNoEngineer = 'engineerId' in data && Number(data.engineerId) === 0;
+    const isEngineerOnlyChange = 'engineerId' in data && !('startTime' in data) && !('endTime' in data) && !('breakTimeMins' in data) && !isChangingToNoEngineer;
 
     // ── OPTIMISTIC UI ──
     setTimeLogs(applyPatch);
@@ -2065,6 +2067,8 @@ function TicketsPage() {
         }
         let newTotal = 0;
         nextLogs.forEach(log => {
+           // Skip "No Engineer" days (engineer_id=0) — no cost contribution
+           if (Number(log.engineer_id) === 0) return;
            const dStr = log.task_date ? String(log.task_date).split('T')[0] : '';
            const sTime = log.start_time || `${dStr}T09:00:00Z`;
            const eTime = log.end_time || `${dStr}T17:00:00Z`;
@@ -2097,6 +2101,7 @@ function TicketsPage() {
               eng_total_cost: resData.eng_total_cost ?? t.eng_total_cost
             };
           }
+          // For No Engineer change or time changes: update both Customer Revenue and Payout
           return {
             ...t,
             totalCost: resData.total_cost,
