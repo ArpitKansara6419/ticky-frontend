@@ -193,8 +193,8 @@ const LeavesPage = () => {
     <div className="leaves-page-container">
       <header className="leaves-header">
         <div className="header-text">
-          <h1 className="page-title">Engineer Leave Management</h1>
-          <p className="page-subtitle">Track, apply and manage leave requests efficiently.</p>
+          <h1 className="page-title">{isAdmin ? "Absence & Leave Console" : "My Absence Hub"}</h1>
+          <p className="page-subtitle">{isAdmin ? "Review, approve, and audit workforce leave requests." : "Track, apply, and manage your leave requests."}</p>
         </div>
         {!isAdmin && (
           <button className="apply-leave-btn" onClick={() => setIsModalOpen(true)}>
