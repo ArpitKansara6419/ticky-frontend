@@ -49,11 +49,10 @@ const LeavesPage = () => {
     setUserEmail(email);
     setUserId(storedUserId);
     
-    // For this demo, let's assume if email exists and they are not in engineer list, they might be admin
-    // Or check if role === 'Admin'
-    setIsAdmin(role === 'Admin' || email === 'admin@aimbizit.com'); // Fallback for testing
+    const isUserAdmin = role ? (role === 'Admin') : true;
+    setIsAdmin(isUserAdmin);
     
-    fetchData(email, storedUserId, role === 'Admin' || email === 'admin@aimbizit.com');
+    fetchData(email, storedUserId, isUserAdmin);
   }, []);
 
   const fetchData = async (email, uId, adminStatus) => {
