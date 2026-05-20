@@ -1,9 +1,9 @@
 /* LeavesPage.css - Premium Absence & Leave Console Theme */
 
 .leaves-page-container {
-  padding: 32px;
-  max-width: 1500px;
-  margin: 0 auto;
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
   color: var(--text-main, #1e293b);
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
