@@ -225,6 +225,17 @@
   border: 1.5px solid var(--sidebar-bg);
 }
 
+.sidebar-badge--info {
+  background: var(--primary) !important;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.4) !important;
+}
+
+.sidebar-badge--warning {
+  background: var(--warning) !important;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.4) !important;
+}
+
+
 .sidebar-link-label {
   white-space: nowrap;
   flex: 1;

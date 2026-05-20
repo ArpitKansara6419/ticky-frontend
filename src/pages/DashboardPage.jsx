@@ -780,6 +780,7 @@ function DashboardPage() {
   const [insightsLayout] = useState('split')
   const [approvalsCount, setApprovalsCount] = useState(0)
   const [unreadNotesCount, setUnreadNotesCount] = useState(0)
+  const [pendingLeavesCount, setPendingLeavesCount] = useState(0)
 
   // Fetch pending approvals count for sidebar badge
   const fetchApprovalsCount = async () => {
@@ -806,12 +807,26 @@ function DashboardPage() {
     }
   }
 
+  const fetchPendingLeavesCount = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/leaves/stats`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setPendingLeavesCount(data.pending || 0)
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending leaves count', err)
+    }
+  }
+
   useEffect(() => {
     fetchApprovalsCount()
     fetchUnreadNotesCount()
+    fetchPendingLeavesCount()
     const interval = setInterval(() => {
       fetchApprovalsCount()
       fetchUnreadNotesCount()
+      fetchPendingLeavesCount()
     }, 10000) // update every 10s
     return () => clearInterval(interval)
   }, [])
@@ -1132,6 +1147,9 @@ function DashboardPage() {
                 )}
                 {item.id === 'tickets' && unreadNotesCount > 0 && (
                   <span className="sidebar-badge sidebar-badge--info">{unreadNotesCount}</span>
+                )}
+                {item.id === 'leaves' && pendingLeavesCount > 0 && (
+                  <span className="sidebar-badge sidebar-badge--warning">{pendingLeavesCount}</span>
                 )}
               </span>
               <span className="sidebar-link-label">{item.label}</span>

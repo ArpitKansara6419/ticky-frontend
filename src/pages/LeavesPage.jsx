@@ -37,6 +37,10 @@ const LeavesPage = () => {
     documentSigned: false
   });
 
+  // Signed Documents Viewer State
+  const [activeDocModal, setActiveDocModal] = useState(null);
+  const [activeDocTab, setActiveDocTab] = useState('PL');
+
   useEffect(() => {
     const email = localStorage.getItem('userEmail');
     const role = localStorage.getItem('userRole'); // Assuming role is stored
@@ -145,6 +149,15 @@ const LeavesPage = () => {
       }
     } catch (err) {
       console.error('Error updating leave status:', err);
+    }
+  };
+
+  const openSignedDocs = (leave) => {
+    setActiveDocModal(leave);
+    if (parseFloat(leave.paid_days || 0) === 0 && parseFloat(leave.unpaid_days || 0) > 0) {
+      setActiveDocTab('UL');
+    } else {
+      setActiveDocTab('PL');
     }
   };
 
@@ -278,6 +291,9 @@ const LeavesPage = () => {
                           <td>{leave.total_days}</td>
                           <td className="reason-cell">{leave.reason || '-'}</td>
                           <td className="action-btns">
+                            <button className="btn-view-doc" onClick={() => openSignedDocs(leave)}>
+                              <FiFileText /> View Docs
+                            </button>
                             <button className="btn-approve" onClick={() => handleUpdateStatus(leave.id, 'Approved')}>Approve</button>
                             <button className="btn-decline" onClick={() => handleUpdateStatus(leave.id, 'Declined')}>Decline</button>
                           </td>
@@ -302,6 +318,7 @@ const LeavesPage = () => {
                       <th>Range</th>
                       <th>Status</th>
                       <th>Applied At</th>
+                      <th>Documents</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -312,6 +329,11 @@ const LeavesPage = () => {
                         <td>{formatDate(leave.start_date)} - {formatDate(leave.end_date)}</td>
                         <td><span className={`status-pill ${leave.status.toLowerCase()}`}>{leave.status}</span></td>
                         <td>{formatDate(leave.applied_at)}</td>
+                        <td>
+                          <button className="btn-view-doc-small" onClick={() => openSignedDocs(leave)}>
+                            <FiFileText /> View
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -449,6 +471,62 @@ const LeavesPage = () => {
                 <button type="submit" className="submit-btn">Submit Application</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Signed Documents Viewer Modal */}
+      {activeDocModal && (
+        <div className="modal-backdrop">
+          <div className="leave-modal glass-card doc-viewer-modal">
+            <header className="modal-header">
+              <h2>Signed Leave Documents</h2>
+              <button className="close-btn" onClick={() => setActiveDocModal(null)}><FiXCircle /></button>
+            </header>
+            
+            <div className="doc-tabs">
+              {parseFloat(activeDocModal.paid_days || 0) > 0 && (
+                <button 
+                  className={`doc-tab-btn ${activeDocTab === 'PL' ? 'active' : ''}`}
+                  onClick={() => setActiveDocTab('PL')}
+                >
+                  Paid Leave Document
+                </button>
+              )}
+              {parseFloat(activeDocModal.unpaid_days || 0) > 0 && (
+                <button 
+                  className={`doc-tab-btn ${activeDocTab === 'UL' ? 'active' : ''}`}
+                  onClick={() => setActiveDocTab('UL')}
+                >
+                  Unpaid Leave Document
+                </button>
+              )}
+            </div>
+
+            <div className="iframe-container" style={{ flex: 1, minHeight: '450px', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', margin: '15px 0' }}>
+              <iframe 
+                src={`${API_BASE_URL}/leaves/${activeDocModal.id}/documents/${activeDocTab.toLowerCase()}`}
+                title="Signed Document"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
+
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', gap: '15px', marginTop: '15px' }}>
+              <button 
+                className="print-btn" 
+                onClick={() => window.open(`${API_BASE_URL}/leaves/${activeDocModal.id}/documents/${activeDocTab.toLowerCase()}`, '_blank')}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#003366', color: '#FFF', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                <FiDownload /> Open Full Page / Print
+              </button>
+              <button 
+                className="close-btn-footer" 
+                onClick={() => setActiveDocModal(null)}
+                style={{ padding: '10px 16px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
