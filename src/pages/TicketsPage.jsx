@@ -2058,9 +2058,13 @@ function TicketsPage() {
     if (!logId) return;
 
     // ── Check if ONLY engineer is being changed (Customer Revenue must NOT change) ──
-    // Exception: if engineer changes TO or FROM "No Engineer" (id=0), cost MUST recalculate
-    const isChangingToNoEngineer = 'engineerId' in data && Number(data.engineerId) === 0;
-    const isEngineerOnlyChange = 'engineerId' in data && !('startTime' in data) && !('endTime' in data) && !('breakTimeMins' in data) && !isChangingToNoEngineer;
+    // Exception: if engineer changes TO or FROM "No Engineer" (id=0 / null), cost MUST recalculate
+    const existingLog = (timeLogs || []).find(l => Number(l.id) === Number(logId));
+    const wasNoEngineer = existingLog ? (existingLog.engineer_id === null || Number(existingLog.engineer_id) === 0 || existingLog.status === 'Absent') : false;
+    const isChangingToNoEngineer = 'engineerId' in data && (data.engineerId === null || Number(data.engineerId) === 0);
+    const isChangingFromNoEngineer = wasNoEngineer && 'engineerId' in data && data.engineerId !== null && Number(data.engineerId) !== 0;
+
+    const isEngineerOnlyChange = 'engineerId' in data && !('startTime' in data) && !('endTime' in data) && !('breakTimeMins' in data) && !isChangingToNoEngineer && !isChangingFromNoEngineer;
 
     // ── OPTIMISTIC UI ──
     setTimeLogs(applyPatch);
@@ -2076,8 +2080,8 @@ function TicketsPage() {
         }
         let newTotal = 0;
         nextLogs.forEach(log => {
-           // Skip "No Engineer" days (engineer_id=0) — no cost contribution
-           if (Number(log.engineer_id) === 0) return;
+           // Skip "No Engineer" days (engineer_id=0 / null / Absent) — no cost contribution
+           if (log.status === 'Absent' || log.engineer_id === null || log.engineer_id === undefined || Number(log.engineer_id) === 0) return;
            const dStr = log.task_date ? String(log.task_date).split('T')[0] : '';
            const sTime = log.start_time || `${dStr}T09:00:00Z`;
            const eTime = log.end_time || `${dStr}T17:00:00Z`;
@@ -3760,10 +3764,9 @@ function TicketsPage() {
                                      }
                                      return { ...l, isWeekend, isHoliday, start_time, end_time };
                                   });
-                                  const hasWeekdays = logsWithInfo.some(l => !l.isWeekend && !l.isHoliday);
                                   return logsWithInfo.filter(l => {
                                     // Exclude "No Engineer" / Absent days
-                                    if (Number(l.engineer_id) === 0 || l.status === 'Absent') return false;
+                                    if (l.engineer_id === null || l.engineer_id === undefined || Number(l.engineer_id) === 0 || l.status === 'Absent') return false;
                                     // If weekend or holiday, ONLY count if they worked (explicit times exist)
                                     if (l.isWeekend || l.isHoliday) return !!(l.start_time && l.end_time);
                                     return true;
