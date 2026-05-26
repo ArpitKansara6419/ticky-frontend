@@ -3991,34 +3991,16 @@ function TicketsPage() {
                               // NEW: Smart Date Logic for List View (Matching Modal)
                               let displayLogs = [];
                               if (isExpanded) {
-                                // Consistency: Only show working days (hide weekends) and sort by date
                                 displayLogs = parsedLogs
-                                  .filter(l => {
-                                     const dRaw = l.task_date || l.taskDate;
-                                     if (!dRaw) return false;
-                                     const dStr = typeof dRaw === 'string' ? dRaw.split('T')[0] : new Date(dRaw).toISOString().split('T')[0];
-                                     
-                                     const dObj = parseWallClockDate(dStr);
-                                     const dw = dObj.getUTCDay();
-                                     const isWeekend = dw === 0 || dw === 6;
-                                     const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
-                                     const isHoliday = activeHols.includes(dStr);
-                                     const isAutoGen = !l.status || l.status === 'Pending';
-
-                                     if (isWeekend || isHoliday) {
-                                       return !isAutoGen || (l.start_time && l.end_time);
-                                     }
-                                     return true;
-                                  })
                                   .map((l, sidx) => {
                                     const dRaw = l.task_date || l.taskDate;
                                     const dStr = dRaw ? (typeof dRaw === 'string' ? dRaw.split('T')[0] : new Date(dRaw).toISOString().split('T')[0]) : '';
-                                    return { ...l, logDateStr: dStr || `Day ${sidx + 1}` };
+                                    return {
+                                      ...l,
+                                      logDateStr: dStr
+                                    };
                                   });
-                                
-                                displayLogs.sort((a, b) => new Date(a.logDateStr) - new Date(b.logDateStr));
                               }
-
                               const subRows = isExpanded ? displayLogs.map((log, sidx) => {
                                 const logDate = log.logDateStr
                                   ? new Date(log.logDateStr).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
@@ -4027,14 +4009,24 @@ function TicketsPage() {
                                 const logId = log.id;
                                 // No Engineer day
                                 const isNoEngineerDay = Number(log.engineer_id) === 0;
+
+                                // Check if this is a skipped weekend or holiday
+                                const dObj = parseWallClockDate(log.logDateStr);
+                                const dw = dObj.getUTCDay();
+                                const isWeekend = dw === 0 || dw === 6;
+                                const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
+                                const isHoliday = activeHols.includes(log.logDateStr);
+                                const isAutoGen = !log.status || log.status === 'Pending';
+                                const isSkippedDay = (isWeekend || isHoliday) && isAutoGen && !log.start_time && !log.end_time;
+
                                 const displayIn = log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : (ticket.taskTime || '09:00');
                                 const displayOut = log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : '17:00';
-                                const rowHrs = isNoEngineerDay ? 0 : calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
+                                const rowHrs = isNoEngineerDay || isSkippedDay ? 0 : calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
                                 const rowExceeded = rowHrs > 8;
 
                                 const rowCost = (() => {
                                    // No Engineer = 0 cost
-                                   if (isNoEngineerDay) return '0.00';
+                                   if (isNoEngineerDay || isSkippedDay) return '0.00';
                                    let rRates = { 
                                      hr: ticket.hourlyRate, 
                                      hd: ticket.halfDayRate, 
@@ -4064,6 +4056,44 @@ function TicketsPage() {
                                    });
                                    return calc ? calc.grandTotal : '0.00';
                                  })();
+
+                                if (isSkippedDay) {
+                                  return (
+                                    <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: '#f8fafc', borderLeft: '4px solid #cbd5e1', opacity: 0.65 }}>
+                                      <td style={{ paddingLeft: '36px', fontSize: '12px', verticalAlign: 'middle' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                          <span style={{ color: '#cbd5e1', fontWeight: '700' }}>↳</span>
+                                          <span style={{ fontWeight: '500', color: '#94a3b8', textDecoration: 'line-through' }}>{logDate}</span>
+                                          {isHoliday && (
+                                            <span style={{ fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#d97706', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'inline-block' }}>
+                                              🎉 Public Holiday
+                                            </span>
+                                          )}
+                                          {isWeekend && (
+                                            <span style={{ fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'inline-block' }}>
+                                              📅 Weekend
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      
+                                      <td colSpan={4} style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', fontWeight: '600', paddingLeft: '16px', verticalAlign: 'middle' }}>
+                                        Non-Working Day (Skipped)
+                                      </td>
+
+                                      <td style={{ textAlign: 'right', paddingRight: '20px', verticalAlign: 'middle' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#cbd5e1', textDecoration: 'line-through' }}>
+                                            0.00h
+                                          </span>
+                                          <span style={{ fontSize: '10px', color: '#cbd5e1', fontWeight: '600', textDecoration: 'line-through' }}>
+                                            {currency} 0.00
+                                          </span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                }
 
                                 return (
                                   <tr key={`${ticket.id}-log-${logId || sidx}`} style={{ background: isNoEngineerDay ? '#f9fafb' : (rowExceeded ? '#fffcec' : '#f8fafc'), borderLeft: `4px solid ${isNoEngineerDay ? '#cbd5e1' : '#6366f1'}`, opacity: isNoEngineerDay ? 0.6 : 1 }}>
