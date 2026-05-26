@@ -148,7 +148,7 @@ const CustomerReceivablePage = () => {
                 totalReceivable: totalRec.toFixed(2),
                 baseCost: baseC.toFixed(2), baseBreakdown: `Aggregate of ${logs.length} days`,
                 otPremium: otP.toFixed(2), oohPremium: oohP.toFixed(2), specialDayPremium: spP.toFixed(2),
-                totalHours: totalHrs, formattedHours: `${Math.floor(totalHrs)}h ${Math.round((totalHrs % 1) * 60)}m`,
+                totalHours: isNaN(totalHrs) ? 0 : totalHrs, formattedHours: `${Math.floor(isNaN(totalHrs) ? 0 : totalHrs)}h ${Math.round(((isNaN(totalHrs) ? 0 : totalHrs) % 1) * 60)}m`,
                 travelCost: travC, toolCost: toolC,
                 isOOH: oohP > 0, isSpecialDay: spP > 0
             };
@@ -1989,7 +1989,7 @@ const CustomerReceivablePage = () => {
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>BILLABLE HRS</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '800', color: '#7c3aed' }}>{bd.formattedHours || `${parseFloat(bd.totalHours || 0).toFixed(2)}h`}</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '800', color: '#7c3aed' }}>{bd.formattedHours && !bd.formattedHours.includes('NaN') ? bd.formattedHours : `${parseFloat(bd.totalHours || 0).toFixed(2)}h`}</div>
                                             </div>
                                         </div>
                                     </div>
