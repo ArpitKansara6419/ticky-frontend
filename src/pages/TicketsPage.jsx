@@ -3994,14 +3994,21 @@ function TicketsPage() {
                                 // Consistency: Only show working days (hide weekends) and sort by date
                                 displayLogs = parsedLogs
                                   .filter(l => {
-                                    const dRaw = l.task_date || l.taskDate;
-                                    if (!dRaw) return false;
-                                    const dStr = typeof dRaw === 'string' ? dRaw.split('T')[0] : new Date(dRaw).toISOString().split('T')[0];
-                                    
-                                    // Only show working days (hide Sat/Sun)
-                                    const dObj = new Date(`${dStr}T00:00:00Z`);
-                                    const day = dObj.getUTCDay();
-                                    return day !== 0 && day !== 6;
+                                     const dRaw = l.task_date || l.taskDate;
+                                     if (!dRaw) return false;
+                                     const dStr = typeof dRaw === 'string' ? dRaw.split('T')[0] : new Date(dRaw).toISOString().split('T')[0];
+                                     
+                                     const dObj = parseWallClockDate(dStr);
+                                     const dw = dObj.getUTCDay();
+                                     const isWeekend = dw === 0 || dw === 6;
+                                     const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
+                                     const isHoliday = activeHols.includes(dStr);
+                                     const isAutoGen = !l.status || l.status === 'Pending';
+
+                                     if (isWeekend || isHoliday) {
+                                       return !isAutoGen || (l.start_time && l.end_time);
+                                     }
+                                     return true;
                                   })
                                   .map((l, sidx) => {
                                     const dRaw = l.task_date || l.taskDate;
