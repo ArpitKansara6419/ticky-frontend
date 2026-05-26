@@ -37,6 +37,22 @@ const parseWallClockDate = (s) => {
   return d;
 };
 
+const getZonedInfo = (date, timeZone) => {
+  const targetTZ = timeZone || 'UTC';
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: targetTZ,
+      hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+    const localDay = new Date(`${parts.year}-${parts.month}-${parts.day}`).getDay();
+    return { dateStr: `${parts.year}-${parts.month}-${parts.day}`, day: localDay, hour: parseInt(parts.hour) };
+  } catch (err) {
+    return { dateStr: '', day: date.getDay(), hour: date.getHours() };
+  }
+};
+
 const calculateDuration = (start, end, breakMins = 0) => {
   if (!start || !end) return 0;
   try {
@@ -241,23 +257,8 @@ const calculateTicketTotal = (opts) => {
 
     const targetTZ = (ctzParam && ctzParam !== 'Ticket Local') ? ctzParam : (tzParam || Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-    const getZonedInfo = (date) => {
-      try {
-        const parts = new Intl.DateTimeFormat('en-US', {
-          timeZone: targetTZ,
-          hour12: false,
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit'
-        }).formatToParts(date).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
-        const localDay = new Date(`${parts.year}-${parts.month}-${parts.day}`).getDay();
-        return { dateStr: `${parts.year}-${parts.month}-${parts.day}`, day: localDay, hour: parseInt(parts.hour) };
-      } catch (err) {
-        return { dateStr: '', day: date.getDay(), hour: date.getHours() };
-      }
-    };
-
-    const startInfo = getZonedInfo(s);
-    const endInfo = getZonedInfo(e);
+    const startInfo = getZonedInfo(s, targetTZ);
+    const endInfo = getZonedInfo(e, targetTZ);
 
     const HOLIDAYS_BY_COUNTRY = {
       'India': ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'],
@@ -271,10 +272,10 @@ const calculateTicketTotal = (opts) => {
     
     let startHr = startInfo.hour;
     let endHr = endInfo.hour;
-    if (opts.startTime && opts.startTime.includes('T')) {
+    if (opts.startTime && opts.startTime.includes('T') && !opts.startTime.includes('Z') && !opts.startTime.includes('+')) {
       startHr = parseInt(opts.startTime.split('T')[1].split(':')[0], 10);
     }
-    if (opts.endTime && opts.endTime.includes('T')) {
+    if (opts.endTime && opts.endTime.includes('T') && !opts.endTime.includes('Z') && !opts.endTime.includes('+')) {
       endHr = parseInt(opts.endTime.split('T')[1].split(':')[0], 10);
     }
     const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
@@ -653,8 +654,10 @@ function TicketsPage() {
         let existing = (timeLogs || []).find(l => {
           const rawDate = l.task_date || l.taskDate || '';
           if (!rawDate) return false;
-          const dateOnly = rawDate.toString().split('T')[0].split(' ')[0].trim();
-          return dateOnly === d;
+          const parsed = parseWallClockDate(rawDate);
+          if (isNaN(parsed.getTime())) return false;
+          const zoned = getZonedInfo(parsed, timezone);
+          return zoned.dateStr === d;
         });
 
         const dObj = parseWallClockDate(d);

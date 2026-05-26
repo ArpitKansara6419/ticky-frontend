@@ -448,8 +448,8 @@ function LeadsPage() {
       // Wall-clock hour extraction for robustness
       let startHr = startInfo.hour;
       let endHr = endInfo.hour;
-      if (startTime.includes('T')) startHr = parseInt(startTime.split('T')[1].split(':')[0], 10);
-      if (endTime.includes('T')) endHr = parseInt(endTime.split('T')[1].split(':')[0], 10);
+      if (startTime.includes('T') && !startTime.includes('Z') && !startTime.includes('+')) startHr = parseInt(startTime.split('T')[1].split(':')[0], 10);
+      if (endTime.includes('T') && !endTime.includes('Z') && !endTime.includes('+')) endHr = parseInt(endTime.split('T')[1].split(':')[0], 10);
 
       const isWeekend = (startInfo.day === 0 || startInfo.day === 6 || endInfo.day === 0 || endInfo.day === 6);
       const PUBLIC_HOLIDAYS = ['2026-01-26', '2026-03-08', '2026-03-25', '2026-04-11', '2026-04-14', '2026-04-21', '2026-05-01', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-12', '2026-10-31', '2026-11-01', '2026-12-25'];
