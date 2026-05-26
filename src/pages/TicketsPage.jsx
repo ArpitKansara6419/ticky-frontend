@@ -662,8 +662,8 @@ function TicketsPage() {
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
 
-        // If it's a holiday and status is 'Pending', treat the times as null/empty (not worked)
-        if (isHoliday && existing && existing.status === 'Pending') {
+        // If it's a holiday OR weekend and status is 'Pending', treat as null/not worked
+        if ((isHoliday || isWeekend) && existing && existing.status === 'Pending') {
           existing = { ...existing, start_time: null, startTime: null, end_time: null, endTime: null };
         }
 
