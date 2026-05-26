@@ -2269,7 +2269,7 @@ function TicketsPage() {
       city: t.city || '',
       country: t.country || '',
       zipCode: t.zip_code || t.zipCode || '',
-      timezone: t.timezone || '',
+      timezone: t.timezone || 'Asia/Kolkata',
       pocDetails: t.poc_details || t.pocDetails || '',
       reDetails: t.re_details || t.reDetails || '',
       callInvites: t.call_invites || t.callInvites || '',
@@ -2338,7 +2338,7 @@ function TicketsPage() {
     setCity(normalized.city || '')
     setCountry(normalized.country || '')
     setZipCode(normalized.zipCode || '')
-    setTimezone(normalized.timezone || '')
+    setTimezone(normalized.timezone || 'Asia/Kolkata')
     setPocDetails(normalized.pocDetails || '')
     setReDetails(normalized.reDetails || '')
     setCallInvites(normalized.callInvites || '')
@@ -2502,7 +2502,7 @@ function TicketsPage() {
         setCity(parsedLead.city || '')
         setCountry(parsedLead.country || '')
         setZipCode(parsedLead.zipCode || '')
-        setTimezone(parsedLead.timezone || '')
+        setTimezone(parsedLead.timezone || 'Asia/Kolkata')
         setLatitude(parsedLead.latitude || null)
         setLongitude(parsedLead.longitude || null)
 
@@ -2602,7 +2602,7 @@ function TicketsPage() {
       setCity(lead.city || '')
       setCountry(lead.country || '')
       setZipCode(lead.zipCode || '')
-      setTimezone(lead.timezone || '')
+      setTimezone(lead.timezone || 'Asia/Kolkata')
       setTools(lead.toolsRequired || '')
       setCurrency(lead.currency || 'USD')
       setHourlyRate(lead.hourlyRate != null ? String(lead.hourlyRate) : '')
