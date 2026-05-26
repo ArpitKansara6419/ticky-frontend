@@ -4017,7 +4017,7 @@ function TicketsPage() {
                                 const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
                                 const isHoliday = activeHols.includes(log.logDateStr);
                                 const isAutoGen = !log.status || log.status === 'Pending';
-                                const isSkippedDay = (isWeekend || isHoliday) && isAutoGen && !log.start_time && !log.end_time;
+                                const isSkippedDay = (isWeekend || isHoliday) && isAutoGen;
 
                                 const displayIn = log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : (ticket.taskTime || '09:00');
                                 const displayOut = log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : '17:00';
