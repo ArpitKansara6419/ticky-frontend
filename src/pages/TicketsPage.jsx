@@ -662,8 +662,10 @@ function TicketsPage() {
         const activeHols = HOLIDAYS_CALC[country] || HOLIDAYS_CALC['India'] || [];
         const isHoliday = activeHols.includes(d);
 
-        // If it's a holiday OR weekend and status is 'Pending', treat as null/not worked
-        if ((isHoliday || isWeekend) && existing && existing.status === 'Pending') {
+        // Auto-generated weekend/holiday logs have status=null — treat as not worked.
+        // Only count if engineer confirmed work (non-null, non-Pending status).
+        const isAutoGen = !existing?.status || existing.status === 'Pending';
+        if ((isHoliday || isWeekend) && isAutoGen) {
           existing = { ...existing, start_time: null, startTime: null, end_time: null, endTime: null };
         }
 
@@ -3758,7 +3760,8 @@ function TicketsPage() {
                                     const isHoliday = activeHols.includes(dStr);
                                     let start_time = l.start_time;
                                     let end_time = l.end_time;
-                                    if ((isHoliday || isWeekend) && l.status === 'Pending') {
+                                    const isAutoGenBadge = !l.status || l.status === 'Pending';
+                                    if ((isHoliday || isWeekend) && isAutoGenBadge) {
                                       start_time = null;
                                       end_time = null;
                                     }
