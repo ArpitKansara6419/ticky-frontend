@@ -462,7 +462,7 @@ function LeadsPage() {
       const isHoliday = PUBLIC_HOLIDAYS.includes(startInfo.dateStr) || PUBLIC_HOLIDAYS.includes(endInfo.dateStr);
       const isSpecialDay = isWeekend || isHoliday;
 
-      const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
+      const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0 && !isWeekend && !isHoliday;
 
       let base = 0, ot = 0, ooh = 0, special = 0;
 

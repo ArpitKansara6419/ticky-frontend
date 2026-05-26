@@ -280,7 +280,7 @@ const calculateTicketTotal = (opts) => {
       const parts = opts.endTime.split(/[T ]/);
       if (parts[1]) endHr = parseInt(parts[1].split(':')[0], 10);
     }
-    const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
+    const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0 && !isWeekend && !isHoliday;
 
     const customOTRate = parseFloat(otParam) || (hr * 1.5);
     const customOOHRate = parseFloat(oohParam) || (hr * 1.5);
