@@ -164,8 +164,10 @@ const CustomerReceivablePage = () => {
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
 
         // Final protection: if time is not explicitly logged, default to 8 hours max.
-        let hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
+        const rawDiffMs = e.getTime() - s.getTime();
+        let hrs = isNaN(rawDiffMs) ? 0 : Math.max(0, rawDiffMs / 1000 - brk) / 3600;
         if (!ticket.start_time && !ticket.end_time && hrs > 8) hrs = 8;
+        if (isNaN(hrs)) hrs = 0;
 
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
@@ -284,8 +286,9 @@ const CustomerReceivablePage = () => {
             oohBreakdown,
             specialDayPremium: sp.toFixed(2),
             spBreakdown,
-            totalHours: hrs, 
-            formattedHours: `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
+            totalHours: isNaN(hrs) ? 0 : hrs, 
+            formattedHours: `${Math.floor(isNaN(hrs) ? 0 : hrs)}h ${Math.round(((isNaN(hrs) ? 0 : hrs) % 1) * 60)}m`,
+            totalHoursFormatted: isNaN(hrs) ? '0h 0m' : `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m`,
             travelCost: trav, 
             toolCost: tool,
             isOOH: isO,
@@ -381,7 +384,8 @@ const CustomerReceivablePage = () => {
         const s = new Date(sStr.includes('T') ? sStr : `${sStr}T09:00:00Z`);
         const e = new Date(eStr.includes('T') ? eStr : `${eStr}T17:00:00Z`);
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
-        const hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
+        const rawDiffMsEng = e.getTime() - s.getTime();
+        const hrs = isNaN(rawDiffMsEng) ? 0 : Math.max(0, rawDiffMsEng / 1000 - brk) / 3600;
 
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
@@ -1733,7 +1737,9 @@ const CustomerReceivablePage = () => {
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <div style={{ fontWeight: '700' }}>{bd.formattedHours || '00:00'}</div>
+                                                        <div style={{ fontWeight: '700' }}>
+                                                          {bd.formattedHours && !bd.formattedHours.includes('NaN') ? bd.formattedHours : '0h 0m'}
+                                                        </div>
                                                     </td>
                                                     <td className="text-right">
                                                         <div style={{ fontSize: '12px', color: '#64748b' }}>Travel: {parseFloat(bd.travelCost || 0).toFixed(0)}</div>
