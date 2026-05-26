@@ -272,11 +272,13 @@ const calculateTicketTotal = (opts) => {
     
     let startHr = startInfo.hour;
     let endHr = endInfo.hour;
-    if (opts.startTime && opts.startTime.includes('T') && !opts.startTime.includes('Z') && !opts.startTime.includes('+')) {
-      startHr = parseInt(opts.startTime.split('T')[1].split(':')[0], 10);
+    if (opts.startTime && (opts.startTime.includes('T') || opts.startTime.includes(' ')) && !opts.startTime.includes('Z') && !opts.startTime.includes('+')) {
+      const parts = opts.startTime.split(/[T ]/);
+      if (parts[1]) startHr = parseInt(parts[1].split(':')[0], 10);
     }
-    if (opts.endTime && opts.endTime.includes('T') && !opts.endTime.includes('Z') && !opts.endTime.includes('+')) {
-      endHr = parseInt(opts.endTime.split('T')[1].split(':')[0], 10);
+    if (opts.endTime && (opts.endTime.includes('T') || opts.endTime.includes(' ')) && !opts.endTime.includes('Z') && !opts.endTime.includes('+')) {
+      const parts = opts.endTime.split(/[T ]/);
+      if (parts[1]) endHr = parseInt(parts[1].split(':')[0], 10);
     }
     const workIsOOH = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0;
 

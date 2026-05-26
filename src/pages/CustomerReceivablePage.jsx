@@ -171,8 +171,14 @@ const CustomerReceivablePage = () => {
         const endInfo = getZonedInfo(e);
         let startHr = info.hour;
         let endHr = endInfo.hour;
-        if (sStr.includes('T') && !sStr.includes('Z') && !sStr.includes('+')) startHr = parseInt(sStr.split('T')[1].split(':')[0], 10);
-        if (eStr.includes('T') && !eStr.includes('Z') && !eStr.includes('+')) endHr = parseInt(eStr.split('T')[1].split(':')[0], 10);
+        if ((sStr.includes('T') || sStr.includes(' ')) && !sStr.includes('Z') && !sStr.includes('+')) {
+            const parts = sStr.split(/[T ]/);
+            if (parts[1]) startHr = parseInt(parts[1].split(':')[0], 10);
+        }
+        if ((eStr.includes('T') || eStr.includes(' ')) && !eStr.includes('Z') && !eStr.includes('+')) {
+            const parts = eStr.split(/[T ]/);
+            if (parts[1]) endHr = parseInt(parts[1].split(':')[0], 10);
+        }
 
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
         const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
@@ -381,8 +387,14 @@ const CustomerReceivablePage = () => {
         const endInfo = getZonedInfo(e);
         let startHr = info.hour;
         let endHr = endInfo.hour;
-        if (sStr.includes('T') && !sStr.includes('Z') && !sStr.includes('+')) startHr = parseInt(sStr.split('T')[1].split(':')[0], 10);
-        if (eStr.includes('T') && !eStr.includes('Z') && !eStr.includes('+')) endHr = parseInt(eStr.split('T')[1].split(':')[0], 10);
+        if ((sStr.includes('T') || sStr.includes(' ')) && !sStr.includes('Z') && !sStr.includes('+')) {
+            const parts = sStr.split(/[T ]/);
+            if (parts[1]) startHr = parseInt(parts[1].split(':')[0], 10);
+        }
+        if ((eStr.includes('T') || eStr.includes(' ')) && !eStr.includes('Z') && !eStr.includes('+')) {
+            const parts = eStr.split(/[T ]/);
+            if (parts[1]) endHr = parseInt(parts[1].split(':')[0], 10);
+        }
 
         const isWK = info.day === 0 || info.day === 6 || endInfo.day === 0 || endInfo.day === 6;
         const HOLS = ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'];
