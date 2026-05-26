@@ -3755,14 +3755,14 @@ function TicketsPage() {
                                     const dw = dObj.getUTCDay();
                                     const isWeekend = dw === 0 || dw === 6;
                                     const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
-                                     const isHoliday = activeHols.includes(dStr);
-                                     let start_time = l.start_time;
-                                     let end_time = l.end_time;
-                                     if (isHoliday && l.status === 'Pending') {
-                                       start_time = null;
-                                       end_time = null;
-                                     }
-                                     return { ...l, isWeekend, isHoliday, start_time, end_time };
+                                    const isHoliday = activeHols.includes(dStr);
+                                    let start_time = l.start_time;
+                                    let end_time = l.end_time;
+                                    if ((isHoliday || isWeekend) && l.status === 'Pending') {
+                                      start_time = null;
+                                      end_time = null;
+                                    }
+                                    return { ...l, isWeekend, isHoliday, start_time, end_time };
                                   });
                                   return logsWithInfo.filter(l => {
                                     // Exclude "No Engineer" / Absent days
@@ -4498,16 +4498,39 @@ function TicketsPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                     <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                       <label style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Customer Revenue</label>
-                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{selectedTicket.currency} {parseFloat(selectedTicket.totalCost || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>
+                        {selectedTicket.currency} {parseFloat(
+                          (liveBreakdown && parseFloat(liveBreakdown.grandTotal) > 0)
+                            ? liveBreakdown.grandTotal
+                            : (selectedTicket.totalCost || 0)
+                        ).toFixed(2)}
+                      </div>
                     </div>
                     <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                       <label style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Engineer Payout</label>
-                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#64748b' }}>{selectedTicket.engCurrency || selectedTicket.currency} {parseFloat(selectedTicket.engTotalCost || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#64748b' }}>
+                        {selectedTicket.engCurrency || selectedTicket.currency} {parseFloat(
+                          (payoutLiveBreakdown && parseFloat(payoutLiveBreakdown.grandTotal) > 0)
+                            ? payoutLiveBreakdown.grandTotal
+                            : (selectedTicket.engTotalCost || 0)
+                        ).toFixed(2)}
+                      </div>
                     </div>
                     <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', padding: '12px', borderRadius: '12px', border: '1px solid #10b981' }}>
                       <label style={{ fontSize: '9px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Estimated Margin</label>
                       <div style={{ fontSize: '16px', fontWeight: '900', color: '#059669' }}>
-                        {selectedTicket.currency} {(parseFloat(selectedTicket.totalCost || 0) - parseFloat(selectedTicket.engTotalCost || 0)).toFixed(2)}
+                        {selectedTicket.currency} {(
+                          parseFloat(
+                            (liveBreakdown && parseFloat(liveBreakdown.grandTotal) > 0)
+                              ? liveBreakdown.grandTotal
+                              : (selectedTicket.totalCost || 0)
+                          ) -
+                          parseFloat(
+                            (payoutLiveBreakdown && parseFloat(payoutLiveBreakdown.grandTotal) > 0)
+                              ? payoutLiveBreakdown.grandTotal
+                              : (selectedTicket.engTotalCost || 0)
+                          )
+                        ).toFixed(2)}
                       </div>
                     </div>
                   </div>
