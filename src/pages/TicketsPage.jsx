@@ -38,7 +38,7 @@ const parseWallClockDate = (s) => {
 };
 
 const getZonedInfo = (date, timeZone) => {
-  const targetTZ = timeZone || 'UTC';
+  const targetTZ = timeZone || 'Asia/Kolkata';
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: targetTZ,
@@ -464,7 +464,7 @@ function TicketsPage() {
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
   const [zipCode, setZipCode] = useState('')
-  const [timezone, setTimezone] = useState('')
+  const [timezone, setTimezone] = useState('Asia/Kolkata')
 
   const [pocDetails, setPocDetails] = useState('')
   const [reDetails, setReDetails] = useState('')
