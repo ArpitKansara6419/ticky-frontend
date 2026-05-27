@@ -400,7 +400,7 @@ const EngineerPayoutPage = () => {
                 totalPayout: totalRec.toFixed(2),
                 base: baseC.toFixed(2), ot: otP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
                 baseBreakdown: combinedBaseBD || "N/A", otBreakdown: combinedOtBD || "",
-                totalHours: totalHrs, otHours: totalHrs > 8 ? totalHrs - 8 : 0
+                totalHours: isNaN(totalHrs) ? 0 : totalHrs, otHours: isNaN(totalHrs) ? 0 : (totalHrs > 8 ? totalHrs - 8 : 0)
             };
         }
 
@@ -411,8 +411,10 @@ const EngineerPayoutPage = () => {
         const s = new Date(sStr.includes('T') ? sStr : `${sStr}T09:00:00Z`);
         const e = new Date(eStr.includes('T') ? eStr : `${eStr}T17:00:00Z`);
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
-        let hrs = Math.max(0, (e.getTime() - s.getTime()) / 1000 - brk) / 3600;
+        const rawDiffMsEng = e.getTime() - s.getTime();
+        let hrs = isNaN(rawDiffMsEng) ? 0 : Math.max(0, rawDiffMsEng / 1000 - brk) / 3600;
         if (!ticket.start_time && !ticket.end_time && hrs > 8) hrs = 8;
+        if (isNaN(hrs)) hrs = 0;
 
         const info = getZonedInfo(s);
         const endInfo = getZonedInfo(e);
@@ -479,7 +481,7 @@ const EngineerPayoutPage = () => {
             totalPayout: total.toFixed(2),
             base: base.toFixed(2), ot: ot.toFixed(2), sp: sp.toFixed(2), trav: trav.toFixed(2), tool: tool.toFixed(2),
             baseBreakdown: baseBD, otBreakdown: otBD,
-            totalHours: hrs, otHours: hrs > 8 ? hrs - 8 : 0,
+            totalHours: isNaN(hrs) ? 0 : hrs, otHours: isNaN(hrs) ? 0 : (hrs > 8 ? hrs - 8 : 0),
             isSpecialDay
         };
     };
@@ -663,7 +665,7 @@ const EngineerPayoutPage = () => {
                                             <td>{ticket.task_name}</td>
                                             <td>{(() => {
                                                  const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
-                                                 return pd.totalHours.toFixed(2) + 'h';
+                                                 return (isNaN(pd.totalHours) ? 0 : pd.totalHours).toFixed(2) + 'h';
                                              })()}</td>
                                             <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
                                             <td className="amount-cell">${(() => {
@@ -713,7 +715,7 @@ const EngineerPayoutPage = () => {
                                     <label>WORK DURATION</label>
                                     <p>{(() => {
                                          const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
-                                         return pd.totalHours.toFixed(2);
+                                         return (pd && !isNaN(pd.totalHours) ? pd.totalHours : 0).toFixed(2);
                                      })()} hours</p>
                                 </div>
                                 <div className="detail-item">
