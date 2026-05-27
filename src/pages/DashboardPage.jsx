@@ -13,6 +13,7 @@ import AttendancePage from './AttendancePage'
 import ApprovalsPage from './ApprovalsPage'
 import EngineerPayoutPage from './EngineerPayoutPage'
 import LeavesPage from './LeavesPage'
+import LeaveHistoryPage from './LeaveHistoryPage'
 import {
   FiHome,
   FiUsers,
@@ -750,6 +751,7 @@ function DashboardPage() {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isLeavesOpen, setIsLeavesOpen] = useState(false)
 
   // Theme state
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
@@ -960,18 +962,27 @@ function DashboardPage() {
     if (id === 'profile') {
       setIsProfileModalOpen(true)
       if (isSettingsOpen) setIsSettingsOpen(false)
+      if (isLeavesOpen) setIsLeavesOpen(false)
       return
     }
     // Clear and replace state to prevent persistence of 'openForm' from dashboard cards
     navigate('/dashboard', { state: {}, replace: true })
     setActivePage(id)
     if (isSettingsOpen) setIsSettingsOpen(false)
+    if (isLeavesOpen) setIsLeavesOpen(false)
   }
 
   const handleSettingsItemClick = (id) => {
     navigate('/dashboard', { state: {}, replace: true })
     setActivePage(id)
+    if (isLeavesOpen) setIsLeavesOpen(false)
     // Removed setIsSettingsOpen(false) so menu stays open
+  }
+
+  const handleLeavesItemClick = (id) => {
+    navigate('/dashboard', { state: {}, replace: true })
+    setActivePage(id)
+    if (isSettingsOpen) setIsSettingsOpen(false)
   }
 
   const handleAvatarChange = (event) => {
@@ -1103,8 +1114,12 @@ function DashboardPage() {
 
 
 
-    if (activePage === 'leaves') {
+    if (activePage === 'leaves' || activePage === 'leaves-requests') {
       return <LeavesPage />
+    }
+
+    if (activePage === 'leaves-history') {
+      return <LeaveHistoryPage />
     }
 
     return <GenericPage pageId={activePage} />
@@ -1133,40 +1148,95 @@ function DashboardPage() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Main">
-          {MAIN_MENU_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`sidebar-link ${activePage === item.id ? 'sidebar-link--active' : ''}`}
-              onClick={() => handleMenuClick(item.id)}
-            >
-              <span className="sidebar-link-icon">
-                <item.icon />
-                {item.id === 'approvals' && approvalsCount > 0 && (
-                  <span className="sidebar-badge">{approvalsCount}</span>
-                )}
-                {item.id === 'tickets' && unreadNotesCount > 0 && (
-                  <span className="sidebar-badge sidebar-badge--info">{unreadNotesCount}</span>
-                )}
-                {item.id === 'leaves' && pendingLeavesCount > 0 && (
-                  <span className="sidebar-badge sidebar-badge--warning">{pendingLeavesCount}</span>
-                )}
-              </span>
-              <span className="sidebar-link-label">{item.label}</span>
-            </button>
-          ))}
+          {MAIN_MENU_ITEMS.map((item) => {
+            if (item.id === 'leaves') {
+              return (
+                <div key={item.id} className={`sidebar-settings sidebar-leaves ${isLeavesOpen ? 'sidebar-settings--open' : ''}`}>
+                  <button
+                    type="button"
+                    className={`sidebar-link ${activePage.startsWith('leaves') ? 'sidebar-link--active' : ''}`}
+                    onClick={() => {
+                      setIsLeavesOpen((prev) => !prev);
+                      if (isSettingsOpen) setIsSettingsOpen(false);
+                    }}
+                  >
+                    <span className="sidebar-link-icon">
+                      <FiCoffee />
+                      {pendingLeavesCount > 0 && (
+                        <span className="sidebar-badge sidebar-badge--warning">{pendingLeavesCount}</span>
+                      )}
+                    </span>
+                    <span className="sidebar-link-label">Leaves</span>
+                    <span className="sidebar-chevron" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                      {isLeavesOpen ? <FiChevronUp /> : <FiChevronDown />}
+                    </span>
+                  </button>
+                  {isLeavesOpen && (
+                    <div className="sidebar-settings-dropdown">
+                      <button
+                        type="button"
+                        className={`sidebar-settings-item ${activePage === 'leaves-requests' ? 'sidebar-settings-item--active' : ''}`}
+                        onClick={() => handleLeavesItemClick('leaves-requests')}
+                      >
+                        <span className="sidebar-settings-icon">
+                          <FiCoffee />
+                        </span>
+                        <span>Leave Requests</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`sidebar-settings-item ${activePage === 'leaves-history' ? 'sidebar-settings-item--active' : ''}`}
+                        onClick={() => handleLeavesItemClick('leaves-history')}
+                      >
+                        <span className="sidebar-settings-icon">
+                          <FiClock />
+                        </span>
+                        <span>Leave History</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`sidebar-link ${activePage === item.id ? 'sidebar-link--active' : ''}`}
+                onClick={() => handleMenuClick(item.id)}
+              >
+                <span className="sidebar-link-icon">
+                  <item.icon />
+                  {item.id === 'approvals' && approvalsCount > 0 && (
+                    <span className="sidebar-badge">{approvalsCount}</span>
+                  )}
+                  {item.id === 'tickets' && unreadNotesCount > 0 && (
+                    <span className="sidebar-badge sidebar-badge--info">{unreadNotesCount}</span>
+                  )}
+                </span>
+                <span className="sidebar-link-label">{item.label}</span>
+              </button>
+            )
+          })}
 
           {/* Settings with dropdown */}
           <div className={`sidebar-settings ${isSettingsOpen ? 'sidebar-settings--open' : ''}`}>
             <button
               type="button"
               className={`sidebar-link ${activePage.startsWith('settings') ? 'sidebar-link--active' : ''}`}
-              onClick={() => setIsSettingsOpen((prev) => !prev)}
+              onClick={() => {
+                setIsSettingsOpen((prev) => !prev);
+                if (isLeavesOpen) setIsLeavesOpen(false);
+              }}
             >
               <span className="sidebar-link-icon">
                 <FiSettings />
               </span>
               <span className="sidebar-link-label">Setting</span>
+              <span className="sidebar-chevron" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                {isSettingsOpen ? <FiChevronUp /> : <FiChevronDown />}
+              </span>
             </button>
             {isSettingsOpen && (
               <div className="sidebar-settings-dropdown">

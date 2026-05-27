@@ -1485,3 +1485,38 @@
     padding: 12px 14px;
   }
 }
+
+/* Sidebar Chevron and Accordion Dropdown Enhancements */
+.sidebar-chevron {
+  font-size: 13px;
+  color: var(--sidebar-text);
+  opacity: 0.6;
+  transition: transform var(--transition-speed), opacity var(--transition-speed);
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-link:hover .sidebar-chevron {
+  opacity: 1;
+}
+
+/* Collapsed Sidebar Layout Improvements */
+.dashboard-shell--collapsed .sidebar-chevron {
+  display: none !important;
+}
+
+.dashboard-shell--collapsed .sidebar-settings-dropdown {
+  padding-left: 0;
+  align-items: center;
+}
+
+.dashboard-shell--collapsed .sidebar-settings-dropdown span:not(.sidebar-settings-icon) {
+  display: none !important;
+}
+
+.dashboard-shell--collapsed .sidebar-settings-item {
+  justify-content: center;
+  width: 100%;
+  padding: 8px 0;
+}

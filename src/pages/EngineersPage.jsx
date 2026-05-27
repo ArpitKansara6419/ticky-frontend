@@ -304,7 +304,7 @@ function EngineersPage() {
                     city: eng.city || '',
                     country: eng.country || '',
                     address: eng.address || '',
-                    allocatedAnnualLeaves: eng.allocatedAnnualLeaves || '20',
+                    allocatedAnnualLeaves: eng.allocatedAnnualLeaves != null ? String(eng.allocatedAnnualLeaves) : '20',
                     accumulatedLeaves: eng.accumulatedLeaves !== null && eng.accumulatedLeaves !== undefined ? eng.accumulatedLeaves.toString() : ''
                 });
             }
@@ -755,7 +755,7 @@ function EngineersPage() {
                                             <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', display: 'block', marginBottom: '3px' }}>MONTHLY ACCUMULATION RATE</label>
                                             <div style={{ fontWeight: '600', color: '#10b981', fontSize: '14px' }}>
                                                 {(() => {
-                                                    const leaves = selectedEngineer.allocatedAnnualLeaves;
+                                                    const leaves = selectedEngineer.allocatedAnnualLeaves != null ? String(selectedEngineer.allocatedAnnualLeaves) : '0';
                                                     if (leaves === '20') return '1.66 days';
                                                     if (leaves === '26') return '2.16 days';
                                                     const val = parseFloat(leaves) || 0;

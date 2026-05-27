@@ -193,7 +193,7 @@ const LeavesPage = () => {
     <div className="leaves-page-container">
       <header className="leaves-header">
         <div className="header-text">
-          <h1 className="page-title">{isAdmin ? "Workforce Absence Registry" : "Personal Leave Registry"}</h1>
+          <h1 className="page-title">{isAdmin ? "Workforce Leave Requests" : "Personal Leave Registry"}</h1>
           <p className="page-subtitle">{isAdmin ? "Review, approve, and audit workforce leave requests." : "Track, apply, and manage your leave requests."}</p>
         </div>
         {!isAdmin && (
