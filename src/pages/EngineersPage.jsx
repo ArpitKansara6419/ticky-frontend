@@ -304,7 +304,7 @@ function EngineersPage() {
                     city: eng.city || '',
                     country: eng.country || '',
                     address: eng.address || '',
-                    allocatedAnnualLeaves: eng.allocatedAnnualLeaves != null ? String(eng.allocatedAnnualLeaves) : '20',
+                    allocatedAnnualLeaves: eng.allocatedAnnualLeaves != null ? String(parseFloat(eng.allocatedAnnualLeaves)) : '20',
                     accumulatedLeaves: eng.accumulatedLeaves !== null && eng.accumulatedLeaves !== undefined ? eng.accumulatedLeaves.toString() : ''
                 });
             }
