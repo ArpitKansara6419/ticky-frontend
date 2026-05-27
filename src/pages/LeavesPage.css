@@ -556,10 +556,13 @@
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
 }
 
-/* Document Viewer & Custom Dark Mode */
 .doc-viewer-modal {
   max-width: 900px !important;
   width: 95% !important;
+  height: 85vh !important;
+  max-height: 85vh !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .doc-tabs {
