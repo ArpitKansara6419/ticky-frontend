@@ -6,10 +6,10 @@ import {
   FiFileText,
   FiSearch,
   FiRefreshCw,
-  FiUser,
   FiCalendar,
   FiFilter,
   FiDownload,
+  FiUsers,
 } from 'react-icons/fi';
 import './LeavesPage.css';
 import './LeaveHistoryPage.css';
@@ -18,9 +18,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const LeaveHistoryPage = () => {
   const [leaves, setLeaves] = useState([]);
+  const [engineerSummary, setEngineerSummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [summarySearch, setSummarySearch] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [activeDocModal, setActiveDocModal] = useState(null);
   const [activeDocTab, setActiveDocTab] = useState('PL');
@@ -29,19 +31,26 @@ const LeaveHistoryPage = () => {
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   useEffect(() => {
-    fetchLeaves();
+    fetchAll();
   }, []);
 
-  const fetchLeaves = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/leaves`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
+      const [leavesRes, summaryRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/leaves`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/leaves/engineer-summary`, { credentials: 'include' }),
+      ]);
+      if (leavesRes.ok) {
+        const data = await leavesRes.json();
         setLeaves(data.leaves || []);
       }
+      if (summaryRes.ok) {
+        const data = await summaryRes.json();
+        setEngineerSummary(data.engineers || []);
+      }
     } catch (err) {
-      console.error('Error fetching leaves:', err);
+      console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
@@ -65,7 +74,7 @@ const LeaveHistoryPage = () => {
     }
   };
 
-  // Filter leaves by tab, search and year
+  // Filter leaves
   const filteredLeaves = leaves.filter((l) => {
     const yearMatch = selectedYear === 'all' || (l.start_date && l.start_date.startsWith(selectedYear));
     const searchMatch =
@@ -76,22 +85,22 @@ const LeaveHistoryPage = () => {
     if (!yearMatch || !searchMatch) return false;
 
     switch (activeTab) {
-      case 'pending':
-        return l.status === 'Pending';
-      case 'paid':
-        return l.status === 'Approved' && l.leave_type === 'Paid';
-      case 'unpaid':
-        return l.status === 'Approved' && l.leave_type === 'Unpaid';
-      case 'mixed':
-        return l.status === 'Approved' && l.leave_type === 'Mixed';
-      case 'declined':
-        return l.status === 'Declined';
-      default:
-        return true; // 'all'
+      case 'pending': return l.status === 'Pending';
+      case 'paid': return l.status === 'Approved' && l.leave_type === 'Paid';
+      case 'unpaid': return l.status === 'Approved' && l.leave_type === 'Unpaid';
+      case 'mixed': return l.status === 'Approved' && l.leave_type === 'Mixed';
+      case 'declined': return l.status === 'Declined';
+      default: return true;
     }
   });
 
-  // Summary counts
+  // Filter engineer summary
+  const filteredSummary = engineerSummary.filter((e) =>
+    !summarySearch ||
+    e.engineerName?.toLowerCase().includes(summarySearch.toLowerCase()) ||
+    String(e.engineerId).includes(summarySearch)
+  );
+
   const counts = {
     all: leaves.length,
     pending: leaves.filter((l) => l.status === 'Pending').length,
@@ -129,10 +138,145 @@ const LeaveHistoryPage = () => {
             View and track all engineers' pending, paid, and unpaid leave requests.
           </p>
         </div>
-        <button className="lhp-refresh-btn" onClick={fetchLeaves} title="Refresh">
+        <button className="lhp-refresh-btn" onClick={fetchAll} title="Refresh">
           <FiRefreshCw />
         </button>
       </header>
+
+      {/* ─── SECTION 1: Engineer Leave Balance Summary ─── */}
+      <div className="table-card glass-card" style={{ marginBottom: '28px' }}>
+        <div style={{
+          padding: '18px 24px 14px',
+          borderBottom: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <FiUsers style={{ color: '#6366f1', fontSize: '20px' }} />
+            <span style={{ fontWeight: '700', fontSize: '16px', color: '#1e293b' }}>
+              Engineer Leave Balance Summary
+            </span>
+            <span style={{
+              background: '#ede9fe', color: '#6366f1', borderRadius: '20px',
+              padding: '2px 10px', fontSize: '12px', fontWeight: '600',
+            }}>
+              {filteredSummary.length} Engineers
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px 12px' }}>
+            <FiSearch style={{ color: '#94a3b8', fontSize: '14px' }} />
+            <input
+              type="text"
+              placeholder="Search engineer..."
+              value={summarySearch}
+              onChange={(e) => setSummarySearch(e.target.value)}
+              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', color: '#475569', width: '160px' }}
+            />
+          </div>
+        </div>
+
+        <div className="table-responsive">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th style={{ minWidth: '60px' }}>#</th>
+                <th style={{ minWidth: '80px' }}>Eng. ID</th>
+                <th style={{ minWidth: '160px' }}>Engineer Name</th>
+                <th style={{ minWidth: '120px' }}>Joining Date</th>
+                <th style={{ minWidth: '120px' }}>Allocated Annual Leaves</th>
+                <th style={{ minWidth: '140px' }}>Accumulated Leaves (This Year)</th>
+                <th style={{ minWidth: '160px' }}>Till Date Accumulated Leaves</th>
+                <th style={{ minWidth: '130px' }}>Total Paid Leaves Used</th>
+                <th style={{ minWidth: '140px' }}>Total Unpaid Leaves Used</th>
+                <th style={{ minWidth: '110px' }}>Balance Leave</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSummary.length === 0 ? (
+                <tr>
+                  <td colSpan="10" className="empty-msg">No engineer records found.</td>
+                </tr>
+              ) : (
+                filteredSummary.map((eng, idx) => (
+                  <tr key={eng.engineerId}>
+                    <td style={{ color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{idx + 1}</td>
+                    <td>
+                      <span style={{
+                        background: '#f1f5f9', color: '#6366f1', fontWeight: '700',
+                        fontSize: '12px', padding: '3px 8px', borderRadius: '6px',
+                      }}>
+                        #{eng.engineerId}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="lhp-avatar">
+                          {(eng.engineerName || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>
+                          {eng.engineerName || '—'}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: '13px', color: '#475569' }}>
+                      {formatDate(eng.joiningDate)}
+                    </td>
+                    <td>
+                      <span style={{
+                        fontWeight: '700', color: '#1e293b', background: '#f1f5f9',
+                        padding: '4px 10px', borderRadius: '8px', fontSize: '13px',
+                      }}>
+                        {parseFloat(eng.allocatedAnnualLeaves || 0).toFixed(1)}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        fontWeight: '700', color: '#8b5cf6', background: '#ede9fe',
+                        padding: '4px 10px', borderRadius: '8px', fontSize: '13px',
+                      }}>
+                        {parseFloat(eng.accumulatedLeavesThisYear || 0).toFixed(1)}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        fontWeight: '700', color: '#0369a1', background: '#e0f2fe',
+                        padding: '4px 10px', borderRadius: '8px', fontSize: '13px',
+                      }}>
+                        {parseFloat(eng.tillDateAccumulatedLeaves || 0).toFixed(1)}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ color: '#10b981', fontWeight: '700', fontSize: '13px' }}>
+                        {parseFloat(eng.totalPaidLeavesUsed || 0).toFixed(1)} d
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ color: '#64748b', fontWeight: '700', fontSize: '13px' }}>
+                        {parseFloat(eng.totalUnpaidLeavesUsed || 0).toFixed(1)} d
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        fontWeight: '800', fontSize: '14px',
+                        color: parseFloat(eng.balanceLeave || 0) > 0 ? '#10b981' : '#ef4444',
+                        background: parseFloat(eng.balanceLeave || 0) > 0 ? '#dcfce7' : '#fee2e2',
+                        padding: '4px 10px', borderRadius: '8px',
+                      }}>
+                        {parseFloat(eng.balanceLeave || 0).toFixed(1)} d
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ─── SECTION 2: All Leave Requests ─── */}
 
       {/* Summary Stat Cards */}
       <div className="lhp-stats-row">
@@ -201,9 +345,7 @@ const LeaveHistoryPage = () => {
           >
             <option value="all">All Years</option>
             {yearOptions.map((y) => (
-              <option key={y} value={y.toString()}>
-                {y}
-              </option>
+              <option key={y} value={y.toString()}>{y}</option>
             ))}
           </select>
         </div>
@@ -234,7 +376,7 @@ const LeaveHistoryPage = () => {
         })}
       </div>
 
-      {/* Table */}
+      {/* Leave Requests Table */}
       <div className="table-card glass-card" style={{ marginTop: '0', borderRadius: '0 16px 16px 16px' }}>
         <div className="table-responsive">
           <table className="modern-table">
@@ -288,16 +430,10 @@ const LeaveHistoryPage = () => {
                       </div>
                     </td>
                     <td>
-                      <span
-                        style={{
-                          fontWeight: '700',
-                          color: '#1e293b',
-                          background: '#f1f5f9',
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                        }}
-                      >
+                      <span style={{
+                        fontWeight: '700', color: '#1e293b', background: '#f1f5f9',
+                        padding: '4px 10px', borderRadius: '8px', fontSize: '13px',
+                      }}>
                         {leave.total_days || 0}d
                       </span>
                     </td>
@@ -334,20 +470,12 @@ const LeaveHistoryPage = () => {
           </table>
         </div>
 
-        {/* Table footer */}
         {filteredLeaves.length > 0 && (
-          <div
-            style={{
-              padding: '12px 24px',
-              borderTop: '1px solid #e2e8f0',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '13px',
-              color: '#94a3b8',
-              fontWeight: '500',
-            }}
-          >
+          <div style={{
+            padding: '12px 24px', borderTop: '1px solid #e2e8f0',
+            display: 'flex', justifyContent: 'space-between',
+            alignItems: 'center', fontSize: '13px', color: '#94a3b8', fontWeight: '500',
+          }}>
             <span>
               Showing <strong style={{ color: '#475569' }}>{filteredLeaves.length}</strong> of{' '}
               <strong style={{ color: '#475569' }}>{leaves.length}</strong> records
@@ -362,7 +490,7 @@ const LeaveHistoryPage = () => {
         )}
       </div>
 
-      {/* Signed Documents Viewer Modal */}
+      {/* Signed Documents Modal */}
       {activeDocModal && (
         <div className="modal-backdrop">
           <div className="leave-modal glass-card doc-viewer-modal">
@@ -396,16 +524,10 @@ const LeaveHistoryPage = () => {
               )}
             </div>
 
-            <div
-              style={{
-                flex: 1,
-                minHeight: '450px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                margin: '15px 0',
-              }}
-            >
+            <div style={{
+              flex: 1, minHeight: '450px', border: '1px solid #e2e8f0',
+              borderRadius: '8px', overflow: 'hidden', margin: '15px 0',
+            }}>
               <iframe
                 src={`${API_BASE_URL}/leaves/${activeDocModal.id}/documents/${activeDocTab.toLowerCase()}`}
                 title="Signed Document"
@@ -413,14 +535,7 @@ const LeaveHistoryPage = () => {
               />
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: '15px',
-                marginTop: '15px',
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '15px', marginTop: '15px' }}>
               <button
                 className="apply-leave-btn"
                 onClick={() =>
@@ -435,13 +550,9 @@ const LeaveHistoryPage = () => {
               <button
                 onClick={() => setActiveDocModal(null)}
                 style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#f1f5f9',
-                  color: '#475569',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
+                  padding: '10px 16px', backgroundColor: '#f1f5f9',
+                  color: '#475569', border: 'none', borderRadius: '6px',
+                  cursor: 'pointer', fontWeight: 'bold',
                 }}
               >
                 Close
