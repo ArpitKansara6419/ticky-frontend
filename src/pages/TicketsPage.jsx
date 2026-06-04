@@ -1764,33 +1764,9 @@ function TicketsPage() {
         if (engineers.length === 0) loadDropdowns();
         fetchTicketExtras(ticketId);
 
-        // Auto-recalculate and refresh stored costs whenever the modal is opened
-        // This ensures the Financial Summary always shows the correct engineer payout
-        try {
-          const recalcRes = await fetch(`${API_BASE_URL}/tickets/${ticketId}/recalculate`, {
-            method: 'POST',
-            credentials: 'include'
-          });
-          if (recalcRes.ok) {
-            const recalcData = await recalcRes.json();
-            setSelectedTicket(prev => ({
-              ...prev,
-              totalCost: recalcData.total_cost ?? prev.totalCost,
-              total_cost: recalcData.total_cost ?? prev.total_cost,
-              engTotalCost: recalcData.eng_total_cost ?? prev.engTotalCost,
-              eng_total_cost: recalcData.eng_total_cost ?? prev.eng_total_cost
-            }));
-            setTickets(prev => prev.map(tt => Number(tt.id) === Number(ticketId) ? {
-              ...tt,
-              totalCost: recalcData.total_cost ?? tt.totalCost,
-              total_cost: recalcData.total_cost ?? tt.total_cost,
-              engTotalCost: recalcData.eng_total_cost ?? tt.engTotalCost,
-              eng_total_cost: recalcData.eng_total_cost ?? tt.eng_total_cost
-            } : tt));
-          }
-        } catch (recalcErr) {
-          console.warn('[openTicketModal] recalculate failed silently:', recalcErr);
-        }
+        // NOTE: Auto-recalculate removed - it was overwriting the correct stored total_cost
+        // The live Financial Breakdown in the modal correctly re-calculates client-side.
+
 
         // Pre-collapse all month accordions in View modal so they start closed
         try {
