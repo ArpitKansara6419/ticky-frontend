@@ -1857,6 +1857,7 @@ function TicketsPage() {
         breakTime: Number(inlineBreakTime) || 0,
         status: newStatus,
         taskTime: inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : selectedTicket.taskTime,
+        taskEndTime: inlineEndTime && inlineEndTime.includes('T') ? inlineEndTime.split('T')[1].slice(0, 5) : (selectedTicket.taskEndTime || selectedTicket.task_end_time),
         taskStartDate: inlineStartTime ? inlineStartTime.split('T')[0] : selectedTicket.taskStartDate?.split('T')[0],
         taskEndDate: inlineEndTime ? inlineEndTime.split('T')[0] : selectedTicket.taskEndDate?.split('T')[0]
       };
@@ -3892,7 +3893,7 @@ function TicketsPage() {
                                   </td>
                                   <td>
                                     <div style={{ fontWeight: '800', color: isResolved ? '#94a3b8' : '#1e293b', fontSize: '14px' }}>
-                                      {currency} {parseFloat(ticket.totalCost || 0).toFixed(2)}
+                                      {ticket.currency || 'USD'} {parseFloat(ticket.totalCost || 0).toFixed(2)}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                                       <div style={{ fontSize: '10px', color: isResolved ? '#cbd5e1' : '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
