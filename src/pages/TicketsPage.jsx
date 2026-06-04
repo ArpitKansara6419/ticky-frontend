@@ -1681,7 +1681,8 @@ function TicketsPage() {
               longitude: payload.longitude,
               followUpDate: null,
               statusChangeReason: null,
-              followUpHistory: null
+              followUpHistory: null,
+              syncTickets: false
             })
           });
 
