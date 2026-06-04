@@ -2329,7 +2329,7 @@ function TicketsPage() {
     setTaskStartDate(normalized.taskStartDate)
     setTaskEndDate(normalized.taskEndDate)
     setTaskTime(normalized.taskTime || '09:00')
-    setTaskEndTime(t.task_end_time || (t.endTime && t.endTime.includes('T') ? t.endTime.split('T')[1].slice(0, 5) : '17:00'))
+    setTaskEndTime(t.task_end_time || t.taskEndTime || '17:00')
     setScopeOfWork(normalized.scopeOfWork || '')
     setTools(normalized.tools || '')
     setEngineerName(normalized.engineerName || '')
@@ -4375,7 +4375,7 @@ function TicketsPage() {
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Scheduled Time</label>
                   <span style={{ fontWeight: '700', color: '#1e293b' }}>
-                    {selectedTicket.taskTime} - {selectedTicket.taskEndTime || (selectedTicket.endTime ? selectedTicket.endTime.split('T')[1].slice(0, 5) : '--:--')}
+                    {selectedTicket.taskTime || '--:--'} - {selectedTicket.taskEndTime || selectedTicket.task_end_time || '--:--'}
                   </span>
                 </div>
                 <div className="detail-item">
