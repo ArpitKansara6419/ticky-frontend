@@ -77,12 +77,12 @@ const formatForInput = (dateStr) => {
   if (isNaN(d.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
 
-  // Use UTC components to display exactly what is stored in the DB (wall-clock time)
-  const year = d.getUTCFullYear();
-  const month = pad(d.getUTCMonth() + 1);
-  const day = pad(d.getUTCDate());
-  const hours = pad(d.getUTCHours());
-  const minutes = pad(d.getUTCMinutes());
+  // Use LOCAL time components so UTC-stored times display correctly in IST (matching mobile app)
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
@@ -1065,10 +1065,12 @@ function TicketsPage() {
     setEditingTicketId(null)
   }
 
-  const loadTickets = async () => {
+  const loadTickets = async (isSilent = false) => {
     try {
-      setLoading(true)
-      setError('')
+      if (!isSilent) {
+        setLoading(true)
+        setError('')
+      }
       const res = await fetch(`${API_BASE_URL}/tickets`, { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) {
@@ -1109,7 +1111,7 @@ function TicketsPage() {
       })).sort((a, b) => b.id - a.id))
 
       // COLLAPSE ALL MONTHS BY DEFAULT on load
-      if (data.tickets && data.tickets.length > 0) {
+      if (!isSilent && data.tickets && data.tickets.length > 0) {
         const initialCollapsed = new Set();
         data.tickets.forEach(t => {
           const d = t.task_start_date || t.taskStartDate;
@@ -1124,15 +1126,19 @@ function TicketsPage() {
       }
 
       // Handle initial filter if coming from dashboard/approvals
-      if (location.state?.filterTicketId && !filterTicketIdHandled) {
+      if (!isSilent && location.state?.filterTicketId && !filterTicketIdHandled) {
         setFilterTicketIdHandled(true)
         openTicketModal(location.state.filterTicketId)
       }
     } catch (err) {
       console.error('Load tickets error', err)
-      setError(err.message || 'Unable to load tickets')
+      if (!isSilent) {
+        setError(err.message || 'Unable to load tickets')
+      }
     } finally {
-      setLoading(false)
+      if (!isSilent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -1378,6 +1384,33 @@ function TicketsPage() {
     loadDropdowns() // Ensure engineers are loaded for inline editing
   }, [])
 
+  // ─── Real-time polling: silently refresh every 30s so website auto-updates ───
+  // when the mobile engineer logs Start Work / End Work times
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      // 1. Silently refresh the tickets list
+      loadTickets(true);
+
+      // 2. If a ticket modal is open, also refresh that specific ticket
+      if (isTicketModalOpen && selectedTicket?.id) {
+        try {
+          const r = await fetch(`${API_BASE_URL}/tickets/${selectedTicket.id}`, { credentials: 'include' });
+          if (r.ok) {
+            const data = await r.json();
+            const t = data.ticket || data;
+            const start = t.startTime || t.start_time;
+            const end = t.endTime || t.end_time;
+            setSelectedTicket(prev => ({ ...prev, ...t }));
+            // Update inline time inputs so the Edit Time fields also show correct IST times
+            setInlineStartTime(start ? formatForInput(start) : (t.taskStartDate ? formatForInput(t.taskStartDate) : ''));
+            setInlineEndTime(end ? formatForInput(end) : (t.taskEndDate ? formatForInput(t.taskEndDate) : ''));
+          }
+        } catch (_) { /* ignore poll errors */ }
+      }
+    }, 30000); // every 30 seconds
+    return () => clearInterval(interval);
+  }, [isTicketModalOpen, selectedTicket?.id]);
+
   const filteredTickets = useMemo(() => {
     let result = tickets;
     if (searchTerm) {
@@ -1489,12 +1522,12 @@ function TicketsPage() {
           const d = String(dObj.getUTCDate()).padStart(2, '0');
           finalEndTime = `${y}-${m}-${d}T${taskEndTime.padStart(5, '0')}`;
         } else if (taskEndDate && taskTime) {
-          // Default to finish same day + 8 hours if no explicit end time
-          const d = parseWallClockDate(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
+          // Default to finish same day + 8 hours if no explicit end time (local time)
+          const d = new Date(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
           if (!isNaN(d.getTime())) {
-            d.setUTCHours(d.getUTCHours() + 8);
+            d.setHours(d.getHours() + 8);
             const pad = (n) => String(n).padStart(2, '0');
-            finalEndTime = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+            finalEndTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
           }
         }
       }
@@ -1557,17 +1590,18 @@ function TicketsPage() {
           if (isNaN(d.getTime())) return null;
           return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
         })(),
+        // Convert local IST datetime-local input → UTC for consistent DB storage
         startTime: (() => {
-          const d = parseWallClockDate(finalStartTime);
-          if (isNaN(d.getTime())) return finalStartTime;
-          const timePart = finalStartTime.includes('T') ? finalStartTime.split('T')[1] : (finalStartTime.includes(' ') ? finalStartTime.split(' ')[1] : '00:00:00');
-          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}T${timePart.replace('Z', '')}`;
+          if (!finalStartTime) return null;
+          const d = new Date(finalStartTime); // browser treats "YYYY-MM-DDTHH:mm" as LOCAL (IST)
+          if (isNaN(d.getTime())) return null;
+          return d.toISOString().slice(0, 19).replace('T', ' ');
         })(),
         endTime: (() => {
-          const d = parseWallClockDate(finalEndTime);
-          if (isNaN(d.getTime())) return finalEndTime;
-          const timePart = finalEndTime.includes('T') ? finalEndTime.split('T')[1] : (finalEndTime.includes(' ') ? finalEndTime.split(' ')[1] : '00:00:00');
-          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}T${timePart.replace('Z', '')}`;
+          if (!finalEndTime) return null;
+          const d = new Date(finalEndTime);
+          if (isNaN(d.getTime())) return null;
+          return d.toISOString().slice(0, 19).replace('T', ' ');
         })(),
         breakTime: Number(breakTime) || 0,
         latitude,
@@ -1852,9 +1886,16 @@ function TicketsPage() {
         alert('Shift exceeded 8 hours. Ticket has been automatically placed ON HOLD.');
       }
 
+      // Helper: convert local IST datetime-local string → UTC for DB storage
+      const toUTCStr = (localDT) => {
+        if (!localDT) return null;
+        const d = new Date(localDT); // browser treats "YYYY-MM-DDTHH:mm" as LOCAL (IST)
+        return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 19).replace('T', ' ');
+      };
+
       const payload = {
-        startTime: inlineStartTime,
-        endTime: inlineEndTime,
+        startTime: toUTCStr(inlineStartTime),
+        endTime: toUTCStr(inlineEndTime),
         breakTime: Number(inlineBreakTime) || 0,
         status: newStatus,
         taskTime: inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : selectedTicket.taskTime,
