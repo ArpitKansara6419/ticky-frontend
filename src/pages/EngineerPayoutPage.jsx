@@ -4,7 +4,7 @@ import {
     FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
     FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
     FiBriefcase, FiHash, FiClock, FiEye, FiFilter, FiDownload,
-    FiCreditCard, FiCheck, FiRefreshCw
+    FiCreditCard, FiCheck, FiRefreshCw, FiGlobe
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -502,7 +502,22 @@ const EngineerPayoutPage = () => {
                     </h1>
                     <p>{selectedEngineerId ? 'Displaying unpaid tickets for this engineer' : 'Manage and process payments for engineers'}</p>
                 </div>
-                <div className="header-actions">
+                <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {selectedEngineerId && (
+                        <div className="calc-timezone-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                            <FiGlobe size={14} style={{ color: '#6366f1' }} />
+                            <select 
+                                value={calcTimezone} 
+                                onChange={(e) => setCalcTimezone(e.target.value)}
+                                style={{ background: 'none', border: 'none', fontSize: '13px', fontWeight: '600', color: '#475569', outline: 'none', cursor: 'pointer' }}
+                            >
+                                <option value="Ticket Local">Ticket Local (Auto)</option>
+                                <option value="Asia/Kolkata">India (IST)</option>
+                                <option value="Europe/Warsaw">Poland (CET)</option>
+                                <option value="UTC">UTC (Universal)</option>
+                            </select>
+                        </div>
+                    )}
                     <button 
                         className="btn-refresh" 
                         onClick={selectedEngineerId ? () => fetchEngineerTickets(selectedEngineerId) : fetchEngineersSummary}
@@ -693,86 +708,186 @@ const EngineerPayoutPage = () => {
                 </main>
             )}
 
-            {/* Ticket Detail Modal (Simplified) */}
-            {detailTicket && (
-                <div className="payout-modal-overlay">
-                    <div className="payout-modal">
-                        <div className="modal-header">
-                            <h3>Ticket Detail: #{detailTicket.id}</h3>
-                            <button onClick={handleCloseDetails}><FiX /></button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="detail-grid">
-                                <div className="detail-item">
-                                    <label>TASK</label>
-                                    <p>{detailTicket.task_name}</p>
+            {/* ─── PREMIUM TICKET DETAIL MODAL ─────────────────────────────────── */}
+            {detailTicket && (() => {
+                const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
+                const cur = detailTicket.eng_currency || selectedCurrency || 'USD';
+
+                // Format time helper (UTC-stored → local display)
+                const fmtTime = (str) => {
+                    if (!str) return '—';
+                    const d = new Date(str.includes('T') || str.endsWith('Z') ? str : str.replace(' ', 'T') + 'Z');
+                    if (isNaN(d.getTime())) return str.slice(0, 5);
+                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                };
+                const fmtDate = (str) => {
+                    if (!str) return '—';
+                    const d = new Date(str.includes('T') || str.endsWith('Z') ? str : str.replace(' ', 'T') + 'Z');
+                    if (isNaN(d.getTime())) return str.slice(0, 10);
+                    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                };
+
+                const totalHrs = isNaN(pd.totalHours) ? 0 : parseFloat(pd.totalHours);
+                const breakMins = parseInt(detailTicket.break_time || 0);
+                const hh = Math.floor(totalHrs);
+                const mm = Math.round((totalHrs - hh) * 60);
+                const durationStr = `${hh}h ${mm}m`;
+                const billingType = detailTicket.eng_billing_type || 'Hourly';
+                const payType = detailTicket.eng_pay_type || 'Default';
+
+                return (
+                    <div className="pm-overlay" onClick={handleCloseDetails}>
+                        <div className="pm-modal" onClick={e => e.stopPropagation()}>
+
+                            {/* ── Header ── */}
+                            <div className="pm-header">
+                                <div className="pm-header-left">
+                                    <div className="pm-ticket-chip">
+                                        <FiHash size={12} />
+                                        Ticket {detailTicket.id}
+                                    </div>
+                                    <h2 className="pm-title">{detailTicket.task_name}</h2>
+                                    <p className="pm-subtitle">
+                                        <FiBriefcase size={13} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+                                        {detailTicket.customer_name}
+                                    </p>
                                 </div>
-                                <div className="detail-item">
-                                    <label>CUSTOMER</label>
-                                    <p>{detailTicket.customer_name}</p>
-                                </div>
-                                <div className="detail-item">
-                                    <label>WORK DURATION</label>
-                                    <p>{(() => {
-                                         const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
-                                         return (pd && !isNaN(pd.totalHours) ? pd.totalHours : 0).toFixed(2);
-                                     })()} hours</p>
-                                </div>
-                                <div className="detail-item">
-                                    <label>PAYOUT TYPE</label>
-                                    <p>{detailTicket.eng_pay_type || 'Default'} ({detailTicket.eng_billing_type || 'Hourly'})</p>
-                                </div>
+                                <button className="pm-close-btn" onClick={handleCloseDetails}>
+                                    <FiX size={18} />
+                                </button>
                             </div>
 
-                            <div className="calculation-section">
-                                <label>CALCULATION BREAKDOWN</label>
-                                {(() => {
-                                    const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
-                                    const cur = detailTicket.eng_currency || 'USD';
-                                    return (
-                                        <div className="payout-breakdown">
-                                            <div className="payout-row highlight-bold">
-                                                <div className="payout-label-col">
-                                                    <span>Base Labor Payout</span>
-                                                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '2px' }}>{pd.baseBreakdown}</div>
-                                                </div>
-                                                <span className="payout-amount">{cur} {pd.base}</span>
-                                            </div>
-                                            {parseFloat(pd.ot) > 0 && (
-                                                <div className="payout-row">
-                                                    <div className="payout-label-col">
-                                                        <span>Overtime Payout (OT)</span>
-                                                        <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500', marginTop: '1px' }}>{pd.otBreakdown}</div>
-                                                    </div>
-                                                    <span className="payout-amount">{cur} {pd.ot}</span>
-                                                </div>
-                                            )}
-                                            {parseFloat(pd.trav) > 0 && (
-                                                <div className="payout-row">
-                                                    <span>Travel Reimbursement</span>
-                                                    <span className="payout-amount">{cur} {pd.trav}</span>
-                                                </div>
-                                            )}
-                                            {parseFloat(pd.tool) > 0 && (
-                                                <div className="payout-row">
-                                                    <span>Tool Charges</span>
-                                                    <span className="payout-amount">{cur} {pd.tool}</span>
-                                                </div>
-                                            )}
-                                            <div className="payout-total-line">
-                                                <div className="total-box">
-                                                    <span className="total-label">Net Payout</span>
-                                                    <span className="total-value">{cur} {pd.totalPayout}</span>
-                                                </div>
+                            {/* ── Scrollable Body ── */}
+                            <div className="pm-body">
+
+                                {/* ── Time Timeline ── */}
+                                <div className="pm-section-title"><FiClock size={14} /> Time Log</div>
+                                <div className="pm-timeline">
+                                    <div className="pm-tl-item">
+                                        <div className="pm-tl-icon start"><FiArrowRight /></div>
+                                        <div className="pm-tl-label">Start Time</div>
+                                        <div className="pm-tl-value">{fmtTime(detailTicket.start_time)}</div>
+                                        <div className="pm-tl-date">{fmtDate(detailTicket.start_time)}</div>
+                                    </div>
+                                    <div className="pm-tl-line" />
+                                    <div className="pm-tl-item">
+                                        <div className="pm-tl-icon break"><FiClock /></div>
+                                        <div className="pm-tl-label">Break</div>
+                                        <div className="pm-tl-value">{breakMins > 0 ? `${breakMins}m` : '—'}</div>
+                                        <div className="pm-tl-date">deducted</div>
+                                    </div>
+                                    <div className="pm-tl-line" />
+                                    <div className="pm-tl-item">
+                                        <div className="pm-tl-icon end"><FiCheckCircle /></div>
+                                        <div className="pm-tl-label">End Time</div>
+                                        <div className="pm-tl-value">{fmtTime(detailTicket.end_time)}</div>
+                                        <div className="pm-tl-date">{fmtDate(detailTicket.end_time)}</div>
+                                    </div>
+                                    <div className="pm-tl-line" />
+                                    <div className="pm-tl-item">
+                                        <div className="pm-tl-icon duration"><FiCalendar /></div>
+                                        <div className="pm-tl-label">Duration</div>
+                                        <div className="pm-tl-value duration-val">{durationStr}</div>
+                                        <div className="pm-tl-date">net worked</div>
+                                    </div>
+                                </div>
+
+                                {/* ── Billing Info ── */}
+                                <div className="pm-billing-row">
+                                    <div className="pm-billing-chip">
+                                        <FiCreditCard size={12} />
+                                        {billingType}
+                                    </div>
+                                    <div className="pm-billing-chip secondary">
+                                        {payType} Rate
+                                    </div>
+                                    {pd.isSpecialDay && (
+                                        <div className="pm-billing-chip special">
+                                            ★ Special Day
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ── Payment Breakdown ── */}
+                                <div className="pm-section-title"><FiDollarSign size={14} /> Payment Breakdown</div>
+                                <div className="pm-breakdown">
+
+                                    {/* Base */}
+                                    <div className="pm-bd-row">
+                                        <div className="pm-bd-left">
+                                            <div className="pm-bd-dot base" />
+                                            <div>
+                                                <div className="pm-bd-name">Base Labour Payout</div>
+                                                {pd.baseBreakdown && pd.baseBreakdown !== 'N/A' && (
+                                                    <div className="pm-bd-sub">{pd.baseBreakdown}</div>
+                                                )}
                                             </div>
                                         </div>
-                                    );
-                                })()}
-                            </div>
-                        </div>
+                                        <div className="pm-bd-amount base-color">{cur} {parseFloat(pd.base).toFixed(2)}</div>
+                                    </div>
+
+                                    {/* Overtime */}
+                                    {parseFloat(pd.ot) > 0 && (
+                                        <div className="pm-bd-row">
+                                            <div className="pm-bd-left">
+                                                <div className="pm-bd-dot ot" />
+                                                <div>
+                                                    <div className="pm-bd-name">Overtime (OT)</div>
+                                                    {pd.otBreakdown && <div className="pm-bd-sub">{pd.otBreakdown}</div>}
+                                                </div>
+                                            </div>
+                                            <div className="pm-bd-amount ot-color">{cur} {parseFloat(pd.ot).toFixed(2)}</div>
+                                        </div>
+                                    )}
+
+                                    {/* Special Day */}
+                                    {parseFloat(pd.sp) > 0 && (
+                                        <div className="pm-bd-row">
+                                            <div className="pm-bd-left">
+                                                <div className="pm-bd-dot sp" />
+                                                <div>
+                                                    <div className="pm-bd-name">Special Day Bonus</div>
+                                                    <div className="pm-bd-sub">Weekend / Holiday rate</div>
+                                                </div>
+                                            </div>
+                                            <div className="pm-bd-amount sp-color">{cur} {parseFloat(pd.sp).toFixed(2)}</div>
+                                        </div>
+                                    )}
+
+                                    {/* Travel */}
+                                    {parseFloat(pd.trav) > 0 && (
+                                        <div className="pm-bd-row">
+                                            <div className="pm-bd-left">
+                                                <div className="pm-bd-dot trav" />
+                                                <div className="pm-bd-name">Travel Reimbursement</div>
+                                            </div>
+                                            <div className="pm-bd-amount">{cur} {parseFloat(pd.trav).toFixed(2)}</div>
+                                        </div>
+                                    )}
+
+                                    {/* Divider */}
+                                    <div className="pm-bd-divider" />
+
+                                    {/* Net Total Hero */}
+                                    <div className="pm-net-payout">
+                                        <div className="pm-net-label">
+                                            <FiCheckCircle size={16} />
+                                            Net Payout
+                                        </div>
+                                        <div className="pm-net-amount">
+                                            <span className="pm-net-currency">{cur}</span>
+                                            <span className="pm-net-value">{parseFloat(pd.totalPayout).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+
+                                </div>{/* /pm-breakdown */}
+
+                            </div>{/* /pm-body */}
+                        </div>{/* /pm-modal */}
                     </div>
-                </div>
-            )}
+                );
+            })()}
+
         </div>
     );
 };
