@@ -353,9 +353,7 @@ const calculateTicketTotal = (opts) => {
       else if (isHoliday) special = customHolidayRate;
     }
 
-    if (workIsOOH && bil !== 'Agreed Rate' && bil !== 'Cancellation') {
-      ooh = hrs * customOOHRate;
-    }
+    // OOH is completely disabled per request
     let effectiveBase = Number(base) || 0;
     // Removed the _isLogAggregation zero-out logic for Agreed Rate/Cancellation.
     // We now handle one-time fee logic in the aggregation loop itself if needed,
@@ -376,7 +374,7 @@ const calculateTicketTotal = (opts) => {
       tools: finalTools.toFixed(2),
       travel: finalTravel.toFixed(2),
       grandTotal: grand.toFixed(2),
-      isOOH: workIsOOH,
+      isOOH: false,
       isSpecialDay: isWeekend || isHoliday,
       perDayRate:   opts._perDayRate   != null ? parseFloat(opts._perDayRate).toFixed(2)   : null,
       workingDays:  opts._workingDays  != null ? opts._workingDays                          : null,

@@ -197,7 +197,7 @@ const CustomerReceivablePage = () => {
         const activeHols = HOLIDAYS_CALC[ticket.country] || HOLIDAYS_CALC['India'] || [];
         const isH = activeHols.includes(info.dateStr) || activeHols.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
-        const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0 && !isWK && !isH;
+        const isO = false; // OOH is strictly for engineers, not customer receivable
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
         let baseBreakdown = "";
@@ -426,9 +426,13 @@ const CustomerReceivablePage = () => {
         const HOLS = ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
-        const isO = (startHr < 8 || startHr >= 18 || endHr > 18) && hrs > 0 && !isWK && !isH;
+        const isO = false; // OOH is completely disabled per request
 
         let base = 0, ot = 0, ooh = 0, sp = 0;
+        const customOOHRate = parseFloat(ticket.eng_ooh_rate || ticket.ooh_rate || ticket.oohRate || 0) || (hr * 1.5);
+        if (isO && billingType !== 'Agreed Rate' && billingType !== 'Cancellation') {
+            ooh = hrs * customOOHRate;
+        }
         if (billingType === 'Hourly') {
             const b = Math.max(2, hrs); 
             base = b * hr; 

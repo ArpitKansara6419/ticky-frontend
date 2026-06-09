@@ -289,6 +289,7 @@ const EngineerPayoutPage = () => {
         let hd = parseFloat(ticket.eng_half_day_rate || 0);
         let fd = parseFloat(ticket.eng_full_day_rate || 0);
         let billingType = ticket.eng_billing_type || 'Hourly';
+        let oohRate = parseFloat(ticket.eng_ooh_rate || ticket.oohRate || ticket.ooh_rate || 0);
 
         // FALLBACK: If pay type is DEFAULT, pull rates from the engineer's master profile
         if ((ticket.eng_pay_type === 'Default' || !ticket.eng_pay_type) && engProfile) {
@@ -296,6 +297,7 @@ const EngineerPayoutPage = () => {
             hd = parseFloat(engProfile.half_day_rate ?? engProfile.halfDayRate ?? 0);
             fd = parseFloat(engProfile.full_day_rate ?? engProfile.fullDayRate ?? 0);
             billingType = engProfile.billing_type ?? engProfile.billingType ?? 'Hourly';
+            oohRate = parseFloat(engProfile.ooh_rate ?? engProfile.oohRate ?? 0);
         }
 
         const getZonedInfo = (date) => {
@@ -315,6 +317,7 @@ const EngineerPayoutPage = () => {
             let totalRec = 0; let totalHrs = 0; let baseC = 0; let otP = 0; let oohP = 0; let spP = 0; let travC = 0; let toolC = 0;
             let combinedBaseBD = "";
             let combinedOtBD = "";
+            let combinedOohBD = "";
 
             // Resolve the current target engineer ID. 
             const targetEngId = Number(selectedEngineerId);
@@ -369,6 +372,9 @@ const EngineerPayoutPage = () => {
                 otP += parseFloat(res.ot || 0);
                 if (res.otBreakdown) combinedOtBD += (combinedOtBD ? " + " : "") + res.otBreakdown;
                 
+                oohP += parseFloat(res.ooh || 0);
+                if (res.oohBreakdown) combinedOohBD += (combinedOohBD ? " + " : "") + res.oohBreakdown;
+                
                 spP += parseFloat(res.sp || 0);
                 // Travel and Tool costs are excluded from Engineer Payout
                 travC = 0;
@@ -387,26 +393,20 @@ const EngineerPayoutPage = () => {
                    baseC = parseFloat(ticket.eng_cancellation_fee || 0);
                    combinedBaseBD = "Fixed Cancellation Fee";
                }
-               const tOneTime = 0; // Excluded
-               toolC = 0; // Excluded
-            } else {
-               if (billingType === 'Agreed Rate' || billingType === 'Cancellation') {
-                   // No base for sub-eng on fixed tickets unless logs (which are summed above)
-               }
             }
 
-            totalRec = baseC + otP + spP; // Excluded travC and toolC
+            totalRec = baseC + otP + oohP + spP; // Excluded travC and toolC
             return {
                 totalPayout: totalRec.toFixed(2),
-                base: baseC.toFixed(2), ot: otP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
-                baseBreakdown: combinedBaseBD || "N/A", otBreakdown: combinedOtBD || "",
+                base: baseC.toFixed(2), ot: otP.toFixed(2), ooh: oohP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
+                baseBreakdown: combinedBaseBD || "N/A", otBreakdown: combinedOtBD || "", oohBreakdown: combinedOohBD || "",
                 totalHours: isNaN(totalHrs) ? 0 : totalHrs, otHours: isNaN(totalHrs) ? 0 : (totalHrs > 8 ? totalHrs - 8 : 0)
             };
         }
 
         const sStr = ticket.start_time || ticket.task_start_date;
         const eStr = ticket.end_time || ticket.task_end_date || ticket.start_time;
-        if (!sStr || !eStr) return { totalPayout: "0.00", totalHours: 0, base: "0.00", ot: "0.00", sp: "0.00", trav: "0.00", tool: "0.00" };
+        if (!sStr || !eStr) return { totalPayout: "0.00", totalHours: 0, base: "0.00", ot: "0.00", ooh: "0.00", sp: "0.00", trav: "0.00", tool: "0.00" };
 
         const parseDateSafe = (str, defaultTimeSuffix) => {
             if (!str) return new Date();
@@ -444,14 +444,16 @@ const EngineerPayoutPage = () => {
         const HOLS = ['2026-01-26', '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-05-01', '2026-05-27', '2026-06-26', '2026-08-15', '2026-08-26', '2026-10-02', '2026-10-20', '2026-11-08', '2026-11-24', '2026-12-25'];
         const isH = HOLS.includes(info.dateStr) || HOLS.includes(endInfo.dateStr);
         const isSpecialDay = isWK || isH;
+        const workIsOOH = false; // OOH is completely disabled per request
 
-        let base = 0, ot = 0, sp = 0;
-        let baseBD = "", otBD = "";
+        let base = 0, ot = 0, ooh = 0, sp = 0;
+        let baseBD = "", otBD = "", oohBD = "";
 
         // Custom Rates
         const customOTRate = parseFloat(ticket.eng_overtime_rate) || (hr * 1.5);
         const customWeekendRate = parseFloat(ticket.eng_weekend_rate) || (hr * 2.0);
         const customHolidayRate = parseFloat(ticket.eng_holiday_rate) || (hr * 2.0);
+        const customOOHRate = oohRate || (hr * 1.5);
 
         const bType = billingType.toLowerCase();
         if (bType.includes('hourly') && !bType.includes('half') && !bType.includes('full')) {
@@ -477,6 +479,11 @@ const EngineerPayoutPage = () => {
             base = ticket._is_log_aggregation ? 0 : parseFloat(ticket.eng_cancellation_fee || 0);
         }
 
+        if (workIsOOH && bType !== 'agreed' && bType !== 'cancellation') {
+            ooh = hrs * customOOHRate;
+            oohBD = `${hrs.toFixed(2)}h OOH @ ${customOOHRate.toFixed(2)}`;
+        }
+
         if (isH) {
             sp = customHolidayRate;
         } else if (isWK) {
@@ -487,13 +494,14 @@ const EngineerPayoutPage = () => {
         const trav = 0;
         const tool = 0;
 
-        const total = base + ot + sp + trav + tool;
+        const total = base + ot + ooh + sp + trav + tool;
         return {
             totalPayout: total.toFixed(2),
-            base: base.toFixed(2), ot: ot.toFixed(2), sp: sp.toFixed(2), trav: trav.toFixed(2), tool: tool.toFixed(2),
-            baseBreakdown: baseBD, otBreakdown: otBD,
+            base: base.toFixed(2), ot: ot.toFixed(2), ooh: ooh.toFixed(2), sp: sp.toFixed(2), trav: trav.toFixed(2), tool: tool.toFixed(2),
+            baseBreakdown: baseBD, otBreakdown: otBD, oohBreakdown: oohBD,
             totalHours: isNaN(hrs) ? 0 : hrs, otHours: isNaN(hrs) ? 0 : (hrs > 8 ? hrs - 8 : 0),
-            isSpecialDay
+            isSpecialDay,
+            isOOH: workIsOOH
         };
     };
 
@@ -815,6 +823,11 @@ const EngineerPayoutPage = () => {
                                     {pd.isSpecialDay && (
                                         <div className="pm-billing-chip special">
                                             ★ Special Day
+                                        </div>
+                                    )}
+                                    {pd.isOOH && (
+                                        <div className="pm-billing-chip special" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                                            ☾ Out of Hours
                                         </div>
                                     )}
                                 </div>
