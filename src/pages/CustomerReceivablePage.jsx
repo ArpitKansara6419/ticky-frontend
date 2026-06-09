@@ -158,9 +158,20 @@ const CustomerReceivablePage = () => {
         const eStr = ticket.end_time || ticket.task_end_date || ticket.start_time;
         if (!sStr || !eStr) return {};
 
+        const parseDateSafe = (str, defaultTimeSuffix) => {
+            if (!str) return new Date();
+            if (str.length <= 10) {
+                return new Date(`${str}T${defaultTimeSuffix}Z`);
+            }
+            if (str.includes('T') || str.includes('Z') || str.includes('+')) {
+                return new Date(str);
+            }
+            return new Date(str.replace(' ', 'T') + 'Z');
+        };
+
         // If it's a date-only string from task_start_date, force a standard 8-hour shift default
-        const s = new Date(sStr.includes('T') ? sStr : `${sStr}T09:00:00Z`);
-        const e = new Date(eStr.includes('T') ? eStr : `${eStr}T17:00:00Z`);
+        const s = parseDateSafe(sStr, '09:00:00');
+        const e = parseDateSafe(eStr, '17:00:00');
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
 
         // Final protection: if time is not explicitly logged, default to 8 hours max.
@@ -381,8 +392,19 @@ const CustomerReceivablePage = () => {
         const eStr = ticket.end_time || ticket.task_end_date || ticket.start_time;
         if (!sStr || !eStr) return {};
 
-        const s = new Date(sStr.includes('T') ? sStr : `${sStr}T09:00:00Z`);
-        const e = new Date(eStr.includes('T') ? eStr : `${eStr}T17:00:00Z`);
+        const parseDateSafe = (str, defaultTimeSuffix) => {
+            if (!str) return new Date();
+            if (str.length <= 10) {
+                return new Date(`${str}T${defaultTimeSuffix}Z`);
+            }
+            if (str.includes('T') || str.includes('Z') || str.includes('+')) {
+                return new Date(str);
+            }
+            return new Date(str.replace(' ', 'T') + 'Z');
+        };
+
+        const s = parseDateSafe(sStr, '09:00:00');
+        const e = parseDateSafe(eStr, '17:00:00');
         const brk = parseInt(ticket.break_time || (ticket.break_time_mins ? ticket.break_time_mins * 60 : 0) || 0);
         const rawDiffMsEng = e.getTime() - s.getTime();
         const hrs = isNaN(rawDiffMsEng) ? 0 : Math.max(0, rawDiffMsEng / 1000 - brk) / 3600;
