@@ -19,6 +19,13 @@ const CURRENCIES = [
     { value: 'INR', label: 'INR (₹)' }
 ];
 
+const CURRENCY_SYMBOLS = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    INR: '₹'
+};
+
 const MONTHS = [
     "All Months", "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -35,6 +42,8 @@ const EngineerPayoutPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
     const [processing, setProcessing] = useState(false);
+    const [selectedEngineerProfile, setSelectedEngineerProfile] = useState(null);
+    const [displayCurrencySymbol, setDisplayCurrencySymbol] = useState('$');
 
     // Filter states
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
@@ -62,8 +71,11 @@ const EngineerPayoutPage = () => {
                 
                 // Update stats
                 const totalAmount = data.engineers.reduce((sum, eng) => sum + parseFloat(eng.total_payout_estimated), 0);
+                const uniqueCurrencies = [...new Set((data.engineers || []).map(e => e.currency || 'USD'))];
+                const commonCurrency = uniqueCurrencies.length === 1 ? uniqueCurrencies[0] : 'USD';
+                setDisplayCurrencySymbol(CURRENCY_SYMBOLS[commonCurrency] || '$');
                 setStats({
-                  unpaidCount: data.engineers.length,
+                  unpaidCount: (data.engineers || []).length,
                   totalUnpaidAmount: totalAmount.toFixed(2)
                 });
             }
@@ -82,6 +94,7 @@ const EngineerPayoutPage = () => {
             if (res.ok) {
                 const data = await res.json();
                 setUnpaidTickets(data.tickets || []);
+                setSelectedEngineerProfile(data.engineer || null);
                 setSelectedTicketIds([]); // Clear selection when switching engineers
             }
         } catch (e) {
@@ -283,7 +296,7 @@ const EngineerPayoutPage = () => {
         
         // Resolve the target engineer ID (this is the engineer being viewed/calculated)
         const targetEngId = Number(selectedEngineerId);
-        const engProfile = engineersList.find(e => Number(e.id) === targetEngId);
+        const engProfile = selectedEngineerProfile || engineersList.find(e => Number(e.id) === targetEngId);
 
         let hr = parseFloat(ticket.eng_hourly_rate || 0);
         let hd = parseFloat(ticket.eng_half_day_rate || 0);
@@ -566,7 +579,7 @@ const EngineerPayoutPage = () => {
                         <FiDollarSign className="stat-icon" />
                         <div className="stat-info">
                             <span className="stat-label">Est. Total Payout</span>
-                            <span className="stat-value">${stats.totalUnpaidAmount}</span>
+                            <span className="stat-value">{displayCurrencySymbol}{stats.totalUnpaidAmount}</span>
                         </div>
                     </div>
                 </div>
@@ -626,7 +639,7 @@ const EngineerPayoutPage = () => {
                                                 <span className="badge-ticket">{eng.ticket_count} tickets</span>
                                             </td>
                                             <td className="amount-cell">
-                                                {selectedCurrency} {parseFloat(eng.total_payout_estimated).toFixed(2)}
+                                                {CURRENCY_SYMBOLS[eng.currency || 'USD'] || '$'}{parseFloat(eng.total_payout_estimated).toFixed(2)}
                                             </td>
                                             <td>
                                                 <button className="btn-action" onClick={() => fetchEngineerTickets(eng.id)}>
@@ -650,14 +663,17 @@ const EngineerPayoutPage = () => {
                     <div className="selection-bar">
                         <div className="selection-info">
                             <span className="count">{selectedTicketIds.length} tickets selected</span>
-                            <span className="total">Total to Pay: <strong>{selectedCurrency} {
-                                unpaidTickets
+                            <span className="total">Total to Pay: <strong>{(() => {
+                                const firstSelected = unpaidTickets.find(t => selectedTicketIds.includes(t.id));
+                                const curSymbol = CURRENCY_SYMBOLS[firstSelected?.eng_currency || firstSelected?.currency || 'USD'] || '$';
+                                const total = unpaidTickets
                                     .filter(t => selectedTicketIds.includes(t.id))
                                     .reduce((sum, t) => {
                                         const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
                                         return sum + parseFloat(pd.totalPayout);
-                                    }, 0).toFixed(2)
-                            }</strong></span>
+                                    }, 0).toFixed(2);
+                                return `${curSymbol}${total}`;
+                            })()}</strong></span>
                         </div>
                         <button 
                             className="btn-primary" 
@@ -702,9 +718,10 @@ const EngineerPayoutPage = () => {
                                                  return (isNaN(pd.totalHours) ? 0 : pd.totalHours).toFixed(2) + 'h';
                                              })()}</td>
                                             <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
-                                            <td className="amount-cell">${(() => {
+                                            <td className="amount-cell">{(() => {
                                                  const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
-                                                 return parseFloat(pd.totalPayout || ticket.eng_total_cost || 0).toFixed(2);
+                                                 const curSymbol = CURRENCY_SYMBOLS[ticket.eng_currency || ticket.currency || 'USD'] || '$';
+                                                 return curSymbol + parseFloat(pd.totalPayout || ticket.eng_total_cost || 0).toFixed(2);
                                              })()}</td>
                                             <td>
                                                 <button className="btn-view" onClick={() => handleOpenDetails(ticket)}>
@@ -730,7 +747,8 @@ const EngineerPayoutPage = () => {
             {/* ─── PREMIUM TICKET DETAIL MODAL ─────────────────────────────────── */}
             {detailTicket && (() => {
                 const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
-                const cur = detailTicket.eng_currency || selectedCurrency || 'USD';
+                const curCode = detailTicket.eng_currency || detailTicket.currency || 'USD';
+                const cur = CURRENCY_SYMBOLS[curCode] || '$';
 
                 // Format time helper (UTC-stored → local display)
                 const fmtTime = (str) => {
