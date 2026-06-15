@@ -1374,17 +1374,87 @@ function LeadsPage() {
                           })()}
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            className={`status-badge status-badge--${l.status.toLowerCase()}`}
-                            onClick={() => openStatusChangeModal(l)}
-                          >
-                            {l.status === 'BID' && <FiAlertCircle />}
-                            {l.status === 'Confirm' && <FiCheckCircle />}
-                            {l.status === 'Reschedule' && <FiCalendar />}
-                            {l.status === 'Cancelled' && <FiXCircle />}
-                            {l.status}
-                          </button>
+                          {(() => {
+                            const effectiveStatus = l.existingTicketId && l.ticketStatus ? l.ticketStatus : l.status;
+                            const badgeClass = `status-badge status-badge--${effectiveStatus.toLowerCase().replace(/\s+/g, '-')}`;
+                            
+                            // Icons for status
+                            let statusIcon = null;
+                            let pulseDotClass = "";
+                            
+                            if (effectiveStatus === 'BID') statusIcon = <FiAlertCircle />;
+                            else if (effectiveStatus === 'Confirm') statusIcon = <FiCheckCircle />;
+                            else if (effectiveStatus === 'Reschedule') statusIcon = <FiCalendar />;
+                            else if (effectiveStatus === 'Cancelled') statusIcon = <FiXCircle />;
+                            else if (effectiveStatus === 'Resolved') statusIcon = <FiCheckCircle style={{ color: '#15803d' }} />;
+                            else if (['On Route', 'On Site', 'In Progress'].includes(effectiveStatus)) {
+                              pulseDotClass = `pulse-dot pulse-dot--${effectiveStatus.toLowerCase().replace(/\s+/g, '-')}`;
+                            }
+                            
+                            return (
+                              <div className="status-badge-container">
+                                <button
+                                  type="button"
+                                  className={badgeClass}
+                                  onClick={() => openStatusChangeModal(l)}
+                                >
+                                  {pulseDotClass && <span className={pulseDotClass} />}
+                                  {statusIcon}
+                                  {effectiveStatus}
+                                </button>
+                                
+                                <div className="status-hover-card">
+                                  <div className="status-hover-card-title">Lead & Ticket Details</div>
+                                  <div className="status-hover-card-row">
+                                    <span className="status-hover-card-label">Lead Name:</span>
+                                    <span className="status-hover-card-value">{l.taskName}</span>
+                                  </div>
+                                  <div className="status-hover-card-row">
+                                    <span className="status-hover-card-label">Lead Status:</span>
+                                    <span className="status-hover-card-value" style={{ fontWeight: '700' }}>{l.status}</span>
+                                  </div>
+                                  {l.existingTicketId ? (
+                                    <>
+                                      <div style={{ height: '1px', background: 'var(--border-subtle, #e2e8f0)', margin: '8px 0' }} />
+                                      <div className="status-hover-card-row">
+                                        <span className="status-hover-card-label">Ticket ID:</span>
+                                        <span className="status-hover-card-value" style={{ fontFamily: 'monospace', background: 'var(--input-bg)', padding: '2px 6px', borderRadius: '4px' }}>
+                                          #AIM-T-{String(l.existingTicketId).padStart(3, '0')}
+                                        </span>
+                                      </div>
+                                      <div className="status-hover-card-row">
+                                        <span className="status-hover-card-label">Live Status:</span>
+                                        <span className="status-hover-card-value" style={{ color: 'var(--primary)', fontWeight: '700' }}>{l.ticketStatus}</span>
+                                      </div>
+                                      {l.ticketEngineerName && (
+                                        <div className="status-hover-card-row">
+                                          <span className="status-hover-card-label">Engineer:</span>
+                                          <span className="status-hover-card-value">{l.ticketEngineerName}</span>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                      No ticket generated yet.
+                                    </div>
+                                  )}
+                                  
+                                  {/* Reschedule/Follow-up history summary in hover card */}
+                                  {l.statusChangeReason && (
+                                    <>
+                                      <div style={{ height: '1px', background: 'var(--border-subtle, #e2e8f0)', margin: '8px 0' }} />
+                                      <div className="status-hover-card-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                                        <span className="status-hover-card-label" style={{ marginBottom: '2px' }}>Reason / Remarks:</span>
+                                        <span className="status-hover-card-value" style={{ fontWeight: 'normal', fontSize: '12px', wordBreak: 'break-word', color: 'var(--text-muted)' }}>
+                                          {l.statusChangeReason}
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td>
                           {l.status === 'Confirm' ? (
