@@ -4036,8 +4036,12 @@ function TicketsPage() {
                                 const isAutoGen = !log.status || log.status === 'Pending';
                                 const isSkippedDay = (isWeekend || isHoliday) && isAutoGen;
 
-                                const displayIn = log.start_time ? String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] : (ticket.taskTime || '09:00');
-                                const displayOut = log.end_time ? String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] : '17:00';
+                                const displayIn = log.start_time
+                                  ? ((formatForInput(String(log.start_time)) || '').slice(11, 16) || String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] || ticket.taskTime || '09:00')
+                                  : (ticket.taskTime || '09:00');
+                                const displayOut = log.end_time
+                                  ? ((formatForInput(String(log.end_time)) || '').slice(11, 16) || String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] || '17:00')
+                                  : '17:00';
                                 const rowHrs = isNoEngineerDay || isSkippedDay ? 0 : calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
                                 const rowExceeded = rowHrs > 8;
 
