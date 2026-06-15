@@ -56,6 +56,63 @@ const EngineerPayoutPage = () => {
 
     // Modals
     const [detailTicket, setDetailTicket] = useState(null);
+    const [adjustments, setAdjustments] = useState([]);
+    const [adjLabel, setAdjLabel] = useState('');
+    const [adjAmount, setAdjAmount] = useState('');
+    const [adjType, setAdjType] = useState('add');
+    const [adjLoading, setAdjLoading] = useState(false);
+
+    // Fetch manual adjustments when detailTicket opens
+    useEffect(() => {
+        if (!detailTicket) { setAdjustments([]); return; }
+        fetch(`${API_BASE_URL}/tickets/${detailTicket.id}/payout-adjustments`)
+            .then(r => r.json())
+            .then(d => {
+                const adjs = d.adjustments || [];
+                setAdjustments(adjs);
+                // Sync with the unpaidTickets list so that calculations elsewhere reflect it!
+                setUnpaidTickets(prev => prev.map(t => t.id === detailTicket.id ? { ...t, adjustments: adjs } : t));
+            })
+            .catch(() => setAdjustments([]));
+        // Reset form
+        setAdjLabel(''); setAdjAmount(''); setAdjType('add');
+    }, [detailTicket?.id]);
+
+    const handleAddAdjustment = async () => {
+        if (!adjLabel.trim() || !adjAmount) return;
+        const finalAmount = adjType === 'deduct' ? -Math.abs(parseFloat(adjAmount)) : Math.abs(parseFloat(adjAmount));
+        if (isNaN(finalAmount) || finalAmount === 0) return;
+        setAdjLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/tickets/${detailTicket.id}/payout-adjustments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: adjLabel.trim(), amount: finalAmount })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const newAdj = data.adjustment;
+                setAdjustments(prev => {
+                    const next = [...prev, newAdj];
+                    setUnpaidTickets(prevUnb => prevUnb.map(t => t.id === detailTicket.id ? { ...t, adjustments: next } : t));
+                    return next;
+                });
+                setAdjLabel(''); setAdjAmount('');
+            }
+        } catch (e) { console.error(e); }
+        setAdjLoading(false);
+    };
+
+    const handleDeleteAdjustment = async (adjId) => {
+        try {
+            await fetch(`${API_BASE_URL}/tickets/payout-adjustments/${adjId}`, { method: 'DELETE' });
+            setAdjustments(prev => {
+                const next = prev.filter(a => a.id !== adjId);
+                setUnpaidTickets(prevUnb => prevUnb.map(t => t.id === detailTicket.id ? { ...t, adjustments: next } : t));
+                return next;
+            });
+        } catch (e) { console.error(e); }
+    };
 
     useEffect(() => {
         fetchEngineersSummary();
@@ -220,6 +277,7 @@ const EngineerPayoutPage = () => {
                 const pd = calculateEngineerPayoutFrontend({
                     ...t,
                     time_logs: [], 
+                    adjustments: [], // Exclude adjustments from log row
                     start_time: log.start_time,
                     end_time: log.end_time,
                     task_start_date: log.task_date,
@@ -239,6 +297,27 @@ const EngineerPayoutPage = () => {
                 grandTotal += parseFloat(pd.totalPayout || 0);
             });
         });
+
+        // ── Manual Adjustments ──
+        let totalAdjustments = 0;
+        unpaidTickets.forEach(t => {
+            let adjs = t.adjustments || [];
+            adjs.forEach(adj => {
+                const amt = parseFloat(adj.amount) || 0;
+                totalAdjustments += amt;
+                serviceRows.push([
+                    '', // Date
+                    `Ticket #${t.id} Adj: ${adj.label}`, // Description
+                    '', // In
+                    '', // Out
+                    '', // Base
+                    '', // OT
+                    '', // Bonus/Special
+                    `${amt.toFixed(2)}` // Amount
+                ]);
+            });
+        });
+        grandTotal += totalAdjustments;
 
         autoTable(doc, {
             startY: doc.lastAutoTable.finalY + 8,
@@ -409,11 +488,17 @@ const EngineerPayoutPage = () => {
             }
 
             totalRec = baseC + otP + oohP + spP; // Excluded travC and toolC
+            let adjSum = 0;
+            if (!ticket._is_log_aggregation && ticket.adjustments && Array.isArray(ticket.adjustments)) {
+                adjSum = ticket.adjustments.reduce((sum, adj) => sum + parseFloat(adj.amount || 0), 0);
+            }
+            totalRec += adjSum;
             return {
                 totalPayout: totalRec.toFixed(2),
                 base: baseC.toFixed(2), ot: otP.toFixed(2), ooh: oohP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
                 baseBreakdown: combinedBaseBD || "N/A", otBreakdown: combinedOtBD || "", oohBreakdown: combinedOohBD || "",
-                totalHours: isNaN(totalHrs) ? 0 : totalHrs, otHours: isNaN(totalHrs) ? 0 : (totalHrs > 8 ? totalHrs - 8 : 0)
+                totalHours: isNaN(totalHrs) ? 0 : totalHrs, otHours: isNaN(totalHrs) ? 0 : (totalHrs > 8 ? totalHrs - 8 : 0),
+                adjustmentsSum: adjSum.toFixed(2)
             };
         }
 
@@ -507,14 +592,19 @@ const EngineerPayoutPage = () => {
         const trav = 0;
         const tool = 0;
 
-        const total = base + ot + ooh + sp + trav + tool;
+        let adjSum = 0;
+        if (!ticket._is_log_aggregation && ticket.adjustments && Array.isArray(ticket.adjustments)) {
+            adjSum = ticket.adjustments.reduce((sum, adj) => sum + parseFloat(adj.amount || 0), 0);
+        }
+        const total = base + ot + ooh + sp + trav + tool + adjSum;
         return {
             totalPayout: total.toFixed(2),
             base: base.toFixed(2), ot: ot.toFixed(2), ooh: ooh.toFixed(2), sp: sp.toFixed(2), trav: trav.toFixed(2), tool: tool.toFixed(2),
             baseBreakdown: baseBD, otBreakdown: otBD, oohBreakdown: oohBD,
             totalHours: isNaN(hrs) ? 0 : hrs, otHours: isNaN(hrs) ? 0 : (hrs > 8 ? hrs - 8 : 0),
             isSpecialDay,
-            isOOH: workIsOOH
+            isOOH: workIsOOH,
+            adjustmentsSum: adjSum.toFixed(2)
         };
     };
 
@@ -746,7 +836,8 @@ const EngineerPayoutPage = () => {
 
             {/* ─── PREMIUM TICKET DETAIL MODAL ─────────────────────────────────── */}
             {detailTicket && (() => {
-                const pd = calculateEngineerPayoutFrontend(detailTicket, calcTimezone);
+                const ticketWithAdjustments = { ...detailTicket, adjustments };
+                const pd = calculateEngineerPayoutFrontend(ticketWithAdjustments, calcTimezone);
                 const curCode = detailTicket.eng_currency || detailTicket.currency || 'USD';
                 const cur = CURRENCY_SYMBOLS[curCode] || '$';
 
@@ -909,6 +1000,97 @@ const EngineerPayoutPage = () => {
 
                                     {/* Divider */}
                                     <div className="pm-bd-divider" />
+
+                                    {/* ── Manual Adjustments Panel ─────────────────────── */}
+                                    <div style={{ marginTop: '16px', background: '#fafafa', border: '1.5px dashed #c7d2fe', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>⚙️ Manual Adjustments</div>
+
+                                        {/* Existing adjustments list */}
+                                        {adjustments.length > 0 && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                                                {adjustments.map(adj => (
+                                                    <div key={adj.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: parseFloat(adj.amount) >= 0 ? '#f0fdf4' : '#fef2f2', border: `1px solid ${parseFloat(adj.amount) >= 0 ? '#bbf7d0' : '#fecaca'}`, borderRadius: '8px', padding: '8px 12px' }}>
+                                                        <div>
+                                                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>{adj.label}</div>
+                                                            <div style={{ fontSize: '11px', color: '#64748b' }}>{new Date(adj.created_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <span style={{ fontSize: '14px', fontWeight: '800', color: parseFloat(adj.amount) >= 0 ? '#16a34a' : '#ef4444' }}>
+                                                                {parseFloat(adj.amount) >= 0 ? '+' : ''}{cur} {parseFloat(adj.amount).toFixed(2)}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => handleDeleteAdjustment(adj.id)}
+                                                                title="Delete adjustment"
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px', padding: '2px 4px', borderRadius: '4px', lineHeight: 1 }}
+                                                            >🗑</button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Add new adjustment form */}
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                            <div style={{ flex: '2', minWidth: '140px' }}>
+                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>LABEL / REASON</div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Parking, Penalty, Bonus..."
+                                                    value={adjLabel}
+                                                    onChange={e => setAdjLabel(e.target.value)}
+                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                                />
+                                            </div>
+                                            <div style={{ flex: '1', minWidth: '100px' }}>
+                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>AMOUNT ({cur})</div>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0.00"
+                                                    value={adjAmount}
+                                                    onChange={e => setAdjAmount(e.target.value)}
+                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                                />
+                                            </div>
+                                            <div style={{ minWidth: '100px' }}>
+                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>TYPE</div>
+                                                <select
+                                                    value={adjType}
+                                                    onChange={e => setAdjType(e.target.value)}
+                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', background: '#fff', cursor: 'pointer' }}
+                                                >
+                                                    <option value="add">➕ Add</option>
+                                                    <option value="deduct">➖ Deduct</option>
+                                                </select>
+                                            </div>
+                                            <button
+                                                onClick={handleAddAdjustment}
+                                                disabled={adjLoading || !adjLabel.trim() || !adjAmount}
+                                                style={{ padding: '8px 18px', background: (!adjLabel.trim() || !adjAmount) ? '#e2e8f0' : '#6366f1', color: (!adjLabel.trim() || !adjAmount) ? '#94a3b8' : '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: (!adjLabel.trim() || !adjAmount) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', height: '36px' }}
+                                            >
+                                                {adjLoading ? '...' : '+ Add'}
+                                            </button>
+                                        </div>
+
+                                        {/* Adjusted total summary */}
+                                        {adjustments.length > 0 && (() => {
+                                            const adjTotal = adjustments.reduce((s, a) => s + parseFloat(a.amount), 0);
+                                            const baseTotal = parseFloat(pd.totalPayout) - adjTotal;
+                                            return (
+                                                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #eef2ff, #f5f3ff)', borderRadius: '10px', padding: '12px 16px' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase' }}>Subtotal & Adjustments</div>
+                                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                                            {cur} {baseTotal.toFixed(2)} {adjTotal >= 0 ? '+' : '–'} {cur} {Math.abs(adjTotal).toFixed(2)} adjustments
+                                                        </div>
+                                                    </div>
+                                                    <span style={{ fontSize: '22px', fontWeight: '900', color: parseFloat(pd.totalPayout) >= 0 ? '#6366f1' : '#ef4444' }}>
+                                                        {cur} {parseFloat(pd.totalPayout).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
 
                                     {/* Net Total Hero */}
                                     <div className="pm-net-payout">
