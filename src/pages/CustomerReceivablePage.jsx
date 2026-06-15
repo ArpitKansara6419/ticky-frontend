@@ -504,6 +504,11 @@ const CustomerReceivablePage = () => {
     });
 
     const [detailTicket, setDetailTicket] = useState(null);
+    const [adjustments, setAdjustments] = useState([]);
+    const [adjLabel, setAdjLabel] = useState('');
+    const [adjAmount, setAdjAmount] = useState('');
+    const [adjType, setAdjType] = useState('add'); // 'add' | 'deduct'
+    const [adjLoading, setAdjLoading] = useState(false);
     const [isInvoiceOptionsModalOpen, setIsInvoiceOptionsModalOpen] = useState(false);
     const [invoicePoNumber, setInvoicePoNumber] = useState('');
     const [invoiceServiceNumber, setInvoiceServiceNumber] = useState('');
@@ -513,6 +518,45 @@ const CustomerReceivablePage = () => {
     const [sgstPercent, setSgstPercent] = useState(0);
     const [discountPercent, setDiscountPercent] = useState(0);
     const [selectedFormat, setSelectedFormat] = useState('pdf');
+
+    // ── Adjustments logic ───────────────────────────────────────────────────
+    useEffect(() => {
+        if (!detailTicket) { setAdjustments([]); return; }
+        fetch(`${API_BASE_URL}/tickets/${detailTicket.id}/adjustments`)
+            .then(r => r.json())
+            .then(d => setAdjustments(d.adjustments || []))
+            .catch(() => setAdjustments([]));
+        // Reset form
+        setAdjLabel(''); setAdjAmount(''); setAdjType('add');
+    }, [detailTicket?.id]);
+
+    const handleAddAdjustment = async () => {
+        if (!adjLabel.trim() || !adjAmount) return;
+        const finalAmount = adjType === 'deduct' ? -Math.abs(parseFloat(adjAmount)) : Math.abs(parseFloat(adjAmount));
+        if (isNaN(finalAmount) || finalAmount === 0) return;
+        setAdjLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/tickets/${detailTicket.id}/adjustments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: adjLabel.trim(), amount: finalAmount })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setAdjustments(prev => [...prev, data.adjustment]);
+                setAdjLabel(''); setAdjAmount('');
+            }
+        } catch (e) { console.error(e); }
+        setAdjLoading(false);
+    };
+
+    const handleDeleteAdjustment = async (adjId) => {
+        try {
+            await fetch(`${API_BASE_URL}/tickets/adjustments/${adjId}`, { method: 'DELETE' });
+            setAdjustments(prev => prev.filter(a => a.id !== adjId));
+        } catch (e) { console.error(e); }
+    };
+    // ─────────────────────────────────────────────────────────────────────────
 
     const handleOpenInvoiceOptions = (ticket) => {
         setInvoicePoNumber('');
@@ -2110,16 +2154,104 @@ const CustomerReceivablePage = () => {
                                                 <span>+ {cur} {parseFloat(bd.toolCost).toFixed(2)}</span>
                                             </div>
                                         )}
+                                        {/* Net Receivable base */}
                                         <div className="breakdown-total-premium" style={{ borderTop: '2px solid #6366f1', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <span style={{ color: '#6366f1', fontSize: '18px', fontWeight: '700' }}>Net Receivable</span>
                                             <span style={{ color: '#6366f1', fontSize: '18px', fontWeight: '800' }}>{cur} {bd.totalReceivable}</span>
                                         </div>
-                                        {detailTicket.total_cost && parseFloat(detailTicket.total_cost) !== parseFloat(bd.totalReceivable) && (
-                                            <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8', textAlign: 'right' }}>
-                                                {/* Note Removed */}
-                                            </p>
-                                        )}
                                     </div>
+
+                                    {/* ── Manual Adjustments Panel ─────────────────────── */}
+                                    <div style={{ marginTop: '16px', background: '#fafafa', border: '1.5px dashed #c7d2fe', borderRadius: '14px', padding: '16px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>⚙️ Manual Adjustments</div>
+
+                                        {/* Existing adjustments list */}
+                                        {adjustments.length > 0 && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                                                {adjustments.map(adj => (
+                                                    <div key={adj.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: parseFloat(adj.amount) >= 0 ? '#f0fdf4' : '#fef2f2', border: `1px solid ${parseFloat(adj.amount) >= 0 ? '#bbf7d0' : '#fecaca'}`, borderRadius: '8px', padding: '8px 12px' }}>
+                                                        <div>
+                                                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>{adj.label}</div>
+                                                            <div style={{ fontSize: '11px', color: '#64748b' }}>{new Date(adj.created_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <span style={{ fontSize: '14px', fontWeight: '800', color: parseFloat(adj.amount) >= 0 ? '#16a34a' : '#ef4444' }}>
+                                                                {parseFloat(adj.amount) >= 0 ? '+' : ''}{cur} {parseFloat(adj.amount).toFixed(2)}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => handleDeleteAdjustment(adj.id)}
+                                                                title="Delete adjustment"
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px', padding: '2px 4px', borderRadius: '4px', lineHeight: 1 }}
+                                                            >🗑</button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Add new adjustment form */}
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                            <div style={{ flex: '2', minWidth: '140px' }}>
+                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>LABEL / REASON</div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Parking, Penalty, Bonus..."
+                                                    value={adjLabel}
+                                                    onChange={e => setAdjLabel(e.target.value)}
+                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                                />
+                                            </div>
+                                            <div style={{ flex: '1', minWidth: '100px' }}>
+                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>AMOUNT ({cur})</div>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0.00"
+                                                    value={adjAmount}
+                                                    onChange={e => setAdjAmount(e.target.value)}
+                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                                />
+                                            </div>
+                                            <div style={{ minWidth: '100px' }}>
+                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>TYPE</div>
+                                                <select
+                                                    value={adjType}
+                                                    onChange={e => setAdjType(e.target.value)}
+                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', background: '#fff', cursor: 'pointer' }}
+                                                >
+                                                    <option value="add">➕ Add</option>
+                                                    <option value="deduct">➖ Deduct</option>
+                                                </select>
+                                            </div>
+                                            <button
+                                                onClick={handleAddAdjustment}
+                                                disabled={adjLoading || !adjLabel.trim() || !adjAmount}
+                                                style={{ padding: '8px 18px', background: (!adjLabel.trim() || !adjAmount) ? '#e2e8f0' : '#6366f1', color: (!adjLabel.trim() || !adjAmount) ? '#94a3b8' : '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: (!adjLabel.trim() || !adjAmount) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', height: '36px' }}
+                                            >
+                                                {adjLoading ? '...' : '+ Add'}
+                                            </button>
+                                        </div>
+
+                                        {/* Adjusted total */}
+                                        {adjustments.length > 0 && (() => {
+                                            const adjTotal = adjustments.reduce((s, a) => s + parseFloat(a.amount), 0);
+                                            const finalTotal = parseFloat(bd.totalReceivable) + adjTotal;
+                                            return (
+                                                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #eef2ff, #f5f3ff)', borderRadius: '10px', padding: '12px 16px' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase' }}>Adjusted Total</div>
+                                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                                            {cur} {parseFloat(bd.totalReceivable).toFixed(2)} {adjTotal >= 0 ? '+' : '–'} {cur} {Math.abs(adjTotal).toFixed(2)} adjustments
+                                                        </div>
+                                                    </div>
+                                                    <span style={{ fontSize: '22px', fontWeight: '900', color: finalTotal >= 0 ? '#6366f1' : '#ef4444' }}>
+                                                        {cur} {finalTotal.toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                    {/* ─────────────────────────────────────────────────── */}
                                 </div>
 
                                 {/* Scope of Work */}
