@@ -144,6 +144,12 @@ const CustomerReceivablePage = () => {
                 baseC = parseFloat(dummy.baseCost || 0);
             }
             totalRec = baseC + otP + oohP + spP + travC + toolC;
+            if (!ticket.is_recursive_call) {
+                let adjs = [];
+                try { adjs = typeof ticket.adjustments === 'string' ? JSON.parse(ticket.adjustments) : (ticket.adjustments || []); } catch (e) {}
+                const adjSum = adjs.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0);
+                totalRec += adjSum;
+            }
             return {
                 totalReceivable: totalRec.toFixed(2),
                 baseCost: baseC.toFixed(2), baseBreakdown: `Aggregate of ${logs.length} days`,
@@ -285,6 +291,12 @@ const CustomerReceivablePage = () => {
         // Always use live calculation to ensure correctness, especially after fixing the 0.06 bug.
         // If we need to support manual overrides in the future, we can re-add prioritization logic here.
         let finalReceivable = total;
+        if (!ticket.is_recursive_call) {
+            let adjs = [];
+            try { adjs = typeof ticket.adjustments === 'string' ? JSON.parse(ticket.adjustments) : (ticket.adjustments || []); } catch (e) {}
+            const adjSum = adjs.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0);
+            finalReceivable += adjSum;
+        }
         let billingGap = 0;
 
         return {
@@ -524,7 +536,11 @@ const CustomerReceivablePage = () => {
         if (!detailTicket) { setAdjustments([]); return; }
         fetch(`${API_BASE_URL}/tickets/${detailTicket.id}/adjustments`)
             .then(r => r.json())
-            .then(d => setAdjustments(d.adjustments || []))
+            .then(d => {
+                const adjs = d.adjustments || [];
+                setAdjustments(adjs);
+                setUnbilledList(prev => prev.map(t => t.id === detailTicket.id ? { ...t, adjustments: adjs } : t));
+            })
             .catch(() => setAdjustments([]));
         // Reset form
         setAdjLabel(''); setAdjAmount(''); setAdjType('add');
@@ -543,7 +559,12 @@ const CustomerReceivablePage = () => {
             });
             if (res.ok) {
                 const data = await res.json();
-                setAdjustments(prev => [...prev, data.adjustment]);
+                const newAdj = data.adjustment;
+                setAdjustments(prev => {
+                    const next = [...prev, newAdj];
+                    setUnbilledList(prevUnb => prevUnb.map(t => t.id === detailTicket.id ? { ...t, adjustments: next } : t));
+                    return next;
+                });
                 setAdjLabel(''); setAdjAmount('');
             }
         } catch (e) { console.error(e); }
@@ -553,7 +574,11 @@ const CustomerReceivablePage = () => {
     const handleDeleteAdjustment = async (adjId) => {
         try {
             await fetch(`${API_BASE_URL}/tickets/adjustments/${adjId}`, { method: 'DELETE' });
-            setAdjustments(prev => prev.filter(a => a.id !== adjId));
+            setAdjustments(prev => {
+                const next = prev.filter(a => a.id !== adjId);
+                setUnbilledList(prevUnb => prevUnb.map(t => t.id === detailTicket.id ? { ...t, adjustments: next } : t));
+                return next;
+            });
         } catch (e) { console.error(e); }
     };
     // ─────────────────────────────────────────────────────────────────────────
@@ -714,6 +739,11 @@ const CustomerReceivablePage = () => {
         });
 
         const subtotal = parseFloat(bd.totalReceivable);
+        let adjs = [];
+        try { adjs = typeof ticket.adjustments === 'string' ? JSON.parse(ticket.adjustments) : (ticket.adjustments || []); } catch (e) {}
+        const adjTotal = adjs.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0);
+        const subtotalWithoutAdjs = subtotal - adjTotal;
+
         const discountAmt = subtotal * (discountPercent / 100);
         const taxableAmt = subtotal - discountAmt;
         const taxes = [
@@ -726,13 +756,22 @@ const CustomerReceivablePage = () => {
 
         const footerRows = [];
         if (isInvoice) {
-            footerRows.push(['Subtotal', `${cur} ${subtotal.toFixed(2)}`]);
+            footerRows.push(['Subtotal (Base Work)', `${cur} ${subtotalWithoutAdjs.toFixed(2)}`]);
+            adjs.forEach(adj => {
+                const prefix = parseFloat(adj.amount) >= 0 ? '+' : '';
+                footerRows.push([adj.label, `${prefix}${cur} ${parseFloat(adj.amount).toFixed(2)}`]);
+            });
             if (discountPercent > 0) footerRows.push([`Discount (${discountPercent}%)`, `- ${cur} ${discountAmt.toFixed(2)}`]);
             activeTaxes.forEach(t => {
                 footerRows.push([`${t.name} (${t.pct}%)`, `${cur} ${(taxableAmt * (t.pct / 100)).toFixed(2)}`]);
             });
             footerRows.push(['TOTAL AMOUNT DUE', `${cur} ${grandTotal.toFixed(2)}`]);
         } else {
+            footerRows.push(['Subtotal (Base Work)', `${cur} ${subtotalWithoutAdjs.toFixed(2)}`]);
+            adjs.forEach(adj => {
+                const prefix = parseFloat(adj.amount) >= 0 ? '+' : '';
+                footerRows.push([adj.label, `${prefix}${cur} ${parseFloat(adj.amount).toFixed(2)}`]);
+            });
             footerRows.push(['NET BREAKDOWN TOTAL', `${cur} ${subtotal.toFixed(2)}`]);
         }
 
@@ -912,6 +951,14 @@ const CustomerReceivablePage = () => {
             const cin = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
             const cout = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
 
+            const travelVal = parseFloat(logRes.travelCost || 0);
+            const toolVal = parseFloat(logRes.toolCost || 0);
+            const fullTotal = parseFloat(logRes.totalReceivable || 0);
+
+            grandTotalTools += toolVal;
+            grandTotalTravel += travelVal;
+            grandTotalService += (fullTotal - travelVal - toolVal);
+
             const otherParts = [];
             if (travelVal > 0) otherParts.push(`Travel: ${travelVal.toFixed(2)}`);
             if (toolVal > 0) otherParts.push(`Tool: ${toolVal.toFixed(2)}`);
@@ -938,7 +985,35 @@ const CustomerReceivablePage = () => {
             serviceRows.push(row);
         });
 
-        const finalGrandTotal = grandTotalService + grandTotalTravel + grandTotalTools;
+        // Add manual adjustments as individual rows in the table
+        let totalAdjustments = 0;
+        selectedTickets.forEach(ticket => {
+            let adjs = [];
+            try { adjs = typeof ticket.adjustments === 'string' ? JSON.parse(ticket.adjustments) : (ticket.adjustments || []); } catch (e) {}
+            adjs.forEach(adj => {
+                const amt = parseFloat(adj.amount) || 0;
+                totalAdjustments += amt;
+                let row = [];
+                if (isInvoice) {
+                    row = [
+                        `Tkt #${ticket.id} Adj: ${adj.label}`,
+                        '',
+                        `${amt.toFixed(2)}`
+                    ];
+                } else {
+                    row = [
+                        '', // Date
+                        '', // Type
+                        `Tkt #${ticket.id} Adj: ${adj.label}`,
+                        '', '', '', '', // IN, OUT, RATE, OTHER
+                        `${amt.toFixed(2)}`
+                    ];
+                }
+                serviceRows.push(row);
+            });
+        });
+
+        const finalGrandTotal = grandTotalService + grandTotalTravel + grandTotalTools + totalAdjustments;
 
         const headers = isInvoice
             ? [['DESCRIPTION', 'LOCATION', `AMOUNT (${cur})`]]
@@ -991,6 +1066,26 @@ const CustomerReceivablePage = () => {
                     parseFloat(logRes.travelCost),
                     parseFloat(logRes.toolCost),
                     parseFloat(logRes.totalReceivable)
+                ]);
+            });
+
+            // Factor in manual adjustments
+            let adjs = [];
+            try { adjs = typeof ticket.adjustments === 'string' ? JSON.parse(ticket.adjustments) : (ticket.adjustments || []); } catch (e) {}
+            adjs.forEach(adj => {
+                const amt = parseFloat(adj.amount) || 0;
+                grandTotal += amt;
+                allDataRows.push([
+                    '', // Date
+                    `Tkt #${ticket.id} Adj: ${adj.label}`, // Task
+                    '', // Eng
+                    '', // Loc
+                    '', // In
+                    '', // Out
+                    '', // Rate
+                    '', // Travel
+                    '', // Tools
+                    amt // Amount
                 ]);
             });
         });
@@ -1063,6 +1158,22 @@ const CustomerReceivablePage = () => {
             ];
         });
 
+        const adjRows = [];
+        let adjs = [];
+        try { adjs = typeof ticket.adjustments === 'string' ? JSON.parse(ticket.adjustments) : (ticket.adjustments || []); } catch (e) {}
+        adjs.forEach(adj => {
+            adjRows.push([
+                '',
+                `Adjustment: ${adj.label}`,
+                '',
+                '',
+                '',
+                '',
+                '',
+                parseFloat(adj.amount)
+            ]);
+        });
+
         // ─── Build sheet data ─────────────────────────────────────────────────
         const wsData = [
             // Row 1: Branding
@@ -1080,6 +1191,7 @@ const CustomerReceivablePage = () => {
             ['DATE', 'DESCRIPTION', 'CHECK IN', 'CHECK OUT', `RATE (${cur})`, `TRAVEL (${cur})`, `TOOLS (${cur})`, `AMOUNT (${cur})`],
             // Data rows
             ...dataRows,
+            ...adjRows,
             // Footer total
             [],
             ['', '', '', '', '', '', 'TOTAL', parseFloat(bd.totalReceivable)],
@@ -1120,6 +1232,9 @@ const CustomerReceivablePage = () => {
 
     const generateExcelReport = (ticket, bd) => {
         const cur = ticket.currency || 'USD';
+        let adjs = [];
+        try { adjs = typeof ticket.adjustments === 'string' ? JSON.parse(ticket.adjustments) : (ticket.adjustments || []); } catch (e) {}
+
         const data = [
             ["Awokta Professional Invoice"],
             ["Ticket ID", `#${ticket.id}`],
@@ -1135,10 +1250,17 @@ const CustomerReceivablePage = () => {
             ["OOH Premium", bd.oohBreakdown || '', parseFloat(bd.oohPremium)],
             ["Special Day Premium", bd.spBreakdown || '', parseFloat(bd.specialDayPremium)],
             ["Travel Cost", "", parseFloat(bd.travelCost)],
-            ["Tool Cost", "", parseFloat(bd.toolCost)],
+            ["Tool Cost", "", parseFloat(bd.toolCost)]
+        ];
+
+        adjs.forEach(adj => {
+            data.push([adj.label, "Manual Adjustment", parseFloat(adj.amount)]);
+        });
+
+        data.push(
             [],
             ["NET RECEIVABLE", "", parseFloat(bd.totalReceivable), cur]
-        ];
+        );
 
         const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();

@@ -100,7 +100,14 @@ function DashboardHome({ onNavigate, insightsLayout }) {
     activeLeads: 0,
     currentMonthRevenue: '0.00',
     prevMonthRevenue: '0.00',
+    liveOnRoute: 0,
+    liveOnSite: 0,
+    liveInProgress: 0,
+    liveBreak: 0,
+    liveOnHold: 0,
+    liveApprovalPending: 0,
   })
+  const [lastRefreshed, setLastRefreshed] = useState(new Date())
 
   // Helpers for Calendar
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate()
@@ -149,7 +156,7 @@ function DashboardHome({ onNavigate, insightsLayout }) {
     return date.toLocaleString('default', { month: 'long', year: 'numeric' })
   }
 
-  // Fetch tickets
+  // Fetch tickets + stats — initial + real-time polling every 30s
   useEffect(() => {
     async function fetchTickets() {
       try {
@@ -171,13 +178,22 @@ function DashboardHome({ onNavigate, insightsLayout }) {
       try {
         const res = await fetch(`${API_BASE_URL}/insights/stats`, { credentials: 'include' })
         const data = await res.json()
-        if (res.ok) setStats(data)
+        if (res.ok) {
+          setStats(data)
+          setLastRefreshed(new Date())
+        }
       } catch (err) {
         console.error('Failed to load dashboard stats', err)
       }
     }
     fetchTickets()
     fetchStats()
+    // Poll every 30 seconds for real-time status updates
+    const pollInterval = setInterval(() => {
+      fetchTickets()
+      fetchStats()
+    }, 30000)
+    return () => clearInterval(pollInterval)
   }, [])
 
   // Filter tickets for a specific date (based on range taskStartDate to taskEndDate)
@@ -407,6 +423,40 @@ function DashboardHome({ onNavigate, insightsLayout }) {
           </div>
         )}
       </div>
+
+      {/* ── 3b. Live Ticket Status ───────────────────────────────────────── */}
+      <div className="section-spacer" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '18px 24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse-live 1.5s infinite', flexShrink: 0 }} />
+            <h2 className="section-title" style={{ margin: 0 }}>Live Ticket Status</h2>
+            <span style={{ fontSize: '11px', background: '#fef2f2', color: '#dc2626', padding: '2px 8px', borderRadius: '99px', fontWeight: '700', border: '1px solid #fecaca' }}>REAL-TIME</span>
+          </div>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            🔄 Last updated: {lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+          {[
+            { label: 'On Route', key: 'liveOnRoute',        emoji: '🚗', bg: '#fff7ed', color: '#c2410c', border: '#ffedd5' },
+            { label: 'On Site',  key: 'liveOnSite',         emoji: '📍', bg: '#fdf4ff', color: '#86198f', border: '#fae8ff' },
+            { label: 'In Progress', key: 'liveInProgress',  emoji: '⚙️',  bg: '#f0fdf4', color: '#166534', border: '#dcfce7' },
+            { label: 'Break',    key: 'liveBreak',          emoji: '☕',  bg: '#fef9c3', color: '#854d0e', border: '#fef08a' },
+            { label: 'On Hold',  key: 'liveOnHold',         emoji: '⏸️',  bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' },
+            { label: 'Approval Pending', key: 'liveApprovalPending', emoji: '⏳', bg: '#fff1f2', color: '#be123c', border: '#ffe4e6' },
+          ].map(({ label, key, emoji, bg, color, border }) => {
+            const count = parseInt(stats[key] || tickets.filter(t => t.status === label).length || 0)
+            return (
+              <div key={key} style={{ background: count > 0 ? bg : 'var(--input-bg)', border: `1px solid ${count > 0 ? border : 'var(--border-subtle)'}`, borderRadius: '12px', padding: '12px 14px', transition: 'all 0.3s' }}>
+                <div style={{ fontSize: '18px', marginBottom: '4px' }}>{emoji}</div>
+                <div style={{ fontSize: '22px', fontWeight: '800', color: count > 0 ? color : 'var(--text-muted)', lineHeight: 1 }}>{count}</div>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: count > 0 ? color : 'var(--text-muted)', marginTop: '3px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      {/* ─────────────────────────────────────────────────────────────────── */}
 
       {/* 4. Ticket Calendar */}
       <section className="dashboard-card-split section-spacer">

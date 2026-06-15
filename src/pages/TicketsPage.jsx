@@ -94,6 +94,36 @@ const safeExtractTime = (dtStr) => {
   return match ? `${match[1]}:${match[2]}` : '';
 };
 
+const formatActualTime = (dateStr, timeZone) => {
+  if (!dateStr) return '--:--:--';
+  try {
+    let clean = String(dateStr).trim();
+    if (!clean.includes('Z') && !clean.includes('+') && clean.includes('T')) {
+      clean += 'Z';
+    } else if (!clean.includes('T') && clean.includes(' ')) {
+      clean = clean.replace(' ', 'T') + 'Z';
+    }
+    const d = new Date(clean);
+    if (isNaN(d.getTime())) return '--:--:--';
+    
+    const targetTZ = timeZone || 'Asia/Kolkata';
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: targetTZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).format(d);
+  } catch (err) {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    } catch (e) {
+      return '--:--:--';
+    }
+  }
+};
+
 const STATIC_COUNTRIES = [
   { name: 'United States', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'], code: 'US' },
   { name: 'United Kingdom', timezones: ['Europe/London'], code: 'GB' },
@@ -4402,6 +4432,34 @@ function TicketsPage() {
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>City</label>
                   <span style={{ fontWeight: '700', color: '#1e293b' }}>{selectedTicket.city}, {selectedTicket.country}</span>
+                </div>
+
+                {/* Engineer Departure & Arrival */}
+                <div className="detail-item">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>🚗 Departure Time (On Route)</label>
+                  <span style={{ fontWeight: '700', color: selectedTicket.onRouteTime ? '#f59e0b' : '#64748b' }}>
+                    {selectedTicket.onRouteTime ? formatActualTime(selectedTicket.onRouteTime, selectedTicket.timezone) : '--:--:--'}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>📍 Arrival Time (On Site)</label>
+                  <span style={{ fontWeight: '700', color: selectedTicket.onSiteTime ? '#8b5cf6' : '#64748b' }}>
+                    {selectedTicket.onSiteTime ? formatActualTime(selectedTicket.onSiteTime, selectedTicket.timezone) : '--:--:--'}
+                  </span>
+                </div>
+
+                {/* Engineer Start Work & End Work */}
+                <div className="detail-item">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>⏱️ Engineer Time In (Start Work)</label>
+                  <span style={{ fontWeight: '700', color: selectedTicket.startTime ? '#10b981' : '#64748b' }}>
+                    {selectedTicket.startTime ? formatActualTime(selectedTicket.startTime, selectedTicket.timezone) : '--:--:--'}
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>⏱️ Engineer Time Out (End Work)</label>
+                  <span style={{ fontWeight: '700', color: selectedTicket.endTime ? '#ef4444' : '#64748b' }}>
+                    {selectedTicket.endTime ? formatActualTime(selectedTicket.endTime, selectedTicket.timezone) : '--:--:--'}
+                  </span>
                 </div>
 
                 <div className="detail-item">
