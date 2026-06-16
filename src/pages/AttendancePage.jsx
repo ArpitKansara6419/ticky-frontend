@@ -234,12 +234,62 @@ const AttendancePage = ({ user }) => {
                                     return `${hrs}h`;
                                 };
 
+                                const tickets = r.tickets || [];
+                                let arrivalTicketId = null;
+                                let checkInTicketId = null;
+                                let checkOutTicketId = null;
+                                let lateTicketId = null;
+
+                                if (tickets.length > 0) {
+                                    let earliestArr = null;
+                                    let earliestCI = null;
+                                    let latestCO = null;
+                                    let maxL = -1;
+
+                                    tickets.forEach(t => {
+                                        if (t.arrival_time) {
+                                            const d = new Date(t.arrival_time);
+                                            if (!isNaN(d.getTime())) {
+                                                if (!earliestArr || d < earliestArr) {
+                                                    earliestArr = d;
+                                                    arrivalTicketId = t.ticket_id;
+                                                }
+                                            }
+                                        }
+                                        if (t.check_in_time) {
+                                            const d = new Date(t.check_in_time);
+                                            if (!isNaN(d.getTime())) {
+                                                if (!earliestCI || d < earliestCI) {
+                                                    earliestCI = d;
+                                                    checkInTicketId = t.ticket_id;
+                                                }
+                                            }
+                                        }
+                                        if (t.check_out_time) {
+                                            const d = new Date(t.check_out_time);
+                                            if (!isNaN(d.getTime())) {
+                                                if (!latestCO || d > latestCO) {
+                                                    latestCO = d;
+                                                    checkOutTicketId = t.ticket_id;
+                                                }
+                                            }
+                                        }
+                                        if (t.late_time && t.late_time.includes('late')) {
+                                            const mins = parseInt(t.late_time);
+                                            if (!isNaN(mins) && mins > maxL) {
+                                                maxL = mins;
+                                                lateTicketId = t.ticket_id;
+                                            }
+                                        }
+                                    });
+                                }
+
                                 return (
                                     <React.Fragment key={r.engineer_id || r.id}>
                                         <tr>
                                             <td>
                                                 <div className="user-info" style={{ display: 'flex', alignItems: 'center' }}>
-                                                    {r.tickets && r.tickets.length > 0 ? (
+                                                    {tickets.length > 0 ? (
                                                         <button 
                                                             className="btn-expand" 
                                                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px 0 0', display: 'flex', alignItems: 'center', color: '#6366f1', fontSize: '18px' }}
@@ -254,16 +304,134 @@ const AttendancePage = ({ user }) => {
                                                     <div>
                                                         <span className="name">{r.engineer_name}</span>
                                                         <span className="email">{r.email}</span>
+                                                        {tickets.length > 0 && (
+                                                            <div className="engineer-tickets-list" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px', alignItems: 'center' }}>
+                                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>Tickets:</span>
+                                                                {tickets.map(t => (
+                                                                    <span 
+                                                                        key={t.ticket_id} 
+                                                                        className="tkt-badge-small clickable" 
+                                                                        style={{ 
+                                                                            fontSize: '10px', 
+                                                                            padding: '1px 5px', 
+                                                                            borderRadius: '4px', 
+                                                                            backgroundColor: '#e0e7ff', 
+                                                                            color: '#4338ca', 
+                                                                            fontWeight: '600',
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            fetchTicketDetails(t.ticket_id);
+                                                                        }}
+                                                                    >
+                                                                        #{t.ticket_id}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
                                             <td><span className={`status-badge ${r.status?.toLowerCase()}`}>{r.status}</span></td>
-                                            <td className="mono-text">{arrival ? arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                            <td className="text-secondary">{r.late_time || '-'}</td>
-                                            <td className="mono-text">{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                            <td className="mono-text">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                            <td>{formatBreakTime(r.break_time)}</td>
-                                            <td className={`duration ${duration === 'Active' ? 'text-green' : ''}`}>{duration}</td>
+                                            <td className="mono-text">
+                                                <div>{arrival ? arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</div>
+                                                {arrival && arrivalTicketId && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
+                                                        {tickets.length > 1 ? 'Earliest: ' : 'Ticket: '}
+                                                        <span 
+                                                            style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                fetchTicketDetails(arrivalTicketId);
+                                                            }}
+                                                        >
+                                                            #{arrivalTicketId}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="text-secondary">
+                                                <div>{r.late_time || '-'}</div>
+                                                {r.late_time && r.late_time !== '-' && r.late_time !== 'On Time' && lateTicketId && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
+                                                        {tickets.length > 1 ? 'Max: ' : 'Ticket: '}
+                                                        <span 
+                                                            style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                fetchTicketDetails(lateTicketId);
+                                                            }}
+                                                        >
+                                                            #{lateTicketId}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {r.late_time === 'On Time' && arrivalTicketId && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
+                                                        Ticket: 
+                                                        <span 
+                                                            style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                fetchTicketDetails(arrivalTicketId);
+                                                            }}
+                                                        >
+                                                             #{arrivalTicketId}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="mono-text">
+                                                <div>{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</div>
+                                                {start && checkInTicketId && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
+                                                        {tickets.length > 1 ? 'Earliest: ' : 'Ticket: '}
+                                                        <span 
+                                                            style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                fetchTicketDetails(checkInTicketId);
+                                                            }}
+                                                        >
+                                                            #{checkInTicketId}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="mono-text">
+                                                <div>{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</div>
+                                                {end && checkOutTicketId && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
+                                                        {tickets.length > 1 ? 'Latest: ' : 'Ticket: '}
+                                                        <span 
+                                                            style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                fetchTicketDetails(checkOutTicketId);
+                                                            }}
+                                                        >
+                                                            #{checkOutTicketId}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div>{formatBreakTime(r.break_time)}</div>
+                                                {r.break_time > 0 && tickets.length > 1 && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
+                                                        Total (Sum)
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className={`duration ${duration === 'Active' ? 'text-green' : ''}`}>
+                                                <div>{duration}</div>
+                                                {duration !== '-' && duration !== 'Active' && tickets.length > 1 && (
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
+                                                        Total (Sum)
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td>
                                                 <button className="icon-btn" onClick={async () => {
                                                     // Fetch monthly data for this specific engineer to show in modal
