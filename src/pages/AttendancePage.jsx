@@ -467,68 +467,120 @@ const AttendancePage = ({ user }) => {
                                                 </button>
                                             </td>
                                         </tr>
-                                        {expandedRow === r.engineer_id && r.tickets && r.tickets.length > 0 && (
-                                            <tr className="expanded-attendance-row">
-                                                <td colSpan="9">
-                                                    <div className="expanded-tickets-container">
-                                                        <div className="expanded-tickets-header">
-                                                            <h4>Ticket Activities ({r.tickets.length})</h4>
-                                                        </div>
-                                                        <table className="expanded-tickets-table">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Ticket</th>
-                                                                    <th>Customer</th>
-                                                                    <th>Scheduled</th>
-                                                                    <th>Arrival Time</th>
-                                                                    <th>Late Arrival</th>
-                                                                    <th>Check In</th>
-                                                                    <th>Check Out</th>
-                                                                    <th>Break Time</th>
-                                                                    <th>Duration</th>
-                                                                    <th>Action</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {r.tickets.map(t => {
+                                                            {expandedRow === r.engineer_id && r.tickets && r.tickets.length > 0 && (() => {
+                                            const sortedTickets = [...r.tickets].sort((a, b) => {
+                                                const dateA = a.arrival_time ? new Date(a.arrival_time) : (a.check_in_time ? new Date(a.check_in_time) : null);
+                                                const dateB = b.arrival_time ? new Date(b.arrival_time) : (b.check_in_time ? new Date(b.check_in_time) : null);
+                                                
+                                                if (dateA && !isNaN(dateA.getTime()) && dateB && !isNaN(dateB.getTime())) {
+                                                    return dateA - dateB;
+                                                }
+                                                if (dateA && !isNaN(dateA.getTime())) return -1;
+                                                if (dateB && !isNaN(dateB.getTime())) return 1;
+                                                return 0;
+                                            });
+
+                                            return (
+                                                <tr className="expanded-attendance-row">
+                                                    <td colSpan="9">
+                                                        <div className="expanded-tickets-container">
+                                                            <div className="expanded-tickets-header">
+                                                                <h4>Daily Activities Timeline ({sortedTickets.length})</h4>
+                                                            </div>
+                                                            <div className="attendance-timeline">
+                                                                {sortedTickets.map((t, idx) => {
                                                                     const checkInTime = t.check_in_time ? new Date(t.check_in_time) : null;
                                                                     const checkOutTime = t.check_out_time ? new Date(t.check_out_time) : null;
                                                                     const arrivalTime = t.arrival_time ? new Date(t.arrival_time) : null;
+                                                                    
+                                                                    const isLate = t.late_time?.includes('late');
+                                                                    const isActive = t.duration === 'Active';
+                                                                    const isResolved = t.status?.toLowerCase() === 'resolved';
+
+                                                                    let nodeStatusClass = 'status-default';
+                                                                    if (isActive) nodeStatusClass = 'status-active';
+                                                                    else if (isLate) nodeStatusClass = 'status-late';
+                                                                    else if (isResolved) nodeStatusClass = 'status-resolved';
 
                                                                     return (
-                                                                        <tr key={t.ticket_id}>
-                                                                            <td>
-                                                                                <div className="tkt-info">
-                                                                                    <span className="tkt-id">#{t.ticket_id}</span>
-                                                                                    <span className="tkt-name">{t.task_name}</span>
+                                                                        <div key={t.ticket_id} className="timeline-item">
+                                                                            {/* Left Side: Time Summary */}
+                                                                            <div className="timeline-time-col">
+                                                                                <div className="time-block">
+                                                                                    <span className="time-label">Arrival</span>
+                                                                                    <span className="time-val mono">{arrivalTime ? arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
                                                                                 </div>
-                                                                            </td>
-                                                                            <td>{t.customer_name || '-'}</td>
-                                                                            <td>{t.task_time || '-'}</td>
-                                                                            <td className="mono-text">{arrivalTime ? arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                                                            <td>
-                                                                                <span className={`late-badge ${t.late_time?.includes('late') ? 'is-late' : 'is-ontime'}`}>
-                                                                                    {t.late_time}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="mono-text">{checkInTime ? checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                                                            <td className="mono-text">{checkOutTime ? checkOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                                                            <td>{formatBreakTime(t.break_time)}</td>
-                                                                            <td className={`duration-cell ${t.duration === 'Active' ? 'text-green' : ''}`}>{t.duration}</td>
-                                                                            <td>
-                                                                                <button className="btn-view-ticket" onClick={() => fetchTicketDetails(t.ticket_id)}>
-                                                                                    <FiEye style={{ marginRight: '4px' }} /> View Info
-                                                                                </button>
-                                                                            </td>
-                                                                        </tr>
+                                                                                <div className="time-block">
+                                                                                    <span className="time-label">Work Session</span>
+                                                                                    <span className="time-val mono">
+                                                                                        {checkInTime ? checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                                                                        {' - '}
+                                                                                        {checkOutTime ? checkOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (checkInTime ? 'Active' : '--:--')}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="duration-badge-wrapper">
+                                                                                    <span className={`dur-badge ${isActive ? 'active' : ''}`}>
+                                                                                        <FiClock /> {t.duration}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Middle: Pulse Node and Line */}
+                                                                            <div className="timeline-node-col">
+                                                                                <div className={`timeline-node ${nodeStatusClass}`}>
+                                                                                    <div className="node-inner"></div>
+                                                                                </div>
+                                                                                {idx < sortedTickets.length - 1 && <div className="timeline-connector-line"></div>}
+                                                                            </div>
+
+                                                                            {/* Right Side: Details Card */}
+                                                                            <div className="timeline-details-card">
+                                                                                <div className="card-header">
+                                                                                    <div className="tkt-number-grp">
+                                                                                        <span className="tkt-hash">#{t.ticket_id}</span>
+                                                                                        <span className={`tkt-status-pill ${(t.status || 'open').toLowerCase().replace(' ', '-')}`}>
+                                                                                            {t.status}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <h4 className="tkt-title">{t.task_name}</h4>
+                                                                                </div>
+
+                                                                                <div className="card-body-grid">
+                                                                                    <div className="grid-item">
+                                                                                        <span className="item-label">Customer</span>
+                                                                                        <span className="item-val">{t.customer_name || '-'}</span>
+                                                                                    </div>
+                                                                                    <div className="grid-item">
+                                                                                        <span className="item-label">Scheduled Time</span>
+                                                                                        <span className="item-val">{t.task_time || '-'}</span>
+                                                                                    </div>
+                                                                                    <div className="grid-item">
+                                                                                        <span className="item-label">Arrival Status</span>
+                                                                                        <span className={`item-val late-status ${isLate ? 'late' : 'ontime'}`}>
+                                                                                            {t.late_time}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="grid-item">
+                                                                                        <span className="item-label">Break Duration</span>
+                                                                                        <span className="item-val">{formatBreakTime(t.break_time)}</span>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div className="card-footer">
+                                                                                    <button className="timeline-view-btn" onClick={() => fetchTicketDetails(t.ticket_id)}>
+                                                                                        <FiEye /> View Details
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
                                                                     );
                                                                 })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })()}
                                     </React.Fragment>
                                 );
                             })

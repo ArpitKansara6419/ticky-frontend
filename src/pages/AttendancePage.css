@@ -955,4 +955,311 @@
 .tkt-status-badge.break { background: #fee2e2; color: #b91c1c; }
 .tkt-status-badge.on-route { background: #e0f2fe; color: #0369a1; }
 .tkt-status-badge.on-site { background: #ecfdf5; color: #047857; }
-.tkt-status-badge.approval-pending { background: #fffbeb; color: #b45309; }
+.tkt-status-badge.approval-pending { background: #fffbeb; color: #b45309; }
+
+/* Premium Timeline Expanded Row Styles */
+.attendance-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 8px 0;
+    position: relative;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: stretch;
+    gap: 20px;
+    min-height: 140px;
+}
+
+/* Left Column: Time Summary */
+.timeline-time-col {
+    width: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    text-align: right;
+    padding-right: 12px;
+}
+
+.timeline-time-col .time-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.timeline-time-col .time-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+}
+
+.timeline-time-col .time-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.timeline-time-col .time-val.mono {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.duration-badge-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.dur-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.dur-badge.active {
+    background: var(--success-light);
+    color: #065f46;
+    border-color: #a7f3d0;
+    animation: softPulse 2s infinite;
+}
+
+/* Middle Column: Node and Connector */
+.timeline-node-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 32px;
+}
+
+.timeline-node {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    background: #fff;
+    border: 2px solid #cbd5e1;
+    transition: all 0.3s;
+    margin-top: 24px;
+}
+
+.timeline-node.status-active {
+    border-color: var(--success);
+    box-shadow: 0 0 0 4px var(--success-light);
+}
+
+.timeline-node.status-active .node-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: nodePulse 1.5s infinite;
+}
+
+.timeline-node.status-late {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 4px var(--danger-light);
+}
+
+.timeline-node.status-late .node-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--danger);
+}
+
+.timeline-node.status-resolved {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+.timeline-node.status-resolved .node-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+.timeline-node.status-default .node-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #94a3b8;
+}
+
+.timeline-connector-line {
+    width: 2px;
+    flex-grow: 1;
+    background: linear-gradient(to bottom, #cbd5e1, #e2e8f0);
+    z-index: 1;
+    margin-top: 4px;
+}
+
+/* Right Column: Glassmorphic Details Card */
+.timeline-details-card {
+    flex-grow: 1;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.timeline-details-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+    border-color: #cbd5e1;
+}
+
+.timeline-details-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.timeline-details-card .tkt-number-grp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.timeline-details-card .tkt-hash {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.timeline-details-card .tkt-status-pill {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Status Pill Colors (Sync with ticket status badge) */
+.tkt-status-pill.open { background: #eff6ff; color: #1d4ed8; }
+.tkt-status-pill.in-progress { background: #fef3c7; color: #d97706; }
+.tkt-status-pill.resolved { background: #ecfdf5; color: #047857; }
+.tkt-status-pill.assigned { background: #f3e8ff; color: #7e22ce; }
+.tkt-status-pill.break { background: #fee2e2; color: #b91c1c; }
+.tkt-status-pill.on-route { background: #e0f2fe; color: #0369a1; }
+.tkt-status-pill.on-site { background: #ecfdf5; color: #047857; }
+.tkt-status-pill.approval-pending { background: #fffbeb; color: #b45309; }
+
+.timeline-details-card .tkt-title {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.timeline-details-card .card-body-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.timeline-details-card .grid-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.timeline-details-card .item-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.timeline-details-card .item-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.timeline-details-card .item-val.late-status.late {
+    color: #ef4444;
+}
+
+.timeline-details-card .item-val.late-status.ontime {
+    color: #10b981;
+}
+
+.timeline-details-card .card-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 8px;
+}
+
+.timeline-view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.timeline-view-btn:hover {
+    background: var(--primary-light);
+    border-color: #c7d2fe;
+    color: var(--primary);
+}
+
+/* Animations */
+@keyframes nodePulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+@keyframes softPulse {
+    0% {
+        opacity: 0.9;
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+    100% {
+        opacity: 0.9;
+    }
+}
