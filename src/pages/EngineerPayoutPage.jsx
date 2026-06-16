@@ -362,11 +362,30 @@ const EngineerPayoutPage = () => {
         doc.save(`Payout_Sheet_${engineer.name.replace(/\s+/g, '_')}.pdf`);
     };
 
-    // Filtering logic for the list of engineers
-    const filteredEngineers = engineersList.filter(eng => 
-        eng.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        eng.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter engineers by currency first (for stats)
+    const currencyFilteredEngineers = useMemo(() => {
+        return engineersList.filter(eng => (eng.currency || 'USD') === selectedCurrency);
+    }, [engineersList, selectedCurrency]);
+
+    // Apply search filter for the table display
+    const filteredEngineers = useMemo(() => {
+        return currencyFilteredEngineers.filter(eng => 
+            eng.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            eng.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [currencyFilteredEngineers, searchTerm]);
+
+    const statsForSelectedCurrency = useMemo(() => {
+        const unpaidCount = currencyFilteredEngineers.length;
+        const totalAmount = currencyFilteredEngineers.reduce(
+            (sum, eng) => sum + parseFloat(eng.total_payout_estimated || 0),
+            0
+        );
+        return {
+            unpaidCount,
+            totalUnpaidAmount: totalAmount.toFixed(2)
+        };
+    }, [currencyFilteredEngineers]);
 
     // Proper Calculation Logic for Engineers
     const calculateEngineerPayoutFrontend = (ticket, forcedTZ) => {
@@ -662,7 +681,7 @@ const EngineerPayoutPage = () => {
                         <FiUser className="stat-icon" />
                         <div className="stat-info">
                             <span className="stat-label">Unpaid Engineers</span>
-                            <span className="stat-value">{stats.unpaidCount}</span>
+                            <span className="stat-value">{selectedEngineerId ? 1 : statsForSelectedCurrency.unpaidCount}</span>
                         </div>
                     </div>
                     <div className="stat-card green">
@@ -684,7 +703,7 @@ const EngineerPayoutPage = () => {
                                         const curSymbol = CURRENCY_SYMBOLS[firstTicket?.eng_currency || firstTicket?.currency || 'USD'] || '$';
                                         return `${curSymbol}${total.toFixed(2)}`;
                                     }
-                                    return `${displayCurrencySymbol}${stats.totalUnpaidAmount}`;
+                                    return `${CURRENCY_SYMBOLS[selectedCurrency] || '$'}${statsForSelectedCurrency.totalUnpaidAmount}`;
                                 })()}
                             </span>
                         </div>
