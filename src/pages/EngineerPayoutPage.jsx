@@ -127,7 +127,7 @@ const EngineerPayoutPage = () => {
                 setEngineersList(data.engineers || []);
                 
                 // Update stats
-                const totalAmount = data.engineers.reduce((sum, eng) => sum + parseFloat(eng.total_payout_estimated), 0);
+                const totalAmount = (data.engineers || []).reduce((sum, eng) => sum + parseFloat(eng.total_payout_estimated || 0), 0);
                 const uniqueCurrencies = [...new Set((data.engineers || []).map(e => e.currency || 'USD'))];
                 const commonCurrency = uniqueCurrencies.length === 1 ? uniqueCurrencies[0] : 'USD';
                 setDisplayCurrencySymbol(CURRENCY_SYMBOLS[commonCurrency] || '$');
@@ -669,7 +669,24 @@ const EngineerPayoutPage = () => {
                         <FiDollarSign className="stat-icon" />
                         <div className="stat-info">
                             <span className="stat-label">Est. Total Payout</span>
-                            <span className="stat-value">{displayCurrencySymbol}{stats.totalUnpaidAmount}</span>
+                            <span className="stat-value">
+                                {(() => {
+                                    if (selectedEngineerId && unpaidTickets.length > 0) {
+                                        // Dynamically sum all ticket payouts for this engineer
+                                        const total = unpaidTickets.reduce((sum, t) => {
+                                            const backendAmt = parseFloat(t.eng_total_cost || 0);
+                                            if (backendAmt > 0) return sum + backendAmt;
+                                            // Fallback to frontend calculation
+                                            const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
+                                            return sum + parseFloat(pd.totalPayout || 0);
+                                        }, 0);
+                                        const firstTicket = unpaidTickets[0];
+                                        const curSymbol = CURRENCY_SYMBOLS[firstTicket?.eng_currency || firstTicket?.currency || 'USD'] || '$';
+                                        return `${curSymbol}${total.toFixed(2)}`;
+                                    }
+                                    return `${displayCurrencySymbol}${stats.totalUnpaidAmount}`;
+                                })()}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -729,7 +746,7 @@ const EngineerPayoutPage = () => {
                                                 <span className="badge-ticket">{eng.ticket_count} tickets</span>
                                             </td>
                                             <td className="amount-cell">
-                                                {CURRENCY_SYMBOLS[eng.currency || 'USD'] || '$'}{parseFloat(eng.total_payout_estimated).toFixed(2)}
+                                                {CURRENCY_SYMBOLS[eng.currency || 'USD'] || '$'}{parseFloat(eng.total_payout_estimated || 0).toFixed(2)}
                                             </td>
                                             <td>
                                                 <button className="btn-action" onClick={() => fetchEngineerTickets(eng.id)}>
@@ -809,9 +826,11 @@ const EngineerPayoutPage = () => {
                                              })()}</td>
                                             <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
                                             <td className="amount-cell">{(() => {
-                                                 const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
                                                  const curSymbol = CURRENCY_SYMBOLS[ticket.eng_currency || ticket.currency || 'USD'] || '$';
-                                                 return curSymbol + parseFloat(pd.totalPayout || ticket.eng_total_cost || 0).toFixed(2);
+                                                 const backendAmt = parseFloat(ticket.eng_total_cost || 0);
+                                                 if (backendAmt > 0) return curSymbol + backendAmt.toFixed(2);
+                                                 const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
+                                                 return curSymbol + parseFloat(pd.totalPayout || 0).toFixed(2);
                                              })()}</td>
                                             <td>
                                                 <button className="btn-view" onClick={() => handleOpenDetails(ticket)}>
