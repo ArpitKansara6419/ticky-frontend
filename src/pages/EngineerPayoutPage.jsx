@@ -776,8 +776,12 @@ const EngineerPayoutPage = () => {
                                 const total = unpaidTickets
                                     .filter(t => selectedTicketIds.includes(t.id))
                                     .reduce((sum, t) => {
+                                        // Use backend-calculated eng_total_cost (includes adjustments & single-day fix)
+                                        const backendAmt = parseFloat(t.eng_total_cost || 0);
+                                        if (backendAmt > 0) return sum + backendAmt;
+                                        // Fallback to frontend calculation
                                         const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
-                                        return sum + parseFloat(pd.totalPayout);
+                                        return sum + parseFloat(pd.totalPayout || 0);
                                     }, 0).toFixed(2);
                                 return `${curSymbol}${total}`;
                             })()}</strong></span>
