@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FiCalendar, FiClock, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight, FiX, FiCheckCircle, FiMinusCircle, FiTarget, FiSearch, FiFilter, FiDownload, FiGlobe, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiUserCheck, FiChevronLeft, FiChevronRight, FiActivity, FiArrowRight, FiX, FiCheckCircle, FiMinusCircle, FiTarget, FiSearch, FiFilter, FiDownload, FiGlobe, FiAlertCircle, FiTrash2, FiChevronDown, FiEye } from 'react-icons/fi';
 import './AttendancePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -31,6 +31,27 @@ const AttendancePage = ({ user }) => {
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedEngineer, setSelectedEngineer] = useState(null);
+    const [expandedRow, setExpandedRow] = useState(null);
+    const [selectedTicket, setSelectedTicket] = useState(null);
+    const [selectedTicketLoading, setSelectedTicketLoading] = useState(false);
+
+    const fetchTicketDetails = async (ticketId) => {
+        setSelectedTicketLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                setSelectedTicket(data);
+            } else {
+                alert("Failed to load ticket details.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error loading ticket details.");
+        } finally {
+            setSelectedTicketLoading(false);
+        }
+    };
 
     const tableContainerRef = useRef(null);
     const todayColRef = useRef(null);
@@ -214,58 +235,133 @@ const AttendancePage = ({ user }) => {
                                 };
 
                                 return (
-                                    <tr key={r.id || r.engineer_id}>
-                                        <td>
-                                            <div className="user-info">
-                                                <div className="avatar">{r.engineer_name?.charAt(0)}</div>
-                                                <div>
-                                                    <span className="name">{r.engineer_name}</span>
-                                                    <span className="email">{r.email}</span>
+                                    <React.Fragment key={r.engineer_id || r.id}>
+                                        <tr>
+                                            <td>
+                                                <div className="user-info" style={{ display: 'flex', alignItems: 'center' }}>
+                                                    {r.tickets && r.tickets.length > 0 ? (
+                                                        <button 
+                                                            className="btn-expand" 
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px 0 0', display: 'flex', alignItems: 'center', color: '#6366f1', fontSize: '18px' }}
+                                                            onClick={() => setExpandedRow(expandedRow === r.engineer_id ? null : r.engineer_id)}
+                                                        >
+                                                            {expandedRow === r.engineer_id ? <FiChevronDown /> : <FiChevronRight />}
+                                                        </button>
+                                                    ) : (
+                                                        <span style={{ width: '22px', display: 'inline-block' }}></span>
+                                                    )}
+                                                    <div className="avatar">{r.engineer_name?.charAt(0)}</div>
+                                                    <div>
+                                                        <span className="name">{r.engineer_name}</span>
+                                                        <span className="email">{r.email}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td><span className={`status-badge ${r.status?.toLowerCase()}`}>{r.status}</span></td>
-                                        <td className="mono-text">{arrival ? arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                        <td className="text-secondary">{r.late_time || '-'}</td>
-                                        <td className="mono-text">{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                        <td className="mono-text">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
-                                        <td>{formatBreakTime(r.break_time)}</td>
-                                        <td className={`duration ${duration === 'Active' ? 'text-green' : ''}`}>{duration}</td>
-                                        <td>
-                                            <button className="icon-btn" onClick={async () => {
-                                                // Fetch monthly data for this specific engineer to show in modal
-                                                try {
-                                                    const currentYear = new Date().getFullYear();
-                                                    const currentMonth = new Date().getMonth() + 1;
+                                            </td>
+                                            <td><span className={`status-badge ${r.status?.toLowerCase()}`}>{r.status}</span></td>
+                                            <td className="mono-text">{arrival ? arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                            <td className="text-secondary">{r.late_time || '-'}</td>
+                                            <td className="mono-text">{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                            <td className="mono-text">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                            <td>{formatBreakTime(r.break_time)}</td>
+                                            <td className={`duration ${duration === 'Active' ? 'text-green' : ''}`}>{duration}</td>
+                                            <td>
+                                                <button className="icon-btn" onClick={async () => {
+                                                    // Fetch monthly data for this specific engineer to show in modal
+                                                    try {
+                                                        const currentYear = new Date().getFullYear();
+                                                        const currentMonth = new Date().getMonth() + 1;
 
-                                                    // We need to fetch monthly data to show the calendar
-                                                    // Since we don't have it in daily view, we fetch it now
-                                                    // Optimistically set a temp loading state or just fetch
-                                                    setLoading(true);
-                                                    const res = await fetch(`${API_BASE_URL}/attendance/monthly?year=${currentYear}&month=${currentMonth}`, { credentials: 'include' });
-                                                    if (res.ok) {
-                                                        const data = await res.json();
-                                                        if (Array.isArray(data)) {
-                                                            const engData = data.find(e => e.email === r.email);
-                                                            if (engData) {
-                                                                setSelectedEngineer(engData);
-                                                                setMonth(currentMonth);
-                                                                setYear(currentYear);
-                                                            } else {
-                                                                alert("No monthly data found for this engineer.");
+                                                        // We need to fetch monthly data to show the calendar
+                                                        // Since we don't have it in daily view, we fetch it now
+                                                        // Optimistically set a temp loading state or just fetch
+                                                        setLoading(true);
+                                                        const res = await fetch(`${API_BASE_URL}/attendance/monthly?year=${currentYear}&month=${currentMonth}`, { credentials: 'include' });
+                                                        if (res.ok) {
+                                                            const data = await res.json();
+                                                            if (Array.isArray(data)) {
+                                                                const engData = data.find(e => e.email === r.email);
+                                                                if (engData) {
+                                                                    setSelectedEngineer(engData);
+                                                                    setMonth(currentMonth);
+                                                                    setYear(currentYear);
+                                                                } else {
+                                                                    alert("No monthly data found for this engineer.");
+                                                                }
                                                             }
                                                         }
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    } finally {
+                                                        setLoading(false);
                                                     }
-                                                } catch (e) {
-                                                    console.error(e);
-                                                } finally {
-                                                    setLoading(false);
-                                                }
-                                            }}>
-                                                <FiCalendar />
-                                            </button>
-                                        </td>
-                                    </tr>
+                                                }}>
+                                                    <FiCalendar />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {expandedRow === r.engineer_id && r.tickets && r.tickets.length > 0 && (
+                                            <tr className="expanded-attendance-row">
+                                                <td colSpan="9">
+                                                    <div className="expanded-tickets-container">
+                                                        <div className="expanded-tickets-header">
+                                                            <h4>Ticket Activities ({r.tickets.length})</h4>
+                                                        </div>
+                                                        <table className="expanded-tickets-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Ticket</th>
+                                                                    <th>Customer</th>
+                                                                    <th>Scheduled</th>
+                                                                    <th>Arrival Time</th>
+                                                                    <th>Late Arrival</th>
+                                                                    <th>Check In</th>
+                                                                    <th>Check Out</th>
+                                                                    <th>Break Time</th>
+                                                                    <th>Duration</th>
+                                                                    <th>Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {r.tickets.map(t => {
+                                                                    const checkInTime = t.check_in_time ? new Date(t.check_in_time) : null;
+                                                                    const checkOutTime = t.check_out_time ? new Date(t.check_out_time) : null;
+                                                                    const arrivalTime = t.arrival_time ? new Date(t.arrival_time) : null;
+
+                                                                    return (
+                                                                        <tr key={t.ticket_id}>
+                                                                            <td>
+                                                                                <div className="tkt-info">
+                                                                                    <span className="tkt-id">#{t.ticket_id}</span>
+                                                                                    <span className="tkt-name">{t.task_name}</span>
+                                                                                </div>
+                                                                            </td>
+                                                                            <td>{t.customer_name || '-'}</td>
+                                                                            <td>{t.task_time || '-'}</td>
+                                                                            <td className="mono-text">{arrivalTime ? arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                                                            <td>
+                                                                                <span className={`late-badge ${t.late_time?.includes('late') ? 'is-late' : 'is-ontime'}`}>
+                                                                                    {t.late_time}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="mono-text">{checkInTime ? checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                                                            <td className="mono-text">{checkOutTime ? checkOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+                                                                            <td>{formatBreakTime(t.break_time)}</td>
+                                                                            <td className={`duration-cell ${t.duration === 'Active' ? 'text-green' : ''}`}>{t.duration}</td>
+                                                                            <td>
+                                                                                <button className="btn-view-ticket" onClick={() => fetchTicketDetails(t.ticket_id)}>
+                                                                                    <FiEye style={{ marginRight: '4px' }} /> View Info
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
                                 );
                             })
                         )}
@@ -532,6 +628,76 @@ const AttendancePage = ({ user }) => {
                                     );
                                 })}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Ticket Details Modal */}
+            {selectedTicket && (
+                <div className="tkt-modal-backdrop" onClick={() => setSelectedTicket(null)}>
+                    <div className="tkt-modal-card" onClick={e => e.stopPropagation()}>
+                        <div className="tkt-modal-header">
+                            <h2>Ticket Information</h2>
+                            <p>Ticket #{selectedTicket.id || selectedTicket.ticket_id} • {selectedTicket.customerName || selectedTicket.customer_name || 'N/A'}</p>
+                            <button className="tkt-modal-close" onClick={() => setSelectedTicket(null)}><FiX /></button>
+                        </div>
+                        <div className="tkt-modal-body">
+                            {selectedTicketLoading ? (
+                                <div className="loading-state">
+                                    <div className="spinner"></div>
+                                    <p>Loading ticket details...</p>
+                                </div>
+                            ) : (
+                                <div className="tkt-grid">
+                                    <div className="tkt-grid-item" style={{ gridColumn: 'span 2' }}>
+                                        <span className="tkt-label">Task Name</span>
+                                        <span className="tkt-val" style={{ fontSize: '16px', color: '#4f46e5' }}>{selectedTicket.taskName || selectedTicket.task_name}</span>
+                                    </div>
+                                    <div className="tkt-grid-item">
+                                        <span className="tkt-label">Status</span>
+                                        <span className="tkt-val">
+                                            <span className={`tkt-status-badge ${(selectedTicket.status || 'open').toLowerCase().replace(' ', '-')}`}>
+                                                {selectedTicket.status}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div className="tkt-grid-item">
+                                        <span className="tkt-label">Scheduled Time</span>
+                                        <span className="tkt-val">{selectedTicket.taskTime || selectedTicket.task_time || 'N/A'}</span>
+                                    </div>
+                                    <div className="tkt-grid-item">
+                                        <span className="tkt-label">Start Date</span>
+                                        <span className="tkt-val">{selectedTicket.taskStartDate ? new Date(selectedTicket.taskStartDate).toLocaleDateString() : 'N/A'}</span>
+                                    </div>
+                                    <div className="tkt-grid-item">
+                                        <span className="tkt-label">End Date</span>
+                                        <span className="tkt-val">{selectedTicket.taskEndDate ? new Date(selectedTicket.taskEndDate).toLocaleDateString() : 'N/A'}</span>
+                                    </div>
+                                    <div className="tkt-grid-item" style={{ gridColumn: 'span 2' }}>
+                                        <span className="tkt-label">Address</span>
+                                        <span className="tkt-val">
+                                            {[
+                                                selectedTicket.apartment,
+                                                selectedTicket.addressLine1 || selectedTicket.address_line1,
+                                                selectedTicket.city,
+                                                selectedTicket.country,
+                                                selectedTicket.zipCode || selectedTicket.zip_code
+                                            ].filter(Boolean).join(', ') || 'N/A'}
+                                        </span>
+                                    </div>
+                                    {selectedTicket.pocDetails && (
+                                        <div className="tkt-grid-item" style={{ gridColumn: 'span 2' }}>
+                                            <span className="tkt-label">POC Details</span>
+                                            <span className="tkt-val">{selectedTicket.pocDetails || selectedTicket.poc_details}</span>
+                                        </div>
+                                    )}
+                                    <div className="tkt-grid-item" style={{ gridColumn: 'span 2' }}>
+                                        <span className="tkt-label">Scope of Work</span>
+                                        <span className="tkt-val scope">{selectedTicket.scopeOfWork || selectedTicket.scope_of_work || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
