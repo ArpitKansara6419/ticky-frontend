@@ -41,7 +41,7 @@ const AttendancePage = ({ user }) => {
             const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
-                setSelectedTicket(data);
+                setSelectedTicket(data.ticket || data);
             } else {
                 alert("Failed to load ticket details.");
             }
