@@ -107,8 +107,11 @@ const formatActualTime = (dateStr, timeZone) => {
     if (isNaN(d.getTime())) return '--:--:--';
     
     const targetTZ = timeZone || 'Asia/Kolkata';
-    return new Intl.DateTimeFormat('en-IN', {
+    return new Intl.DateTimeFormat('en-GB', {
       timeZone: targetTZ,
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -117,7 +120,15 @@ const formatActualTime = (dateStr, timeZone) => {
   } catch (err) {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      return d.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
     } catch (e) {
       return '--:--:--';
     }
@@ -545,6 +556,8 @@ function TicketsPage() {
 
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
+  const [onRouteTime, setOnRouteTime] = useState('')
+  const [onSiteTime, setOnSiteTime] = useState('')
   const [breakTime, setBreakTime] = useState('0') // in minutes
 
   const [liveBreakdown, setLiveBreakdown] = useState(null);
@@ -552,6 +565,8 @@ function TicketsPage() {
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineStartTime, setInlineStartTime] = useState('');
   const [inlineEndTime, setInlineEndTime] = useState('');
+  const [inlineOnRouteTime, setInlineOnRouteTime] = useState('');
+  const [inlineOnSiteTime, setInlineOnSiteTime] = useState('');
   const [inlineBreakTime, setInlineBreakTime] = useState('0');
   const [isUpdatingTime, setIsUpdatingTime] = useState(false);
   const [leadType, setLeadType] = useState('Full time') // 'Full time' | 'Dispatch'
@@ -608,55 +623,8 @@ function TicketsPage() {
 
 
   // Smart Auto-Sync for Start & End Time based on Task Details
-  // TIMEZONE-SAFE: builds wall-clock strings directly without new Date() to avoid local TZ shifts
-  const autoSyncTime = (startDate, endDate, startTimeStr, endTimeStr) => {
-    if (viewMode === 'form' && startDate && startTimeStr) {
-      const sTime = startTimeStr.padStart(5, '0');
-      const eTime = (endTimeStr || '').padStart(5, '0');
-
-      setStartTime(`${startDate}T${sTime}`);
-
-      if (endDate) {
-        if (eTime && eTime !== '00:00') {
-           setEndTime(`${endDate}T${eTime}`);
-        } else {
-          // Fallback to 8 hours default if no end time provided
-          const [hStr, mStr] = sTime.split(':');
-          const pad = (n) => String(n).padStart(2, '0');
-          let h = parseInt(hStr, 10) + 8;
-          let d = endDate;
-          if (h >= 24) {
-            const baseDate = parseWallClockDate(endDate);
-            baseDate.setUTCDate(baseDate.getUTCDate() + 1);
-            d = `${baseDate.getUTCFullYear()}-${pad(baseDate.getUTCMonth() + 1)}-${pad(baseDate.getUTCDate())}`;
-            h = h - 24;
-          }
-          setEndTime(`${d}T${pad(h)}:${mStr}`);
-        }
-      }
-    }
-  };
-
-  // Reverse Sync: Update Task Details from Time Log Overrides
-  const reverseSyncTime = (startVal, endVal) => {
-    if (startVal && startVal.includes('T')) {
-      const [date, time] = startVal.split('T');
-      if (taskStartDate !== date) setTaskStartDate(date);
-      const shortTime = time.slice(0, 5);
-      if (taskTime !== shortTime) setTaskTime(shortTime);
-    }
-    if (endVal && endVal.includes('T')) {
-      const [date] = endVal.split('T');
-      if (taskEndDate !== date) setTaskEndDate(date);
-    }
-  }
-
-  // Effect to keep Task Details in sync with Overrides in Full Form
-  useEffect(() => {
-    if (viewMode === 'form' && (startTime || endTime)) {
-      reverseSyncTime(startTime, endTime);
-    }
-  }, [startTime, endTime, viewMode]);
+  // DISABLED to ensure Scheduled Time and Actual Time remain independent.
+  const autoSyncTime = (startDate, endDate, startTimeStr, endTimeStr) => {};
 
 
   useEffect(() => {
@@ -1087,6 +1055,8 @@ function TicketsPage() {
     setCancellationFee('')
     setStartTime('')
     setEndTime('')
+    setOnRouteTime('')
+    setOnSiteTime('')
     setBreakTime('0')
     setError('')
     setSuccess('')
@@ -1428,10 +1398,14 @@ function TicketsPage() {
             const t = data.ticket || data;
             const start = t.startTime || t.start_time;
             const end = t.endTime || t.end_time;
+            const route = t.onRouteTime || t.on_route_time;
+            const site = t.onSiteTime || t.on_site_time;
             setSelectedTicket(prev => ({ ...prev, ...t }));
             // Update inline time inputs so the Edit Time fields also show correct IST times
-            setInlineStartTime(start ? formatForInput(start) : (t.taskStartDate ? formatForInput(t.taskStartDate) : ''));
-            setInlineEndTime(end ? formatForInput(end) : (t.taskEndDate ? formatForInput(t.taskEndDate) : ''));
+            setInlineStartTime(start ? formatForInput(start) : '');
+            setInlineEndTime(end ? formatForInput(end) : '');
+            setInlineOnRouteTime(route ? formatForInput(route) : '');
+            setInlineOnSiteTime(site ? formatForInput(site) : '');
           }
         } catch (_) { /* ignore poll errors */ }
       }
@@ -1531,54 +1505,41 @@ function TicketsPage() {
       setSaving(true)
       setSuccess('')
 
-      // BACKFILL: If activity times are empty, sync them with scheduled details before sending
-      let finalStartTime = startTime;
-      let finalEndTime = endTime;
+      // Convert local IST datetime-local inputs → UTC for consistent DB storage
+      const formattedStartTime = (() => {
+        if (!startTime) return null;
+        const d = new Date(startTime);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 19).replace('T', ' ');
+      })();
 
-      if (!finalStartTime && taskStartDate && taskTime) {
-        const dObj = parseWallClockDate(taskStartDate);
-        const y = dObj.getUTCFullYear();
-        const m = String(dObj.getUTCMonth() + 1).padStart(2, '0');
-        const d = String(dObj.getUTCDate()).padStart(2, '0');
-        finalStartTime = `${y}-${m}-${d}T${taskTime.padStart(5, '0')}`;
-      }
-      if (!finalEndTime) {
-        if (taskEndDate && taskEndTime) {
-          const dObj = parseWallClockDate(taskEndDate);
-          const y = dObj.getUTCFullYear();
-          const m = String(dObj.getUTCMonth() + 1).padStart(2, '0');
-          const d = String(dObj.getUTCDate()).padStart(2, '0');
-          finalEndTime = `${y}-${m}-${d}T${taskEndTime.padStart(5, '0')}`;
-        } else if (taskEndDate && taskTime) {
-          // Default to finish same day + 8 hours if no explicit end time (local time)
-          const d = new Date(`${taskEndDate}T${taskTime.padStart(5, '0')}`);
-          if (!isNaN(d.getTime())) {
-            d.setHours(d.getHours() + 8);
-            const pad = (n) => String(n).padStart(2, '0');
-            finalEndTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-          }
-        }
-      }
+      const formattedEndTime = (() => {
+        if (!endTime) return null;
+        const d = new Date(endTime);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 19).replace('T', ' ');
+      })();
 
-      // SYNC: If activity times are provided, synchronize the scheduled task details to match
-      let finalTaskStartDate = taskStartDate;
-      let finalTaskEndDate = taskEndDate;
-      let finalTaskTimeValue = taskTime;
+      const formattedOnRouteTime = (() => {
+        if (!onRouteTime) return null;
+        const d = new Date(onRouteTime);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 19).replace('T', ' ');
+      })();
 
-      if (finalStartTime && finalStartTime.includes('T')) {
-        finalTaskStartDate = finalStartTime.split('T')[0];
-        finalTaskTimeValue = finalStartTime.split('T')[1].slice(0, 5);
-      }
-      if (finalEndTime && finalEndTime.includes('T')) {
-        finalTaskEndDate = finalEndTime.split('T')[0];
-      }
+      const formattedOnSiteTime = (() => {
+        if (!onSiteTime) return null;
+        const d = new Date(onSiteTime);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 19).replace('T', ' ');
+      })();
 
       const payload = {
         customerId: Number(customerId),
         leadId: leadId ? Number(leadId) : null,
         clientName,
         taskName,
-        taskTime: finalTaskTimeValue,
+        taskTime: taskTime,
         taskEndTime: taskEndTime,
         scopeOfWork,
         tools,
@@ -1609,28 +1570,19 @@ function TicketsPage() {
         cancellationFee: cancellationFee !== '' && cancellationFee !== null ? Number(cancellationFee) : 0,
         status: status,
         taskStartDate: (() => {
-          const d = parseWallClockDate(finalTaskStartDate);
+          const d = parseWallClockDate(taskStartDate);
           if (isNaN(d.getTime())) return null;
           return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
         })(),
         taskEndDate: (() => {
-          const d = parseWallClockDate(finalTaskEndDate);
+          const d = parseWallClockDate(taskEndDate);
           if (isNaN(d.getTime())) return null;
           return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
         })(),
-        // Convert local IST datetime-local input → UTC for consistent DB storage
-        startTime: (() => {
-          if (!finalStartTime) return null;
-          const d = new Date(finalStartTime); // browser treats "YYYY-MM-DDTHH:mm" as LOCAL (IST)
-          if (isNaN(d.getTime())) return null;
-          return d.toISOString().slice(0, 19).replace('T', ' ');
-        })(),
-        endTime: (() => {
-          if (!finalEndTime) return null;
-          const d = new Date(finalEndTime);
-          if (isNaN(d.getTime())) return null;
-          return d.toISOString().slice(0, 19).replace('T', ' ');
-        })(),
+        startTime: formattedStartTime,
+        endTime: formattedEndTime,
+        onRouteTime: formattedOnRouteTime,
+        onSiteTime: formattedOnSiteTime,
         breakTime: Number(breakTime) || 0,
         latitude,
         longitude,
@@ -1858,8 +1810,12 @@ function TicketsPage() {
 
         const start = t.startTime || t.start_time;
         const end = t.endTime || t.end_time;
-        setInlineStartTime(start ? formatForInput(start) : (t.taskStartDate ? formatForInput(t.taskStartDate) : ''));
-        setInlineEndTime(end ? formatForInput(end) : (t.taskEndDate ? formatForInput(t.taskEndDate) : ''));
+        const route = t.onRouteTime || t.on_route_time;
+        const site = t.onSiteTime || t.on_site_time;
+        setInlineStartTime(start ? formatForInput(start) : '');
+        setInlineEndTime(end ? formatForInput(end) : '');
+        setInlineOnRouteTime(route ? formatForInput(route) : '');
+        setInlineOnSiteTime(site ? formatForInput(site) : '');
         const bt = t.breakTime !== undefined ? t.breakTime : t.break_time;
         setInlineBreakTime(bt ? String(Math.floor(Number(bt) / 60)) : '0');
         setNewExtendEndDate(t.taskEndDate ? String(t.taskEndDate).split('T')[0] : '');
@@ -1924,12 +1880,10 @@ function TicketsPage() {
       const payload = {
         startTime: toUTCStr(inlineStartTime),
         endTime: toUTCStr(inlineEndTime),
+        onRouteTime: toUTCStr(inlineOnRouteTime),
+        onSiteTime: toUTCStr(inlineOnSiteTime),
         breakTime: Number(inlineBreakTime) || 0,
-        status: newStatus,
-        taskTime: inlineStartTime && inlineStartTime.includes('T') ? inlineStartTime.split('T')[1].slice(0, 5) : selectedTicket.taskTime,
-        taskEndTime: inlineEndTime && inlineEndTime.includes('T') ? inlineEndTime.split('T')[1].slice(0, 5) : (selectedTicket.taskEndTime || selectedTicket.task_end_time),
-        taskStartDate: inlineStartTime ? inlineStartTime.split('T')[0] : selectedTicket.taskStartDate?.split('T')[0],
-        taskEndDate: inlineEndTime ? inlineEndTime.split('T')[0] : selectedTicket.taskEndDate?.split('T')[0]
+        status: newStatus
       };
 
       const res = await fetch(`${API_BASE_URL}/tickets/${tId}`, {
@@ -2337,6 +2291,8 @@ function TicketsPage() {
       billingType: t.billingType ?? t.billing_type ?? 'Hourly',
       startTime: t.startTime || t.start_time || '',
       endTime: t.endTime || t.end_time || '',
+      onRouteTime: t.onRouteTime || t.on_route_time || '',
+      onSiteTime: t.onSiteTime || t.on_site_time || '',
       breakTime: t.breakTime !== undefined ? t.breakTime : (t.break_time || 0),
       leadType: t.leadType || t.lead_type || 'Full time',
       engPayType: t.engPayType ?? t.eng_pay_type ?? 'Default',
@@ -2406,6 +2362,8 @@ function TicketsPage() {
     setBillingType(normalized.billingType)
     setStartTime(normalized.startTime ? formatForInput(normalized.startTime) : '')
     setEndTime(normalized.endTime ? formatForInput(normalized.endTime) : '')
+    setOnRouteTime(normalized.onRouteTime ? formatForInput(normalized.onRouteTime) : '')
+    setOnSiteTime(normalized.onSiteTime ? formatForInput(normalized.onSiteTime) : '')
     setBreakTime(String(Math.floor(Number(normalized.breakTime) / 60)))
     setLeadType(normalized.leadType)
     setEngPayType(normalized.engPayType)
@@ -3070,7 +3028,7 @@ function TicketsPage() {
                     <input 
                       type="date" 
                       value={taskStartDate} 
-                      onChange={(e) => { setTaskStartDate(e.target.value); autoSyncTime(e.target.value, taskEndDate, taskTime, taskEndTime); }} 
+                      onChange={(e) => setTaskStartDate(e.target.value)} 
                       readOnly={!!leadId}
                       className={leadId ? 'synced-field' : ''}
                       onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Start Date, please edit the originating Lead.`)}
@@ -3081,7 +3039,7 @@ function TicketsPage() {
                     <input 
                       type="date" 
                       value={taskEndDate} 
-                      onChange={(e) => { setTaskEndDate(e.target.value); autoSyncTime(taskStartDate, e.target.value, taskTime, taskEndTime); }} 
+                      onChange={(e) => setTaskEndDate(e.target.value)} 
                       readOnly={!!leadId}
                       className={leadId ? 'synced-field' : ''}
                       onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the End Date, please edit the originating Lead.`)}
@@ -3103,21 +3061,25 @@ function TicketsPage() {
                     </label>
                   )}
                   <label className="tickets-field">
-                    <span>Actual Start Time <span className="field-required">*</span></span>
+                    <span>Scheduled Start Time <span className="field-required">*</span></span>
                     <input 
                       type="time" 
                       value={taskTime} 
-                      onChange={(e) => { setTaskTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, e.target.value, taskEndTime); }} 
+                      onChange={(e) => setTaskTime(e.target.value)} 
+                      readOnly={!!leadId}
                       className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Scheduled Start Time, please edit the originating Lead.`)}
                     />
                   </label>
                   <label className="tickets-field">
-                    <span>Actual End Time <span className="field-required">*</span></span>
+                    <span>Scheduled End Time <span className="field-required">*</span></span>
                     <input 
                       type="time" 
                       value={taskEndTime} 
-                      onChange={(e) => { setTaskEndTime(e.target.value); autoSyncTime(taskStartDate, taskEndDate, taskTime, e.target.value); }} 
+                      onChange={(e) => setTaskEndTime(e.target.value)} 
+                      readOnly={!!leadId}
                       className={leadId ? 'synced-field' : ''}
+                      onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Scheduled End Time, please edit the originating Lead.`)}
                     />
                   </label>
                   <label className="tickets-field tickets-field--full">
@@ -3142,6 +3104,48 @@ function TicketsPage() {
                       readOnly={!!leadId}
                       className={leadId ? 'synced-field' : ''}
                       onClick={() => leadId && alert(`This ticket is linked to Lead #L-${leadId}. To change the Tools Required, please edit the originating Lead.`)}
+                    />
+                  </label>
+                </div>
+              </section>
+
+              {/* Activity Tracking (Actual Times) */}
+              <section className="tickets-card">
+                <h2 className="tickets-section-title"><FiActivity /> Engineer Activity Logs (Actual Times)</h2>
+                <p style={{ margin: '-10px 0 15px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                  Mainly synced from mobile app. Enter manually if phone is switched off.
+                </p>
+                <div className="tickets-grid">
+                  <label className="tickets-field">
+                    <span>🚗 Departure Time (On Route)</span>
+                    <input 
+                      type="datetime-local" 
+                      value={onRouteTime} 
+                      onChange={(e) => setOnRouteTime(e.target.value)} 
+                    />
+                  </label>
+                  <label className="tickets-field">
+                    <span>📍 Arrival Time (On Site)</span>
+                    <input 
+                      type="datetime-local" 
+                      value={onSiteTime} 
+                      onChange={(e) => setOnSiteTime(e.target.value)} 
+                    />
+                  </label>
+                  <label className="tickets-field">
+                    <span>⏱️ Engineer Time In (Start Work)</span>
+                    <input 
+                      type="datetime-local" 
+                      value={startTime} 
+                      onChange={(e) => setStartTime(e.target.value)} 
+                    />
+                  </label>
+                  <label className="tickets-field">
+                    <span>⏱️ Engineer Time Out (End Work)</span>
+                    <input 
+                      type="datetime-local" 
+                      value={endTime} 
+                      onChange={(e) => setEndTime(e.target.value)} 
                     />
                   </label>
                 </div>
@@ -4437,29 +4441,65 @@ function TicketsPage() {
                 {/* Engineer Departure & Arrival */}
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>🚗 Departure Time (On Route)</label>
-                  <span style={{ fontWeight: '700', color: selectedTicket.onRouteTime ? '#f59e0b' : '#64748b' }}>
-                    {selectedTicket.onRouteTime ? formatActualTime(selectedTicket.onRouteTime, selectedTicket.timezone) : '--:--:--'}
-                  </span>
+                  {isInlineEditing ? (
+                    <input 
+                      type="datetime-local" 
+                      value={inlineOnRouteTime} 
+                      onChange={(e) => setInlineOnRouteTime(e.target.value)} 
+                      style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', width: '100%', fontSize: '12px', color: '#1e293b', fontWeight: '600' }}
+                    />
+                  ) : (
+                    <span style={{ fontWeight: '700', color: selectedTicket.onRouteTime ? '#f59e0b' : '#64748b' }}>
+                      {selectedTicket.onRouteTime ? formatActualTime(selectedTicket.onRouteTime, selectedTicket.timezone) : '--:--:--'}
+                    </span>
+                  )}
                 </div>
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>📍 Arrival Time (On Site)</label>
-                  <span style={{ fontWeight: '700', color: selectedTicket.onSiteTime ? '#8b5cf6' : '#64748b' }}>
-                    {selectedTicket.onSiteTime ? formatActualTime(selectedTicket.onSiteTime, selectedTicket.timezone) : '--:--:--'}
-                  </span>
+                  {isInlineEditing ? (
+                    <input 
+                      type="datetime-local" 
+                      value={inlineOnSiteTime} 
+                      onChange={(e) => setInlineOnSiteTime(e.target.value)} 
+                      style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', width: '100%', fontSize: '12px', color: '#1e293b', fontWeight: '600' }}
+                    />
+                  ) : (
+                    <span style={{ fontWeight: '700', color: selectedTicket.onSiteTime ? '#8b5cf6' : '#64748b' }}>
+                      {selectedTicket.onSiteTime ? formatActualTime(selectedTicket.onSiteTime, selectedTicket.timezone) : '--:--:--'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Engineer Start Work & End Work */}
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>⏱️ Engineer Time In (Start Work)</label>
-                  <span style={{ fontWeight: '700', color: selectedTicket.startTime ? '#10b981' : '#64748b' }}>
-                    {selectedTicket.startTime ? formatActualTime(selectedTicket.startTime, selectedTicket.timezone) : '--:--:--'}
-                  </span>
+                  {isInlineEditing ? (
+                    <input 
+                      type="datetime-local" 
+                      value={inlineStartTime} 
+                      onChange={(e) => setInlineStartTime(e.target.value)} 
+                      style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', width: '100%', fontSize: '12px', color: '#1e293b', fontWeight: '600' }}
+                    />
+                  ) : (
+                    <span style={{ fontWeight: '700', color: selectedTicket.startTime ? '#10b981' : '#64748b' }}>
+                      {selectedTicket.startTime ? formatActualTime(selectedTicket.startTime, selectedTicket.timezone) : '--:--:--'}
+                    </span>
+                  )}
                 </div>
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>⏱️ Engineer Time Out (End Work)</label>
-                  <span style={{ fontWeight: '700', color: selectedTicket.endTime ? '#ef4444' : '#64748b' }}>
-                    {selectedTicket.endTime ? formatActualTime(selectedTicket.endTime, selectedTicket.timezone) : '--:--:--'}
-                  </span>
+                  {isInlineEditing ? (
+                    <input 
+                      type="datetime-local" 
+                      value={inlineEndTime} 
+                      onChange={(e) => setInlineEndTime(e.target.value)} 
+                      style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', width: '100%', fontSize: '12px', color: '#1e293b', fontWeight: '600' }}
+                    />
+                  ) : (
+                    <span style={{ fontWeight: '700', color: selectedTicket.endTime ? '#ef4444' : '#64748b' }}>
+                      {selectedTicket.endTime ? formatActualTime(selectedTicket.endTime, selectedTicket.timezone) : '--:--:--'}
+                    </span>
+                  )}
                 </div>
 
                 <div className="detail-item">
@@ -4674,20 +4714,13 @@ function TicketsPage() {
                   if (!isInlineEditing) {
                     const actualStart = selectedTicket.startTime || selectedTicket.start_time;
                     const actualEnd = selectedTicket.endTime || selectedTicket.end_time;
-                    if (actualStart) {
-                      setInlineStartTime(formatForInput(actualStart));
-                      setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
-                    } else {
-                      const sd = selectedTicket.taskStartDate ? selectedTicket.taskStartDate.split('T')[0] : '';
-                      const st = (selectedTicket.taskTime || '08:00').padStart(5, '0');
-                      if (sd) {
-                        setInlineStartTime(`${sd}T${st}`);
-                        let h = parseInt(st.split(':')[0], 10) + 8;
-                        let d = sd;
-                        if (h >= 24) { d = new Date(new Date(`${sd}T00:00:00Z`).getTime() + 86400000).toISOString().split('T')[0]; h -= 24; }
-                        setInlineEndTime(`${d}T${String(h).padStart(2, '0')}:${st.split(':')[1]}`);
-                      }
-                    }
+                    const routeVal = selectedTicket.onRouteTime || selectedTicket.on_route_time;
+                    const siteVal = selectedTicket.onSiteTime || selectedTicket.on_site_time;
+                    setInlineOnRouteTime(routeVal ? formatForInput(routeVal) : '');
+                    setInlineOnSiteTime(siteVal ? formatForInput(siteVal) : '');
+                    
+                    setInlineStartTime(actualStart ? formatForInput(actualStart) : '');
+                    setInlineEndTime(actualEnd ? formatForInput(actualEnd) : '');
                     const bt = selectedTicket.breakTime !== undefined ? selectedTicket.breakTime : selectedTicket.break_time;
                     setInlineBreakTime(bt ? Math.floor(Number(bt) / 60) : '0');
                   }
