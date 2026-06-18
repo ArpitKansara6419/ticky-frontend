@@ -417,8 +417,14 @@ function LeadsPage() {
     try {
       // Treat as wall-clock time
       const s = new Date(startTime.includes('Z') || startTime.includes('+') ? startTime : startTime.replace(' ', 'T') + 'Z');
-      const e = new Date(endTime.includes('Z') || endTime.includes('+') ? endTime : endTime.replace(' ', 'T') + 'Z');
+      let e = new Date(endTime.includes('Z') || endTime.includes('+') ? endTime : endTime.replace(' ', 'T') + 'Z');
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 };
+
+      const sDateStr = startTime.includes('T') ? startTime.split('T')[0] : startTime.split(' ')[0];
+      const eDateStr = endTime.includes('T') ? endTime.split('T')[0] : endTime.split(' ')[0];
+      if (e.getTime() < s.getTime() && sDateStr === eDateStr) {
+        e = new Date(e.getTime() + 24 * 3600 * 1000);
+      }
 
       const totSec = Math.max(0, (e.getTime() - s.getTime()) / 1000);
       const hrs = totSec / 3600;

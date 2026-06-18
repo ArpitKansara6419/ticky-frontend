@@ -286,10 +286,17 @@ const calculateTicketTotal = (opts) => {
     const eStr = String(eParamFinal || '2026-01-01T17:00:00Z');
 
     const s = parseWallClockDate(sStr);
-    const e = parseWallClockDate(eStr);
+    let e = parseWallClockDate(eStr);
     // Fallback if dates are invalid
     if (isNaN(s.getTime()) || isNaN(e.getTime())) {
-       return { totalHours: '8.00', base: (fd || hr*8 || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) };
+       return { hrs: '8.00', totalHours: '8.00', base: (fd || hr*8 || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) };
+    }
+
+    // Midnight wrap-around logic
+    const sDateStr = sStr.includes('T') ? sStr.split('T')[0] : sStr.split(' ')[0];
+    const eDateStr = eStr.includes('T') ? eStr.split('T')[0] : eStr.split(' ')[0];
+    if (e.getTime() < s.getTime() && sDateStr === eDateStr) {
+       e = new Date(e.getTime() + 24 * 3600 * 1000);
     }
 
     const brkSec = (parseInt(bParam) || 0) * 60;
@@ -423,7 +430,7 @@ const calculateTicketTotal = (opts) => {
     };
   } catch (err) { 
      console.error("Calculation Engine Error:", err);
-     return { totalHours: '0.00', base: (fd || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) }; 
+     return { hrs: '0.00', totalHours: '0.00', base: (fd || 0).toFixed(2), ot: '0.00', ooh: '0.00', specialDay: '0.00', tools: '0.00', travel: '0.00', grandTotal: (fd || 0).toFixed(2) }; 
   }
 };
 
