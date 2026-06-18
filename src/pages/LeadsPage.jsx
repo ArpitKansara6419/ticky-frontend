@@ -521,6 +521,19 @@ function LeadsPage() {
     } catch (e) { return { hrs: 0, base: 0, ot: 0, ooh: 0, specialDay: 0, grandTotal: 0 }; }
   };
 
+  const getEndTime8HoursLater = (timeStr) => {
+    if (!timeStr) return '17:00';
+    const parts = timeStr.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1] || '0', 10);
+    let endH = h + 8;
+    if (endH >= 24) {
+      endH -= 24;
+    }
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(endH)}:${pad(m)}`;
+  };
+
   const openStatusChangeModal = (lead) => {
     setStatusChangeData({
       leadId: lead.id,
@@ -536,6 +549,13 @@ function LeadsPage() {
     setFollowUpDate(currentStart)
     setStatusChangeEndDate(currentEnd)
     setStatusChangeReason('')
+
+    // Pre-fill status change times from the lead details
+    const lTime = lead.taskTime || lead.task_time || '09:00';
+    const lEndTime = lead.taskEndTime || lead.task_end_time || getEndTime8HoursLater(lTime);
+    setStatusChangeStartTime(lTime.slice(0, 5));
+    setStatusChangeEndTime(lEndTime.slice(0, 5));
+
     setIsStatusModalOpen(true)
   }
 
