@@ -1322,24 +1322,6 @@ const CustomerReceivablePage = () => {
         } catch (e) { console.error("Invoice Fetch Error:", e); }
     };
 
-    // Calculate Dynamic Unbilled Total based on Context (uses filteredUnbilled which already filters by currency)
-    const dynamicUnbilledTotal = useMemo(() => {
-        const isAll = selectedCurrency === 'All';
-        return unbilledList
-            .filter(item => isAll || (item.currency || 'USD').toUpperCase() === selectedCurrency.toUpperCase())
-            .reduce((sum, item) => {
-                const cur = (item.currency || 'USD').toUpperCase();
-                const bd = calculateTicketCostFrontend(item, calcTimezone, cur);
-                const val = parseFloat(bd.totalReceivable) || 0;
-                
-                if (isAll) {
-                    // Convert to USD base
-                    const rate = EXCHANGE_RATES[cur] || 1;
-                    return sum + (val / rate);
-                }
-                return sum + val;
-            }, 0);
-    }, [unbilledList, calcTimezone, selectedCurrency]);
 
     const toggleTicket = (id) => {
         setSelectedTicketIds(prev =>
@@ -1699,6 +1681,46 @@ const CustomerReceivablePage = () => {
         });
     }, [invoiceList, searchTerm, filterCustomer, selectedYear, selectedMonth]);
 
+    // Calculate Dynamic Unbilled Total based on Context (uses filteredUnbilled which already filters by currency)
+    const dynamicUnbilledTotal = useMemo(() => {
+        const isAll = selectedCurrency === 'All';
+        return filteredUnbilled.reduce((sum, item) => {
+            const cur = (item.currency || 'USD').toUpperCase();
+            const bd = calculateTicketCostFrontend(item, calcTimezone, cur);
+            const val = parseFloat(bd.totalReceivable) || 0;
+            
+            if (isAll) {
+                // Convert to USD base using EXCHANGE_RATES
+                const rate = EXCHANGE_RATES[cur] || 1;
+                return sum + (val / rate);
+            }
+            return sum + val;
+        }, 0);
+    }, [filteredUnbilled, calcTimezone, selectedCurrency]);
+
+    const dynamicUnpaidTotal = useMemo(() => {
+        const unpaidList = filteredInvoices.filter(inv => inv.status?.toLowerCase() === 'unpaid');
+        return unpaidList.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
+    }, [filteredInvoices]);
+
+    const dynamicOverdueTotal = useMemo(() => {
+        const unpaidList = filteredInvoices.filter(inv => inv.status?.toLowerCase() === 'unpaid');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const overdueList = unpaidList.filter(inv => {
+            if (!inv.due_date) return false;
+            const dueDate = new Date(inv.due_date);
+            return dueDate < today;
+        });
+        return overdueList.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
+    }, [filteredInvoices]);
+
+    const dynamicPaidTotal = useMemo(() => {
+        const paidList = filteredInvoices.filter(inv => inv.status?.toLowerCase() === 'paid');
+        return paidList.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
+    }, [filteredInvoices]);
+
     // Pagination Logic for Unbilled
     const totalUnbilledPages = Math.ceil(filteredUnbilled.length / itemsPerPage);
     const displayedUnbilled = filteredUnbilled.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -1802,7 +1824,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon amber"><FiFileText /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {((parseFloat(stats.unpaid) || 0) * (EXCHANGE_RATES[selectedCurrency === 'All' ? 'USD' : selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {dynamicUnpaidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Unpaid Invoices</p>
                         <small style={{ color: '#94a3b8', fontSize: '11px' }}>Awaiting client payment</small>
                     </div>
@@ -1810,7 +1832,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon emerald"><FiCheckCircle /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {((parseFloat(stats.overdue) || 0) * (EXCHANGE_RATES[selectedCurrency === 'All' ? 'USD' : selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {dynamicOverdueTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Total Overdue</p>
                         <small style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700' }}>Requires immediate action</small>
                     </div>
@@ -1818,7 +1840,7 @@ const CustomerReceivablePage = () => {
                 <div className="stat-card-premium">
                     <div className="stat-icon blue" style={{ background: '#f0f9ff', color: '#0369a1' }}><FiDollarSign /></div>
                     <div className="stat-content">
-                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {((parseFloat(stats.paid) || 0) * (EXCHANGE_RATES[selectedCurrency === 'All' ? 'USD' : selectedCurrency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <h3>{selectedCurrency === 'All' ? 'USD' : selectedCurrency} {dynamicPaidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         <p>Collected Revenue</p>
                         <small style={{ color: '#059669', fontSize: '11px', fontWeight: '700' }}>Total for {new Date().getFullYear()}</small>
                     </div>
