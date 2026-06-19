@@ -4551,20 +4551,20 @@ function TicketsPage() {
                         <>
                           {startDiffers ? (
                             <>
-                              <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginRight: '6px' }}>{schedStart}</span>
-                              <span style={{ color: '#10b981', marginRight: '6px' }}>{actualStartStr}</span>
+                              <strong style={{ textDecoration: 'line-through', color: '#94a3b8', marginRight: '6px', fontWeight: 'normal' }}>{schedStart}</strong>
+                              <strong style={{ color: '#10b981', marginRight: '6px', fontWeight: 'bold' }}>{actualStartStr}</strong>
                             </>
                           ) : (
-                            <span>{schedStart}</span>
+                            schedStart
                           )}
                           {' - '}
                           {endDiffers ? (
                             <>
-                              <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginLeft: '6px', marginRight: '6px' }}>{schedEnd}</span>
-                              <span style={{ color: '#ef4444' }}>{actualEndStr}</span>
+                              <strong style={{ textDecoration: 'line-through', color: '#94a3b8', marginLeft: '6px', marginRight: '6px', fontWeight: 'normal' }}>{schedEnd}</strong>
+                              <strong style={{ color: '#ef4444', fontWeight: 'bold' }}>{actualEndStr}</strong>
                             </>
                           ) : (
-                            <span>{schedEnd}</span>
+                            schedEnd
                           )}
                         </>
                       );
