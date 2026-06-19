@@ -80,6 +80,68 @@ const safeExtractTime = (dtStr) => {
   return match ? `${match[1]}:${match[2]}` : '';
 };
 
+const formatTimeToHHMM = (dateStr, timeZone) => {
+  if (!dateStr) return '';
+  try {
+    const d = parseWallClockDate(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const targetTZ = timeZone || 'Asia/Kolkata';
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: targetTZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(d).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+    return `${parts.hour}:${parts.minute}`;
+  } catch (err) {
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: timeZone || 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).formatToParts(d).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+      return `${parts.hour}:${parts.minute}`;
+    } catch (e) {
+      return '';
+    }
+  }
+};
+
+const formatTimeToHHMMSS = (dateStr, timeZone) => {
+  if (!dateStr) return '';
+  try {
+    const d = parseWallClockDate(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const targetTZ = timeZone || 'Asia/Kolkata';
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: targetTZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).formatToParts(d).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+    return `${parts.hour}:${parts.minute}:${parts.second}`;
+  } catch (err) {
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: timeZone || 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).formatToParts(d).reduce((acc, part) => { acc[part.type] = part.value; return acc; }, {});
+      return `${parts.hour}:${parts.minute}:${parts.second}`;
+    } catch (e) {
+      return '';
+    }
+  }
+};
+
 const formatActualTime = (dateStr, timeZone) => {
   if (!dateStr) return '--:--:--';
   try {
@@ -2324,8 +2386,23 @@ function TicketsPage() {
     setTaskName(normalized.taskName || '')
     setTaskStartDate(normalized.taskStartDate)
     setTaskEndDate(normalized.taskEndDate)
-    setTaskTime(normalized.taskTime || '09:00')
-    setTaskEndTime(t.task_end_time || t.taskEndTime || '17:00')
+    let initialTaskTime = normalized.taskTime || '09:00';
+    if (normalized.startTime) {
+      const actualStart = formatTimeToHHMM(normalized.startTime, normalized.timezone);
+      if (actualStart) {
+        initialTaskTime = actualStart;
+      }
+    }
+    setTaskTime(initialTaskTime)
+
+    let initialTaskEndTime = t.task_end_time || t.taskEndTime || '17:00';
+    if (normalized.endTime || t.end_time) {
+      const actualEnd = formatTimeToHHMM(normalized.endTime || t.end_time, normalized.timezone);
+      if (actualEnd) {
+        initialTaskEndTime = actualEnd;
+      }
+    }
+    setTaskEndTime(initialTaskEndTime)
     setScopeOfWork(normalized.scopeOfWork || '')
     setTools(normalized.tools || '')
     setEngineerName(normalized.engineerName || '')
@@ -3054,7 +3131,24 @@ function TicketsPage() {
                     </label>
                   )}
                   <label className="tickets-field">
-                    <span>Scheduled Start Time <span className="field-required">*</span></span>
+                    <span>
+                      Scheduled Start Time <span className="field-required">*</span>
+                      {(() => {
+                        const ticket = tickets.find(tk => String(tk.id) === String(editingTicketId));
+                        if (ticket && (ticket.startTime || ticket.start_time)) {
+                          const actualStart = formatTimeToHHMM(ticket.startTime || ticket.start_time, ticket.timezone);
+                          const origScheduled = ticket.taskTime || ticket.task_time || '09:00';
+                          if (actualStart && origScheduled && actualStart.slice(0, 5) !== origScheduled.slice(0, 5)) {
+                            return (
+                              <span style={{ marginLeft: '8px', fontSize: '11px', color: '#64748b', fontWeight: 'normal' }}>
+                                (Original: <span style={{ textDecoration: 'line-through', color: '#ef4444' }}>{origScheduled.slice(0, 5)}</span>)
+                              </span>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
+                    </span>
                     <input 
                       type="time" 
                       value={taskTime} 
@@ -3065,7 +3159,24 @@ function TicketsPage() {
                     />
                   </label>
                   <label className="tickets-field">
-                    <span>Scheduled End Time <span className="field-required">*</span></span>
+                    <span>
+                      Scheduled End Time <span className="field-required">*</span>
+                      {(() => {
+                        const ticket = tickets.find(tk => String(tk.id) === String(editingTicketId));
+                        if (ticket && (ticket.endTime || ticket.end_time)) {
+                          const actualEnd = formatTimeToHHMM(ticket.endTime || ticket.end_time, ticket.timezone);
+                          const origScheduled = ticket.taskEndTime || ticket.task_end_time || '17:00';
+                          if (actualEnd && origScheduled && actualEnd.slice(0, 5) !== origScheduled.slice(0, 5)) {
+                            return (
+                              <span style={{ marginLeft: '8px', fontSize: '11px', color: '#64748b', fontWeight: 'normal' }}>
+                                (Original: <span style={{ textDecoration: 'line-through', color: '#ef4444' }}>{origScheduled.slice(0, 5)}</span>)
+                              </span>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
+                    </span>
                     <input 
                       type="time" 
                       value={taskEndTime} 
@@ -4423,7 +4534,41 @@ function TicketsPage() {
                 <div className="detail-item">
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Scheduled Time</label>
                   <span style={{ fontWeight: '700', color: '#1e293b' }}>
-                    {selectedTicket.taskTime || '--:--'} - {selectedTicket.taskEndTime || selectedTicket.task_end_time || '--:--'}
+                    {(() => {
+                      const actualStart = selectedTicket.startTime || selectedTicket.start_time;
+                      const actualEnd = selectedTicket.endTime || selectedTicket.end_time;
+                      
+                      const actualStartStr = actualStart ? formatTimeToHHMMSS(actualStart, selectedTicket.timezone) : '';
+                      const actualEndStr = actualEnd ? formatTimeToHHMMSS(actualEnd, selectedTicket.timezone) : '';
+                      
+                      const schedStart = selectedTicket.taskTime || '--:--';
+                      const schedEnd = selectedTicket.taskEndTime || selectedTicket.task_end_time || '--:--';
+                      
+                      const startDiffers = actualStartStr && actualStartStr.slice(0, 5) !== schedStart.slice(0, 5);
+                      const endDiffers = actualEndStr && actualEndStr.slice(0, 5) !== schedEnd.slice(0, 5);
+                      
+                      return (
+                        <>
+                          {startDiffers ? (
+                            <>
+                              <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginRight: '6px' }}>{schedStart}</span>
+                              <span style={{ color: '#10b981', marginRight: '6px' }}>{actualStartStr}</span>
+                            </>
+                          ) : (
+                            <span>{schedStart}</span>
+                          )}
+                          {' - '}
+                          {endDiffers ? (
+                            <>
+                              <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginLeft: '6px', marginRight: '6px' }}>{schedEnd}</span>
+                              <span style={{ color: '#ef4444' }}>{actualEndStr}</span>
+                            </>
+                          ) : (
+                            <span>{schedEnd}</span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </span>
                 </div>
                 <div className="detail-item">
