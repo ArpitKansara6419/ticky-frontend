@@ -14,27 +14,21 @@ const parseWallClockDate = (s) => {
   const str = String(s).trim();
   if (!str) return new Date(NaN);
   
-  // Handle ISO format or space instead of T
-  let clean = str.replace(' ', 'T');
-  // If it doesn't have a timezone, treat as UTC wall-clock
-  if (!clean.includes('Z') && !clean.includes('+') && clean.includes('T')) {
-    clean += 'Z';
-  } else if (!clean.includes('T') && clean.includes('-')) {
-     // YYYY-MM-DD format
-     clean += 'T00:00:00Z';
-  }
-  
-  const d = new Date(clean);
-  if (!isNaN(d.getTime())) return d;
-  
-  // Fallback for DD-MM-YYYY
+  // DD-MM-YYYY
   if (/^\d{2}-\d{2}-\d{4}/.test(str)) {
-    const [dd, mm, yyyy] = str.split('T')[0].split(' ')[0].split('-');
+    const [d, m, y] = str.split('T')[0].split(' ')[0].split('-');
     const timePart = str.includes('T') ? str.split('T')[1] : (str.includes(' ') ? str.split(' ')[1] : '00:00:00');
-    return new Date(`${yyyy}-${mm}-${dd}T${timePart.replace('Z', '')}Z`);
+    const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
+    return new Date(iso);
   }
-  
-  return d;
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const datePart = str.split('T')[0].split(' ')[0];
+    const timePart = str.includes('T') ? str.split('T')[1] : (str.includes(' ') ? str.split(' ')[1] : '00:00:00');
+    const iso = `${datePart}T${timePart.replace('Z', '')}Z`;
+    return new Date(iso);
+  }
+  return new Date(str);
 };
 
 const getZonedInfo = (date, timeZone) => {
@@ -66,18 +60,10 @@ const calculateDuration = (start, end, breakMins = 0) => {
 
 const formatForInput = (dateStr) => {
   if (!dateStr) return '';
-  let d;
-  if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-    // Force UTC for wall-clock strings from DB to prevent local TZ offset shift
-    d = new Date(dateStr.replace(' ', 'T') + 'Z');
-  } else {
-    d = new Date(dateStr);
-  }
-
+  const d = parseWallClockDate(dateStr);
   if (isNaN(d.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
 
-  // Use LOCAL time components so UTC-stored times display correctly in IST (matching mobile app)
+  const pad = (n) => String(n).padStart(2, '0');
   const year = d.getFullYear();
   const month = pad(d.getMonth() + 1);
   const day = pad(d.getDate());
@@ -97,13 +83,7 @@ const safeExtractTime = (dtStr) => {
 const formatActualTime = (dateStr, timeZone) => {
   if (!dateStr) return '--:--:--';
   try {
-    let clean = String(dateStr).trim();
-    if (!clean.includes('Z') && !clean.includes('+') && clean.includes('T')) {
-      clean += 'Z';
-    } else if (!clean.includes('T') && clean.includes(' ')) {
-      clean = clean.replace(' ', 'T') + 'Z';
-    }
-    const d = new Date(clean);
+    const d = parseWallClockDate(dateStr);
     if (isNaN(d.getTime())) return '--:--:--';
     
     const targetTZ = timeZone || 'Asia/Kolkata';
@@ -120,6 +100,7 @@ const formatActualTime = (dateStr, timeZone) => {
   } catch (err) {
     try {
       const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '--:--:--';
       return d.toLocaleString('en-GB', {
         day: '2-digit',
         month: 'short',
@@ -592,11 +573,9 @@ function TicketsPage() {
   
   const parseWallClockDate = useCallback((str) => {
     if (!str) return new Date(NaN);
+    if (str instanceof Date) return str;
     const s = String(str).trim();
-    // YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-      return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
-    }
+    if (!s) return new Date(NaN);
     // DD-MM-YYYY
     if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
       const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
@@ -604,7 +583,14 @@ function TicketsPage() {
       const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
       return new Date(iso);
     }
-    return new Date(s.includes('Z') || s.includes('+') ? s : s.replace(' ', 'T') + 'Z');
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      const datePart = s.split('T')[0].split(' ')[0];
+      const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : '00:00:00');
+      const iso = `${datePart}T${timePart.replace('Z', '')}Z`;
+      return new Date(iso);
+    }
+    return new Date(s);
   }, []);
 
   const workingDays = useMemo(() => {
