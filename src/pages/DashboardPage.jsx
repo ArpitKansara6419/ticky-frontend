@@ -14,6 +14,7 @@ import ApprovalsPage from './ApprovalsPage'
 import EngineerPayoutPage from './EngineerPayoutPage'
 import LeavesPage from './LeavesPage'
 import LeaveHistoryPage from './LeaveHistoryPage'
+import BankPage from './BankPage'
 import {
   FiHome,
   FiUsers,
@@ -1135,6 +1136,10 @@ function DashboardPage() {
 
     if (activePage === 'leaves-history') {
       return <LeaveHistoryPage />
+    }
+
+    if (activePage === 'settings-bank') {
+      return <BankPage />
     }
 
     return <GenericPage pageId={activePage} />
