@@ -1,5 +1,5 @@
 /* CustomerReceivablePage.jsx */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
     FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
@@ -9,6 +9,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import aimbotLogoSrc from '../assets/aimbot-logo.png';
 import './CustomerReceivablePage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -531,6 +532,41 @@ const CustomerReceivablePage = () => {
     const [discountPercent, setDiscountPercent] = useState(0);
     const [selectedFormat, setSelectedFormat] = useState('pdf');
 
+    // Bank selection
+    const [banks, setBanks] = useState([]);
+    const [selectedBankId, setSelectedBankId] = useState('');
+    const aimbotLogoBase64Ref = useRef(null);
+
+    // Pre-load Aimbot logo as base64 for PDF embedding
+    useEffect(() => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            aimbotLogoBase64Ref.current = canvas.toDataURL('image/png');
+        };
+        img.src = aimbotLogoSrc;
+    }, []);
+
+    // Fetch banks on mount
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/banks`)
+            .then(r => r.json())
+            .then(data => {
+                const bankList = data.banks || [];
+                setBanks(bankList);
+                // Auto-select primary bank
+                const primary = bankList.find(b => b.is_primary);
+                if (primary) setSelectedBankId(String(primary.id));
+                else if (bankList.length > 0) setSelectedBankId(String(bankList[0].id));
+            })
+            .catch(() => {});
+    }, []);
+
     // ── Adjustments logic ───────────────────────────────────────────────────
     useEffect(() => {
         if (!detailTicket) { setAdjustments([]); return; }
@@ -620,16 +656,34 @@ const CustomerReceivablePage = () => {
         const paymentDateObj = new Date(issueDateObj.getTime() + 30 * 24 * 60 * 60 * 1000);
         const paymentDate = paymentDateObj.toLocaleDateString('en-GB');
 
+        // ── Get selected bank for this invoice ───────────────────────────────
+        const selectedBank = banks.find(b => String(b.id) === String(selectedBankId)) || banks.find(b => b.is_primary) || banks[0] || null;
+
         // ── Header Section ───────────────────────────────────────────────────
         doc.setFillColor(...PRIMARY_COLOR);
         doc.rect(0, 0, 210, 10, 'F');
 
-        doc.setFillColor(...ACCENT_COLOR);
-        doc.ellipse(25, 25, 10, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'bold');
-        doc.text('aimbizit', 18, 26);
+        // Add Aimbot logo image (top-left)
+        if (aimbotLogoBase64Ref.current) {
+            try {
+                doc.addImage(aimbotLogoBase64Ref.current, 'PNG', 10, 12, 22, 22);
+            } catch(e) {
+                // Fallback to circle if image fails
+                doc.setFillColor(...ACCENT_COLOR);
+                doc.ellipse(21, 23, 10, 10, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'bold');
+                doc.text('aimbot', 14, 24);
+            }
+        } else {
+            doc.setFillColor(...ACCENT_COLOR);
+            doc.ellipse(21, 23, 10, 10, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            doc.text('aimbot', 14, 24);
+        }
         
         doc.setTextColor(...PRIMARY_COLOR);
         doc.setFontSize(22);
@@ -682,12 +736,19 @@ const CustomerReceivablePage = () => {
         doc.setFont('helvetica', 'bold');
         doc.text('PAYMENT INFORMATION', 20, bankY + 7);
         
+        const bkName   = selectedBank ? (selectedBank.bank_name || 'ING Bank') : 'ING Bank';
+        const bkSwift  = selectedBank ? (selectedBank.swift_bic || 'INGBPLPW') : 'INGBPLPW';
+        const bkIban   = selectedBank ? (selectedBank.iban || 'PL 93 1050 1012 1000 0090 3264 5138') : 'PL 93 1050 1012 1000 0090 3264 5138';
+        const bkAccNum = selectedBank ? (selectedBank.account_number || '') : '';
+        const bkHolder = selectedBank ? (selectedBank.account_holder_name || '') : '';
+
         doc.setFontSize(8.5);
         doc.setTextColor(...TEXT_MAIN);
         doc.setFont('helvetica', 'normal');
-        doc.text('Bank:', 20, bankY + 15); doc.setFont('helvetica', 'bold'); doc.text('ING Bank', 40, bankY + 15);
-        doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 125, bankY + 15); doc.text('INGBPLPW', 142, bankY + 15);
-        doc.text('IBAN:', 20, bankY + 22); doc.setFont('helvetica', 'bold'); doc.text('PL 93 1050 1012 1000 0090 3264 5138', 40, bankY + 22);
+        doc.text('Bank:', 20, bankY + 14); doc.setFont('helvetica', 'bold'); doc.text(bkName, 40, bankY + 14);
+        if (bkHolder) { doc.setFont('helvetica', 'normal'); doc.text('Account:', 20, bankY + 19); doc.setFont('helvetica', 'bold'); doc.text(bkHolder, 40, bankY + 19); }
+        doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 125, bankY + 14); doc.setFont('helvetica', 'bold'); doc.text(bkSwift, 142, bankY + 14);
+        doc.setFont('helvetica', 'normal'); doc.text('IBAN:', 20, bankY + 24); doc.setFont('helvetica', 'bold'); doc.text(bkIban, 40, bankY + 24);
 
         // ── Service Table (Optimized Columns) ────────────────────────────────
         const serviceRows = [];
@@ -883,15 +944,32 @@ const CustomerReceivablePage = () => {
         const customInvoiceNo = `CINV-${String(issueDateObj.getMonth()+1).padStart(2,'0')}-${baseTicket.id}`;
         const paymentDate = new Date(issueDateObj.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB');
 
+        // ── Get selected bank for consolidated invoice ───────────────────────
+        const consoSelectedBank = banks.find(b => String(b.id) === String(selectedBankId)) || banks.find(b => b.is_primary) || banks[0] || null;
+
         // Header
         doc.setFillColor(...PRIMARY_COLOR);
         doc.rect(0, 0, 210, 10, 'F');
-        doc.setFillColor(...ACCENT_COLOR);
-        doc.ellipse(25, 25, 10, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'bold');
-        doc.text('aimbizit', 18, 26);
+        // Aimbot logo
+        if (aimbotLogoBase64Ref.current) {
+            try {
+                doc.addImage(aimbotLogoBase64Ref.current, 'PNG', 10, 12, 22, 22);
+            } catch(e) {
+                doc.setFillColor(...ACCENT_COLOR);
+                doc.ellipse(25, 25, 10, 10, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'bold');
+                doc.text('aimbot', 18, 26);
+            }
+        } else {
+            doc.setFillColor(...ACCENT_COLOR);
+            doc.ellipse(25, 25, 10, 10, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            doc.text('aimbot', 18, 26);
+        }
         doc.setTextColor(...PRIMARY_COLOR);
         doc.setFontSize(22);
         doc.text(isInvoice ? 'CONSOLIDATED INVOICE' : 'CONSOLIDATED BREAKDOWN', 200, 30, { align: 'right' });
@@ -925,12 +1003,18 @@ const CustomerReceivablePage = () => {
         });
 
         // Bank Section
-        const bankY = doc.lastAutoTable.finalY + 6;
+        const cbankY = doc.lastAutoTable.finalY + 6;
         doc.setFillColor(...LIGHT_BG);
-        doc.roundedRect(14, bankY, 182, 30, 2, 2, 'F');
-        doc.setFontSize(8); doc.setTextColor(...ACCENT_COLOR); doc.text('PAYMENT INFORMATION', 20, bankY + 7);
-        doc.setFontSize(8.5); doc.setTextColor(...TEXT_MAIN); doc.text('Bank:', 20, bankY + 15); doc.setFont('helvetica', 'bold'); doc.text('ING Bank', 40, bankY + 15);
-        doc.setFont('helvetica', 'normal'); doc.text('IBAN:', 20, bankY + 22); doc.setFont('helvetica', 'bold'); doc.text('PL 93 1050 1012 1000 0090 3264 5138', 40, bankY + 22);
+        doc.roundedRect(14, cbankY, 182, 30, 2, 2, 'F');
+        doc.setFontSize(8); doc.setTextColor(...ACCENT_COLOR); doc.text('PAYMENT INFORMATION', 20, cbankY + 7);
+        const cbkName   = consoSelectedBank ? (consoSelectedBank.bank_name || 'ING Bank') : 'ING Bank';
+        const cbkSwift  = consoSelectedBank ? (consoSelectedBank.swift_bic || 'INGBPLPW') : 'INGBPLPW';
+        const cbkIban   = consoSelectedBank ? (consoSelectedBank.iban || 'PL 93 1050 1012 1000 0090 3264 5138') : 'PL 93 1050 1012 1000 0090 3264 5138';
+        const cbkHolder = consoSelectedBank ? (consoSelectedBank.account_holder_name || '') : '';
+        doc.setFontSize(8.5); doc.setTextColor(...TEXT_MAIN); doc.text('Bank:', 20, cbankY + 14); doc.setFont('helvetica', 'bold'); doc.text(cbkName, 40, cbankY + 14);
+        if (cbkHolder) { doc.setFont('helvetica', 'normal'); doc.text('Account:', 20, cbankY + 19); doc.setFont('helvetica', 'bold'); doc.text(cbkHolder, 40, cbankY + 19); }
+        doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 125, cbankY + 14); doc.setFont('helvetica', 'bold'); doc.text(cbkSwift, 142, cbankY + 14);
+        doc.setFont('helvetica', 'normal'); doc.text('IBAN:', 20, cbankY + 24); doc.setFont('helvetica', 'bold'); doc.text(cbkIban, 40, cbankY + 24);
 
         // Consolidated Table
         const serviceRows = [];
@@ -1020,7 +1104,7 @@ const CustomerReceivablePage = () => {
             : [['DATE', 'TYPE', 'DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, 'OTHER COST', `AMOUNT (${cur})`]];
 
         autoTable(doc, {
-            startY: bankY + 38,
+            startY: cbankY + 38,
             head: headers,
             body: serviceRows,
             theme: 'grid',
@@ -2182,6 +2266,32 @@ const CustomerReceivablePage = () => {
                                             <div style={{ fontSize: '14px', fontWeight: '700', color: item.highlight ? 'var(--crm-primary, #7c3aed)' : '#1e293b' }}>{item.value}</div>
                                         </div>
                                     ))}
+                                    {/* Bank Dropdown */}
+                                    <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #c7d2fe' }}>
+                                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#6d28d9', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>🏦 Bank (for Invoice)</div>
+                                        <select
+                                            value={selectedBankId}
+                                            onChange={e => setSelectedBankId(e.target.value)}
+                                            style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: '#1e293b', background: '#fff', outline: 'none', cursor: 'pointer' }}
+                                        >
+                                            {banks.length === 0 && <option value="">No banks found — add one in Bank Settings</option>}
+                                            {banks.map(b => (
+                                                <option key={b.id} value={String(b.id)}>
+                                                    {b.bank_name}{b.is_primary ? ' ★ (Primary)' : ''} — {b.account_holder_name || ''} — IBAN: {b.iban || b.account_number || 'N/A'}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {selectedBankId && banks.find(b => String(b.id) === String(selectedBankId)) && (() => {
+                                            const sb = banks.find(b => String(b.id) === String(selectedBankId));
+                                            return (
+                                                <div style={{ marginTop: '8px', display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '11px', color: '#64748b' }}>
+                                                    {sb.swift_bic && <span><strong>SWIFT:</strong> {sb.swift_bic}</span>}
+                                                    {sb.iban && <span><strong>IBAN:</strong> {sb.iban}</span>}
+                                                    {sb.account_number && !sb.iban && <span><strong>Acc#:</strong> {sb.account_number}</span>}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
                                 </div>
 
                                 {/* Section 2: Time Logs */}
