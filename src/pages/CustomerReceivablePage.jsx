@@ -726,30 +726,6 @@ const CustomerReceivablePage = () => {
             columnStyles: { 0: { cellWidth: 65 }, 1: { cellWidth: 65 } } // Reduced widths to prevent overlap
         });
 
-        // ── Bank Section ─────────────────────────────────────────────────────
-        const bankY = doc.lastAutoTable.finalY + 6;
-        doc.setFillColor(...LIGHT_BG);
-        doc.roundedRect(14, bankY, 182, 30, 2, 2, 'F');
-        
-        doc.setFontSize(8);
-        doc.setTextColor(...ACCENT_COLOR);
-        doc.setFont('helvetica', 'bold');
-        doc.text('PAYMENT INFORMATION', 20, bankY + 7);
-        
-        const bkName   = selectedBank ? (selectedBank.bank_name || 'ING Bank') : 'ING Bank';
-        const bkSwift  = selectedBank ? (selectedBank.swift_bic || 'INGBPLPW') : 'INGBPLPW';
-        const bkIban   = selectedBank ? (selectedBank.iban || 'PL 93 1050 1012 1000 0090 3264 5138') : 'PL 93 1050 1012 1000 0090 3264 5138';
-        const bkAccNum = selectedBank ? (selectedBank.account_number || '') : '';
-        const bkHolder = selectedBank ? (selectedBank.account_holder_name || '') : '';
-
-        doc.setFontSize(8.5);
-        doc.setTextColor(...TEXT_MAIN);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Bank:', 20, bankY + 14); doc.setFont('helvetica', 'bold'); doc.text(bkName, 40, bankY + 14);
-        if (bkHolder) { doc.setFont('helvetica', 'normal'); doc.text('Account:', 20, bankY + 19); doc.setFont('helvetica', 'bold'); doc.text(bkHolder, 40, bankY + 19); }
-        doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 125, bankY + 14); doc.setFont('helvetica', 'bold'); doc.text(bkSwift, 142, bankY + 14);
-        doc.setFont('helvetica', 'normal'); doc.text('IBAN:', 20, bankY + 24); doc.setFont('helvetica', 'bold'); doc.text(bkIban, 40, bankY + 24);
-
         // ── Service Table (Optimized Columns) ────────────────────────────────
         const serviceRows = [];
         const displayLogs = logs.length > 0 ? logs : [{ task_date: ticket.task_start_date, start_time: ticket.start_time, end_time: ticket.end_time }];
@@ -841,7 +817,7 @@ const CustomerReceivablePage = () => {
             : [['DATE', 'TYPE', 'DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, 'OTHER COST', `AMOUNT (${cur})`]];
 
         autoTable(doc, {
-            startY: bankY + 38,
+            startY: doc.lastAutoTable.finalY + 10,
             head: headers,
             body: serviceRows,
             theme: 'grid',
@@ -869,14 +845,102 @@ const CustomerReceivablePage = () => {
             footStyles: { fillColor: [255, 255, 255], cellPadding: 3 }
         });
 
-        const footY = 270;
-        doc.setFontSize(8.5);
-        doc.setTextColor(...TEXT_DIM);
-        doc.text(`Service Period: ${serviceDuration}`, 14, footY);
-        doc.text('Computer-generated document. No signature required.', 14, footY + 5);
-        doc.setTextColor(...PRIMARY_COLOR);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Thank you for your business!', 105, footY + 15, { align: 'center' });
+        // ── Bank / Payment Information (BELOW the total amount) ───────────────────
+        const bkName   = selectedBank ? (selectedBank.bank_name || '') : '';
+        const bkSwift  = selectedBank ? (selectedBank.swift_bic || '') : '';
+        const bkIban   = selectedBank ? (selectedBank.iban || '') : '';
+        const bkAccNum = selectedBank ? (selectedBank.account_number || '') : '';
+        const bkHolder = selectedBank ? (selectedBank.account_holder_name || '') : '';
+        const bkSortCode = selectedBank ? (selectedBank.sort_code || '') : '';
+
+        // Only show bank section if we have at least a bank name
+        if (bkName) {
+            // Build the bank info rows dynamically
+            const bankLines = [];
+            if (bkHolder) bankLines.push({ label: 'Account Holder:', value: bkHolder });
+            if (bkAccNum) bankLines.push({ label: 'Account No:', value: bkAccNum });
+            if (bkSortCode) bankLines.push({ label: 'Sort Code:', value: bkSortCode });
+            if (bkIban) bankLines.push({ label: 'IBAN:', value: bkIban });
+            if (bkSwift) bankLines.push({ label: 'SWIFT/BIC:', value: bkSwift });
+
+            const boxHeight = 12 + bankLines.length * 6;
+            const bankY = doc.lastAutoTable.finalY + 8;
+
+            doc.setFillColor(...LIGHT_BG);
+            doc.roundedRect(14, bankY, 182, boxHeight, 2, 2, 'F');
+            doc.setDrawColor(...ACCENT_COLOR);
+            doc.setLineWidth(0.5);
+            doc.line(14, bankY, 14, bankY + boxHeight); // left accent line
+
+            doc.setFontSize(8);
+            doc.setTextColor(...ACCENT_COLOR);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PAYMENT INFORMATION', 20, bankY + 7);
+
+            // Bank name on same line as header right side
+            doc.setFontSize(9);
+            doc.setTextColor(...TEXT_MAIN);
+            doc.text(`Bank: `, 20, bankY + 7 + 6);
+            doc.setFont('helvetica', 'bold');
+            doc.text(bkName, 40, bankY + 7 + 6);
+
+            // Remaining fields
+            doc.setFontSize(8.5);
+            let lineOffset = bankY + 7 + 12;
+            const col2Start = 110; // right column start x
+            const rightFields = [];
+
+            bankLines.forEach((bl, idx) => {
+                if (bl.label === 'SWIFT/BIC:' || bl.label === 'Sort Code:') {
+                    rightFields.push(bl);
+                } else {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(...TEXT_DIM);
+                    doc.text(bl.label, 20, lineOffset);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...TEXT_MAIN);
+                    doc.text(bl.value, 55, lineOffset);
+                    lineOffset += 6;
+                }
+            });
+
+            // Right column (SWIFT, Sort Code)
+            let rLineOffset = bankY + 7 + 12;
+            rightFields.forEach(rf => {
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...TEXT_DIM);
+                doc.text(rf.label, col2Start, rLineOffset);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...TEXT_MAIN);
+                doc.text(rf.value, col2Start + 20, rLineOffset);
+                rLineOffset += 6;
+            });
+
+            doc.setLineWidth(0.1); // reset
+            doc.setDrawColor(220, 220, 220);
+
+            // Footer text below bank box
+            const footY = bankY + boxHeight + 8;
+            doc.setFontSize(8.5);
+            doc.setTextColor(...TEXT_DIM);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Service Period: ${serviceDuration}`, 14, footY);
+            doc.text('Computer-generated document. No signature required.', 14, footY + 5);
+            doc.setTextColor(...PRIMARY_COLOR);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Thank you for your business!', 105, footY + 15, { align: 'center' });
+        } else {
+            // No bank - just footer
+            const footY = doc.lastAutoTable.finalY + 12;
+            doc.setFontSize(8.5);
+            doc.setTextColor(...TEXT_DIM);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Service Period: ${serviceDuration}`, 14, footY);
+            doc.text('Computer-generated document. No signature required.', 14, footY + 5);
+            doc.setTextColor(...PRIMARY_COLOR);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Thank you for your business!', 105, footY + 15, { align: 'center' });
+        }
 
         doc.save(filename);
     };
@@ -1002,19 +1066,7 @@ const CustomerReceivablePage = () => {
             columnStyles: { 0: { cellWidth: 65 }, 1: { cellWidth: 65 } }
         });
 
-        // Bank Section
-        const cbankY = doc.lastAutoTable.finalY + 6;
-        doc.setFillColor(...LIGHT_BG);
-        doc.roundedRect(14, cbankY, 182, 30, 2, 2, 'F');
-        doc.setFontSize(8); doc.setTextColor(...ACCENT_COLOR); doc.text('PAYMENT INFORMATION', 20, cbankY + 7);
-        const cbkName   = consoSelectedBank ? (consoSelectedBank.bank_name || 'ING Bank') : 'ING Bank';
-        const cbkSwift  = consoSelectedBank ? (consoSelectedBank.swift_bic || 'INGBPLPW') : 'INGBPLPW';
-        const cbkIban   = consoSelectedBank ? (consoSelectedBank.iban || 'PL 93 1050 1012 1000 0090 3264 5138') : 'PL 93 1050 1012 1000 0090 3264 5138';
-        const cbkHolder = consoSelectedBank ? (consoSelectedBank.account_holder_name || '') : '';
-        doc.setFontSize(8.5); doc.setTextColor(...TEXT_MAIN); doc.text('Bank:', 20, cbankY + 14); doc.setFont('helvetica', 'bold'); doc.text(cbkName, 40, cbankY + 14);
-        if (cbkHolder) { doc.setFont('helvetica', 'normal'); doc.text('Account:', 20, cbankY + 19); doc.setFont('helvetica', 'bold'); doc.text(cbkHolder, 40, cbankY + 19); }
-        doc.setFont('helvetica', 'normal'); doc.text('SWIFT:', 125, cbankY + 14); doc.setFont('helvetica', 'bold'); doc.text(cbkSwift, 142, cbankY + 14);
-        doc.setFont('helvetica', 'normal'); doc.text('IBAN:', 20, cbankY + 24); doc.setFont('helvetica', 'bold'); doc.text(cbkIban, 40, cbankY + 24);
+        // (Bank section will be rendered BELOW the table)
 
         // Consolidated Table
         const serviceRows = [];
@@ -1104,7 +1156,7 @@ const CustomerReceivablePage = () => {
             : [['DATE', 'TYPE', 'DESCRIPTION', 'IN', 'OUT', `RATE (${cur})`, 'OTHER COST', `AMOUNT (${cur})`]];
 
         autoTable(doc, {
-            startY: cbankY + 38,
+            startY: doc.lastAutoTable.finalY + 10,
             head: headers,
             body: serviceRows,
             theme: 'grid',
@@ -1118,6 +1170,61 @@ const CustomerReceivablePage = () => {
             foot: [[{ content: 'CONSOLIDATED TOTAL', colSpan: isInvoice ? 2 : 7, styles: { halign: 'right', fontStyle: 'bold' } }, { content: `${cur} ${finalGrandTotal.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: ACCENT_COLOR, fontSize: 11 } }]],
             footStyles: { fillColor: [255, 255, 255] }
         });
+
+        // ── Dynamic Bank / Payment Information (BELOW the total) ──────────────────
+        const cbkName   = consoSelectedBank ? (consoSelectedBank.bank_name || '') : '';
+        const cbkSwift  = consoSelectedBank ? (consoSelectedBank.swift_bic || '') : '';
+        const cbkIban   = consoSelectedBank ? (consoSelectedBank.iban || '') : '';
+        const cbkAccNum = consoSelectedBank ? (consoSelectedBank.account_number || '') : '';
+        const cbkHolder = consoSelectedBank ? (consoSelectedBank.account_holder_name || '') : '';
+        const cbkSortCode = consoSelectedBank ? (consoSelectedBank.sort_code || '') : '';
+
+        if (cbkName) {
+            const cbankLines = [];
+            if (cbkHolder) cbankLines.push({ label: 'Account Holder:', value: cbkHolder });
+            if (cbkAccNum) cbankLines.push({ label: 'Account No:', value: cbkAccNum });
+            if (cbkSortCode) cbankLines.push({ label: 'Sort Code:', value: cbkSortCode });
+            if (cbkIban) cbankLines.push({ label: 'IBAN:', value: cbkIban });
+            if (cbkSwift) cbankLines.push({ label: 'SWIFT/BIC:', value: cbkSwift });
+
+            const cbBoxHeight = 12 + cbankLines.length * 6;
+            const cbankY = doc.lastAutoTable.finalY + 8;
+
+            doc.setFillColor(...LIGHT_BG);
+            doc.roundedRect(14, cbankY, 182, cbBoxHeight, 2, 2, 'F');
+            doc.setDrawColor(...ACCENT_COLOR);
+            doc.setLineWidth(0.5);
+            doc.line(14, cbankY, 14, cbankY + cbBoxHeight);
+
+            doc.setFontSize(8); doc.setTextColor(...ACCENT_COLOR); doc.setFont('helvetica', 'bold');
+            doc.text('PAYMENT INFORMATION', 20, cbankY + 7);
+            doc.setFontSize(9); doc.setTextColor(...TEXT_MAIN);
+            doc.text('Bank: ', 20, cbankY + 13); doc.setFont('helvetica', 'bold'); doc.text(cbkName, 40, cbankY + 13);
+
+            doc.setFontSize(8.5);
+            let cLineOffset = cbankY + 19;
+            const cRightFields = [];
+            cbankLines.forEach(bl => {
+                if (bl.label === 'SWIFT/BIC:' || bl.label === 'Sort Code:') {
+                    cRightFields.push(bl);
+                } else {
+                    doc.setFont('helvetica', 'normal'); doc.setTextColor(...TEXT_DIM);
+                    doc.text(bl.label, 20, cLineOffset);
+                    doc.setFont('helvetica', 'bold'); doc.setTextColor(...TEXT_MAIN);
+                    doc.text(bl.value, 55, cLineOffset);
+                    cLineOffset += 6;
+                }
+            });
+            let cRLineOffset = cbankY + 19;
+            cRightFields.forEach(rf => {
+                doc.setFont('helvetica', 'normal'); doc.setTextColor(...TEXT_DIM);
+                doc.text(rf.label, 110, cRLineOffset);
+                doc.setFont('helvetica', 'bold'); doc.setTextColor(...TEXT_MAIN);
+                doc.text(rf.value, 130, cRLineOffset);
+                cRLineOffset += 6;
+            });
+            doc.setLineWidth(0.1); doc.setDrawColor(220, 220, 220);
+        }
 
         doc.save(filename);
     };
@@ -1284,15 +1391,32 @@ const CustomerReceivablePage = () => {
             ['Thank You'],
             [],
             // Bank Details
-            ['BANK Details for Payment'],
-            ['Bank Name', 'ING Bank'],
-            ['Bank Address', 'Warsaw, Poland'],
-            ['Account Holder Name', 'AIMBOT BUSINESS SERVICES'],
-            ['Account Number', 'PL 93 1050 1012 1000 0090 3264 5138'],
-            ['IBAN', 'PL 93 1050 1012 1000 0090 3264 5138'],
-            ['BIC / Swift Code', 'INGBPLPW'],
-            ['Sort Code (UK ONLY)', '-'],
-            ['Country', 'Poland']
+            ...(() => {
+                const activeBank = banks.find(b => String(b.id) === String(selectedBankId)) || banks.find(b => b.is_primary) || banks[0] || null;
+                if (activeBank) {
+                    const rows = [['BANK Details for Payment']];
+                    rows.push(['Bank Name', activeBank.bank_name || '']);
+                    if (activeBank.bank_address) rows.push(['Bank Address', activeBank.bank_address]);
+                    rows.push(['Account Holder Name', activeBank.account_holder_name || '']);
+                    rows.push(['Account Number', activeBank.account_number || '']);
+                    if (activeBank.iban) rows.push(['IBAN', activeBank.iban]);
+                    if (activeBank.swift_bic) rows.push(['BIC / Swift Code', activeBank.swift_bic]);
+                    if (activeBank.sort_code) rows.push(['Sort Code (UK ONLY)', activeBank.sort_code]);
+                    return rows;
+                } else {
+                    return [
+                        ['BANK Details for Payment'],
+                        ['Bank Name', 'ING Bank'],
+                        ['Bank Address', 'Warsaw, Poland'],
+                        ['Account Holder Name', 'AIMBOT BUSINESS SERVICES'],
+                        ['Account Number', 'PL 93 1050 1012 1000 0090 3264 5138'],
+                        ['IBAN', 'PL 93 1050 1012 1000 0090 3264 5138'],
+                        ['BIC / Swift Code', 'INGBPLPW'],
+                        ['Sort Code (UK ONLY)', '-'],
+                        ['Country', 'Poland']
+                    ];
+                }
+            })()
         ];
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
