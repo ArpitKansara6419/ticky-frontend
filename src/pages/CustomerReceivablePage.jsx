@@ -2550,6 +2550,37 @@ const CustomerReceivablePage = () => {
                         </div>
                         
                         <div className="invoice-modal-body">
+
+                            {/* Bank Selection */}
+                            <div className="premium-input-group" style={{ marginBottom: '18px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', color: '#1e293b', fontSize: '13px', marginBottom: '8px' }}>
+                                    🏦 Bank Details (shown on Invoice)
+                                </label>
+                                <select
+                                    value={selectedBankId}
+                                    onChange={e => setSelectedBankId(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #c7d2fe', borderRadius: '10px', fontSize: '13px', fontWeight: '600', color: '#1e293b', background: '#fff', outline: 'none', cursor: 'pointer', boxShadow: '0 1px 4px rgba(99,102,241,0.08)' }}
+                                >
+                                    {banks.length === 0 && <option value="">No banks found — add one in Bank Settings</option>}
+                                    {banks.map(b => (
+                                        <option key={b.id} value={String(b.id)}>
+                                            {b.is_primary ? '★ ' : ''}{b.bank_name} — {b.account_holder_name || ''} — {b.iban || b.account_number || 'N/A'}
+                                        </option>
+                                    ))}
+                                </select>
+                                {selectedBankId && banks.find(b => String(b.id) === String(selectedBankId)) && (() => {
+                                    const sb = banks.find(b => String(b.id) === String(selectedBankId));
+                                    return (
+                                        <div style={{ marginTop: '8px', display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '11px', color: '#64748b', background: '#f0f4ff', borderRadius: '8px', padding: '8px 12px' }}>
+                                            <span><strong>Bank:</strong> {sb.bank_name}</span>
+                                            {sb.swift_bic && <span><strong>SWIFT:</strong> {sb.swift_bic}</span>}
+                                            {sb.iban && <span><strong>IBAN:</strong> {sb.iban}</span>}
+                                            {sb.account_number && !sb.iban && <span><strong>Acc#:</strong> {sb.account_number}</span>}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
                             <div className="premium-input-group">
                                 <label>PO Number</label>
                                 <div className="premium-input-wrapper">
