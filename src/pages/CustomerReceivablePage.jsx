@@ -853,7 +853,6 @@ const CustomerReceivablePage = () => {
         const bkHolder = selectedBank ? (selectedBank.account_holder_name || '') : '';
         const bkSortCode = selectedBank ? (selectedBank.sort_code || '') : '';
 
-        // Only show bank section if we have at least a bank name
         if (bkName) {
             // Build the bank info rows dynamically
             const bankLines = [];
@@ -863,56 +862,65 @@ const CustomerReceivablePage = () => {
             if (bkIban) bankLines.push({ label: 'IBAN:', value: bkIban });
             if (bkSwift) bankLines.push({ label: 'SWIFT/BIC:', value: bkSwift });
 
-            const boxHeight = 12 + bankLines.length * 6;
+            const leftFields = [];
+            const rightFields = [];
+            bankLines.forEach(bl => {
+                if (bl.label === 'SWIFT/BIC:' || bl.label === 'Sort Code:') {
+                    rightFields.push(bl);
+                } else {
+                    leftFields.push(bl);
+                }
+            });
+
+            const maxLines = Math.max(1 + leftFields.length, rightFields.length);
+            const boxHeight = 10 + maxLines * 6 + 4; // 10 top, 4 bottom padding
             const bankY = doc.lastAutoTable.finalY + 8;
 
             doc.setFillColor(...LIGHT_BG);
             doc.roundedRect(14, bankY, 182, boxHeight, 2, 2, 'F');
+            
+            // Premium left accent line with rounded caps inside the box
             doc.setDrawColor(...ACCENT_COLOR);
-            doc.setLineWidth(0.5);
-            doc.line(14, bankY, 14, bankY + boxHeight); // left accent line
+            doc.setLineWidth(1.5);
+            doc.setLineCap('round');
+            doc.line(17, bankY + 4, 17, bankY + boxHeight - 4);
 
             doc.setFontSize(8);
             doc.setTextColor(...ACCENT_COLOR);
             doc.setFont('helvetica', 'bold');
-            doc.text('PAYMENT INFORMATION', 20, bankY + 7);
+            doc.text('PAYMENT INFORMATION', 22, bankY + 7);
 
-            // Bank name on same line as header right side
-            doc.setFontSize(9);
-            doc.setTextColor(...TEXT_MAIN);
-            doc.text(`Bank: `, 20, bankY + 7 + 6);
-            doc.setFont('helvetica', 'bold');
-            doc.text(bkName, 40, bankY + 7 + 6);
-
-            // Remaining fields
+            // Bank Name Row (Aligning with other fields)
             doc.setFontSize(8.5);
-            let lineOffset = bankY + 7 + 12;
-            const col2Start = 110; // right column start x
-            const rightFields = [];
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...TEXT_DIM);
+            doc.text('Bank:', 22, bankY + 13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...TEXT_MAIN);
+            doc.text(bkName, 56, bankY + 13);
 
-            bankLines.forEach((bl, idx) => {
-                if (bl.label === 'SWIFT/BIC:' || bl.label === 'Sort Code:') {
-                    rightFields.push(bl);
-                } else {
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(...TEXT_DIM);
-                    doc.text(bl.label, 20, lineOffset);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...TEXT_MAIN);
-                    doc.text(bl.value, 55, lineOffset);
-                    lineOffset += 6;
-                }
+            // Remaining left fields (Account Holder, Account No, IBAN)
+            let lineOffset = bankY + 19;
+            leftFields.forEach(bl => {
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...TEXT_DIM);
+                doc.text(bl.label, 22, lineOffset);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...TEXT_MAIN);
+                doc.text(bl.value, 56, lineOffset);
+                lineOffset += 6;
             });
 
-            // Right column (SWIFT, Sort Code)
-            let rLineOffset = bankY + 7 + 12;
+            // Right column fields (SWIFT/BIC, Sort Code)
+            const col2Start = 110; // right column start x
+            let rLineOffset = bankY + 13; // start SWIFT/Sort Code at the same height as Bank Name
             rightFields.forEach(rf => {
                 doc.setFont('helvetica', 'normal');
                 doc.setTextColor(...TEXT_DIM);
                 doc.text(rf.label, col2Start, rLineOffset);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(...TEXT_MAIN);
-                doc.text(rf.value, col2Start + 20, rLineOffset);
+                doc.text(rf.value, col2Start + 22, rLineOffset);
                 rLineOffset += 6;
             });
 
@@ -1187,43 +1195,70 @@ const CustomerReceivablePage = () => {
             if (cbkIban) cbankLines.push({ label: 'IBAN:', value: cbkIban });
             if (cbkSwift) cbankLines.push({ label: 'SWIFT/BIC:', value: cbkSwift });
 
-            const cbBoxHeight = 12 + cbankLines.length * 6;
-            const cbankY = doc.lastAutoTable.finalY + 8;
-
-            doc.setFillColor(...LIGHT_BG);
-            doc.roundedRect(14, cbankY, 182, cbBoxHeight, 2, 2, 'F');
-            doc.setDrawColor(...ACCENT_COLOR);
-            doc.setLineWidth(0.5);
-            doc.line(14, cbankY, 14, cbankY + cbBoxHeight);
-
-            doc.setFontSize(8); doc.setTextColor(...ACCENT_COLOR); doc.setFont('helvetica', 'bold');
-            doc.text('PAYMENT INFORMATION', 20, cbankY + 7);
-            doc.setFontSize(9); doc.setTextColor(...TEXT_MAIN);
-            doc.text('Bank: ', 20, cbankY + 13); doc.setFont('helvetica', 'bold'); doc.text(cbkName, 40, cbankY + 13);
-
-            doc.setFontSize(8.5);
-            let cLineOffset = cbankY + 19;
+            const cLeftFields = [];
             const cRightFields = [];
             cbankLines.forEach(bl => {
                 if (bl.label === 'SWIFT/BIC:' || bl.label === 'Sort Code:') {
                     cRightFields.push(bl);
                 } else {
-                    doc.setFont('helvetica', 'normal'); doc.setTextColor(...TEXT_DIM);
-                    doc.text(bl.label, 20, cLineOffset);
-                    doc.setFont('helvetica', 'bold'); doc.setTextColor(...TEXT_MAIN);
-                    doc.text(bl.value, 55, cLineOffset);
-                    cLineOffset += 6;
+                    cLeftFields.push(bl);
                 }
             });
-            let cRLineOffset = cbankY + 19;
+
+            const cMaxLines = Math.max(1 + cLeftFields.length, cRightFields.length);
+            const cbBoxHeight = 10 + cMaxLines * 6 + 4; // 10 top, 4 bottom padding
+            const cbankY = doc.lastAutoTable.finalY + 8;
+
+            doc.setFillColor(...LIGHT_BG);
+            doc.roundedRect(14, cbankY, 182, cbBoxHeight, 2, 2, 'F');
+            
+            // Premium left accent line with rounded caps inside the box
+            doc.setDrawColor(...ACCENT_COLOR);
+            doc.setLineWidth(1.5);
+            doc.setLineCap('round');
+            doc.line(17, cbankY + 4, 17, cbankY + cbBoxHeight - 4);
+
+            doc.setFontSize(8);
+            doc.setTextColor(...ACCENT_COLOR);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PAYMENT INFORMATION', 22, cbankY + 7);
+
+            // Bank Name Row
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...TEXT_DIM);
+            doc.text('Bank:', 22, cbankY + 13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...TEXT_MAIN);
+            doc.text(cbkName, 56, cbankY + 13);
+
+            // Remaining left fields (Account Holder, Account No, IBAN)
+            let cLineOffset = cbankY + 19;
+            cLeftFields.forEach(bl => {
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...TEXT_DIM);
+                doc.text(bl.label, 22, cLineOffset);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...TEXT_MAIN);
+                doc.text(bl.value, 56, cLineOffset);
+                cLineOffset += 6;
+            });
+
+            // Right column fields (SWIFT/BIC, Sort Code)
+            const col2Start = 110;
+            let cRLineOffset = cbankY + 13; // start SWIFT/Sort Code at same height as Bank Name
             cRightFields.forEach(rf => {
-                doc.setFont('helvetica', 'normal'); doc.setTextColor(...TEXT_DIM);
-                doc.text(rf.label, 110, cRLineOffset);
-                doc.setFont('helvetica', 'bold'); doc.setTextColor(...TEXT_MAIN);
-                doc.text(rf.value, 130, cRLineOffset);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...TEXT_DIM);
+                doc.text(rf.label, col2Start, cRLineOffset);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...TEXT_MAIN);
+                doc.text(rf.value, col2Start + 22, cRLineOffset);
                 cRLineOffset += 6;
             });
-            doc.setLineWidth(0.1); doc.setDrawColor(220, 220, 220);
+
+            doc.setLineWidth(0.1);
+            doc.setDrawColor(220, 220, 220);
         }
 
         doc.save(filename);
