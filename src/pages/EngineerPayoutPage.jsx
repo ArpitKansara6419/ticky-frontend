@@ -115,13 +115,13 @@ const EngineerPayoutPage = () => {
     };
 
     useEffect(() => {
-        fetchEngineersSummary();
-    }, []);
+        fetchEngineersSummary(activeTab);
+    }, [activeTab]);
 
-    const fetchEngineersSummary = async () => {
+    const fetchEngineersSummary = async (status = activeTab) => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/payouts/engineers/unpaid`);
+            const res = await fetch(`${API_BASE_URL}/payouts/engineers/unpaid?status=${status === 'history' ? 'Paid' : 'Unpaid'}`);
             if (res.ok) {
                 const data = await res.json();
                 setEngineersList(data.engineers || []);
@@ -143,11 +143,11 @@ const EngineerPayoutPage = () => {
         }
     };
 
-    const fetchEngineerTickets = async (engineerId) => {
+    const fetchEngineerTickets = async (engineerId, status = activeTab) => {
         setLoading(true);
         setSelectedEngineerId(engineerId);
         try {
-            const res = await fetch(`${API_BASE_URL}/payouts/engineer/${engineerId}/tickets`);
+            const res = await fetch(`${API_BASE_URL}/payouts/engineer/${engineerId}/tickets?status=${status === 'history' ? 'Paid' : 'Unpaid'}`);
             if (res.ok) {
                 const data = await res.json();
                 setUnpaidTickets(data.tickets || []);
@@ -164,7 +164,7 @@ const EngineerPayoutPage = () => {
     const handleBackToEngineers = () => {
         setSelectedEngineerId(null);
         setUnpaidTickets([]);
-        fetchEngineersSummary();
+        fetchEngineersSummary(activeTab);
     };
 
     const toggleTicketSelection = (id) => {
@@ -191,8 +191,8 @@ const EngineerPayoutPage = () => {
             if (res.ok) {
                 alert('Payout processed successfully!');
                 // Success - Fetch both summary AND tickets to keep everything in sync
-                await fetchEngineersSummary();
-                await fetchEngineerTickets(selectedEngineerId);
+                await fetchEngineersSummary(activeTab);
+                await fetchEngineerTickets(selectedEngineerId, activeTab);
             } else {
                 alert('Failed to process payout.');
             }
@@ -641,7 +641,12 @@ const EngineerPayoutPage = () => {
                           ? engineersList.find(e => e.id === selectedEngineerId)?.name || 'Engineer Detail'
                           : 'Engineer Payouts'}
                     </h1>
-                    <p>{selectedEngineerId ? 'Displaying unpaid tickets for this engineer' : 'Manage and process payments for engineers'}</p>
+                    <p>
+                        {selectedEngineerId 
+                          ? (activeTab === 'history' ? 'Displaying paid tickets history for this engineer' : 'Displaying unpaid tickets for this engineer')
+                          : (activeTab === 'history' ? 'View and track processed payments for engineers' : 'Manage and process payments for engineers')
+                        }
+                    </p>
                 </div>
                 <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {selectedEngineerId && (
@@ -661,7 +666,7 @@ const EngineerPayoutPage = () => {
                     )}
                     <button 
                         className="btn-refresh" 
-                        onClick={selectedEngineerId ? () => fetchEngineerTickets(selectedEngineerId) : fetchEngineersSummary}
+                        onClick={selectedEngineerId ? () => fetchEngineerTickets(selectedEngineerId, activeTab) : () => fetchEngineersSummary(activeTab)}
                         disabled={loading}
                     >
                         <FiRefreshCw className={loading ? 'spin' : ''} />
@@ -680,14 +685,14 @@ const EngineerPayoutPage = () => {
                     <div className="stat-card blue">
                         <FiUser className="stat-icon" />
                         <div className="stat-info">
-                            <span className="stat-label">Unpaid Engineers</span>
+                            <span className="stat-label">{activeTab === 'history' ? 'Paid Engineers' : 'Unpaid Engineers'}</span>
                             <span className="stat-value">{selectedEngineerId ? 1 : statsForSelectedCurrency.unpaidCount}</span>
                         </div>
                     </div>
                     <div className="stat-card green">
                         <FiDollarSign className="stat-icon" />
                         <div className="stat-info">
-                            <span className="stat-label">Est. Total Payout</span>
+                            <span className="stat-label">{activeTab === 'history' ? 'Total Paid Out' : 'Est. Total Payout'}</span>
                             <span className="stat-value">
                                 {(() => {
                                     if (selectedEngineerId && unpaidTickets.length > 0) {
@@ -715,6 +720,27 @@ const EngineerPayoutPage = () => {
             {!selectedEngineerId ? (
                 /* ENGINEER LIST VIEW */
                 <main className="payout-content">
+                    <div className="payout-tabs-container">
+                        <button 
+                            className={`payout-tab ${activeTab === 'unpaid' ? 'active' : ''}`}
+                            onClick={() => {
+                                setActiveTab('unpaid');
+                                setSearchTerm('');
+                            }}
+                        >
+                            <FiAlertCircle className="tab-icon" /> Unpaid Payouts
+                        </button>
+                        <button 
+                            className={`payout-tab ${activeTab === 'history' ? 'active' : ''}`}
+                            onClick={() => {
+                                setActiveTab('history');
+                                setSearchTerm('');
+                            }}
+                        >
+                            <FiCheckCircle className="tab-icon" /> Paid History
+                        </button>
+                    </div>
+
                     <div className="content-controls">
                         <div className="search-box">
                             <FiSearch className="search-icon" />
@@ -739,8 +765,8 @@ const EngineerPayoutPage = () => {
                                     <th>Engineer</th>
                                     <th>Contact</th>
                                     <th>Location</th>
-                                    <th>Pending Tickets</th>
-                                    <th>Est. Payout</th>
+                                    <th>{activeTab === 'history' ? 'Paid Tickets' : 'Pending Tickets'}</th>
+                                    <th>{activeTab === 'history' ? 'Total Paid' : 'Est. Payout'}</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -762,21 +788,26 @@ const EngineerPayoutPage = () => {
                                             </td>
                                             <td>{eng.city || 'N/A'}</td>
                                             <td>
-                                                <span className="badge-ticket">{eng.ticket_count} tickets</span>
+                                                <span className="badge-ticket" style={activeTab === 'history' ? { background: '#eafaf1', color: '#2ec4b6' } : {}}>{eng.ticket_count} tickets</span>
                                             </td>
                                             <td className="amount-cell">
                                                 {CURRENCY_SYMBOLS[eng.currency || 'USD'] || '$'}{parseFloat(eng.total_payout_estimated || 0).toFixed(2)}
                                             </td>
                                             <td>
                                                 <button className="btn-action" onClick={() => fetchEngineerTickets(eng.id)}>
-                                                    View Tickets <FiArrowRight />
+                                                    View History <FiArrowRight />
                                                 </button>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="empty-row">No engineers with unpaid tickets found.</td>
+                                        <td colSpan="6" className="empty-row" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                                            <FiAlertCircle style={{ fontSize: '20px', marginBottom: '6px', display: 'block', margin: '0 auto' }} />
+                                            {activeTab === 'history' 
+                                              ? 'No engineers with paid tickets found.'
+                                              : 'No engineers with unpaid tickets found.'}
+                                        </td>
                                     </tr>
                                 )}
                             </tbody>
@@ -786,42 +817,70 @@ const EngineerPayoutPage = () => {
             ) : (
                 /* ENGINEER TICKETS VIEW */
                 <main className="payout-content">
-                    <div className="selection-bar">
-                        <div className="selection-info">
-                            <span className="count">{selectedTicketIds.length} tickets selected</span>
-                            <span className="total">Total to Pay: <strong>{(() => {
-                                const firstSelected = unpaidTickets.find(t => selectedTicketIds.includes(t.id));
-                                const curSymbol = CURRENCY_SYMBOLS[firstSelected?.eng_currency || firstSelected?.currency || 'USD'] || '$';
-                                const total = unpaidTickets
-                                    .filter(t => selectedTicketIds.includes(t.id))
-                                    .reduce((sum, t) => {
-                                        // Use backend-calculated eng_total_cost (includes adjustments & single-day fix)
+                    {activeTab === 'unpaid' ? (
+                        <div className="selection-bar">
+                            <div className="selection-info">
+                                <span className="count">{selectedTicketIds.length} tickets selected</span>
+                                <span className="total">Total to Pay: <strong>{(() => {
+                                    const firstSelected = unpaidTickets.find(t => selectedTicketIds.includes(t.id));
+                                    const curSymbol = CURRENCY_SYMBOLS[firstSelected?.eng_currency || firstSelected?.currency || 'USD'] || '$';
+                                    const total = unpaidTickets
+                                        .filter(t => selectedTicketIds.includes(t.id))
+                                        .reduce((sum, t) => {
+                                            // Use backend-calculated eng_total_cost (includes adjustments & single-day fix)
+                                            const backendAmt = parseFloat(t.eng_total_cost || 0);
+                                            if (backendAmt > 0) return sum + backendAmt;
+                                            // Fallback to frontend calculation
+                                            const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
+                                            return sum + parseFloat(pd.totalPayout || 0);
+                                        }, 0).toFixed(2);
+                                    return `${curSymbol}${total}`;
+                                })()}</strong></span>
+                            </div>
+                            <button 
+                                className="btn-primary" 
+                                disabled={selectedTicketIds.length === 0 || processing}
+                                onClick={handleProcessPayout}
+                            >
+                                {processing ? 'Processing...' : <><FiCheck /> Mark as Paid</>}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="selection-bar" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', boxShadow: 'none', padding: '16px 24px' }}>
+                            <div className="selection-info">
+                                <span className="count" style={{ color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}>
+                                    <FiCheckCircle /> Paid Payout History
+                                </span>
+                                <span className="total" style={{ marginLeft: '12px', fontSize: '15px' }}>Total Processed: <strong>{(() => {
+                                    const total = unpaidTickets.reduce((sum, t) => {
                                         const backendAmt = parseFloat(t.eng_total_cost || 0);
                                         if (backendAmt > 0) return sum + backendAmt;
-                                        // Fallback to frontend calculation
                                         const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
                                         return sum + parseFloat(pd.totalPayout || 0);
-                                    }, 0).toFixed(2);
-                                return `${curSymbol}${total}`;
-                            })()}</strong></span>
+                                    }, 0);
+                                    const firstTicket = unpaidTickets[0];
+                                    const curSymbol = CURRENCY_SYMBOLS[firstTicket?.eng_currency || firstTicket?.currency || 'USD'] || '$';
+                                    return `${curSymbol}${total.toFixed(2)}`;
+                                })()}</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontWeight: '800', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Fully Settled
+                            </div>
                         </div>
-                        <button 
-                            className="btn-primary" 
-                            disabled={selectedTicketIds.length === 0 || processing}
-                            onClick={handleProcessPayout}
-                        >
-                            {processing ? 'Processing...' : <><FiCheck /> Mark as Paid</>}
-                        </button>
-                    </div>
+                    )}
 
                     <div className="table-responsive">
                         <table className="payout-table">
                             <thead>
                                 <tr>
-                                    <th width="40"><input type="checkbox" onChange={(e) => {
-                                        if (e.target.checked) setSelectedTicketIds(unpaidTickets.map(t => t.id));
-                                        else setSelectedTicketIds([]);
-                                    }} /></th>
+                                    {activeTab === 'unpaid' ? (
+                                        <th width="40"><input type="checkbox" onChange={(e) => {
+                                            if (e.target.checked) setSelectedTicketIds(unpaidTickets.map(t => t.id));
+                                            else setSelectedTicketIds([]);
+                                        }} /></th>
+                                    ) : (
+                                        <th width="60" style={{ textAlign: 'center' }}>Status</th>
+                                    )}
                                     <th>Ticket ID</th>
                                     <th>Customer</th>
                                     <th>Task Name</th>
@@ -835,11 +894,19 @@ const EngineerPayoutPage = () => {
                                 {unpaidTickets.length > 0 ? (
                                     unpaidTickets.map(ticket => (
                                         <tr key={ticket.id} className={selectedTicketIds.includes(ticket.id) ? 'selected' : ''}>
-                                            <td><input 
-                                                type="checkbox" 
-                                                checked={selectedTicketIds.includes(ticket.id)}
-                                                onChange={() => toggleTicketSelection(ticket.id)}
-                                            /></td>
+                                            {activeTab === 'unpaid' ? (
+                                                <td><input 
+                                                    type="checkbox" 
+                                                    checked={selectedTicketIds.includes(ticket.id)}
+                                                    onChange={() => toggleTicketSelection(ticket.id)}
+                                                /></td>
+                                            ) : (
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <span className="badge-paid" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 'bold' }}>
+                                                        <FiCheck size={12} /> Paid
+                                                    </span>
+                                                </td>
+                                            )}
                                             <td><span className="ticket-id">#{ticket.id}</span></td>
                                             <td>{ticket.customer_name}</td>
                                             <td>{ticket.task_name}</td>
@@ -866,7 +933,9 @@ const EngineerPayoutPage = () => {
                                     <tr>
                                         <td colSpan="8" className="empty-row" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
                                             <FiAlertCircle style={{ fontSize: '24px', marginBottom: '8px', display: 'block', margin: '0 auto' }} />
-                                            No unpaid resolved tickets found for this engineer.
+                                            {activeTab === 'history' 
+                                              ? 'No paid resolved tickets found for this engineer.'
+                                              : 'No unpaid resolved tickets found for this engineer.'}
                                         </td>
                                     </tr>
                                 )}
@@ -1060,11 +1129,13 @@ const EngineerPayoutPage = () => {
                                                             <span style={{ fontSize: '14px', fontWeight: '800', color: parseFloat(adj.amount) >= 0 ? '#16a34a' : '#ef4444' }}>
                                                                 {parseFloat(adj.amount) >= 0 ? '+' : ''}{cur} {parseFloat(adj.amount).toFixed(2)}
                                                             </span>
-                                                            <button
-                                                                onClick={() => handleDeleteAdjustment(adj.id)}
-                                                                title="Delete adjustment"
-                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px', padding: '2px 4px', borderRadius: '4px', lineHeight: 1 }}
-                                                            >🗑</button>
+                                                            {activeTab === 'unpaid' && (
+                                                                <button
+                                                                    onClick={() => handleDeleteAdjustment(adj.id)}
+                                                                    title="Delete adjustment"
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px', padding: '2px 4px', borderRadius: '4px', lineHeight: 1 }}
+                                                                >🗑</button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1072,47 +1143,53 @@ const EngineerPayoutPage = () => {
                                         )}
 
                                         {/* Add new adjustment form */}
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                                            <div style={{ flex: '2', minWidth: '140px' }}>
-                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>LABEL / REASON</div>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. Parking, Penalty, Bonus..."
-                                                    value={adjLabel}
-                                                    onChange={e => setAdjLabel(e.target.value)}
-                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                                                />
-                                            </div>
-                                            <div style={{ flex: '1', minWidth: '100px' }}>
-                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>AMOUNT ({cur})</div>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    placeholder="0.00"
-                                                    value={adjAmount}
-                                                    onChange={e => setAdjAmount(e.target.value)}
-                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                                                />
-                                            </div>
-                                            <div style={{ minWidth: '100px' }}>
-                                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>TYPE</div>
-                                                <select
-                                                    value={adjType}
-                                                    onChange={e => setAdjType(e.target.value)}
-                                                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', background: '#fff', cursor: 'pointer' }}
+                                        {activeTab === 'unpaid' ? (
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                                <div style={{ flex: '2', minWidth: '140px' }}>
+                                                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>LABEL / REASON</div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="e.g. Parking, Penalty, Bonus..."
+                                                        value={adjLabel}
+                                                        onChange={e => setAdjLabel(e.target.value)}
+                                                        style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                                    />
+                                                </div>
+                                                <div style={{ flex: '1', minWidth: '100px' }}>
+                                                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>AMOUNT ({cur})</div>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                        value={adjAmount}
+                                                        onChange={e => setAdjAmount(e.target.value)}
+                                                        style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                                                    />
+                                                </div>
+                                                <div style={{ minWidth: '100px' }}>
+                                                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>TYPE</div>
+                                                    <select
+                                                        value={adjType}
+                                                        onChange={e => setAdjType(e.target.value)}
+                                                        style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #c7d2fe', borderRadius: '8px', fontSize: '13px', outline: 'none', background: '#fff', cursor: 'pointer' }}
+                                                    >
+                                                        <option value="add">➕ Add</option>
+                                                        <option value="deduct">➖ Deduct</option>
+                                                    </select>
+                                                </div>
+                                                <button
+                                                    onClick={handleAddAdjustment}
+                                                    disabled={adjLoading || !adjLabel.trim() || !adjAmount}
+                                                    style={{ padding: '8px 18px', background: (!adjLabel.trim() || !adjAmount) ? '#e2e8f0' : '#6366f1', color: (!adjLabel.trim() || !adjAmount) ? '#94a3b8' : '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: (!adjLabel.trim() || !adjAmount) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', height: '36px' }}
                                                 >
-                                                    <option value="add">➕ Add</option>
-                                                    <option value="deduct">➖ Deduct</option>
-                                                </select>
+                                                    {adjLoading ? '...' : '+ Add'}
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={handleAddAdjustment}
-                                                disabled={adjLoading || !adjLabel.trim() || !adjAmount}
-                                                style={{ padding: '8px 18px', background: (!adjLabel.trim() || !adjAmount) ? '#e2e8f0' : '#6366f1', color: (!adjLabel.trim() || !adjAmount) ? '#94a3b8' : '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: (!adjLabel.trim() || !adjAmount) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', height: '36px' }}
-                                            >
-                                                {adjLoading ? '...' : '+ Add'}
-                                            </button>
-                                        </div>
+                                        ) : (
+                                            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', textAlign: 'center', padding: '6px', border: '1px dashed #cbd5e1', borderRadius: '8px', background: '#f8fafc' }}>
+                                                🔒 This ticket has been marked as PAID. Manual adjustments cannot be modified.
+                                            </div>
+                                        )}
 
                                         {/* Adjusted total summary */}
                                         {adjustments.length > 0 && (() => {
