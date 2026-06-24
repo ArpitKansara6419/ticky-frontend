@@ -658,10 +658,23 @@ const AttendancePage = ({ user }) => {
                                         let p = 0, a = 0, l = 0;
                                         days.forEach(d => {
                                             const s = r.attendance[d];
-                                            if (s === 'Present') p++;
-                                            else if (s === 'Absent') a++;
-                                            else if (s === 'Leave') l++;
-                                            else if (s === 'Half Day') p += 0.5;
+                                            const country = r.country || 'IN';
+                                            const isOff = isWeekend(year, month, d, country);
+                                            const isHoli = isPublicHoliday(year, month, d, country);
+                                            const cellDate = new Date(year, month - 1, d);
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+                                            const isPast = cellDate < today;
+
+                                            let status = s;
+                                            if (!status && isPast && !isOff && !isHoli) {
+                                                status = 'Absent';
+                                            }
+
+                                            if (status === 'Present') p++;
+                                            else if (status === 'Absent') a++;
+                                            else if (status === 'Leave') l++;
+                                            else if (status === 'Half Day') p += 0.5;
                                         });
 
                                         return (
@@ -680,11 +693,19 @@ const AttendancePage = ({ user }) => {
                                                     </div>
                                                 </td>
                                                 {days.map(d => {
-                                                    const s = r.attendance[d];
                                                     const country = r.country || 'IN';
                                                     const isOff = isWeekend(year, month, d, country);
                                                     const isHoli = isPublicHoliday(year, month, d, country);
                                                     const isToday = new Date().getDate() === d && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
+                                                    const cellDate = new Date(year, month - 1, d);
+                                                    const today = new Date();
+                                                    today.setHours(0, 0, 0, 0);
+                                                    const isPast = cellDate < today;
+
+                                                    let s = r.attendance[d];
+                                                    if (!s && isPast && !isOff && !isHoli) {
+                                                        s = 'Absent';
+                                                    }
 
                                                     let cellClass = "";
                                                     let content = "";
@@ -827,9 +848,17 @@ const AttendancePage = ({ user }) => {
                                 {Array.from({ length: new Date(year, month - 1, 1).getDay() }).map((_, i) => <div key={`e-${i}`} className="cal-cell empty"></div>)}
 
                                 {Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1).map(d => {
-                                    const s = selectedEngineer.attendance[d];
                                     const isOff = isWeekend(year, month, d, selectedEngineer.country || 'IN');
                                     const isHoli = isPublicHoliday(year, month, d, selectedEngineer.country || 'IN');
+                                    const cellDate = new Date(year, month - 1, d);
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const isPast = cellDate < today;
+
+                                    let s = selectedEngineer.attendance[d];
+                                    if (!s && isPast && !isOff && !isHoli) {
+                                        s = 'Absent';
+                                    }
 
                                     let statusClass = "";
                                     let label = "";
