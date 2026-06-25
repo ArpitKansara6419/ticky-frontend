@@ -1,5 +1,5 @@
 /* EngineerPayoutPage.jsx */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     FiDollarSign, FiFileText, FiCalendar, FiCheckCircle,
     FiAlertCircle, FiX, FiSearch, FiArrowRight, FiUser,
@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import aimbotLogoSrc from '../assets/aimbot-logo.png';
 import './EngineerPayoutPage.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -35,6 +36,50 @@ const YEARS = ["All Years", "2024", "2025", "2026"];
 
 const EngineerPayoutPage = () => {
     const [stats, setStats] = useState({ unpaidCount: 0, totalUnpaidAmount: 0 });
+    const aimbotLogoBase64Ref = useRef(null);
+    useEffect(() => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            aimbotLogoBase64Ref.current = canvas.toDataURL('image/png');
+        };
+        img.src = aimbotLogoSrc;
+    }, []);
+
+    const getTargetTimezone = (ticket) => {
+        return (calcTimezone && calcTimezone !== 'Ticket Local')
+            ? calcTimezone
+            : (ticket?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+    };
+
+    const formatTimeZoned = (str, ticket) => {
+        if (!str) return '—';
+        const d = new Date(str.includes('T') || str.endsWith('Z') ? str : str.replace(' ', 'T') + 'Z');
+        if (isNaN(d.getTime())) return str.slice(0, 5);
+        try {
+            const tz = getTargetTimezone(ticket);
+            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz });
+        } catch (e) {
+            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+    };
+
+    const formatDateZoned = (str, ticket) => {
+        if (!str) return '—';
+        const d = new Date(str.includes('T') || str.endsWith('Z') ? str : str.replace(' ', 'T') + 'Z');
+        if (isNaN(d.getTime())) return str.slice(0, 10);
+        try {
+            const tz = getTargetTimezone(ticket);
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: tz });
+        } catch (e) {
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+    };
+
     const [activeTab, setActiveTab] = useState('unpaid'); // 'unpaid' | 'history'
     const [engineersList, setEngineersList] = useState([]);
     const [unpaidTickets, setUnpaidTickets] = useState([]);
@@ -47,6 +92,14 @@ const EngineerPayoutPage = () => {
 
     // Filter states
     const [selectedCurrency, setSelectedCurrency] = useState('USD');
+    const [selectedLocation, setSelectedLocation] = useState('All Locations');
+    const [selectedPayoutLevel, setSelectedPayoutLevel] = useState('All Payouts');
+    const [selectedTicketCountRange, setSelectedTicketCountRange] = useState('All Tickets');
+    const [sortBy, setSortBy] = useState('name-asc');
+    
+    // Ticket level filter states
+    const [ticketSearchTerm, setTicketSearchTerm] = useState('');
+    const [selectedBillingType, setSelectedBillingType] = useState('All Types');
     const [selectedYear, setSelectedYear] = useState('All Years');
     const [selectedMonth, setSelectedMonth] = useState('All Months');
     const [selectedEngineerId, setSelectedEngineerId] = useState(null);
@@ -210,23 +263,16 @@ const EngineerPayoutPage = () => {
 
     const generatePayoutPDF = (engId) => {
         const engineer = engineersList.find(e => e.id === engId);
-        if (!engineer || unpaidTickets.length === 0) return;
+        if (!engineer || filteredTickets.length === 0) return;
 
         const doc = new jsPDF();
         const cur = selectedCurrency;
         const today = new Date().toLocaleDateString('en-GB');
         
         // ── Logo ─────────────────────────────────────────────────────────────
-        doc.setFillColor(100, 80, 200);
-        doc.ellipse(22, 20, 12, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'bold');
-        doc.text('aimbizit', 14, 21);
-        doc.setTextColor(80, 80, 80);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text('aimbizit.com', 14, 33);
+        if (aimbotLogoBase64Ref.current) {
+            doc.addImage(aimbotLogoBase64Ref.current, 'PNG', 12, 8, 24, 24);
+        }
 
         // ── Header Details ───────────────────────────────────────────────────
         const rx = 115;
@@ -260,19 +306,20 @@ const EngineerPayoutPage = () => {
         const serviceRows = [];
         let grandTotal = 0;
 
-        unpaidTickets.forEach(t => {
+        filteredTickets.forEach(t => {
             const logs = t.time_logs || [];
             const displayLogs = logs.length > 0 ? logs : [{ task_date: t.task_start_date, start_time: t.start_time, end_time: t.end_time }];
             
             displayLogs.forEach(log => {
-                const d = new Date(log.task_date || t.task_start_date).toLocaleDateString('en-GB');
+                const tzForTicket = getTargetTimezone(t);
+                const d = new Date(log.task_date || t.task_start_date).toLocaleDateString('en-GB', { timeZone: tzForTicket });
                 
                 // Detailed Description
                 const desc = `Customer: ${t.customer_name || '-'}\nTask: ${t.task_name || '-'}\nTkt: #${t.id}`;
                 
                 // Times
-                const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
-                const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                const checkIn = log.start_time ? formatTimeZoned(log.start_time, t) : '-';
+                const checkOut = log.end_time ? formatTimeZoned(log.end_time, t) : '-';
 
                 const pd = calculateEngineerPayoutFrontend({
                     ...t,
@@ -300,7 +347,7 @@ const EngineerPayoutPage = () => {
 
         // ── Manual Adjustments ──
         let totalAdjustments = 0;
-        unpaidTickets.forEach(t => {
+        filteredTickets.forEach(t => {
             let adjs = t.adjustments || [];
             adjs.forEach(adj => {
                 const amt = parseFloat(adj.amount) || 0;
@@ -367,17 +414,77 @@ const EngineerPayoutPage = () => {
         return engineersList.filter(eng => (eng.currency || 'USD') === selectedCurrency);
     }, [engineersList, selectedCurrency]);
 
-    // Apply search filter for the table display
+    const uniqueLocations = useMemo(() => {
+        const locations = currencyFilteredEngineers
+            .map(e => e.city)
+            .filter((city, index, self) => city && self.indexOf(city) === index);
+        return ['All Locations', ...locations.sort()];
+    }, [currencyFilteredEngineers]);
+
+    // Apply search and advanced filters, then sort for the table display
     const filteredEngineers = useMemo(() => {
-        return currencyFilteredEngineers.filter(eng => 
-            eng.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            eng.email.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [currencyFilteredEngineers, searchTerm]);
+        let result = currencyFilteredEngineers.filter(eng => {
+            // Search filter (Name, Email, or City)
+            const matchesSearch = 
+                eng.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                eng.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (eng.city || '').toLowerCase().includes(searchTerm.toLowerCase());
+            if (!matchesSearch) return false;
+
+            // Location filter
+            if (selectedLocation !== 'All Locations') {
+                if (eng.city !== selectedLocation) return false;
+            }
+
+            // Payout level filter
+            const estPayout = parseFloat(eng.total_payout_estimated || 0);
+            if (selectedPayoutLevel !== 'All Payouts') {
+                if (selectedPayoutLevel === '> 100' && estPayout <= 100) return false;
+                if (selectedPayoutLevel === '> 500' && estPayout <= 500) return false;
+                if (selectedPayoutLevel === '> 1000' && estPayout <= 1000) return false;
+                if (selectedPayoutLevel === '> 2000' && estPayout <= 2000) return false;
+            }
+
+            // Ticket count filter
+            const count = parseInt(eng.ticket_count || 0);
+            if (selectedTicketCountRange !== 'All Tickets') {
+                if (selectedTicketCountRange === '1-5' && (count < 1 || count > 5)) return false;
+                if (selectedTicketCountRange === '6-15' && (count < 6 || count > 15)) return false;
+                if (selectedTicketCountRange === '> 15' && count <= 15) return false;
+            }
+
+            return true;
+        });
+
+        // Sorting
+        result.sort((a, b) => {
+            if (sortBy === 'name-asc') {
+                return a.name.localeCompare(b.name);
+            }
+            if (sortBy === 'name-desc') {
+                return b.name.localeCompare(a.name);
+            }
+            if (sortBy === 'payout-desc') {
+                return parseFloat(b.total_payout_estimated || 0) - parseFloat(a.total_payout_estimated || 0);
+            }
+            if (sortBy === 'payout-asc') {
+                return parseFloat(a.total_payout_estimated || 0) - parseFloat(b.total_payout_estimated || 0);
+            }
+            if (sortBy === 'tickets-desc') {
+                return parseInt(b.ticket_count || 0) - parseInt(a.ticket_count || 0);
+            }
+            if (sortBy === 'tickets-asc') {
+                return parseInt(a.ticket_count || 0) - parseInt(b.ticket_count || 0);
+            }
+            return 0;
+        });
+
+        return result;
+    }, [currencyFilteredEngineers, searchTerm, selectedLocation, selectedPayoutLevel, selectedTicketCountRange, sortBy]);
 
     const statsForSelectedCurrency = useMemo(() => {
-        const unpaidCount = currencyFilteredEngineers.length;
-        const totalAmount = currencyFilteredEngineers.reduce(
+        const unpaidCount = filteredEngineers.length;
+        const totalAmount = filteredEngineers.reduce(
             (sum, eng) => sum + parseFloat(eng.total_payout_estimated || 0),
             0
         );
@@ -385,7 +492,41 @@ const EngineerPayoutPage = () => {
             unpaidCount,
             totalUnpaidAmount: totalAmount.toFixed(2)
         };
-    }, [currencyFilteredEngineers]);
+    }, [filteredEngineers]);
+
+    const filteredTickets = useMemo(() => {
+        return unpaidTickets.filter(ticket => {
+            // 1. Search text filter (Ticket ID, Customer Name, Task Name)
+            const matchesSearch = 
+                String(ticket.id).includes(ticketSearchTerm) ||
+                (ticket.customer_name || '').toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
+                (ticket.task_name || '').toLowerCase().includes(ticketSearchTerm.toLowerCase());
+            if (!matchesSearch) return false;
+
+            // 2. Billing Type filter
+            const bType = (ticket.eng_billing_type || ticket.billing_type || 'Hourly').toLowerCase();
+            if (selectedBillingType !== 'All Types') {
+                if (!bType.includes(selectedBillingType.toLowerCase())) return false;
+            }
+
+            // 3. Month & Year filter
+            if (ticket.end_time) {
+                const date = new Date(ticket.end_time);
+                if (selectedYear !== 'All Years') {
+                    if (date.getFullYear().toString() !== selectedYear) return false;
+                }
+                if (selectedMonth !== 'All Months') {
+                    const monthIndex = MONTHS.indexOf(selectedMonth); // "All Months", "January", ...
+                    if (monthIndex > 0 && date.getMonth() + 1 !== monthIndex) return false;
+                }
+            } else {
+                // If there's no resolved date (end_time), but they filter month/year, skip it
+                if (selectedYear !== 'All Years' || selectedMonth !== 'All Months') return false;
+            }
+
+            return true;
+        });
+    }, [unpaidTickets, ticketSearchTerm, selectedBillingType, selectedMonth, selectedYear]);
 
     // Proper Calculation Logic for Engineers
     const calculateEngineerPayoutFrontend = (ticket, forcedTZ) => {
@@ -671,7 +812,7 @@ const EngineerPayoutPage = () => {
                     >
                         <FiRefreshCw className={loading ? 'spin' : ''} />
                     </button>
-                    {selectedEngineerId && unpaidTickets.length > 0 && (
+                    {selectedEngineerId && filteredTickets.length > 0 && (
                         <button 
                             className="btn-download-premium" 
                             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '10px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)' }}
@@ -695,16 +836,16 @@ const EngineerPayoutPage = () => {
                             <span className="stat-label">{activeTab === 'history' ? 'Total Paid Out' : 'Est. Total Payout'}</span>
                             <span className="stat-value">
                                 {(() => {
-                                    if (selectedEngineerId && unpaidTickets.length > 0) {
+                                    if (selectedEngineerId && filteredTickets.length > 0) {
                                         // Dynamically sum all ticket payouts for this engineer
-                                        const total = unpaidTickets.reduce((sum, t) => {
+                                        const total = filteredTickets.reduce((sum, t) => {
                                             const backendAmt = parseFloat(t.eng_total_cost || 0);
                                             if (backendAmt > 0) return sum + backendAmt;
                                             // Fallback to frontend calculation
                                             const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
                                             return sum + parseFloat(pd.totalPayout || 0);
                                         }, 0);
-                                        const firstTicket = unpaidTickets[0];
+                                        const firstTicket = filteredTickets[0];
                                         const curSymbol = CURRENCY_SYMBOLS[firstTicket?.eng_currency || firstTicket?.currency || 'USD'] || '$';
                                         return `${curSymbol}${total.toFixed(2)}`;
                                     }
@@ -746,14 +887,38 @@ const EngineerPayoutPage = () => {
                             <FiSearch className="search-icon" />
                             <input 
                                 type="text" 
-                                placeholder="Search engineer by name or email..." 
+                                placeholder="Search by name, email, or city..." 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <div className="filter-group">
-                            <select value={selectedCurrency} onChange={(e) => setSelectedCurrency(e.target.value)}>
+                            <select value={selectedCurrency} onChange={(e) => setSelectedCurrency(e.target.value)} title="Currency">
                                 {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                            <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} title="Location">
+                                {uniqueLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                            </select>
+                            <select value={selectedPayoutLevel} onChange={(e) => setSelectedPayoutLevel(e.target.value)} title="Payout Level">
+                                <option value="All Payouts">All Payout Levels</option>
+                                <option value="> 100">&gt; 100 ({displayCurrencySymbol})</option>
+                                <option value="> 500">&gt; 500 ({displayCurrencySymbol})</option>
+                                <option value="> 1000">&gt; 1000 ({displayCurrencySymbol})</option>
+                                <option value="> 2000">&gt; 2000 ({displayCurrencySymbol})</option>
+                            </select>
+                            <select value={selectedTicketCountRange} onChange={(e) => setSelectedTicketCountRange(e.target.value)} title="Tickets Count">
+                                <option value="All Tickets">All Tickets Count</option>
+                                <option value="1-5">1 - 5 Tickets</option>
+                                <option value="6-15">6 - 15 Tickets</option>
+                                <option value="> 15">&gt; 15 Tickets</option>
+                            </select>
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} title="Sort By">
+                                <option value="name-asc">Sort: Name (A-Z)</option>
+                                <option value="name-desc">Sort: Name (Z-A)</option>
+                                <option value="payout-desc">Sort: Payout (High to Low)</option>
+                                <option value="payout-asc">Sort: Payout (Low to High)</option>
+                                <option value="tickets-desc">Sort: Tickets (High to Low)</option>
+                                <option value="tickets-asc">Sort: Tickets (Low to High)</option>
                             </select>
                         </div>
                     </div>
@@ -817,14 +982,62 @@ const EngineerPayoutPage = () => {
             ) : (
                 /* ENGINEER TICKETS VIEW */
                 <main className="payout-content">
+                    {/* Ticket filter controls */}
+                    <div className="content-controls ticket-controls" style={{ marginTop: '10px', marginBottom: '20px' }}>
+                        <div className="search-box">
+                            <FiSearch className="search-icon" />
+                            <input 
+                                type="text" 
+                                placeholder="Search ticket by ID, customer, or task..." 
+                                value={ticketSearchTerm}
+                                onChange={(e) => setTicketSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <select value={selectedBillingType} onChange={(e) => setSelectedBillingType(e.target.value)} title="Billing Type">
+                                <option value="All Types">All Billing Types</option>
+                                <option value="Hourly">Hourly</option>
+                                <option value="Half Day">Half Day</option>
+                                <option value="Full Day">Full Day</option>
+                                <option value="Agreed">Agreed Rate</option>
+                                <option value="Mixed">Mixed</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Cancellation">Cancellation</option>
+                            </select>
+
+                            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} title="Month">
+                                {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+
+                            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} title="Year">
+                                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+
+                            {(ticketSearchTerm || selectedBillingType !== 'All Types' || selectedMonth !== 'All Months' || selectedYear !== 'All Years') && (
+                                <button 
+                                    className="btn-clear-filters"
+                                    onClick={() => {
+                                        setTicketSearchTerm('');
+                                        setSelectedBillingType('All Types');
+                                        setSelectedMonth('All Months');
+                                        setSelectedYear('All Years');
+                                    }}
+                                    style={{ padding: '10px 16px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     {activeTab === 'unpaid' ? (
                         <div className="selection-bar">
                             <div className="selection-info">
                                 <span className="count">{selectedTicketIds.length} tickets selected</span>
                                 <span className="total">Total to Pay: <strong>{(() => {
-                                    const firstSelected = unpaidTickets.find(t => selectedTicketIds.includes(t.id));
+                                    const firstSelected = filteredTickets.find(t => selectedTicketIds.includes(t.id));
                                     const curSymbol = CURRENCY_SYMBOLS[firstSelected?.eng_currency || firstSelected?.currency || 'USD'] || '$';
-                                    const total = unpaidTickets
+                                    const total = filteredTickets
                                         .filter(t => selectedTicketIds.includes(t.id))
                                         .reduce((sum, t) => {
                                             // Use backend-calculated eng_total_cost (includes adjustments & single-day fix)
@@ -852,13 +1065,13 @@ const EngineerPayoutPage = () => {
                                     <FiCheckCircle /> Paid Payout History
                                 </span>
                                 <span className="total" style={{ marginLeft: '12px', fontSize: '15px' }}>Total Processed: <strong>{(() => {
-                                    const total = unpaidTickets.reduce((sum, t) => {
+                                    const total = filteredTickets.reduce((sum, t) => {
                                         const backendAmt = parseFloat(t.eng_total_cost || 0);
                                         if (backendAmt > 0) return sum + backendAmt;
                                         const pd = calculateEngineerPayoutFrontend(t, calcTimezone);
                                         return sum + parseFloat(pd.totalPayout || 0);
                                     }, 0);
-                                    const firstTicket = unpaidTickets[0];
+                                    const firstTicket = filteredTickets[0];
                                     const curSymbol = CURRENCY_SYMBOLS[firstTicket?.eng_currency || firstTicket?.currency || 'USD'] || '$';
                                     return `${curSymbol}${total.toFixed(2)}`;
                                 })()}</strong></span>
@@ -874,10 +1087,16 @@ const EngineerPayoutPage = () => {
                             <thead>
                                 <tr>
                                     {activeTab === 'unpaid' ? (
-                                        <th width="40"><input type="checkbox" onChange={(e) => {
-                                            if (e.target.checked) setSelectedTicketIds(unpaidTickets.map(t => t.id));
-                                            else setSelectedTicketIds([]);
-                                        }} /></th>
+                                        <th width="40">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={filteredTickets.length > 0 && filteredTickets.every(t => selectedTicketIds.includes(t.id))}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedTicketIds(filteredTickets.map(t => t.id));
+                                                    else setSelectedTicketIds([]);
+                                                }} 
+                                            />
+                                        </th>
                                     ) : (
                                         <th width="60" style={{ textAlign: 'center' }}>Status</th>
                                     )}
@@ -891,8 +1110,8 @@ const EngineerPayoutPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {unpaidTickets.length > 0 ? (
-                                    unpaidTickets.map(ticket => (
+                                {filteredTickets.length > 0 ? (
+                                    filteredTickets.map(ticket => (
                                         <tr key={ticket.id} className={selectedTicketIds.includes(ticket.id) ? 'selected' : ''}>
                                             {activeTab === 'unpaid' ? (
                                                 <td><input 
@@ -914,7 +1133,7 @@ const EngineerPayoutPage = () => {
                                                  const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
                                                  return (isNaN(pd.totalHours) ? 0 : pd.totalHours).toFixed(2) + 'h';
                                              })()}</td>
-                                            <td>{ticket.end_time ? new Date(ticket.end_time).toLocaleDateString() : 'N/A'}</td>
+                                            <td>{ticket.end_time ? formatDateZoned(ticket.end_time, ticket) : 'N/A'}</td>
                                             <td className="amount-cell">{(() => {
                                                  const curSymbol = CURRENCY_SYMBOLS[ticket.eng_currency || ticket.currency || 'USD'] || '$';
                                                  const backendAmt = parseFloat(ticket.eng_total_cost || 0);
@@ -952,19 +1171,9 @@ const EngineerPayoutPage = () => {
                 const curCode = detailTicket.eng_currency || detailTicket.currency || 'USD';
                 const cur = CURRENCY_SYMBOLS[curCode] || '$';
 
-                // Format time helper (UTC-stored → local display)
-                const fmtTime = (str) => {
-                    if (!str) return '—';
-                    const d = new Date(str.includes('T') || str.endsWith('Z') ? str : str.replace(' ', 'T') + 'Z');
-                    if (isNaN(d.getTime())) return str.slice(0, 5);
-                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                };
-                const fmtDate = (str) => {
-                    if (!str) return '—';
-                    const d = new Date(str.includes('T') || str.endsWith('Z') ? str : str.replace(' ', 'T') + 'Z');
-                    if (isNaN(d.getTime())) return str.slice(0, 10);
-                    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                };
+                // Format time helper (respecting calcTimezone dropdown)
+                const fmtTime = (str) => formatTimeZoned(str, detailTicket);
+                const fmtDate = (str) => formatDateZoned(str, detailTicket);
 
                 const totalHrs = isNaN(pd.totalHours) ? 0 : parseFloat(pd.totalHours);
                 const breakMins = parseInt(detailTicket.break_time || 0);
