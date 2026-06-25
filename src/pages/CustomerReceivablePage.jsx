@@ -167,13 +167,28 @@ const CustomerReceivablePage = () => {
 
         const parseDateSafe = (str, defaultTimeSuffix) => {
             if (!str) return new Date();
-            if (str.length <= 10) {
-                return new Date(`${str}T${defaultTimeSuffix}Z`);
+            let s = String(str).trim();
+            // DD-MM-YYYY format
+            if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
+                const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
+                const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : defaultTimeSuffix);
+                const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
+                return new Date(iso);
             }
-            if (str.includes('T') || str.includes('Z') || str.includes('+')) {
-                return new Date(str);
+            // YYYY-MM-DD format
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+                const datePart = s.split('T')[0].split(' ')[0];
+                const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : defaultTimeSuffix);
+                const iso = `${datePart}T${timePart.replace('Z', '')}Z`;
+                return new Date(iso);
             }
-            return new Date(str.replace(' ', 'T') + 'Z');
+            if (s.length <= 10) {
+                return new Date(`${s}T${defaultTimeSuffix}Z`);
+            }
+            if (s.includes('T') || s.includes('Z') || s.includes('+')) {
+                return new Date(s);
+            }
+            return new Date(s.replace(' ', 'T') + 'Z');
         };
 
         // If it's a date-only string from task_start_date, force a standard 8-hour shift default
@@ -407,13 +422,28 @@ const CustomerReceivablePage = () => {
 
         const parseDateSafe = (str, defaultTimeSuffix) => {
             if (!str) return new Date();
-            if (str.length <= 10) {
-                return new Date(`${str}T${defaultTimeSuffix}Z`);
+            let s = String(str).trim();
+            // DD-MM-YYYY format
+            if (/^\d{2}-\d{2}-\d{4}/.test(s)) {
+                const [d, m, y] = s.split('T')[0].split(' ')[0].split('-');
+                const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : defaultTimeSuffix);
+                const iso = `${y}-${m}-${d}T${timePart.replace('Z', '')}Z`;
+                return new Date(iso);
             }
-            if (str.includes('T') || str.includes('Z') || str.includes('+')) {
-                return new Date(str);
+            // YYYY-MM-DD format
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+                const datePart = s.split('T')[0].split(' ')[0];
+                const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : defaultTimeSuffix);
+                const iso = `${datePart}T${timePart.replace('Z', '')}Z`;
+                return new Date(iso);
             }
-            return new Date(str.replace(' ', 'T') + 'Z');
+            if (s.length <= 10) {
+                return new Date(`${s}T${defaultTimeSuffix}Z`);
+            }
+            if (s.includes('T') || s.includes('Z') || s.includes('+')) {
+                return new Date(s);
+            }
+            return new Date(s.replace(' ', 'T') + 'Z');
         };
 
         const s = parseDateSafe(sStr, '09:00:00');
