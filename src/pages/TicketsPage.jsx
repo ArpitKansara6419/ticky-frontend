@@ -1416,12 +1416,13 @@ function TicketsPage() {
       setLongitude(lon)
 
       try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`)
+        const timestamp = Math.floor(Date.now() / 1000)
+        const res = await fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lon}&timestamp=${timestamp}&key=${GOOGLE_MAPS_API_KEY}`)
         const data = await res.json()
-        if (data?.timezone) {
-          setTimezone(data.timezone)
+        if (data.status === 'OK' && data.timeZoneId) {
+          setTimezone(data.timeZoneId)
           setAvailableTimezones(prev => {
-            const newList = Array.from(new Set([data.timezone, ...prev]))
+            const newList = Array.from(new Set([data.timeZoneId, ...prev]))
             return newList
           })
         }
