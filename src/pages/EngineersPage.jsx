@@ -815,7 +815,36 @@ function EngineersPage() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                         {certificationsData.length > 0 ? certificationsData.map((cert, i) => (
                                             <div key={i} style={{ background: '#ffffff', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                                                <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{cert.certificationName}</div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{cert.certificationName}</div>
+                                                    {cert.documentUrl ? (
+                                                        <a
+                                                            href={cert.documentUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                                background: '#6366f1', color: '#ffffff',
+                                                                padding: '3px 10px', borderRadius: '8px',
+                                                                fontSize: '11px', fontWeight: '600',
+                                                                textDecoration: 'none', whiteSpace: 'nowrap',
+                                                                flexShrink: 0, marginLeft: '8px'
+                                                            }}
+                                                        >
+                                                            <i className="fas fa-file-alt"></i> View Document
+                                                        </a>
+                                                    ) : (
+                                                        <span style={{
+                                                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                            background: '#f1f5f9', color: '#94a3b8',
+                                                            padding: '3px 10px', borderRadius: '8px',
+                                                            fontSize: '11px', fontWeight: '600',
+                                                            whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '8px'
+                                                        }}>
+                                                            <i className="fas fa-file-slash"></i> No document
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px' }}>
                                                     ID: {cert.certificationId || 'N/A'} • Issued: {cert.issueDate || 'N/A'} • Expires: {cert.expiryDate || 'N/A'}
                                                 </div>
