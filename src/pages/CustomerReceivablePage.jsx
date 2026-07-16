@@ -2410,11 +2410,25 @@ const CustomerReceivablePage = () => {
             {detailTicket && (() => {
                 const bd = calculateTicketCostFrontend(detailTicket, calcTimezone, selectedCurrency);
                 const cur = detailTicket.currency || 'USD';
+
+                // Resolve ticket timezone for display
+                const ticketTZ = (calcTimezone && calcTimezone !== 'Ticket Local')
+                    ? calcTimezone
+                    : (detailTicket.timezone || null);
+
                 const fmtTime = (v) => {
                     if (!v) return '—';
                     const d = new Date(v);
                     if (isNaN(d.getTime())) return '—';
-                    return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+                    try {
+                        return d.toLocaleString([], {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                            timeZone: ticketTZ || 'UTC'
+                        });
+                    } catch (e) {
+                        return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+                    }
                 };
                 const fmtDate = (v) => {
                     if (!v) return '—';
@@ -2424,6 +2438,44 @@ const CustomerReceivablePage = () => {
                 };
                 const savedTotal = parseFloat(detailTicket.total_cost) > 0 ? parseFloat(detailTicket.total_cost) : parseFloat(bd.totalReceivable);
                 const adjustment = savedTotal - parseFloat(bd.totalReceivable);
+
+                // ── Derive Time In / Time Out from time_logs or direct fields ──
+                let parsedLogs = [];
+                try {
+                    parsedLogs = typeof detailTicket.time_logs === 'string'
+                        ? JSON.parse(detailTicket.time_logs)
+                        : (detailTicket.time_logs || []);
+                } catch (e) { parsedLogs = []; }
+
+                // Filter logs that have actual time data
+                const logsWithTime = parsedLogs.filter(l => l.start_time || l.end_time);
+
+                // Resolve display values
+                let displayTimeIn, displayTimeOut, displayBreak, isMultiLog;
+
+                if (logsWithTime.length > 0) {
+                    // Multi-log ticket: first log = time in, last log = time out
+                    isMultiLog = logsWithTime.length > 1;
+                    const firstLog = logsWithTime[0];
+                    const lastLog = logsWithTime[logsWithTime.length - 1];
+                    displayTimeIn = firstLog.start_time || null;
+                    displayTimeOut = lastLog.end_time || null;
+                    // Sum break times across all logs (break_time_mins is in minutes, break_time in seconds)
+                    const totalBreakSecs = logsWithTime.reduce((sum, l) => {
+                        if (l.break_time_mins != null) return sum + (parseFloat(l.break_time_mins) * 60);
+                        if (l.break_time != null) return sum + parseFloat(l.break_time);
+                        return sum;
+                    }, 0);
+                    displayBreak = totalBreakSecs;
+                } else {
+                    // Single entry ticket: use direct start_time / end_time
+                    isMultiLog = false;
+                    displayTimeIn = detailTicket.start_time || null;
+                    displayTimeOut = detailTicket.end_time || null;
+                    displayBreak = parseFloat(detailTicket.break_time || 0);
+                }
+
+                const hasTimeData = !!(displayTimeIn || displayTimeOut);
 
                 return (
                     <div className="modal-overlay-premium" onClick={() => setDetailTicket(null)}>
@@ -2484,21 +2536,30 @@ const CustomerReceivablePage = () => {
                                 </div>
 
                                 {/* Section 2: Time Logs */}
-                                {(detailTicket.start_time || detailTicket.end_time) && (
+                                {hasTimeData && (
                                     <div style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)', border: '1px solid #c7d2fe', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
-                                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#6d28d9', textTransform: 'uppercase', marginBottom: '12px' }}>⏱ Activity Time Log</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#6d28d9', textTransform: 'uppercase' }}>⏱ Activity Time Log</div>
+                                            {isMultiLog && (
+                                                <span style={{ fontSize: '10px', fontWeight: '700', color: '#7c3aed', background: '#ede9fe', borderRadius: '6px', padding: '2px 7px' }}>
+                                                    Multi-day ({logsWithTime.length} sessions)
+                                                </span>
+                                            )}
+                                        </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                                             <div>
-                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME IN</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(detailTicket.start_time)}</div>
+                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME IN{isMultiLog ? ' (First)' : ''}</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(displayTimeIn)}</div>
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME OUT</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(detailTicket.end_time)}</div>
+                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME OUT{isMultiLog ? ' (Last)' : ''}</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(displayTimeOut)}</div>
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>BREAK</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{detailTicket.break_time ? `${Math.floor(detailTicket.break_time / 60)} min` : '0 min'}</div>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>
+                                                    {displayBreak > 0 ? `${Math.round(displayBreak / 60)} min` : '0 min'}
+                                                </div>
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>BILLABLE HRS</div>
@@ -2507,6 +2568,7 @@ const CustomerReceivablePage = () => {
                                         </div>
                                     </div>
                                 )}
+
 
                                 {/* Section 3: Rates */}
                                 <div style={{ background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px', marginBottom: '20px' }}>
