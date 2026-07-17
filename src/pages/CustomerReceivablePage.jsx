@@ -2535,39 +2535,6 @@ const CustomerReceivablePage = () => {
                                     </div>
                                 </div>
 
-                                {/* Section 2: Time Logs */}
-                                {hasTimeData && (
-                                    <div style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)', border: '1px solid #c7d2fe', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#6d28d9', textTransform: 'uppercase' }}>⏱ Activity Time Log</div>
-                                            {isMultiLog && (
-                                                <span style={{ fontSize: '10px', fontWeight: '700', color: '#7c3aed', background: '#ede9fe', borderRadius: '6px', padding: '2px 7px' }}>
-                                                    Multi-day ({logsWithTime.length} sessions)
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                                            <div>
-                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME IN{isMultiLog ? ' (First)' : ''}</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(displayTimeIn)}</div>
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>TIME OUT{isMultiLog ? ' (Last)' : ''}</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{fmtTime(displayTimeOut)}</div>
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>BREAK</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>
-                                                    {displayBreak > 0 ? `${Math.round(displayBreak / 60)} min` : '0 min'}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', marginBottom: '2px' }}>BILLABLE HRS</div>
-                                                <div style={{ fontSize: '13px', fontWeight: '800', color: '#7c3aed' }}>{bd.formattedHours && !bd.formattedHours.includes('NaN') ? bd.formattedHours : `${parseFloat(bd.totalHours || 0).toFixed(2)}h`}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
 
 
                                 {/* Section 3: Rates */}
