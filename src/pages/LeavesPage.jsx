@@ -315,26 +315,38 @@ const LeavesPage = () => {
                       <th>Engineer</th>
                       <th>Type</th>
                       <th>Range</th>
+                      <th>Days Breakdown</th>
                       <th>Status</th>
                       <th>Applied At</th>
                       <th>Documents</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {leaves.filter(l => l.status !== 'Pending').map(leave => (
-                      <tr key={leave.id}>
-                        <td>{leave.engineerName}</td>
-                        <td>{leave.leave_type}</td>
-                        <td>{formatDate(leave.start_date)} - {formatDate(leave.end_date)}</td>
-                        <td><span className={`status-pill ${leave.status.toLowerCase()}`}>{leave.status}</span></td>
-                        <td>{formatDate(leave.applied_at)}</td>
-                        <td>
-                          <button className="btn-view-doc-small" onClick={() => openSignedDocs(leave)}>
-                            <FiFileText /> View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {leaves.filter(l => l.status !== 'Pending').map(leave => {
+                      const pDays = parseFloat(leave.paid_days || 0) || (leave.leave_type === 'Paid' ? parseFloat(leave.total_days || 0) : 0);
+                      const uDays = parseFloat(leave.unpaid_days || 0) || (leave.leave_type === 'Unpaid' ? parseFloat(leave.total_days || 0) : 0);
+                      return (
+                        <tr key={leave.id}>
+                          <td>{leave.engineerName}</td>
+                          <td><span className={`badge ${leave.leave_type}`}>{leave.leave_type}</span></td>
+                          <td>{formatDate(leave.start_date)} - {formatDate(leave.end_date)}</td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                              {pDays > 0 && <span style={{ padding: '2px 8px', borderRadius: '10px', background: '#dcfce7', color: '#15803d', fontSize: '12px', fontWeight: 'bold' }}>🌴 {pDays} Paid</span>}
+                              {uDays > 0 && <span style={{ padding: '2px 8px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontSize: '12px', fontWeight: 'bold' }}>💼 {uDays} Unpaid</span>}
+                              {pDays === 0 && uDays === 0 && <span>{leave.total_days} Days</span>}
+                            </div>
+                          </td>
+                          <td><span className={`status-pill ${leave.status.toLowerCase()}`}>{leave.status}</span></td>
+                          <td>{formatDate(leave.applied_at)}</td>
+                          <td>
+                            <button className="btn-view-doc-small" onClick={() => openSignedDocs(leave)}>
+                              <FiFileText /> View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -483,21 +495,72 @@ const LeavesPage = () => {
               <button className="close-btn" onClick={() => setActiveDocModal(null)}><FiXCircle /></button>
             </header>
             
+            {/* Summary & Date Breakdown Header */}
+            {(() => {
+              const pDays = parseFloat(activeDocModal.paid_days || 0) || (activeDocModal.leave_type === 'Paid' ? parseFloat(activeDocModal.total_days || 0) : 0);
+              const uDays = parseFloat(activeDocModal.unpaid_days || 0) || (activeDocModal.leave_type === 'Unpaid' ? parseFloat(activeDocModal.total_days || 0) : 0);
+              
+              let details = [];
+              try {
+                if (activeDocModal.day_wise_details) {
+                  details = typeof activeDocModal.day_wise_details === 'string' ? JSON.parse(activeDocModal.day_wise_details) : activeDocModal.day_wise_details;
+                }
+              } catch(e) {}
+
+              const paidDates = Array.isArray(details) ? details.filter(d => d.type === 'Paid').map(d => d.date) : [];
+              const unpaidDates = Array.isArray(details) ? details.filter(d => d.type === 'Unpaid').map(d => d.date) : [];
+
+              return (
+                <div className="doc-summary-card" style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1', margin: '15px 0 10px 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <span style={{ fontWeight: 'bold', color: '#1e293b' }}>Engineer: </span>
+                      <span style={{ color: '#0f172a' }}>{activeDocModal.engineerName}</span>
+                      <span style={{ margin: '0 8px', color: '#94a3b8' }}>|</span>
+                      <span style={{ fontWeight: 'bold', color: '#1e293b' }}>Type: </span>
+                      <span className={`badge ${activeDocModal.leave_type}`}>{activeDocModal.leave_type}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      {pDays > 0 && <span style={{ padding: '4px 12px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', fontWeight: 'bold', fontSize: '13px' }}>🌴 Paid Leave: {pDays} Days</span>}
+                      {uDays > 0 && <span style={{ padding: '4px 12px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', fontWeight: 'bold', fontSize: '13px' }}>💼 Unpaid Leave: {uDays} Days</span>}
+                    </div>
+                  </div>
+
+                  {(paidDates.length > 0 || unpaidDates.length > 0) && (
+                    <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1', fontSize: '13px', color: '#475569' }}>
+                      {paidDates.length > 0 && (
+                        <div style={{ marginBottom: '4px' }}>
+                          <strong style={{ color: '#15803d' }}>Paid Leave Dates: </strong>
+                          {paidDates.map(d => formatDate(d)).join(', ')}
+                        </div>
+                      )}
+                      {unpaidDates.length > 0 && (
+                        <div>
+                          <strong style={{ color: '#b91c1c' }}>Unpaid Leave Dates: </strong>
+                          {unpaidDates.map(d => formatDate(d)).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="doc-tabs">
-              {parseFloat(activeDocModal.paid_days || 0) > 0 && (
+              {(parseFloat(activeDocModal.paid_days || 0) > 0 || activeDocModal.leave_type === 'Paid' || activeDocModal.leave_type === 'Mixed') && (
                 <button 
                   className={`doc-tab-btn ${activeDocTab === 'PL' ? 'active' : ''}`}
                   onClick={() => setActiveDocTab('PL')}
                 >
-                  Paid Leave Document
+                  Paid Leave Document (PL)
                 </button>
               )}
-              {parseFloat(activeDocModal.unpaid_days || 0) > 0 && (
+              {(parseFloat(activeDocModal.unpaid_days || 0) > 0 || activeDocModal.leave_type === 'Unpaid' || activeDocModal.leave_type === 'Mixed') && (
                 <button 
                   className={`doc-tab-btn ${activeDocTab === 'UL' ? 'active' : ''}`}
                   onClick={() => setActiveDocTab('UL')}
                 >
-                  Unpaid Leave Document
+                  Unpaid Leave Document (UL)
                 </button>
               )}
             </div>
