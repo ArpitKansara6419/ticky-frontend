@@ -4717,7 +4717,10 @@ function TicketsPage() {
                       selectedTicket.documentsLabel.split(', ').map((docName, idx) => (
                         <div key={idx} style={{ background: '#f1f5f9', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: '600' }}>
                           <span>{docName}</span>
-                          <button type="button" onClick={() => handleViewDocument(docName)} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '0', display: 'flex' }}><FiEye size={14} /></button>
+                          <button type="button" onClick={() => {
+                            const match = ticketAttachments.find(a => (a.file_name || '').trim() === docName.trim());
+                            handleViewDocument(match ? match.file_url : docName);
+                          }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '0', display: 'flex' }}><FiEye size={14} /></button>
                         </div>
                       ))
                     ) : (<span style={{ color: '#94a3b8', fontSize: '12px' }}>No documents linked.</span>)}
