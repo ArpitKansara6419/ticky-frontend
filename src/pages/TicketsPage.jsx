@@ -558,6 +558,7 @@ function TicketsPage() {
   const [timezone, setTimezone] = useState('Asia/Kolkata')
 
   const [pocDetails, setPocDetails] = useState('')
+  const [pocMeetingLink, setPocMeetingLink] = useState('')
   const [reDetails, setReDetails] = useState('')
   const [callInvites, setCallInvites] = useState('')
 
@@ -1080,6 +1081,7 @@ function TicketsPage() {
     setTimezone('')
     setAvailableTimezones([])
     setPocDetails('')
+    setPocMeetingLink('')
     setReDetails('')
     setCallInvites('')
     setDocumentsLabel('')
@@ -1609,6 +1611,7 @@ function TicketsPage() {
         zipCode,
         timezone,
         pocDetails,
+        pocMeetingLink,
         reDetails,
         callInvites,
         documentsLabel: documents.map(f => f.name).join(', '),
@@ -2330,6 +2333,7 @@ function TicketsPage() {
       zipCode: t.zip_code || t.zipCode || '',
       timezone: t.timezone || 'Asia/Kolkata',
       pocDetails: t.poc_details || t.pocDetails || '',
+      pocMeetingLink: t.poc_meeting_link || t.pocMeetingLink || '',
       reDetails: t.re_details || t.reDetails || '',
       callInvites: t.call_invites || t.callInvites || '',
       documentsLabel: t.documents_label || t.documentsLabel || '',
@@ -2416,6 +2420,7 @@ function TicketsPage() {
     setZipCode(normalized.zipCode || '')
     setTimezone(normalized.timezone || 'Asia/Kolkata')
     setPocDetails(normalized.pocDetails || '')
+    setPocMeetingLink(normalized.pocMeetingLink || '')
     setReDetails(normalized.reDetails || '')
     setCallInvites(normalized.callInvites || '')
     setDocumentsLabel(normalized.documentsLabel || '')
@@ -3350,6 +3355,10 @@ function TicketsPage() {
                   <label className="tickets-field">
                     <span>RE details</span>
                     <textarea rows={4} value={reDetails} onChange={(e) => setReDetails(e.target.value)} placeholder="Relative details..." />
+                  </label>
+                  <label className="tickets-field tickets-field--full">
+                    <span>POC Meeting Link (Manually Add Zoom, Jitsi, Google Meet, Teams, etc.)</span>
+                    <input type="text" value={pocMeetingLink} onChange={(e) => setPocMeetingLink(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij or https://zoom.us/j/..." style={{ padding: '12px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', width: '100%', fontSize: '14px', background: '#f8fafc' }} />
                   </label>
                   <label className="tickets-field tickets-field--full">
                     <span>Attachments / Documents</span>
