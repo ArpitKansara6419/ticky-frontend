@@ -303,6 +303,7 @@ function EngineersPage() {
                     billingType: eng.billingType || 'Hourly',
                     city: eng.city || '',
                     country: eng.country || '',
+                    nationality: eng.nationality || '',
                     address: eng.address || '',
                     allocatedAnnualLeaves: eng.allocatedAnnualLeaves != null ? String(parseFloat(eng.allocatedAnnualLeaves)) : '20',
                     accumulatedLeaves: eng.accumulatedLeaves !== null && eng.accumulatedLeaves !== undefined ? eng.accumulatedLeaves.toString() : ''
@@ -511,6 +512,7 @@ function EngineersPage() {
                 billingType: chargesForm.billingType,
                 city: chargesForm.city,
                 country: chargesForm.country,
+                nationality: chargesForm.nationality,
                 address: chargesForm.address,
                 allocatedAnnualLeaves: chargesForm.allocatedAnnualLeaves,
                 accumulatedLeaves: chargesForm.accumulatedLeaves
@@ -679,6 +681,10 @@ function EngineersPage() {
                                 <div className="detail-item">
                                     <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', marginBottom: '5px', display: 'block' }}>LOCATION</label>
                                     <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>{selectedEngineer.address || '-'}</div>
+                                </div>
+                                <div className="detail-item">
+                                    <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', marginBottom: '5px', display: 'block' }}>NATIONALITY</label>
+                                    <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>{selectedEngineer.nationality || rtwData.nationality || '-'}</div>
                                 </div>
                             </div>
 
@@ -1321,6 +1327,7 @@ function EngineersPage() {
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Type</th>
+                                <th>Nationality</th>
                                 <th>Hourly Rate</th>
                                 <th>Location</th>
                                 <th>Email</th>
@@ -1331,13 +1338,13 @@ function EngineersPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="engineers-empty">
+                                    <td colSpan={9} className="engineers-empty">
                                         Loading engineers...
                                     </td>
                                 </tr>
                             ) : filteredEngineers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="engineers-empty">
+                                    <td colSpan={9} className="engineers-empty">
                                         No engineers found.
                                     </td>
                                 </tr>
@@ -1349,6 +1356,7 @@ function EngineersPage() {
                                             <div className="engineer-name" onClick={() => handleView(eng)} style={{ cursor: 'pointer', color: '#2563eb', fontWeight: 'bold' }}>{eng.name}</div>
                                         </td>
                                         <td><span style={{ fontSize: '13px', color: '#64748b' }}>{eng.employmentType || '-'}</span></td>
+                                        <td><span style={{ fontSize: '13px', color: '#1e293b', fontWeight: '500' }}>{eng.nationality || '-'}</span></td>
                                         <td>
                                             <span style={{ fontWeight: 'bold', color: '#059669' }}>
                                                 {eng.currency === 'EUR' ? '€' : eng.currency === 'GBP' ? '£' : eng.currency === 'INR' ? '₹' : '$'}
