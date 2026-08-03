@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo, FiUser, FiCpu, FiCalendar, FiCheckCircle, FiActivity, FiFileText, FiArrowLeft, FiArrowRight, FiTag, FiNavigation, FiTool, FiMinusCircle } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo, FiUser, FiCpu, FiCalendar, FiCheckCircle, FiActivity, FiFileText, FiArrowLeft, FiArrowRight, FiTag, FiNavigation, FiTool, FiMinusCircle, FiStar, FiMapPin, FiAward, FiFilter, FiSliders } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -615,9 +615,10 @@ function TicketsPage() {
   const [liveBreakdown, setLiveBreakdown] = useState(null);
   const [payoutLiveBreakdown, setPayoutLiveBreakdown] = useState(null);
   const [showFinancialConfirmModal, setShowFinancialConfirmModal] = useState(false);
-  const [showEngPickerModal, setShowEngPickerModal] = useState(false);
-  const [engSortBy, setEngSortBy] = useState('match');
-  const [engSearchQuery, setEngSearchQuery] = useState('');
+  const [filterEngRating, setFilterEngRating] = useState('All');
+  const [filterEngLocation, setFilterEngLocation] = useState('All');
+  const [filterEngSkill, setFilterEngSkill] = useState('All');
+  const [sortEngBy, setSortEngBy] = useState('Default');
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineStartTime, setInlineStartTime] = useState('');
   const [inlineEndTime, setInlineEndTime] = useState('');
@@ -627,6 +628,65 @@ function TicketsPage() {
   const [isUpdatingTime, setIsUpdatingTime] = useState(false);
   const [leadType, setLeadType] = useState('Full time') // 'Full time' | 'Dispatch'
   const [timeLogs, setTimeLogs] = useState([]);
+
+  // Available Unique Skills across loaded Engineers
+  const availableSkills = useMemo(() => {
+    if (!engineers || engineers.length === 0) return [];
+    const skillSet = new Set();
+    engineers.forEach(eng => {
+      const list = eng.skills_list || (eng.skills ? eng.skills.split(',').map(s => s.trim()) : []);
+      list.forEach(s => { if (s) skillSet.add(s); });
+    });
+    return Array.from(skillSet).sort();
+  }, [engineers]);
+
+  // Filtered & Sorted Engineers List for Selection Dropdown
+  const filteredAndSortedEngineers = useMemo(() => {
+    if (!engineers || engineers.length === 0) return [];
+
+    let list = [...engineers];
+
+    // 1. Filter by Rating
+    if (filterEngRating !== 'All') {
+      const minRating = parseFloat(filterEngRating);
+      list = list.filter(eng => parseFloat(eng.rating || 4.8) >= minRating);
+    }
+
+    // 2. Filter by Location
+    if (filterEngLocation === 'City' && city) {
+      const tCity = city.toLowerCase().trim();
+      list = list.filter(eng => eng.city && (eng.city.toLowerCase().trim() === tCity || eng.city.toLowerCase().includes(tCity) || tCity.includes(eng.city.toLowerCase().trim())));
+    } else if (filterEngLocation === 'Country' && country) {
+      const tCountry = country.toLowerCase().trim();
+      list = list.filter(eng => eng.country && (eng.country.toLowerCase().trim() === tCountry || eng.country.toLowerCase().includes(tCountry) || tCountry.includes(eng.country.toLowerCase().trim())));
+    }
+
+    // 3. Filter by Skill
+    if (filterEngSkill !== 'All') {
+      const targetSkill = filterEngSkill.toLowerCase().trim();
+      list = list.filter(eng => {
+        const skillsList = eng.skills_list || (eng.skills ? eng.skills.split(',').map(s => s.trim()) : []);
+        return skillsList.some(s => s.toLowerCase().trim() === targetSkill);
+      });
+    }
+
+    // 4. Sort Option
+    if (sortEngBy === 'Rating') {
+      list.sort((a, b) => parseFloat(b.rating || 4.8) - parseFloat(a.rating || 4.8));
+    } else if (sortEngBy === 'Location') {
+      const tCity = (city || '').toLowerCase().trim();
+      const tCountry = (country || '').toLowerCase().trim();
+      list.sort((a, b) => {
+        const aCityMatch = tCity && a.city && a.city.toLowerCase().trim() === tCity ? 2 : (tCountry && a.country && a.country.toLowerCase().trim() === tCountry ? 1 : 0);
+        const bCityMatch = tCity && b.city && b.city.toLowerCase().trim() === tCity ? 2 : (tCountry && b.country && b.country.toLowerCase().trim() === tCountry ? 1 : 0);
+        return bCityMatch - aCityMatch || parseFloat(b.rating || 4.8) - parseFloat(a.rating || 4.8);
+      });
+    } else if (sortEngBy === 'RateLow') {
+      list.sort((a, b) => parseFloat(a.hourlyRate || 0) - parseFloat(b.hourlyRate || 0));
+    }
+
+    return list;
+  }, [engineers, filterEngRating, filterEngLocation, filterEngSkill, sortEngBy, city, country]);
   const [isUpdatingLog, setIsUpdatingLog] = useState(null); // stores log ID being updated
   const [isResolvingEarly, setIsResolvingEarly] = useState(false);
   const [newExtendEndDate, setNewExtendEndDate] = useState('');
@@ -2997,65 +3057,141 @@ function TicketsPage() {
               {/* Engineer Assignment */}
               <section className="tickets-card">
                 <h2 className="tickets-section-title"><FiActivity /> Engineer Assignment</h2>
-                <div className="tickets-grid">
-                  <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span>Primary Engineer <span className="field-required">*</span></span>
+                
+                {/* PROFESSIONAL INLINE FILTERS BAR */}
+                <div style={{ background: '#f8fafc', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <FiFilter style={{ color: '#6366f1' }} /> Filter & Sort Engineer Candidates
+                    </span>
+                    {(filterEngRating !== 'All' || filterEngLocation !== 'All' || filterEngSkill !== 'All' || sortEngBy !== 'Default') && (
                       <button
                         type="button"
-                        onClick={() => setShowEngPickerModal(true)}
-                        style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)' }}
+                        onClick={() => {
+                          setFilterEngRating('All');
+                          setFilterEngLocation('All');
+                          setFilterEngSkill('All');
+                          setSortEngBy('Default');
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       >
-                        <FiUser /> ⚡ Match Engineer (Sort by Rating, Location & Skills)
+                        <FiX /> Reset Filters
                       </button>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <select 
-                        value={engineerId} 
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setEngineerId(val);
-                          const eng = engineers.find(en => String(en.id) === String(val));
-                          setEngineerName(eng ? eng.name : '');
-                        }} 
-                        disabled={loadingDropdowns}
-                        style={{ flex: 1 }}
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                    {/* Sort By */}
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                        <FiSliders style={{ color: '#6366f1' }} /> Sort By
+                      </label>
+                      <select
+                        value={sortEngBy}
+                        onChange={(e) => setSortEngBy(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff', fontWeight: '600', color: '#1e293b' }}
                       >
-                        <option value="">Select an engineer...</option>
-                        {engineers.map((en) => (
-                          <option key={en.id} value={en.id}>{en.name} {en.city ? `(${en.city}, ${en.country || ''})` : ''} · ⭐ {en.rating || '4.8'}</option>
+                        <option value="Default">Default (A-Z)</option>
+                        <option value="Rating">Rating (High to Low)</option>
+                        <option value="Location">Location Match</option>
+                        <option value="RateLow">Hourly Rate (Low to High)</option>
+                      </select>
+                    </div>
+
+                    {/* Rating Filter */}
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                        <FiStar style={{ color: '#f59e0b' }} /> Rating Filter
+                      </label>
+                      <select
+                        value={filterEngRating}
+                        onChange={(e) => setFilterEngRating(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff', fontWeight: '600', color: '#1e293b' }}
+                      >
+                        <option value="All">All Ratings</option>
+                        <option value="4.8">4.8+ Stars</option>
+                        <option value="4.5">4.5+ Stars</option>
+                        <option value="4.0">4.0+ Stars</option>
+                      </select>
+                    </div>
+
+                    {/* Location Filter */}
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                        <FiMapPin style={{ color: '#10b981' }} /> Location Filter
+                      </label>
+                      <select
+                        value={filterEngLocation}
+                        onChange={(e) => setFilterEngLocation(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff', fontWeight: '600', color: '#1e293b' }}
+                      >
+                        <option value="All">All Locations</option>
+                        <option value="City">Same City {city ? `(${city})` : ''}</option>
+                        <option value="Country">Same Country {country ? `(${country})` : ''}</option>
+                      </select>
+                    </div>
+
+                    {/* Skill Filter */}
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                        <FiAward style={{ color: '#3b82f6' }} /> Skill Filter
+                      </label>
+                      <select
+                        value={filterEngSkill}
+                        onChange={(e) => setFilterEngSkill(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff', fontWeight: '600', color: '#1e293b' }}
+                      >
+                        <option value="All">All Skills</option>
+                        {availableSkills.map((sk) => (
+                          <option key={sk} value={sk}>{sk}</option>
                         ))}
                       </select>
                     </div>
+                  </div>
+                </div>
+
+                <div className="tickets-grid">
+                  <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
+                    <span>Primary Engineer <span className="field-required">*</span> ({filteredAndSortedEngineers.length} candidates available)</span>
+                    <select 
+                      value={engineerId} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEngineerId(val);
+                        const eng = engineers.find(en => String(en.id) === String(val));
+                        setEngineerName(eng ? eng.name : '');
+                      }} 
+                      disabled={loadingDropdowns}
+                    >
+                      <option value="">Select an engineer...</option>
+                      {filteredAndSortedEngineers.map((en) => (
+                        <option key={en.id} value={en.id}>
+                          {en.name} {en.city ? `(${en.city}, ${en.country || ''})` : ''} — Rating: {en.rating || '4.8'} ★ — {en.currency || 'USD'} {en.hourlyRate || '0'}/hr
+                        </option>
+                      ))}
+                    </select>
 
                     {/* Selected Engineer Quick Card Preview */}
                     {engineerId && (() => {
                       const selectedEng = engineers.find(e => String(e.id) === String(engineerId));
                       if (!selectedEng) return null;
                       return (
-                        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px' }}>
-                              {selectedEng.name.charAt(0).toUpperCase()}
+                            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#6366f1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px' }}>
+                              <FiUser />
                             </div>
                             <div>
                               <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>{selectedEng.name}</div>
                               <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                                <span>⭐ <b>{selectedEng.rating || '4.8'}</b></span>
+                                <span>Rating: <b>{selectedEng.rating || '4.8'} ★</b></span>
                                 <span>•</span>
-                                <span>📍 {selectedEng.city || 'Remote'}, {selectedEng.country || ''}</span>
+                                <span>Location: <b>{selectedEng.city || 'Remote'}, {selectedEng.country || ''}</b></span>
                                 <span>•</span>
-                                <span>💰 {selectedEng.currency || 'USD'} {selectedEng.hourlyRate || '0.00'}/hr</span>
+                                <span>Rate: <b>{selectedEng.currency || 'USD'} {selectedEng.hourlyRate || '0.00'}/hr</b></span>
                               </div>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowEngPickerModal(true)}
-                            style={{ background: '#fff', border: '1px solid #cbd5e1', color: '#475569', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                          >
-                            Change Match
-                          </button>
                         </div>
                       );
                     })()}
