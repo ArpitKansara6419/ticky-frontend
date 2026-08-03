@@ -615,6 +615,9 @@ function TicketsPage() {
   const [liveBreakdown, setLiveBreakdown] = useState(null);
   const [payoutLiveBreakdown, setPayoutLiveBreakdown] = useState(null);
   const [showFinancialConfirmModal, setShowFinancialConfirmModal] = useState(false);
+  const [showEngPickerModal, setShowEngPickerModal] = useState(false);
+  const [engSortBy, setEngSortBy] = useState('match');
+  const [engSearchQuery, setEngSearchQuery] = useState('');
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineStartTime, setInlineStartTime] = useState('');
   const [inlineEndTime, setInlineEndTime] = useState('');
@@ -2995,23 +2998,67 @@ function TicketsPage() {
               <section className="tickets-card">
                 <h2 className="tickets-section-title"><FiActivity /> Engineer Assignment</h2>
                 <div className="tickets-grid">
-                  <label className="tickets-field">
-                    <span>Primary Engineer <span className="field-required">*</span></span>
-                    <select 
-                      value={engineerId} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setEngineerId(val);
-                        const eng = engineers.find(en => String(en.id) === String(val));
-                        setEngineerName(eng ? eng.name : '');
-                      }} 
-                      disabled={loadingDropdowns}
-                    >
-                      <option value="">Select an engineer...</option>
-                      {engineers.map((en) => (
-                        <option key={en.id} value={en.id}>{en.name}</option>
-                      ))}
-                    </select>
+                  <label className="tickets-field" style={{ gridColumn: 'span 2' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span>Primary Engineer <span className="field-required">*</span></span>
+                      <button
+                        type="button"
+                        onClick={() => setShowEngPickerModal(true)}
+                        style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)' }}
+                      >
+                        <FiUser /> ⚡ Match Engineer (Sort by Rating, Location & Skills)
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <select 
+                        value={engineerId} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEngineerId(val);
+                          const eng = engineers.find(en => String(en.id) === String(val));
+                          setEngineerName(eng ? eng.name : '');
+                        }} 
+                        disabled={loadingDropdowns}
+                        style={{ flex: 1 }}
+                      >
+                        <option value="">Select an engineer...</option>
+                        {engineers.map((en) => (
+                          <option key={en.id} value={en.id}>{en.name} {en.city ? `(${en.city}, ${en.country || ''})` : ''} · ⭐ {en.rating || '4.8'}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Selected Engineer Quick Card Preview */}
+                    {engineerId && (() => {
+                      const selectedEng = engineers.find(e => String(e.id) === String(engineerId));
+                      if (!selectedEng) return null;
+                      return (
+                        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px' }}>
+                              {selectedEng.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>{selectedEng.name}</div>
+                              <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                <span>⭐ <b>{selectedEng.rating || '4.8'}</b></span>
+                                <span>•</span>
+                                <span>📍 {selectedEng.city || 'Remote'}, {selectedEng.country || ''}</span>
+                                <span>•</span>
+                                <span>💰 {selectedEng.currency || 'USD'} {selectedEng.hourlyRate || '0.00'}/hr</span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowEngPickerModal(true)}
+                            style={{ background: '#fff', border: '1px solid #cbd5e1', color: '#475569', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                          >
+                            Change Match
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </label>
                   <label className="tickets-field">
                     <span>Lead Type</span>
@@ -4922,7 +4969,210 @@ function TicketsPage() {
         </div>
       )}
 
-      {/* PRE-SUBMIT FINANCIAL SUMMARY CONFIRMATION MODAL */}
+      {/* SMART ENGINEER MATCH & SORT PICKER MODAL */}
+      {showEngPickerModal && (
+        <div className="ticket-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0' }}>
+            
+            {/* Modal Header */}
+            <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '24px', borderRadius: '24px 24px 0 0', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#818cf8', letterSpacing: '0.08em', marginBottom: '4px' }}>Smart Engineer Matching</div>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <FiUser style={{ color: '#818cf8' }} /> Select & Match Engineer
+                </h2>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowEngPickerModal(false)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px' }}>
+              {/* Ticket Context Highlight */}
+              {(city || country || taskName) && (
+                <div style={{ background: '#eff6ff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #dbeafe', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                  <div>
+                    <span style={{ fontWeight: '700', color: '#1e40af' }}>Task Context:</span>{' '}
+                    <span style={{ color: '#3b82f6', fontWeight: '600' }}>{taskName || 'Field Task'}</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#1e40af', fontWeight: '600' }}>
+                    📍 Target Location: {city ? `${city}, ${country}` : (country || 'Any Location')}
+                  </div>
+                </div>
+              )}
+
+              {/* Controls Header: Search & Sorting Tabs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search engineers by name, city, country, or skills (e.g. Cisco, Server)..."
+                  value={engSearchQuery}
+                  onChange={(e) => setEngSearchQuery(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                />
+
+                {/* Sorting Feature Buttons */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', background: '#f1f5f9', padding: '6px', borderRadius: '14px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEngSortBy('match')}
+                    style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', fontSize: '13px', fontWeight: '700', cursor: 'pointer', background: engSortBy === 'match' ? '#fff' : 'transparent', color: engSortBy === 'match' ? '#6366f1' : '#64748b', boxShadow: engSortBy === 'match' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}
+                  >
+                    ⚡ Best Overall Fit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEngSortBy('rating')}
+                    style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', fontSize: '13px', fontWeight: '700', cursor: 'pointer', background: engSortBy === 'rating' ? '#fff' : 'transparent', color: engSortBy === 'rating' ? '#d97706' : '#64748b', boxShadow: engSortBy === 'rating' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}
+                  >
+                    ⭐ Rating (High → Low)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEngSortBy('location')}
+                    style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', fontSize: '13px', fontWeight: '700', cursor: 'pointer', background: engSortBy === 'location' ? '#fff' : 'transparent', color: engSortBy === 'location' ? '#059669' : '#64748b', boxShadow: engSortBy === 'location' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}
+                  >
+                    📍 Location / Distance Match
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEngSortBy('skills')}
+                    style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', fontSize: '13px', fontWeight: '700', cursor: 'pointer', background: engSortBy === 'skills' ? '#fff' : 'transparent', color: engSortBy === 'skills' ? '#2563eb' : '#64748b', boxShadow: engSortBy === 'skills' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}
+                  >
+                    🛠️ Skill Match
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEngSortBy('rate')}
+                    style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', fontSize: '13px', fontWeight: '700', cursor: 'pointer', background: engSortBy === 'rate' ? '#fff' : 'transparent', color: engSortBy === 'rate' ? '#7c3aed' : '#64748b', boxShadow: engSortBy === 'rate' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}
+                  >
+                    💰 Rate (Low → High)
+                  </button>
+                </div>
+              </div>
+
+              {/* Engineer List Cards */}
+              <div style={{ display: 'grid', gap: '14px', maxHeight: '55vh', overflowY: 'auto', paddingRight: '4px' }}>
+                {getSortedEngineersHelper(engineers, taskName, scopeOfWork, city, country, engSearchQuery, engSortBy).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '14px' }}>
+                    No engineers found matching your filter criteria.
+                  </div>
+                ) : (
+                  getSortedEngineersHelper(engineers, taskName, scopeOfWork, city, country, engSearchQuery, engSortBy).map((eng) => {
+                    const isSelected = String(engineerId) === String(eng.id);
+                    return (
+                      <div
+                        key={eng.id}
+                        style={{
+                          background: isSelected ? '#f5f3ff' : '#ffffff',
+                          borderRadius: '16px',
+                          border: isSelected ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
+                          padding: '18px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '16px',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected ? '0 8px 20px -4px rgba(139, 92, 246, 0.2)' : '0 2px 8px rgba(0,0,0,0.02)'
+                        }}
+                      >
+                        {/* Engineer Info */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: isSelected ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'linear-gradient(135deg, #475569, #334155)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px' }}>
+                              {eng.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '16px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {eng.name}
+                                <span style={{ fontSize: '11px', background: '#fef3c7', color: '#d97706', padding: '2px 8px', borderRadius: '10px', fontWeight: '800', border: '1px solid #fde68a' }}>
+                                  ⭐ {eng.ratingNum.toFixed(1)} / 5.0
+                                </span>
+                                {eng.overallMatchPct >= 70 && (
+                                  <span style={{ fontSize: '11px', background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: '10px', fontWeight: '800', border: '1px solid #bbf7d0' }}>
+                                    ⚡ {eng.overallMatchPct}% Match
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontWeight: eng.isCityMatch || eng.isCountryMatch ? '700' : '400', color: eng.isCityMatch ? '#059669' : (eng.isCountryMatch ? '#2563eb' : '#64748b') }}>
+                                  📍 {eng.city ? `${eng.city}, ${eng.country || ''}` : (eng.country || 'Remote')}
+                                </span>
+                                {eng.locationBadge && (
+                                  <span style={{ fontSize: '11px', background: eng.isCityMatch ? '#d1fae5' : '#dbeafe', color: eng.isCityMatch ? '#065f46' : '#1e40af', padding: '1px 6px', borderRadius: '6px' }}>
+                                    {eng.locationBadge}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Skills List Badges */}
+                          <div style={{ marginTop: '12px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {eng.skillsList.slice(0, 5).map((sk, idx) => {
+                              const isMatched = eng.matchedSkills.includes(sk);
+                              return (
+                                <span
+                                  key={idx}
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '3px 10px',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    background: isMatched ? '#e0e7ff' : '#f1f5f9',
+                                    color: isMatched ? '#3730a3' : '#475569',
+                                    border: isMatched ? '1px solid #c7d2fe' : '1px solid #e2e8f0'
+                                  }}
+                                >
+                                  {isMatched ? '✓ ' : ''}{sk}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Rate & Action Button */}
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                          <div style={{ fontSize: '16px', fontWeight: '900', color: '#059669' }}>
+                            {eng.currency || 'USD'} {parseFloat(eng.hourlyRate || 0).toFixed(2)}/hr
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEngineerId(eng.id);
+                              setEngineerName(eng.name);
+                              setShowEngPickerModal(false);
+                            }}
+                            style={{
+                              padding: '10px 20px',
+                              borderRadius: '12px',
+                              border: 'none',
+                              background: isSelected ? '#10b981' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                              color: '#fff',
+                              fontWeight: '800',
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {isSelected ? '✓ Assigned' : 'Select Engineer'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showFinancialConfirmModal && (
         <div className="ticket-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
           <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0' }}>
@@ -5043,6 +5293,78 @@ function TicketsPage() {
     </section>
   )
 }
+
+// Smart Engineer Match & Sort Helper Function
+const getSortedEngineersHelper = (engineers, taskName, scopeOfWork, city, country, engSearchQuery, engSortBy) => {
+  if (!engineers || engineers.length === 0) return [];
+  
+  const textToMatch = `${taskName || ''} ${scopeOfWork || ''}`.toLowerCase();
+  
+  const enriched = engineers.map(eng => {
+    const rating = parseFloat(eng.rating || 4.8);
+    const engCity = (eng.city || '').toLowerCase().trim();
+    const engCountry = (eng.country || '').toLowerCase().trim();
+    const ticketCity = (city || '').toLowerCase().trim();
+    const ticketCountry = (country || '').toLowerCase().trim();
+
+    const isCityMatch = ticketCity && engCity && (ticketCity === engCity || engCity.includes(ticketCity) || ticketCity.includes(engCity));
+    const isCountryMatch = ticketCountry && engCountry && (ticketCountry === engCountry || engCountry.includes(ticketCountry) || ticketCountry.includes(engCountry));
+
+    let locationScore = 0;
+    let locationBadge = 'Remote / International';
+    if (isCityMatch) {
+      locationScore = 100;
+      locationBadge = `🎯 City Match (${eng.city})`;
+    } else if (isCountryMatch) {
+      locationScore = 60;
+      locationBadge = `🌍 Country Match (${eng.country})`;
+    }
+
+    const skillsList = eng.skills_list || (eng.skills ? eng.skills.split(',').map(s => s.trim()) : []);
+    const matchedSkills = skillsList.filter(s => s && textToMatch.includes(s.toLowerCase()));
+    let skillScore = matchedSkills.length > 0 ? Math.min(99, 60 + matchedSkills.length * 15) : 50;
+
+    const overallMatchPct = Math.round((skillScore * 0.4) + (locationScore * 0.35) + ((rating / 5.0) * 100 * 0.25));
+
+    return {
+      ...eng,
+      ratingNum: rating,
+      locationScore,
+      locationBadge,
+      isCityMatch,
+      isCountryMatch,
+      matchedSkills,
+      skillsList,
+      skillScore,
+      overallMatchPct
+    };
+  });
+
+  let filtered = enriched.filter(eng => {
+    if (!engSearchQuery) return true;
+    const q = engSearchQuery.toLowerCase();
+    return (
+      eng.name.toLowerCase().includes(q) ||
+      (eng.city && eng.city.toLowerCase().includes(q)) ||
+      (eng.country && eng.country.toLowerCase().includes(q)) ||
+      (eng.skills && eng.skills.toLowerCase().includes(q))
+    );
+  });
+
+  if (engSortBy === 'rating') {
+    filtered.sort((a, b) => b.ratingNum - a.ratingNum);
+  } else if (engSortBy === 'location') {
+    filtered.sort((a, b) => b.locationScore - a.locationScore || b.ratingNum - a.ratingNum);
+  } else if (engSortBy === 'skills') {
+    filtered.sort((a, b) => b.matchedSkills.length - a.matchedSkills.length || b.skillScore - a.skillScore);
+  } else if (engSortBy === 'rate') {
+    filtered.sort((a, b) => parseFloat(a.hourlyRate || 0) - parseFloat(b.hourlyRate || 0));
+  } else {
+    filtered.sort((a, b) => b.overallMatchPct - a.overallMatchPct || b.ratingNum - a.ratingNum);
+  }
+
+  return filtered;
+};
 
 const Pagination = ({ total, current, onChange }) => {
   if (total <= 1) return null
