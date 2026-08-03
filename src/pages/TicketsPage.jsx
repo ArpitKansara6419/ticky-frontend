@@ -614,6 +614,7 @@ function TicketsPage() {
 
   const [liveBreakdown, setLiveBreakdown] = useState(null);
   const [payoutLiveBreakdown, setPayoutLiveBreakdown] = useState(null);
+  const [showFinancialConfirmModal, setShowFinancialConfirmModal] = useState(false);
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineStartTime, setInlineStartTime] = useState('');
   const [inlineEndTime, setInlineEndTime] = useState('');
@@ -1116,6 +1117,7 @@ function TicketsPage() {
     setOnRouteTime('')
     setOnSiteTime('')
     setBreakTime('0')
+    setShowFinancialConfirmModal(false)
     setError('')
     setSuccess('')
     setEditingTicketId(null)
@@ -1540,8 +1542,8 @@ function TicketsPage() {
     })
   }
 
-  const handleSubmitTicket = async (event) => {
-    event.preventDefault()
+  const handleSubmitTicket = async (event, bypassConfirm = false) => {
+    if (event && event.preventDefault) event.preventDefault()
     
     // Detailed validation to inform user exactly what is missing
     const missingFields = [];
@@ -1557,6 +1559,11 @@ function TicketsPage() {
     if (missingFields.length > 0) {
       setError(`Please fill these required fields: ${missingFields.join(', ')}`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (!bypassConfirm) {
+      setShowFinancialConfirmModal(true);
       return;
     }
 
@@ -2864,7 +2871,7 @@ function TicketsPage() {
                           
                           // Short delay to ensure state updates before submission
                           setTimeout(() => {
-                             handleSubmitTicket();
+                             handleSubmitTicket(null, true);
                           }, 100);
                         } else {
                           // User cancelled prompt
@@ -3453,6 +3460,34 @@ function TicketsPage() {
                   </label>
                 </div>
               </section>
+              {/* LIVE FINANCIAL SUMMARY PREVIEW BANNER ON TICKETS TAB */}
+              <div style={{ marginTop: '24px', padding: '16px 20px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', borderRadius: '16px', color: '#fff', boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#818cf8' }}>
+                    <FiActivity /> Financial Summary Preview
+                  </div>
+                  <span style={{ fontSize: '11px', background: 'rgba(99, 102, 241, 0.2)', color: '#a5b4fc', padding: '3px 10px', borderRadius: '12px', fontWeight: '600', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                    {liveBreakdown?.hrs || '0.00'} hrs · {liveBreakdown?.days || 0} Working Days
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', textAlign: 'center' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>CUSTOMER REVENUE</div>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#818cf8' }}>{currency} {liveBreakdown?.grandTotal || '0.00'}</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>ENGINEER PAYOUT</div>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#f87171' }}>{engCurrency || currency} {payoutLiveBreakdown?.grandTotal || '0.00'}</div>
+                  </div>
+                  <div style={{ background: (parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', padding: '12px', borderRadius: '12px', border: (parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>NET MARGIN</div>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: (parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '#34d399' : '#f87171' }}>
+                      {(parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '+' : ''}{currency} {(parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="tickets-form-actions" style={{ marginTop: '32px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
                 <button type="button" className="tickets-secondary-btn" onClick={() => setActiveMainTab('Tickets')}><FiArrowLeft /> Back to Tickets</button>
                 <button type="button" className="tickets-primary-btn" onClick={() => setActiveMainTab('Cost & Breakdown')}>Next to Financials <FiArrowRight /></button>
@@ -4882,6 +4917,124 @@ function TicketsPage() {
                 {isInlineEditing ? <><FiX /> Cancel</> : <><FiEdit2 /> Edit Time</>}
               </button>
               {isInlineEditing && <button className="tickets-primary-btn" onClick={handleUpdateInlineTime} disabled={isUpdatingTime}>{isUpdatingTime ? 'Saving...' : 'Confirm Changes'}</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRE-SUBMIT FINANCIAL SUMMARY CONFIRMATION MODAL */}
+      {showFinancialConfirmModal && (
+        <div className="ticket-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0' }}>
+            
+            {/* Modal Header */}
+            <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '24px', borderRadius: '24px 24px 0 0', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#818cf8', letterSpacing: '0.08em', marginBottom: '4px' }}>Review Before Saving</div>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <FiActivity style={{ color: '#818cf8' }} /> Financial Summary Review
+                </h2>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowFinancialConfirmModal(false)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px' }}>
+              {/* Ticket & Client Snapshot */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>Task / Ticket</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{taskName}</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>Client: {clientName || 'Standard Client'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>Assigned Engineer</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{engineerName || 'Unassigned'}</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>{liveBreakdown?.hrs || '0.00'} hrs · {liveBreakdown?.days || 0} Working Days</div>
+                </div>
+              </div>
+
+              {/* 3 Metric Cards: Revenue, Payout, Margin */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '24px' }}>
+                <div style={{ background: '#eff6ff', padding: '16px', borderRadius: '14px', border: '1px solid #dbeafe' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase', marginBottom: '6px' }}>Customer Revenue</div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#1d4ed8' }}>{currency} {liveBreakdown?.grandTotal || '0.00'}</div>
+                </div>
+                <div style={{ background: '#fef2f2', padding: '16px', borderRadius: '14px', border: '1px solid #fee2e2' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#991b1b', textTransform: 'uppercase', marginBottom: '6px' }}>Engineer Payout</div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#dc2626' }}>{engCurrency || currency} {payoutLiveBreakdown?.grandTotal || '0.00'}</div>
+                </div>
+                <div style={{ background: (parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '#f0fdf4' : '#fef2f2', padding: '16px', borderRadius: '14px', border: (parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '1px solid #bbf7d0' : '1px solid #fecaca' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: (parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '#166534' : '#991b1b', textTransform: 'uppercase', marginBottom: '6px' }}>Estimated Margin</div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: (parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '#15803d' : '#dc2626' }}>
+                    {(parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)) >= 0 ? '+' : ''}{currency} {(parseFloat(liveBreakdown?.grandTotal || 0) - parseFloat(payoutLiveBreakdown?.grandTotal || 0)).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Breakdown Table */}
+              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '700' }}>Item</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', color: '#64748b', fontWeight: '700' }}>Customer ({currency})</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', color: '#64748b', fontWeight: '700' }}>Engineer ({engCurrency || currency})</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', color: '#64748b', fontWeight: '700' }}>Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { label: 'Base Service Rate', cust: liveBreakdown?.base, eng: payoutLiveBreakdown?.base },
+                      { label: 'Overtime (OT)', cust: liveBreakdown?.ot, eng: payoutLiveBreakdown?.ot },
+                      { label: 'OOH / Special Premiums', cust: (parseFloat(liveBreakdown?.specialDay || 0) + parseFloat(liveBreakdown?.ooh || 0)).toFixed(2), eng: (parseFloat(payoutLiveBreakdown?.special || 0) + parseFloat(payoutLiveBreakdown?.ooh || 0)).toFixed(2) },
+                      { label: 'Travel Cost', cust: liveBreakdown?.travel, eng: '0.00' },
+                      { label: 'Tool Cost', cust: liveBreakdown?.tools, eng: '0.00' },
+                    ].map((row, idx) => {
+                      const c = parseFloat(row.cust || 0);
+                      const p = parseFloat(row.eng || 0);
+                      const m = c - p;
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px 16px', fontWeight: '600', color: '#334155' }}>{row.label}</td>
+                          <td style={{ padding: '10px 16px', textAlign: 'right', color: '#1e293b', fontWeight: '700' }}>{c.toFixed(2)}</td>
+                          <td style={{ padding: '10px 16px', textAlign: 'right', color: '#dc2626', fontWeight: '700' }}>{p.toFixed(2)}</td>
+                          <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: '800', color: m >= 0 ? '#16a34a' : '#dc2626' }}>
+                            {m >= 0 ? '+' : ''}{m.toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '12px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowFinancialConfirmModal(false)}
+                  style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                >
+                  ← Edit Details
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowFinancialConfirmModal(false);
+                    handleSubmitTicket(null, true);
+                  }}
+                  style={{ padding: '12px 24px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', fontWeight: '800', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)' }}
+                >
+                  ✓ Confirm & {editingTicketId ? 'Save Changes' : 'Create Ticket'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
