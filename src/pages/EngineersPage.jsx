@@ -9,17 +9,17 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const calculateEngineerPayoutForTicket = (t, eng, timezoneContext = 'Ticket Local') => {
     if (!t || !eng) return { total: 0 };
 
-    // 1. Prepare Rates (use engineer rates)
-    const hr = parseFloat(eng.hourlyRate || 0);
-    const hd = parseFloat(eng.halfDayRate || 0);
-    const fd = parseFloat(eng.fullDayRate || 0);
-    const otRate = parseFloat(eng.overtimeRate || 0);
-    const oohRate = parseFloat(eng.oohRate || 0);
-    const weekendRate = parseFloat(eng.weekendRate || 0);
-    const holidayRate = parseFloat(eng.holidayRate || 0);
-    const agreedRate = parseFloat(eng.agreedRate || 0);
+    // 1. Prepare Rates (prefer ticket's saved snapshot rates over live engineer profile rates)
+    const hr = parseFloat(t.engHourlyRate ?? t.eng_hourly_rate ?? eng.hourlyRate ?? (eng.hourly_rate || 0));
+    const hd = parseFloat(t.engHalfDayRate ?? t.eng_half_day_rate ?? eng.halfDayRate ?? (eng.half_day_rate || 0));
+    const fd = parseFloat(t.engFullDayRate ?? t.eng_full_day_rate ?? eng.fullDayRate ?? (eng.full_day_rate || 0));
+    const otRate = parseFloat(t.engOvertimeRate ?? t.eng_overtime_rate ?? eng.overtimeRate ?? (eng.overtime_rate || 0));
+    const oohRate = parseFloat(t.engOohRate ?? t.eng_ooh_rate ?? eng.oohRate ?? (eng.ooh_rate || 0));
+    const weekendRate = parseFloat(t.engWeekendRate ?? t.eng_weekend_rate ?? eng.weekendRate ?? (eng.weekend_rate || 0));
+    const holidayRate = parseFloat(t.engHolidayRate ?? t.eng_holiday_rate ?? eng.holidayRate ?? (eng.holiday_rate || 0));
+    const agreedRate = parseFloat(t.engAgreedRate ?? t.eng_agreed_rate ?? eng.agreedRate ?? (eng.agreed_rate || 0));
 
-    const billingType = t.billingType || 'Hourly';
+    const billingType = t.engBillingType || t.eng_billing_type || t.billingType || eng.billingType || 'Hourly';
 
     // 2. Handle Multi-Day vs Single Day
     let logs = [];

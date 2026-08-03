@@ -543,8 +543,14 @@ const EngineerPayoutPage = () => {
         let billingType = ticket.eng_billing_type || 'Hourly';
         let oohRate = parseFloat(ticket.eng_ooh_rate || ticket.oohRate || ticket.ooh_rate || 0);
 
-        // FALLBACK: If pay type is DEFAULT, pull rates from the engineer's master profile
-        if ((ticket.eng_pay_type === 'Default' || !ticket.eng_pay_type) && engProfile) {
+        // FALLBACK: Only pull rates from master profile if ticket has NO saved snapshotted rates at all
+        const hasTicketRates = (ticket.eng_hourly_rate && Number(ticket.eng_hourly_rate) > 0) ||
+                               (ticket.eng_half_day_rate && Number(ticket.eng_half_day_rate) > 0) ||
+                               (ticket.eng_full_day_rate && Number(ticket.eng_full_day_rate) > 0) ||
+                               (ticket.eng_monthly_rate && Number(ticket.eng_monthly_rate) > 0) ||
+                               (ticket.eng_agreed_rate && Number(ticket.eng_agreed_rate) > 0);
+
+        if (!hasTicketRates && engProfile) {
             hr = parseFloat(engProfile.hourly_rate ?? engProfile.hourlyRate ?? 0);
             hd = parseFloat(engProfile.half_day_rate ?? engProfile.halfDayRate ?? 0);
             fd = parseFloat(engProfile.full_day_rate ?? engProfile.fullDayRate ?? 0);
