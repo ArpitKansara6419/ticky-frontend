@@ -5004,7 +5004,18 @@ function TicketsPage() {
                       <div key={n.id || idx} style={{ marginBottom: '12px', padding: '10px', background: n.author_type === 'admin' ? '#fff' : '#f1f5f9', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '10px', fontWeight: '800' }}>
                           <span style={{ color: n.author_type === 'admin' ? '#6366f1' : '#64748b' }}>{n.author_type === 'admin' ? 'ADMIN' : 'ENGINEER'}</span>
-                          <span style={{ color: '#94a3b8' }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span style={{ color: '#94a3b8' }}>
+                            {(() => {
+                              if (!n.created_at) return '';
+                              const raw = String(n.created_at).trim();
+                              const parsed = (raw.includes('Z') || raw.includes('+')) 
+                                ? new Date(raw) 
+                                : new Date(raw.replace(' ', 'T') + 'Z');
+                              return isNaN(parsed.getTime()) 
+                                ? raw 
+                                : parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                            })()}
+                          </span>
                         </div>
                         <p style={{ margin: 0, fontSize: '12px', color: '#1e293b', lineHeight: '1.4' }}>{n.content}</p>
                       </div>
