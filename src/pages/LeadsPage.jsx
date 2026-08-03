@@ -17,6 +17,7 @@ const CURRENCIES = [
   { value: 'EUR', label: 'Euro (EUR)' },
   { value: 'GBP', label: 'Pound (GBP)' },
   { value: 'INR', label: 'Rupee (INR)' },
+  { value: 'PLN', label: 'Polish Złoty (PLN)' },
 ]
 
 const LEAD_STATUSES = ['BID', 'Confirm', 'Reschedule', 'Cancelled']

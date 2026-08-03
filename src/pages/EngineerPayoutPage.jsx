@@ -17,14 +17,16 @@ const CURRENCIES = [
     { value: 'USD', label: 'USD ($)' },
     { value: 'EUR', label: 'EUR (€)' },
     { value: 'GBP', label: 'GBP (£)' },
-    { value: 'INR', label: 'INR (₹)' }
+    { value: 'INR', label: 'INR (₹)' },
+    { value: 'PLN', label: 'PLN (zł)' }
 ];
 
 const CURRENCY_SYMBOLS = {
     USD: '$',
     EUR: '€',
     GBP: '£',
-    INR: '₹'
+    INR: '₹',
+    PLN: 'zł'
 };
 
 const MONTHS = [

@@ -924,7 +924,7 @@ function EngineersPage() {
                                     <div style={{ background: '#eff6ff', padding: '15px', borderRadius: '12px', border: '1px solid #dbeafe' }}>
                                         <div style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600', marginBottom: '5px' }}>TOTAL EARNINGS</div>
                                         <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
-                                            {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : selectedEngineer?.currency === 'INR' ? '₹' : '$'}
+                                            {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : selectedEngineer?.currency === 'INR' ? '₹' : selectedEngineer?.currency === 'PLN' ? 'zł' : '$'}
                                             {engTickets.reduce((acc, t) => acc + calculateEngineerPayoutForTicket(t, selectedEngineer, calcTimezone).total, 0).toFixed(2)}
                                         </div>
                                     </div>
@@ -977,7 +977,7 @@ function EngineersPage() {
                                                                 </td>
                                                                 <td>
                                                                     <div style={{ fontWeight: '700', color: '#1e40af' }}>
-                                                                        {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : '₹'}
+                                                                        {selectedEngineer?.currency === 'EUR' ? '€' : selectedEngineer?.currency === 'GBP' ? '£' : selectedEngineer?.currency === 'INR' ? '₹' : selectedEngineer?.currency === 'PLN' ? 'zł' : '$'}
                                                                         {p.total.toFixed(2)}
                                                                     </div>
                                                                 </td>
@@ -1131,6 +1131,7 @@ function EngineersPage() {
                                             <option value="EUR">EUR - Euro (€)</option>
                                             <option value="GBP">GBP - Pound (£)</option>
                                             <option value="INR">INR - Rupee (₹)</option>
+                                            <option value="PLN">PLN - Polish Złoty (zł)</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -1359,7 +1360,7 @@ function EngineersPage() {
                                         <td><span style={{ fontSize: '13px', color: '#1e293b', fontWeight: '500' }}>{eng.nationality || '-'}</span></td>
                                         <td>
                                             <span style={{ fontWeight: 'bold', color: '#059669' }}>
-                                                {eng.currency === 'EUR' ? '€' : eng.currency === 'GBP' ? '£' : eng.currency === 'INR' ? '₹' : '$'}
+                                                {eng.currency === 'EUR' ? '€' : eng.currency === 'GBP' ? '£' : eng.currency === 'INR' ? '₹' : eng.currency === 'PLN' ? 'zł' : '$'}
                                                 {parseFloat(eng.hourlyRate || 0).toFixed(2)}
                                             </span>
                                         </td>

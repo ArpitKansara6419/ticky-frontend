@@ -210,6 +210,7 @@ const CURRENCIES = [
   { value: 'EUR', label: 'Euro (EUR)' },
   { value: 'GBP', label: 'Pound (GBP)' },
   { value: 'INR', label: 'Rupee (INR)' },
+  { value: 'PLN', label: 'Polish Złoty (PLN)' },
 ]
 
 const HOLIDAYS_CALC = {
