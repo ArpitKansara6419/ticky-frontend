@@ -102,6 +102,7 @@ const LeavesPage = () => {
   const handleApplyLeave = async (e) => {
     e.preventDefault();
     try {
+      const details = generateDayWiseDetails(formData.startDate, formData.endDate, formData.leaveType, formData.paidDays, formData.unpaidDays);
       const res = await fetch(`${API_BASE_URL}/leaves`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,7 +116,8 @@ const LeavesPage = () => {
           total_days: formData.totalDays,
           paid_days: formData.paidDays,
           unpaid_days: formData.unpaidDays,
-          document_signed: formData.documentSigned
+          document_signed: formData.documentSigned,
+          day_wise_details: details
         })
       });
 
@@ -160,12 +162,74 @@ const LeavesPage = () => {
     }
   };
 
+  const POLAND_PUBLIC_HOLIDAYS = [
+    { date: '2026-01-01', name: "Nowy Rok / New Year's Day" },
+    { date: '2026-01-06', name: "Trzech Króli / Epiphany" },
+    { date: '2026-04-05', name: "Wielkanoc / Easter Sunday" },
+    { date: '2026-04-06', name: "Poniedziałek Wielkanocny / Easter Monday" },
+    { date: '2026-05-01', name: "Święto Pracy / Labour Day" },
+    { date: '2026-05-03', name: "Święto Konstytucji 3 Maja / Constitution Day" },
+    { date: '2026-05-24', name: "Zielone Świątki / Pentecost" },
+    { date: '2026-06-04', name: "Boże Ciało / Corpus Christi" },
+    { date: '2026-08-15', name: "Wniebowzięcie NMP / Assumption Day" },
+    { date: '2026-11-01', name: "Wszystkich Świętych / All Saints' Day" },
+    { date: '2026-11-11', name: "Święto Niepodległości / Independence Day" },
+    { date: '2026-12-25', name: "Boże Narodzenie / Christmas Day" },
+    { date: '2026-12-26', name: "Drugi Dzień Bożego Narodzenia / Boxing Day" }
+  ];
+
   const calculateDays = (start, end) => {
     if (!start || !end) return 0;
     const s = new Date(start);
     const e = new Date(end);
     const diff = Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
+  };
+
+  const generateDayWiseDetails = (start, end, leaveType, pDays, uDays) => {
+    if (!start || !end) return [];
+    const s = new Date(start);
+    const e = new Date(end);
+    const details = [];
+    let pRem = parseFloat(pDays || 0);
+    if (leaveType === 'Paid') pRem = calculateDays(start, end);
+    if (leaveType === 'Unpaid') pRem = 0;
+
+    let curr = new Date(s);
+    while (curr <= e) {
+      const dStr = curr.toISOString().split('T')[0];
+      const isPaid = pRem > 0;
+      details.push({ date: dStr, type: isPaid ? 'Paid' : 'Unpaid' });
+      if (isPaid) pRem--;
+      curr.setDate(curr.getDate() + 1);
+    }
+    return details;
+  };
+
+  const getPaidAndUnpaidDates = (leave) => {
+    let details = [];
+    try {
+      if (leave.day_wise_details) {
+        details = typeof leave.day_wise_details === 'string' ? JSON.parse(leave.day_wise_details) : leave.day_wise_details;
+      }
+    } catch(e) {}
+
+    const pCount = parseFloat(leave.paid_days || 0) || (leave.leave_type === 'Paid' ? parseFloat(leave.total_days || 0) : 0);
+    const uCount = parseFloat(leave.unpaid_days || 0) || (leave.leave_type === 'Unpaid' ? parseFloat(leave.total_days || 0) : 0);
+
+    let paidDates = [];
+    let unpaidDates = [];
+
+    if (Array.isArray(details) && details.length > 0) {
+      paidDates = details.filter(d => d.type === 'Paid').map(d => d.date);
+      unpaidDates = details.filter(d => d.type === 'Unpaid').map(d => d.date);
+    } else {
+      const generated = generateDayWiseDetails(leave.start_date, leave.end_date, leave.leave_type, pCount, uCount);
+      paidDates = generated.filter(d => d.type === 'Paid').map(d => d.date);
+      unpaidDates = generated.filter(d => d.type === 'Unpaid').map(d => d.date);
+    }
+
+    return { paidDates, unpaidDates };
   };
 
   const onDateChange = (field, value) => {
@@ -193,8 +257,13 @@ const LeavesPage = () => {
     <div className="leaves-page-container">
       <header className="leaves-header">
         <div className="header-text">
-          <h1 className="page-title">{isAdmin ? "Workforce Leave Requests" : "Personal Leave Registry"}</h1>
-          <p className="page-subtitle">{isAdmin ? "Review, approve, and audit workforce leave requests." : "Track, apply, and manage your leave requests."}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 className="page-title">{isAdmin ? "Workforce Leave Requests" : "Personal Leave Registry"}</h1>
+            <span style={{ background: '#e0e7ff', color: '#3730a3', padding: '4px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: '700', border: '1px solid #c7d2fe', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              🇵🇱 Poland Leave Calendar (CET / Warszawa)
+            </span>
+          </div>
+          <p className="page-subtitle">{isAdmin ? "Review, approve, and audit workforce leave requests based on Poland Labour Code." : "Track, apply, and manage your leave requests."}</p>
         </div>
         {!isAdmin && (
           <button className="apply-leave-btn" onClick={() => setIsModalOpen(true)}>
@@ -314,8 +383,8 @@ const LeavesPage = () => {
                     <tr>
                       <th>Engineer</th>
                       <th>Type</th>
-                      <th>Range</th>
-                      <th>Days Breakdown</th>
+                      <th>Leave Range</th>
+                      <th>Distinct Dates Breakdown</th>
                       <th>Status</th>
                       <th>Applied At</th>
                       <th>Documents</th>
@@ -323,18 +392,24 @@ const LeavesPage = () => {
                   </thead>
                   <tbody>
                     {leaves.filter(l => l.status !== 'Pending').map(leave => {
-                      const pDays = parseFloat(leave.paid_days || 0) || (leave.leave_type === 'Paid' ? parseFloat(leave.total_days || 0) : 0);
-                      const uDays = parseFloat(leave.unpaid_days || 0) || (leave.leave_type === 'Unpaid' ? parseFloat(leave.total_days || 0) : 0);
+                      const { paidDates, unpaidDates } = getPaidAndUnpaidDates(leave);
                       return (
                         <tr key={leave.id}>
                           <td>{leave.engineerName}</td>
                           <td><span className={`badge ${leave.leave_type}`}>{leave.leave_type}</span></td>
                           <td>{formatDate(leave.start_date)} - {formatDate(leave.end_date)}</td>
                           <td>
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                              {pDays > 0 && <span style={{ padding: '2px 8px', borderRadius: '10px', background: '#dcfce7', color: '#15803d', fontSize: '12px', fontWeight: 'bold' }}>🌴 {pDays} Paid</span>}
-                              {uDays > 0 && <span style={{ padding: '2px 8px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontSize: '12px', fontWeight: 'bold' }}>💼 {uDays} Unpaid</span>}
-                              {pDays === 0 && uDays === 0 && <span>{leave.total_days} Days</span>}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px' }}>
+                              {paidDates.length > 0 && (
+                                <div style={{ background: '#dcfce7', color: '#15803d', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
+                                  🌴 <strong>Paid Dates ({paidDates.length}):</strong> {paidDates.map(d => formatDate(d)).join(', ')}
+                                </div>
+                              )}
+                              {unpaidDates.length > 0 && (
+                                <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
+                                  💼 <strong>Unpaid Dates ({unpaidDates.length}):</strong> {unpaidDates.map(d => formatDate(d)).join(', ')}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td><span className={`status-pill ${leave.status.toLowerCase()}`}>{leave.status}</span></td>
