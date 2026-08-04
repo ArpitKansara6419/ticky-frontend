@@ -188,16 +188,39 @@ const LeavesPage = () => {
 
   const generateDayWiseDetails = (start, end, leaveType, pDays, uDays) => {
     if (!start || !end) return [];
-    const s = new Date(start);
-    const e = new Date(end);
+    const parseYMD = (val) => {
+      if (!val) return new Date();
+      if (val instanceof Date) return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+      const str = String(val).split('T')[0].split(' ')[0];
+      const parts = str.split('-');
+      if (parts.length === 3) return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      return new Date(val);
+    };
+
+    const s = parseYMD(start);
+    const e = parseYMD(end);
     const details = [];
+
+    const tot = calculateDays(start, end);
     let pRem = parseFloat(pDays || 0);
-    if (leaveType === 'Paid') pRem = calculateDays(start, end);
-    if (leaveType === 'Unpaid') pRem = 0;
+    let uRem = parseFloat(uDays || 0);
+
+    if (pRem === 0 && uRem === 0) {
+      if (leaveType === 'Paid') pRem = tot;
+      else if (leaveType === 'Unpaid') pRem = 0;
+      else if (leaveType === 'Mixed') pRem = Math.ceil(tot / 2);
+    } else if (pRem > 0 && uRem === 0 && leaveType === 'Mixed') {
+      uRem = Math.max(0, tot - pRem);
+    } else if (uRem > 0 && pRem === 0 && leaveType === 'Mixed') {
+      pRem = Math.max(0, tot - uRem);
+    }
 
     let curr = new Date(s);
     while (curr <= e) {
-      const dStr = curr.toISOString().split('T')[0];
+      const yyyy = curr.getFullYear();
+      const mm = String(curr.getMonth() + 1).padStart(2, '0');
+      const dd = String(curr.getDate()).padStart(2, '0');
+      const dStr = `${yyyy}-${mm}-${dd}`;
       const isPaid = pRem > 0;
       details.push({ date: dStr, type: isPaid ? 'Paid' : 'Unpaid' });
       if (isPaid) pRem--;
@@ -214,8 +237,22 @@ const LeavesPage = () => {
       }
     } catch(e) {}
 
-    const pCount = parseFloat(leave.paid_days || 0) || (leave.leave_type === 'Paid' ? parseFloat(leave.total_days || 0) : 0);
-    const uCount = parseFloat(leave.unpaid_days || 0) || (leave.leave_type === 'Unpaid' ? parseFloat(leave.total_days || 0) : 0);
+    const tot = parseFloat(leave.total_days || 0) || calculateDays(leave.start_date, leave.end_date);
+    let pCount = parseFloat(leave.paid_days || 0);
+    let uCount = parseFloat(leave.unpaid_days || 0);
+
+    if (pCount === 0 && uCount === 0) {
+      if (leave.leave_type === 'Paid') pCount = tot;
+      else if (leave.leave_type === 'Unpaid') uCount = tot;
+      else if (leave.leave_type === 'Mixed') {
+        pCount = Math.ceil(tot / 2);
+        uCount = tot - pCount;
+      }
+    } else if (pCount > 0 && uCount === 0 && leave.leave_type === 'Mixed') {
+      uCount = Math.max(0, tot - pCount);
+    } else if (uCount > 0 && pCount === 0 && leave.leave_type === 'Mixed') {
+      pCount = Math.max(0, tot - uCount);
+    }
 
     let paidDates = [];
     let unpaidDates = [];

@@ -78,10 +78,33 @@ const LeaveHistoryPage = () => {
       }
     } catch(e) {}
 
-    const start = new Date(leave.start_date);
-    const end = new Date(leave.end_date);
-    const pCount = parseFloat(leave.paid_days || 0) || (leave.leave_type === 'Paid' ? parseFloat(leave.total_days || 0) : 0);
-    const uCount = parseFloat(leave.unpaid_days || 0) || (leave.leave_type === 'Unpaid' ? parseFloat(leave.total_days || 0) : 0);
+    const parseYMD = (val) => {
+      if (!val) return new Date();
+      if (val instanceof Date) return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+      const str = String(val).split('T')[0].split(' ')[0];
+      const parts = str.split('-');
+      if (parts.length === 3) return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      return new Date(val);
+    };
+
+    const start = parseYMD(leave.start_date);
+    const end = parseYMD(leave.end_date);
+    const tot = parseFloat(leave.total_days || 0) || Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    let pCount = parseFloat(leave.paid_days || 0);
+    let uCount = parseFloat(leave.unpaid_days || 0);
+
+    if (pCount === 0 && uCount === 0) {
+      if (leave.leave_type === 'Paid') pCount = tot;
+      else if (leave.leave_type === 'Unpaid') uCount = tot;
+      else if (leave.leave_type === 'Mixed') {
+        pCount = Math.ceil(tot / 2);
+        uCount = tot - pCount;
+      }
+    } else if (pCount > 0 && uCount === 0 && leave.leave_type === 'Mixed') {
+      uCount = Math.max(0, tot - pCount);
+    } else if (uCount > 0 && pCount === 0 && leave.leave_type === 'Mixed') {
+      pCount = Math.max(0, tot - uCount);
+    }
 
     let paidDates = [];
     let unpaidDates = [];
@@ -93,7 +116,10 @@ const LeaveHistoryPage = () => {
       let curr = new Date(start);
       let pRem = pCount;
       while (curr <= end) {
-        const dStr = curr.toISOString().split('T')[0];
+        const yyyy = curr.getFullYear();
+        const mm = String(curr.getMonth() + 1).padStart(2, '0');
+        const dd = String(curr.getDate()).padStart(2, '0');
+        const dStr = `${yyyy}-${mm}-${dd}`;
         if (pRem > 0) {
           paidDates.push(dStr);
           pRem--;
