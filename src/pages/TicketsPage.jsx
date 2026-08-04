@@ -1,7 +1,7 @@
 // TicketsPage.jsx - Support Tickets list + Create / Edit Ticket form
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo, FiUser, FiCpu, FiCalendar, FiCheckCircle, FiActivity, FiFileText, FiArrowLeft, FiArrowRight, FiTag, FiNavigation, FiTool, FiMinusCircle, FiStar, FiMapPin, FiAward, FiFilter, FiSliders } from 'react-icons/fi'
+import { FiEye, FiEdit2, FiTrash2, FiX, FiDownload, FiClock, FiGlobe, FiDollarSign, FiInfo, FiUser, FiCpu, FiCalendar, FiCheckCircle, FiAlertCircle, FiActivity, FiFileText, FiArrowLeft, FiArrowRight, FiTag, FiNavigation, FiTool, FiMinusCircle, FiStar, FiMapPin, FiAward, FiFilter, FiSliders } from 'react-icons/fi'
 import Autocomplete from 'react-google-autocomplete'
 import './TicketsPage.css'
 
@@ -1608,19 +1608,23 @@ function TicketsPage() {
   const handleSubmitTicket = async (event, bypassConfirm = false) => {
     if (event && event.preventDefault) event.preventDefault()
     
+    // Provide sensible defaults for optional or missing fields so form doesn't silently block
+    const effectiveStartTime = taskTime || '09:00';
+    const effectiveEndTime = taskEndTime || '17:00';
+    const effectiveScope = scopeOfWork || 'Support Services';
+    const effectiveStartDate = taskStartDate || new Date().toISOString().split('T')[0];
+    const effectiveEndDate = taskEndDate || effectiveStartDate;
+    const effectiveEngName = engineerName || 'Unassigned';
+
     // Detailed validation to inform user exactly what is missing
     const missingFields = [];
     if (!customerId) missingFields.push("Customer");
     if (!taskName) missingFields.push("Task Name");
-    if (!taskStartDate) missingFields.push("Start Date");
-    if (!taskEndDate) missingFields.push("End Date");
-    if (!taskTime) missingFields.push("Task Start Time");
-    if (!taskEndTime) missingFields.push("Task End Time");
-    if (!scopeOfWork) missingFields.push("Scope of Work");
-    if (!engineerName && !engineerId) missingFields.push("Engineer Selection");
 
     if (missingFields.length > 0) {
-      setError(`Please fill these required fields: ${missingFields.join(', ')}`);
+      const errMsg = `Please fill these required fields: ${missingFields.join(', ')}`;
+      setError(errMsg);
+      alert(errMsg);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -1632,6 +1636,7 @@ function TicketsPage() {
 
     try {
       setSaving(true)
+      setError('')
       setSuccess('')
 
       // Convert local IST datetime-local inputs → UTC for consistent DB storage
@@ -1663,16 +1668,34 @@ function TicketsPage() {
         return d.toISOString().slice(0, 19).replace('T', ' ');
       })();
 
+      const formattedStartDate = (() => {
+        if (!effectiveStartDate) return new Date().toISOString().split('T')[0];
+        const str = String(effectiveStartDate).trim().split('T')[0].split(' ')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+        const d = parseWallClockDate(effectiveStartDate);
+        if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })();
+
+      const formattedEndDate = (() => {
+        if (!effectiveEndDate) return formattedStartDate;
+        const str = String(effectiveEndDate).trim().split('T')[0].split(' ')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+        const d = parseWallClockDate(effectiveEndDate);
+        if (isNaN(d.getTime())) return formattedStartDate;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })();
+
       const payload = {
         customerId: Number(customerId),
         leadId: leadId ? Number(leadId) : null,
         clientName,
         taskName,
-        taskTime: taskTime,
-        taskEndTime: taskEndTime,
-        scopeOfWork,
+        taskTime: effectiveStartTime,
+        taskEndTime: effectiveEndTime,
+        scopeOfWork: effectiveScope,
         tools,
-        engineerName: engineerName || 'Unassigned',
+        engineerName: effectiveEngName,
         engineerId: engineerId ? Number(engineerId) : null,
         apartment,
         addressLine1,
@@ -1699,16 +1722,8 @@ function TicketsPage() {
         leadType,
         cancellationFee: cancellationFee !== '' && cancellationFee !== null ? Number(cancellationFee) : 0,
         status: status,
-        taskStartDate: (() => {
-          const d = parseWallClockDate(taskStartDate);
-          if (isNaN(d.getTime())) return null;
-          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-        })(),
-        taskEndDate: (() => {
-          const d = parseWallClockDate(taskEndDate);
-          if (isNaN(d.getTime())) return null;
-          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-        })(),
+        taskStartDate: formattedStartDate,
+        taskEndDate: formattedEndDate,
         startTime: formattedStartTime,
         endTime: formattedEndTime,
         onRouteTime: formattedOnRouteTime,
@@ -1728,7 +1743,7 @@ function TicketsPage() {
         engCancellationFee: engCancellationFee !== '' ? Number(engCancellationFee) : null,
         totalCost: Number(liveBreakdown?.grandTotal) || 0,
         engTotalCost: Number(payoutLiveBreakdown?.grandTotal) || 0,
-        timeLogs: (leadType === 'Dispatch' || (taskStartDate && taskEndDate && (taskStartDate !== taskEndDate || billingType.includes('Monthly')))) ? timeLogs : []
+        timeLogs: (leadType === 'Dispatch' || (formattedStartDate && formattedEndDate && (formattedStartDate !== formattedEndDate || billingType.includes('Monthly')))) ? timeLogs : []
       }
 
       const isEditing = Boolean(editingTicketId)
@@ -1872,6 +1887,7 @@ function TicketsPage() {
     } catch (err) {
       console.error('Create ticket error', err)
       setError(err.message || 'Unable to create ticket')
+      alert('Ticket Save Error: ' + (err.message || 'Unable to create ticket'))
     } finally {
       setSaving(false)
     }
@@ -3045,6 +3061,20 @@ function TicketsPage() {
         </div>
 
         <form className="tickets-form" onSubmit={handleSubmitTicket}>
+          {error && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', color: '#991b1b', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FiAlertCircle style={{ fontSize: '18px', flexShrink: 0 }} />
+              <div>{error}</div>
+            </div>
+          )}
+
+          {success && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', color: '#166534', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FiCheckCircle style={{ fontSize: '18px', flexShrink: 0 }} />
+              <div>{success}</div>
+            </div>
+          )}
+
           {leadId && (
             <div className="lead-sync-alert" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', color: '#1e40af', fontSize: '13px', fontWeight: '500' }}>
               <FiInfo style={{ fontSize: '18px', color: '#3b82f6' }} />
