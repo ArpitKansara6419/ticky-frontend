@@ -660,13 +660,18 @@ const EngineerPayoutPage = () => {
             if (!ticket._is_log_aggregation && ticket.adjustments && Array.isArray(ticket.adjustments)) {
                 adjSum = ticket.adjustments.reduce((sum, adj) => sum + parseFloat(adj.amount || 0), 0);
             }
-            totalRec += adjSum;
+            let expSum = 0;
+            if (!ticket._is_log_aggregation && ticket.expenses && Array.isArray(ticket.expenses)) {
+                expSum = ticket.expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+            }
+            totalRec += adjSum + expSum;
             return {
                 totalPayout: totalRec.toFixed(2),
                 base: baseC.toFixed(2), ot: otP.toFixed(2), ooh: oohP.toFixed(2), sp: spP.toFixed(2), trav: travC.toFixed(2), tool: toolC.toFixed(2),
                 baseBreakdown: combinedBaseBD || "N/A", otBreakdown: combinedOtBD || "", oohBreakdown: combinedOohBD || "",
                 totalHours: isNaN(totalHrs) ? 0 : totalHrs, otHours: isNaN(totalHrs) ? 0 : (totalHrs > 8 ? totalHrs - 8 : 0),
-                adjustmentsSum: adjSum.toFixed(2)
+                adjustmentsSum: adjSum.toFixed(2),
+                expensesSum: expSum.toFixed(2)
             };
         }
 
@@ -779,7 +784,11 @@ const EngineerPayoutPage = () => {
         if (!ticket._is_log_aggregation && ticket.adjustments && Array.isArray(ticket.adjustments)) {
             adjSum = ticket.adjustments.reduce((sum, adj) => sum + parseFloat(adj.amount || 0), 0);
         }
-        const total = base + ot + ooh + sp + trav + tool + adjSum;
+        let expSum = 0;
+        if (!ticket._is_log_aggregation && ticket.expenses && Array.isArray(ticket.expenses)) {
+            expSum = ticket.expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+        }
+        const total = base + ot + ooh + sp + trav + tool + adjSum + expSum;
         return {
             totalPayout: total.toFixed(2),
             base: base.toFixed(2), ot: ot.toFixed(2), ooh: ooh.toFixed(2), sp: sp.toFixed(2), trav: trav.toFixed(2), tool: tool.toFixed(2),
@@ -787,7 +796,8 @@ const EngineerPayoutPage = () => {
             totalHours: isNaN(hrs) ? 0 : hrs, otHours: isNaN(hrs) ? 0 : (hrs > 8 ? hrs - 8 : 0),
             isSpecialDay,
             isOOH: workIsOOH,
-            adjustmentsSum: adjSum.toFixed(2)
+            adjustmentsSum: adjSum.toFixed(2),
+            expensesSum: expSum.toFixed(2)
         };
     };
 
@@ -974,7 +984,7 @@ const EngineerPayoutPage = () => {
                                                     <small>{eng.phone}</small>
                                                 </div>
                                             </td>
-                                            <td>{eng.city || 'N/A'}</td>
+                                            <td>{eng.city || eng.country ? `${eng.city || ''}${eng.city && eng.country ? ', ' : ''}${eng.country || ''}` : 'N/A'}</td>
                                             <td>
                                                 <span className="badge-ticket" style={activeTab === 'history' ? { background: '#eafaf1', color: '#2ec4b6' } : {}}>{eng.ticket_count} tickets</span>
                                             </td>
@@ -1126,6 +1136,7 @@ const EngineerPayoutPage = () => {
                                     <th>Ticket ID</th>
                                     <th>Customer</th>
                                     <th>Task Name</th>
+                                    <th>Location</th>
                                     <th>Hours</th>
                                     <th>Resolved Date</th>
                                     <th>Payout</th>
@@ -1152,6 +1163,7 @@ const EngineerPayoutPage = () => {
                                             <td><span className="ticket-id">#{ticket.id}</span></td>
                                             <td>{ticket.customer_name}</td>
                                             <td>{ticket.task_name}</td>
+                                            <td>{ticket.city || ticket.country ? `${ticket.city || ''}${ticket.city && ticket.country ? ', ' : ''}${ticket.country || ''}` : (selectedEngineerProfile?.city ? `${selectedEngineerProfile.city}${selectedEngineerProfile.country ? ', ' + selectedEngineerProfile.country : ''}` : 'N/A')}</td>
                                             <td>{(() => {
                                                  const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
                                                  return (isNaN(pd.totalHours) ? 0 : pd.totalHours).toFixed(2) + 'h';
@@ -1159,8 +1171,6 @@ const EngineerPayoutPage = () => {
                                             <td>{ticket.end_time ? formatDateZoned(ticket.end_time, ticket) : 'N/A'}</td>
                                             <td className="amount-cell">{(() => {
                                                  const curSymbol = CURRENCY_SYMBOLS[ticket.eng_currency || ticket.currency || 'USD'] || '$';
-                                                 const backendAmt = parseFloat(ticket.eng_total_cost || 0);
-                                                 if (backendAmt > 0) return curSymbol + backendAmt.toFixed(2);
                                                  const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
                                                  return curSymbol + parseFloat(pd.totalPayout || 0).toFixed(2);
                                              })()}</td>
@@ -1173,7 +1183,7 @@ const EngineerPayoutPage = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="8" className="empty-row" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
+                                        <td colSpan="9" className="empty-row" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
                                             <FiAlertCircle style={{ fontSize: '24px', marginBottom: '8px', display: 'block', margin: '0 auto' }} />
                                             {activeTab === 'history' 
                                               ? 'No paid resolved tickets found for this engineer.'
