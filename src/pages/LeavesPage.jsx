@@ -258,8 +258,8 @@ const LeavesPage = () => {
     let unpaidDates = [];
 
     if (Array.isArray(details) && details.length > 0) {
-      paidDates = details.filter(d => d.type === 'Paid').map(d => d.date);
-      unpaidDates = details.filter(d => d.type === 'Unpaid').map(d => d.date);
+      paidDates = details.filter(d => d.type === 'Paid' || d.type === 'PL').map(d => d.date || d.dateStr);
+      unpaidDates = details.filter(d => d.type === 'Unpaid' || d.type === 'UL').map(d => d.date || d.dateStr);
     } else {
       const generated = generateDayWiseDetails(leave.start_date, leave.end_date, leave.leave_type, pCount, uCount);
       paidDates = generated.filter(d => d.type === 'Paid').map(d => d.date);

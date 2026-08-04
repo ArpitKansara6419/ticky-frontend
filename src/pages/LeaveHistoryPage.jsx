@@ -110,8 +110,8 @@ const LeaveHistoryPage = () => {
     let unpaidDates = [];
 
     if (Array.isArray(details) && details.length > 0) {
-      paidDates = details.filter(d => d.type === 'Paid').map(d => d.date);
-      unpaidDates = details.filter(d => d.type === 'Unpaid').map(d => d.date);
+      paidDates = details.filter(d => d.type === 'Paid' || d.type === 'PL').map(d => d.date || d.dateStr);
+      unpaidDates = details.filter(d => d.type === 'Unpaid' || d.type === 'UL').map(d => d.date || d.dateStr);
     } else {
       let curr = new Date(start);
       let pRem = pCount;
