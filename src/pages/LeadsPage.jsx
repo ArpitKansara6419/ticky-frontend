@@ -119,6 +119,93 @@ function LeadsPage() {
   const [assignEngWeekendRate, setAssignEngWeekendRate] = useState('')
   const [assignEngHolidayRate, setAssignEngHolidayRate] = useState('')
   const [assignEngCurrency, setAssignEngCurrency] = useState('USD')
+  const [creatingTicketFromLead, setCreatingTicketFromLead] = useState(false)
+
+  const handleCreateTicketFromLead = async () => {
+    if (!selectedLeadForAssign || !assignEngineerId) return;
+
+    try {
+      setCreatingTicketFromLead(true);
+      const selectedEng = engineers.find(e => String(e.id) === String(assignEngineerId));
+
+      const startDate = selectedLeadForAssign.followUpDate
+        ? String(selectedLeadForAssign.followUpDate).split('T')[0]
+        : (selectedLeadForAssign.taskStartDate ? String(selectedLeadForAssign.taskStartDate).split('T')[0] : new Date().toISOString().split('T')[0]);
+
+      const endDate = selectedLeadForAssign.taskEndDate
+        ? String(selectedLeadForAssign.taskEndDate).split('T')[0]
+        : startDate;
+
+      const payload = {
+        customerId: Number(selectedLeadForAssign.customerId),
+        leadId: Number(selectedLeadForAssign.id),
+        clientName: selectedLeadForAssign.customerName || '',
+        taskName: selectedLeadForAssign.taskName,
+        taskStartDate: startDate,
+        taskEndDate: endDate,
+        taskTime: selectedLeadForAssign.taskTime ? String(selectedLeadForAssign.taskTime).slice(0, 5) : '09:00',
+        taskEndTime: selectedLeadForAssign.taskEndTime ? String(selectedLeadForAssign.taskEndTime).slice(0, 5) : '17:00',
+        scopeOfWork: selectedLeadForAssign.scopeOfWork || 'N/A',
+        tools: selectedLeadForAssign.toolsRequired || '',
+        engineerName: selectedEng?.name || 'Unassigned',
+        engineerId: Number(assignEngineerId),
+        apartment: selectedLeadForAssign.apartment || '',
+        addressLine1: selectedLeadForAssign.addressLine1 || '',
+        addressLine2: selectedLeadForAssign.addressLine2 || '',
+        city: selectedLeadForAssign.city || '',
+        country: selectedLeadForAssign.country || '',
+        zipCode: selectedLeadForAssign.zipCode || '',
+        timezone: selectedLeadForAssign.timezone || 'Asia/Kolkata',
+        currency: selectedLeadForAssign.currency || 'USD',
+        hourlyRate: selectedLeadForAssign.hourlyRate != null ? Number(selectedLeadForAssign.hourlyRate) : null,
+        halfDayRate: selectedLeadForAssign.halfDayRate != null ? Number(selectedLeadForAssign.halfDayRate) : null,
+        fullDayRate: selectedLeadForAssign.fullDayRate != null ? Number(selectedLeadForAssign.fullDayRate) : null,
+        monthlyRate: selectedLeadForAssign.monthlyRate != null ? Number(selectedLeadForAssign.monthlyRate) : null,
+        agreedRate: selectedLeadForAssign.agreedRate != null ? Number(selectedLeadForAssign.agreedRate) : 0,
+        cancellationFee: selectedLeadForAssign.cancellationFee != null ? Number(selectedLeadForAssign.cancellationFee) : 0,
+        travelCostPerDay: selectedLeadForAssign.travelCostPerDay != null ? Number(selectedLeadForAssign.travelCostPerDay) : null,
+        toolCost: selectedLeadForAssign.toolCost != null ? Number(selectedLeadForAssign.toolCost) : 0,
+        billingType: selectedLeadForAssign.billingType || 'Hourly',
+        leadType: selectedLeadForAssign.leadType || 'Full time',
+        status: 'Assigned',
+        engPayType: assignPayType,
+        engBillingType: assignEngBillingType,
+        engCurrency: assignEngCurrency,
+        engHourlyRate: assignEngHourlyRate !== '' ? Number(assignEngHourlyRate) : null,
+        engHalfDayRate: assignEngHalfDayRate !== '' ? Number(assignEngHalfDayRate) : null,
+        engFullDayRate: assignEngFullDayRate !== '' ? Number(assignEngFullDayRate) : null,
+        engMonthlyRate: assignEngMonthlyRate !== '' ? Number(assignEngMonthlyRate) : null,
+        engAgreedRate: assignEngAgreedRate !== '' ? Number(assignEngAgreedRate) : null,
+        engCancellationFee: assignEngCancellationFee !== '' ? Number(assignEngCancellationFee) : null,
+        engOvertimeRate: selectedEng?.overtime_rate || 0,
+        engOohRate: selectedEng?.ooh_rate || 0,
+        engWeekendRate: selectedEng?.weekend_rate || 0,
+        engHolidayRate: selectedEng?.holiday_rate || 0,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to create ticket');
+      }
+
+      setIsAssignModalOpen(false);
+      await loadLeads();
+      const createdId = data.ticket?.id || data.ticketId;
+      navigate('/dashboard', { state: { openTickets: true, filterTicketId: createdId } });
+    } catch (err) {
+      console.error('Error creating ticket from lead modal:', err);
+      alert('Ticket Creation Failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setCreatingTicketFromLead(false);
+    }
+  };
 
   // Form Fields
   const [taskName, setTaskName] = useState('')
@@ -1959,35 +2046,13 @@ function LeadsPage() {
               )}
             </div>
             <div className="lead-modal-footer">
-              <button className="btn-wow-secondary" onClick={() => setIsAssignModalOpen(false)}>Cancel</button>
+              <button className="btn-wow-secondary" onClick={() => setIsAssignModalOpen(false)} disabled={creatingTicketFromLead}>Cancel</button>
               <button
                 className="btn-wow-primary"
-                disabled={!assignEngineerId}
-                onClick={() => {
-                  const selectedEng = engineers.find(e => String(e.id) === String(assignEngineerId));
-                  const payload = {
-                    ...selectedLeadForAssign,
-                    engineerId: assignEngineerId,
-                    engineerName: selectedEng?.name || '',
-                    engPayType: assignPayType,
-                    engBillingType: assignEngBillingType,
-                    engMonthlyRate: assignEngMonthlyRate,
-                    engHourlyRate: assignEngHourlyRate,
-                    engHalfDayRate: assignEngHalfDayRate,
-                    engFullDayRate: assignEngFullDayRate,
-                    engAgreedRate: assignEngAgreedRate,
-                    engCancellationFee: assignEngCancellationFee,
-                    engOvertimeRate: selectedEng?.overtime_rate || 0,
-                    engOohRate: selectedEng?.ooh_rate || 0,
-                    engWeekendRate: selectedEng?.weekend_rate || 0,
-                    engHolidayRate: selectedEng?.holiday_rate || 0,
-                    engCurrency: assignEngCurrency
-                  };
-                  localStorage.setItem('selectedLeadForTicket', JSON.stringify(payload))
-                  navigate('/dashboard', { state: { openTickets: true } })
-                }}
+                disabled={!assignEngineerId || creatingTicketFromLead}
+                onClick={handleCreateTicketFromLead}
               >
-                Create Ticket & Move ➔
+                {creatingTicketFromLead ? 'Creating Ticket...' : 'Create Ticket & Move ➔'}
               </button>
             </div>
           </div>
