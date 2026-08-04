@@ -1798,28 +1798,29 @@ function TicketsPage() {
         try {
           const originalLeadObj = leads.find(l => String(l.id) === String(payload.leadId));
           const originalTaskTime = originalLeadObj ? originalLeadObj.taskTime || originalLeadObj.task_time || payload.taskTime : payload.taskTime;
+          const originalLeadStatus = originalLeadObj ? originalLeadObj.status : 'Confirm';
           
-          const leadSyncRes = await fetch(`${API_BASE_URL}/leads/${payload.leadId}`, {
+          await fetch(`${API_BASE_URL}/leads/${payload.leadId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
               customerId: payload.customerId,
               taskName: payload.taskName,
-              leadType: payload.leadType,
+              leadType: payload.leadType || 'Full time',
               clientTicketNumber: payload.clientTicketNumber || '',
-              taskStartDate: payload.taskStartDate,
-              taskEndDate: payload.taskEndDate,
-              taskTime: originalTaskTime,
-              scopeOfWork: payload.scopeOfWork,
+              taskStartDate: payload.taskStartDate || new Date().toISOString().split('T')[0],
+              taskEndDate: payload.taskEndDate || payload.taskStartDate || new Date().toISOString().split('T')[0],
+              taskTime: originalTaskTime || '09:00',
+              scopeOfWork: payload.scopeOfWork || 'N/A',
               apartment: payload.apartment || '',
-              addressLine1: payload.addressLine1,
+              addressLine1: payload.addressLine1 || '',
               addressLine2: payload.addressLine2 || '',
-              city: payload.city,
-              country: payload.country,
-              zipCode: payload.zipCode,
-              timezone: payload.timezone,
-              currency: payload.currency,
+              city: payload.city || '',
+              country: payload.country || '',
+              zipCode: payload.zipCode || '',
+              timezone: payload.timezone || 'Asia/Kolkata',
+              currency: payload.currency || 'USD',
               hourlyRate: payload.hourlyRate,
               halfDayRate: payload.halfDayRate,
               fullDayRate: payload.fullDayRate,
@@ -1829,13 +1830,13 @@ function TicketsPage() {
               travelCostPerDay: payload.travelCostPerDay,
               toolCost: payload.toolCost || 0,
               totalCost: payload.totalCost || 0,
-              status: payload.status,
+              status: originalLeadStatus,
               isRecurring: 'No',
               recurringStartDate: null,
               recurringEndDate: null,
               totalWeeks: null,
               recurringDays: '',
-              billingType: payload.billingType,
+              billingType: payload.billingType || 'Hourly',
               latitude: payload.latitude,
               longitude: payload.longitude,
               followUpDate: null,
@@ -1844,11 +1845,6 @@ function TicketsPage() {
               syncTickets: false
             })
           });
-
-          if (!leadSyncRes.ok) {
-            const lErr = await leadSyncRes.json();
-            throw new Error(lErr.message || "Lead sync failed");
-          }
           console.log("Lead fully synchronized successfully.");
         } catch (leadSyncErr) {
           console.error("Failed to sync dates to lead:", leadSyncErr.message);
@@ -2758,6 +2754,8 @@ function TicketsPage() {
     const lead = leads.find(l => String(l.id) === String(leadId))
     if (lead) {
       console.log("Populating ticket form from selected lead:", lead.id)
+      setCustomerId(String(lead.customerId || ''))
+      setClientName(lead.customerName || '')
       setTaskName(lead.taskName || '')
       const latestDate = lead.followUpDate || lead.taskStartDate;
       const latestEndDate = lead.taskEndDate || latestDate;
@@ -2787,6 +2785,11 @@ function TicketsPage() {
       setLeadType(lead.leadType || 'Full time')
       setLatitude(lead.latitude || null)
       setLongitude(lead.longitude || null)
+
+      if (lead.engineerId) {
+        setEngineerId(String(lead.engineerId));
+        if (lead.engineerName) setEngineerName(lead.engineerName);
+      }
 
       // AUTO SYNC TIME: Automatically populate the manual override times from the scheduled lead details
       const lDate = latestDate;
