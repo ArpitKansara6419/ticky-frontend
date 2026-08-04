@@ -60,6 +60,36 @@ const AttendancePage = ({ user }) => {
     // --- Helpers ---
     const getEngineerConfig = (countryCode) => COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG['DEFAULT'];
 
+    const formatActivityTime = (val) => {
+        if (!val) return '--:--';
+        const s = String(val).trim();
+        if (!s || s === 'null' || s === 'undefined') return '--:--';
+
+        // HH:MM or HH:MM:SS format
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
+            const parts = s.split(':');
+            return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+        }
+
+        // ISO or Datetime format (extract time string directly to avoid UTC/local offset shift)
+        if (s.includes('T') || s.includes(' ') || s.includes('-')) {
+            const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : s);
+            if (timePart && /^\d{1,2}:\d{2}/.test(timePart)) {
+                const parts = timePart.split(':');
+                return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+            }
+        }
+
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+
+        return '--:--';
+    };
+
     const isWeekend = (y, m, d, countryCode = 'IN') => {
         const dateObj = new Date(y, m - 1, d);
         return getEngineerConfig(countryCode).weekend.includes(dateObj.getDay());
@@ -140,8 +170,9 @@ const AttendancePage = ({ user }) => {
         const total = records.length;
         const present = records.filter(r => r.status === 'Present').length;
         const absent = records.filter(r => r.status === 'Absent').length;
-        const leave = records.filter(r => r.status === 'Leave').length; // Assuming 'Leave' status exists in daily
-        return { total, present, absent, leave };
+        const weekend = records.filter(r => r.status === 'Weekend' || r.status === 'Week Off').length;
+        const leave = records.filter(r => r.status === 'Leave').length;
+        return { total, present, absent, weekend, leave };
     }, [records]);
 
     const monthlyStats = useMemo(() => {
@@ -156,7 +187,17 @@ const AttendancePage = ({ user }) => {
 
         let present = 0, absent = 0, leave = 0;
         monthlyRecords.forEach(r => {
-            const status = r.attendance[d];
+            const country = r.country || 'IN';
+            const isOff = isWeekend(year, month, d, country);
+            const isHoli = isPublicHoliday(year, month, d, country);
+            let status = r.attendance[d];
+
+            if (isOff) {
+                if (status !== 'Present' && status !== 'Half Day') status = 'Weekend';
+            } else if (isHoli) {
+                if (status !== 'Present' && status !== 'Half Day') status = 'Holiday';
+            }
+
             if (status === 'Present') present++;
             else if (status === 'Absent') absent++;
             else if (status === 'Leave') leave++;
@@ -333,10 +374,10 @@ const AttendancePage = ({ user }) => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td><span className={`status-badge ${r.status?.toLowerCase()}`}>{r.status}</span></td>
+                                            <td><span className={`status-badge ${(r.status || 'Absent').toLowerCase().replace(/\s+/g, '-')}`}>{r.status}</span></td>
                                             <td className="mono-text">
-                                                <div>{arrival ? arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</div>
-                                                {arrival && arrivalTicketId && (
+                                                <div>{formatActivityTime(r.arrival_time)}</div>
+                                                {r.arrival_time && arrivalTicketId && (
                                                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
                                                         {tickets.length > 1 ? 'Earliest: ' : 'Ticket: '}
                                                         <span 
@@ -383,8 +424,8 @@ const AttendancePage = ({ user }) => {
                                                 )}
                                             </td>
                                             <td className="mono-text">
-                                                <div>{start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</div>
-                                                {start && checkInTicketId && (
+                                                <div>{formatActivityTime(r.check_in_time)}</div>
+                                                {r.check_in_time && checkInTicketId && (
                                                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
                                                         {tickets.length > 1 ? 'Earliest: ' : 'Ticket: '}
                                                         <span 
@@ -400,8 +441,8 @@ const AttendancePage = ({ user }) => {
                                                 )}
                                             </td>
                                             <td className="mono-text">
-                                                <div>{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</div>
-                                                {end && checkOutTicketId && (
+                                                <div>{formatActivityTime(r.check_out_time)}</div>
+                                                {r.check_out_time && checkOutTicketId && (
                                                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>
                                                         {tickets.length > 1 ? 'Latest: ' : 'Ticket: '}
                                                         <span 
@@ -489,10 +530,6 @@ const AttendancePage = ({ user }) => {
                                                             </div>
                                                             <div className="attendance-timeline">
                                                                 {sortedTickets.map((t, idx) => {
-                                                                    const checkInTime = t.check_in_time ? new Date(t.check_in_time) : null;
-                                                                    const checkOutTime = t.check_out_time ? new Date(t.check_out_time) : null;
-                                                                    const arrivalTime = t.arrival_time ? new Date(t.arrival_time) : null;
-                                                                    
                                                                     const isLate = t.late_time?.includes('late');
                                                                     const isActive = t.duration === 'Active';
                                                                     const isResolved = t.status?.toLowerCase() === 'resolved';
@@ -508,14 +545,14 @@ const AttendancePage = ({ user }) => {
                                                                             <div className="timeline-time-col">
                                                                                 <div className="time-block">
                                                                                     <span className="time-label">Arrival</span>
-                                                                                    <span className="time-val mono">{arrivalTime ? arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
+                                                                                    <span className="time-val mono">{formatActivityTime(t.arrival_time)}</span>
                                                                                 </div>
                                                                                 <div className="time-block">
                                                                                     <span className="time-label">Work Session</span>
                                                                                     <span className="time-val mono">
-                                                                                        {checkInTime ? checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                                                                        {formatActivityTime(t.check_in_time)}
                                                                                         {' - '}
-                                                                                        {checkOutTime ? checkOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (checkInTime ? 'Active' : '--:--')}
+                                                                                        {t.check_out_time ? formatActivityTime(t.check_out_time) : (t.check_in_time ? 'Active' : '--:--')}
                                                                                     </span>
                                                                                 </div>
                                                                                 <div className="duration-badge-wrapper">
@@ -657,7 +694,6 @@ const AttendancePage = ({ user }) => {
                                         // Calculate row stats
                                         let p = 0, a = 0, l = 0;
                                         days.forEach(d => {
-                                            const s = r.attendance[d];
                                             const country = r.country || 'IN';
                                             const isOff = isWeekend(year, month, d, country);
                                             const isHoli = isPublicHoliday(year, month, d, country);
@@ -666,8 +702,12 @@ const AttendancePage = ({ user }) => {
                                             today.setHours(0, 0, 0, 0);
                                             const isPast = cellDate < today;
 
-                                            let status = s;
-                                            if (!status && isPast && !isOff && !isHoli) {
+                                            let status = r.attendance[d];
+                                            if (isOff) {
+                                                if (status !== 'Present' && status !== 'Half Day') status = 'Weekend';
+                                            } else if (isHoli) {
+                                                if (status !== 'Present' && status !== 'Half Day') status = 'Holiday';
+                                            } else if (!status && isPast) {
                                                 status = 'Absent';
                                             }
 
@@ -703,7 +743,11 @@ const AttendancePage = ({ user }) => {
                                                     const isPast = cellDate < today;
 
                                                     let s = r.attendance[d];
-                                                    if (!s && isPast && !isOff && !isHoli) {
+                                                    if (isOff) {
+                                                        if (s !== 'Present' && s !== 'Half Day') s = 'Weekend';
+                                                    } else if (isHoli) {
+                                                        if (s !== 'Present' && s !== 'Half Day') s = 'Holiday';
+                                                    } else if (!s && isPast) {
                                                         s = 'Absent';
                                                     }
 

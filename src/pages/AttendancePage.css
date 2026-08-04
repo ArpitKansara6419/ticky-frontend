@@ -326,6 +326,11 @@
     color: #92400e;
 }
 
+.status-badge.weekend, .status-badge.week-off {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
 .mono-text {
     font-family: 'JetBrains Mono', monospace;
     color: #374151;
