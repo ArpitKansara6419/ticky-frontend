@@ -1625,12 +1625,10 @@ function TicketsPage() {
       const errMsg = `Please fill these required fields: ${missingFields.join(', ')}`;
       setError(errMsg);
       alert(errMsg);
+      if (missingFields.includes("Customer") || missingFields.includes("Task Name")) {
+        setActiveMainTab('Tickets');
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    if (!bypassConfirm) {
-      setShowFinancialConfirmModal(true);
       return;
     }
 
@@ -1771,8 +1769,11 @@ function TicketsPage() {
 
       if (data.earlyResolve) {
         setSuccess('Early closure requested. This ticket is now in "Approval Pending" status.');
+        alert('Early closure requested. This ticket is now in "Approval Pending" status.');
       } else {
-        setSuccess(isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.');
+        const msg = isEditing ? 'Ticket updated successfully.' : 'Ticket created successfully.';
+        setSuccess(msg);
+        alert(msg);
       }
 
       // UPLOAD DOCUMENTS
