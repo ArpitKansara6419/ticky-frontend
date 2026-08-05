@@ -361,10 +361,12 @@ function EngineersPage() {
                         documentName: data.rightToWork.document_name || '',
                         nationality: data.rightToWork.nationality || '',
                         shareCode: data.rightToWork.share_code || '',
-                        verificationStatus: data.rightToWork.verification_status || 'Pending'
+                        verificationStatus: data.rightToWork.verification_status || 'Pending',
+                        passportNumber: data.rightToWork.passport_number || '',
+                        passportCopyUrl: data.rightToWork.passport_copy_url || ''
                     });
                 } else {
-                    setRtwData({ visaType: '', documentUrl: '', documentName: '', issueDate: '', expiryDate: '', notes: '', nationality: '', shareCode: '', verificationStatus: 'Pending' });
+                    setRtwData({ visaType: '', documentUrl: '', documentName: '', issueDate: '', expiryDate: '', notes: '', nationality: '', shareCode: '', verificationStatus: 'Pending', passportNumber: '', passportCopyUrl: '' });
                 }
             }
 
@@ -408,7 +410,9 @@ function EngineersPage() {
                     startDate: e.start_date ? e.start_date.split('T')[0] : '',
                     endDate: e.end_date ? e.end_date.split('T')[0] : '',
                     isCurrent: !!e.is_current,
-                    description: e.description
+                    description: e.description,
+                    referenceNumber: e.reference_number || '',
+                    experienceLetterUrl: e.experience_letter_url || ''
                 })));
             }
 
@@ -686,6 +690,10 @@ function EngineersPage() {
                                     <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', marginBottom: '5px', display: 'block' }}>NATIONALITY</label>
                                     <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>{selectedEngineer.nationality || rtwData.nationality || '-'}</div>
                                 </div>
+                                <div className="detail-item">
+                                    <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', marginBottom: '5px', display: 'block' }}>REFERENCE CODE</label>
+                                    <div className="detail-value" style={{ fontWeight: '600', color: '#1e293b' }}>{selectedEngineer.referenceCode || '-'}</div>
+                                </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginTop: '30px' }}>
@@ -713,9 +721,45 @@ function EngineersPage() {
                                             <label style={{ fontSize: '11px', color: '#94a3b8' }}>EXPIRY DATE</label>
                                             <div style={{ fontWeight: '500', color: '#ef4444' }}>{rtwData.expiryDate || 'N/A'}</div>
                                         </div>
-                                        <div style={{ gridColumn: 'span 2' }}>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: '#94a3b8' }}>PASSPORT NUMBER</label>
+                                            <div style={{ fontWeight: '500', color: '#1e293b' }}>{rtwData.passportNumber || travelData.passportNumber || '-'}</div>
+                                        </div>
+                                        <div>
                                             <label style={{ fontSize: '11px', color: '#94a3b8' }}>SHARE CODE</label>
                                             <div style={{ fontWeight: '500', color: '#1e293b', letterSpacing: '1px' }}>{rtwData.shareCode || '-'}</div>
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px', marginTop: '5px' }}>
+                                            {rtwData.documentUrl && (
+                                                <a
+                                                    href={rtwData.documentUrl.startsWith('http') ? rtwData.documentUrl : `${API_BASE_URL.replace('/api', '')}/${rtwData.documentUrl.replace(/^\//, '')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                        background: '#10b981', color: '#ffffff',
+                                                        padding: '5px 12px', borderRadius: '8px',
+                                                        fontSize: '11px', fontWeight: '600', textDecoration: 'none'
+                                                    }}
+                                                >
+                                                    <i className="fas fa-file-alt"></i> View Work Permit Document
+                                                </a>
+                                            )}
+                                            {rtwData.passportCopyUrl && (
+                                                <a
+                                                    href={rtwData.passportCopyUrl.startsWith('http') ? rtwData.passportCopyUrl : `${API_BASE_URL.replace('/api', '')}/${rtwData.passportCopyUrl.replace(/^\//, '')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                        background: '#3b82f6', color: '#ffffff',
+                                                        padding: '5px 12px', borderRadius: '8px',
+                                                        fontSize: '11px', fontWeight: '600', textDecoration: 'none'
+                                                    }}
+                                                >
+                                                    <i className="fas fa-passport"></i> View Passport Copy
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -799,13 +843,31 @@ function EngineersPage() {
                                     </h4>
                                     {experienceData.length > 0 ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                            {experienceData.slice(0, 2).map((exp, idx) => (
+                                            {experienceData.map((exp, idx) => (
                                                 <div key={idx} style={{ borderLeft: '2px solid #cbd5e1', paddingLeft: '15px' }}>
                                                     <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{exp.jobTitle}</div>
                                                     <div style={{ color: '#64748b', fontSize: '12px' }}>{exp.companyName}</div>
                                                     <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
                                                         {exp.startDate} - {exp.isCurrent ? 'Present' : exp.endDate}
                                                     </div>
+                                                    {exp.referenceNumber && (
+                                                        <div style={{ fontSize: '11px', color: '#475569', fontWeight: '500', marginTop: '3px' }}>
+                                                            Ref No: {exp.referenceNumber}
+                                                        </div>
+                                                    )}
+                                                    {exp.experienceLetterUrl && (
+                                                        <a
+                                                            href={exp.experienceLetterUrl.startsWith('http') ? exp.experienceLetterUrl : `${API_BASE_URL.replace('/api', '')}/${exp.experienceLetterUrl.replace(/^\//, '')}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                                color: '#6366f1', fontSize: '11px', fontWeight: '600', marginTop: '4px', textDecoration: 'none'
+                                                            }}
+                                                        >
+                                                            <i className="fas fa-file-pdf"></i> View Experience Letter
+                                                        </a>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
