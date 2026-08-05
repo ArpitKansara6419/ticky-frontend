@@ -130,9 +130,20 @@ const ApprovalsPage = ({ onViewTicket }) => {
                                     </div>
                                 )}
 
+                                {(item.approvalType === 'Customer Amount' || item.approvalType === 'Expense') && (
+                                    <div className="date-highlight-section" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', padding: '12px 16px', borderRadius: '10px', marginTop: '10px' }}>
+                                        <div className="date-item">
+                                            <label style={{ fontSize: '11px', color: '#166534', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Requested Customer Amount</label>
+                                            <span className="date-val proposed" style={{ color: '#15803d', fontSize: '18px', fontWeight: '700', marginTop: '2px', display: 'block' }}>
+                                                + {item.currency || 'USD'} {parseFloat(item.amount || 0).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="reason-section">
-                                    <label>Justification</label>
-                                    <p>{item.reason || 'No justification provided.'}</p>
+                                    <label>Description / Reason</label>
+                                    <p>{item.reason || 'No description provided.'}</p>
                                 </div>
                             </div>
                             <div className="approval-actions" onClick={e => e.stopPropagation()}>
