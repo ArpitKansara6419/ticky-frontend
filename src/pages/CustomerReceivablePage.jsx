@@ -69,6 +69,29 @@ const CustomerReceivablePage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [calcTimezone, setCalcTimezone] = useState('Ticket Local');
 
+    const getTargetTimezone = (ticket, forcedTZ) => {
+        return (forcedTZ && forcedTZ !== 'Ticket Local')
+            ? forcedTZ
+            : (ticket?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+    };
+
+    const formatTimeZoned = (str, ticket, forcedTZ) => {
+        if (!str) return '-';
+        const s = String(str).trim();
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
+            return s.slice(0, 5);
+        }
+        const cleanStr = s.includes('T') || s.endsWith('Z') ? s : s.replace(' ', 'T') + 'Z';
+        const d = new Date(cleanStr);
+        if (isNaN(d.getTime())) return s.slice(0, 5);
+        try {
+            const tz = getTargetTimezone(ticket, forcedTZ);
+            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz });
+        } catch (e) {
+            return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+    };
+
     // --- FRONTEND CALCULATION ENGINE (Consistent with Tickets/Engineers Page) ---
     const calculateTicketCostFrontend = (ticket, forcedTZ, targetCurrency = 'USD') => {
         if (!ticket) return {};
@@ -788,8 +811,8 @@ const CustomerReceivablePage = () => {
                 ];
             } else {
                 const desc = `I.T. Service\nLoc: ${location}\nTkt: #${ticket.id}`;
-                const checkIn = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
-                const checkOut = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+                const checkIn = log.start_time ? formatTimeZoned(log.start_time, ticket, calcTimezone) : '-';
+                const checkOut = log.end_time ? formatTimeZoned(log.end_time, ticket, calcTimezone) : '-';
                 
                 row = [
                     d,
@@ -1123,8 +1146,8 @@ const CustomerReceivablePage = () => {
                 ? `Tkt #${ticket.id}: ${ticket.task_name} - ${loc}`
                 : `Tkt #${ticket.id}\nTask: ${ticket.task_name}\nLoc: ${loc}`;
             
-            const cin = log.start_time ? new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
-            const cout = log.end_time ? new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : '-';
+            const cin = log.start_time ? formatTimeZoned(log.start_time, ticket, calcTimezone) : '-';
+            const cout = log.end_time ? formatTimeZoned(log.end_time, ticket, calcTimezone) : '-';
 
             const travelVal = parseFloat(logRes.travelCost || 0);
             const toolVal = parseFloat(logRes.toolCost || 0);
@@ -1317,8 +1340,8 @@ const CustomerReceivablePage = () => {
                     `Tkt #${ticket.id}: ${ticket.task_name} (${ticket.customer_name})`,
                     ticket.engineer_name,
                     `${ticket.city}, ${ticket.country}`,
-                    log.start_time ? new Date(log.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-',
-                    log.end_time ? new Date(log.end_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-',
+                    formatTimeZoned(log.start_time, ticket, calcTimezone),
+                    formatTimeZoned(log.end_time, ticket, calcTimezone),
                     parseFloat(logRes.baseCost),
                     parseFloat(logRes.travelCost),
                     parseFloat(logRes.toolCost),
