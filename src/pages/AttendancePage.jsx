@@ -65,26 +65,23 @@ const AttendancePage = ({ user }) => {
         const s = String(val).trim();
         if (!s || s === 'null' || s === 'undefined') return '--:--';
 
-        // HH:MM or HH:MM:SS format
+        // HH:MM or HH:MM:SS format without date (e.g. "09:30" or "09:30:00")
         if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
             const parts = s.split(':');
             return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
         }
 
-        // ISO or Datetime format (extract time string directly to avoid UTC/local offset shift)
-        if (s.includes('T') || s.includes(' ') || s.includes('-')) {
-            const timePart = s.includes('T') ? s.split('T')[1] : (s.includes(' ') ? s.split(' ')[1] : s);
-            if (timePart && /^\d{1,2}:\d{2}/.test(timePart)) {
-                const parts = timePart.split(':');
-                return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
-            }
-        }
-
-        const d = new Date(s);
+        // Clean timestamp (handle space separated MySQL timestamp or ISO string)
+        const cleanStr = s.includes('T') || s.endsWith('Z') ? s : s.replace(' ', 'T') + 'Z';
+        const d = new Date(cleanStr);
         if (!isNaN(d.getTime())) {
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mm = String(d.getMinutes()).padStart(2, '0');
-            return `${hh}:${mm}`;
+            try {
+                return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+            } catch (e) {
+                const hh = String(d.getHours()).padStart(2, '0');
+                const mm = String(d.getMinutes()).padStart(2, '0');
+                return `${hh}:${mm}`;
+            }
         }
 
         return '--:--';
