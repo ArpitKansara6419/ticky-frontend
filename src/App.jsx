@@ -28,7 +28,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route
         path="/dashboard"
-        element={
+        element={ 
           <PrivateRoute>
             <DashboardPage />
           </PrivateRoute>
@@ -40,5 +40,6 @@ function App() {
 } 
 
 export default App
+
 
 
