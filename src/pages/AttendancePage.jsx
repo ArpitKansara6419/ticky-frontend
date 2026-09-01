@@ -124,7 +124,7 @@ const AttendancePage = ({ user }) => {
     const formatActivityTime = (val) => {
         if (!val) return '--:--';
         const s = String(val).trim();
-        if (!s || s === 'null' || s === 'undefined') return '--:--';
+        if (!s || s === 'null' || s === 'undefined' || s === '--:--') return '--:--';
 
         // HH:MM or HH:MM:SS format without date (e.g. "09:30" or "09:30:00")
         if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
@@ -132,8 +132,9 @@ const AttendancePage = ({ user }) => {
             return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
         }
 
-        // Clean timestamp (handle space separated MySQL timestamp or ISO string)
-        const cleanStr = s.includes('T') || s.endsWith('Z') ? s : s.replace(' ', 'T') + 'Z';
+        // Clean timestamp (handle space-separated MySQL timestamp or ISO string)
+        // DO NOT append 'Z' to local MySQL string without 'T', as MySQL strings are already wall-clock local time!
+        const cleanStr = s.includes('T') ? s : s.replace(' ', 'T');
         const d = new Date(cleanStr);
         if (!isNaN(d.getTime())) {
             try {
