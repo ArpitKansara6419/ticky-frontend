@@ -30,6 +30,7 @@ const AttendancePage = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState('default'); // 'default' | 'fulltime' | 'dispatch' | 'all'
     const [selectedEngineer, setSelectedEngineer] = useState(null);
     const [expandedRow, setExpandedRow] = useState(null);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -59,6 +60,66 @@ const AttendancePage = ({ user }) => {
 
     // --- Helpers ---
     const getEngineerConfig = (countryCode) => COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG['DEFAULT'];
+
+    const isFullTimeEngineer = (r) => {
+        const empType = String(r.employment_type || r.employmentType || '').toLowerCase();
+        return empType === 'full-time' || empType === 'fulltime';
+    };
+
+    const hasEngineerClockedIn = (r) => {
+        if (!r) return false;
+        if (r.status === 'Present' || r.status === 'Late' || r.status === 'Half Day') return true;
+        if (r.check_in_time && r.check_in_time !== 'null' && r.check_in_time !== '--:--') return true;
+        if (r.arrival_time && r.arrival_time !== 'null' && r.arrival_time !== '--:--') return true;
+        if (r.tickets && r.tickets.length > 0) {
+            return r.tickets.some(t => t.check_in_time || t.arrival_time || t.status === 'In Progress' || t.status === 'On Site' || t.status === 'Resolved');
+        }
+        return false;
+    };
+
+    // Filtered Daily Records
+    const filteredDailyRecords = useMemo(() => {
+        return records.filter(r => {
+            const query = searchQuery.trim().toLowerCase();
+            const matchesSearch = !query ||
+                (r.engineer_name || '').toLowerCase().includes(query) ||
+                (r.email || '').toLowerCase().includes(query);
+            if (!matchesSearch) return false;
+
+            if (filterType === 'fulltime') {
+                return isFullTimeEngineer(r);
+            }
+            if (filterType === 'dispatch') {
+                return !isFullTimeEngineer(r);
+            }
+            if (filterType === 'all') {
+                return true;
+            }
+            // 'default' (Smart Mode):
+            // Full-time engineers are ALWAYS shown (if absent, shown as Absent).
+            // Dispatch engineers are ONLY shown if they clocked in / checked in today.
+            return isFullTimeEngineer(r) || hasEngineerClockedIn(r);
+        });
+    }, [records, searchQuery, filterType]);
+
+    // Filtered Monthly Records
+    const filteredMonthlyRecords = useMemo(() => {
+        return monthlyRecords.filter(r => {
+            const query = searchQuery.trim().toLowerCase();
+            const matchesSearch = !query ||
+                (r.name || r.engineer_name || '').toLowerCase().includes(query) ||
+                (r.email || '').toLowerCase().includes(query);
+            if (!matchesSearch) return false;
+
+            const hasAnyActivity = r.attendance && Object.values(r.attendance).some(v => v === 'Present' || v === 'Half Day' || v === 'Late');
+
+            if (filterType === 'fulltime') return isFullTimeEngineer(r);
+            if (filterType === 'dispatch') return !isFullTimeEngineer(r);
+            if (filterType === 'all') return true;
+            // 'default'
+            return isFullTimeEngineer(r) || hasAnyActivity;
+        });
+    }, [monthlyRecords, searchQuery, filterType]);
 
     const formatActivityTime = (val) => {
         if (!val) return '--:--';
@@ -164,13 +225,13 @@ const AttendancePage = ({ user }) => {
 
     // --- Stats Calculation ---
     const dailyStats = useMemo(() => {
-        const total = records.length;
-        const present = records.filter(r => r.status === 'Present').length;
-        const absent = records.filter(r => r.status === 'Absent').length;
-        const weekend = records.filter(r => r.status === 'Weekend' || r.status === 'Week Off').length;
-        const leave = records.filter(r => r.status === 'Leave').length;
+        const total = filteredDailyRecords.length;
+        const present = filteredDailyRecords.filter(r => r.status === 'Present').length;
+        const absent = filteredDailyRecords.filter(r => r.status === 'Absent').length;
+        const weekend = filteredDailyRecords.filter(r => r.status === 'Weekend' || r.status === 'Week Off').length;
+        const leave = filteredDailyRecords.filter(r => r.status === 'Leave').length;
         return { total, present, absent, weekend, leave };
-    }, [records]);
+    }, [filteredDailyRecords]);
 
     const monthlyStats = useMemo(() => {
         if (viewMode !== 'monthly') return null;
@@ -183,11 +244,11 @@ const AttendancePage = ({ user }) => {
         if (m !== month || y !== year) return null;
 
         let present = 0, absent = 0, leave = 0;
-        monthlyRecords.forEach(r => {
+        filteredMonthlyRecords.forEach(r => {
             const country = r.country || 'IN';
             const isOff = isWeekend(year, month, d, country);
             const isHoli = isPublicHoliday(year, month, d, country);
-            let status = r.attendance[d];
+            let status = r.attendance ? r.attendance[d] : null;
 
             if (isOff) {
                 if (status !== 'Present' && status !== 'Half Day') status = 'Weekend';
@@ -201,7 +262,7 @@ const AttendancePage = ({ user }) => {
             else if (status === 'Half Day') present += 0.5;
         });
         return { present, absent, leave };
-    }, [monthlyRecords, month, year]);
+    }, [filteredMonthlyRecords, month, year, viewMode]);
 
     // --- Renderers ---
 
@@ -249,10 +310,10 @@ const AttendancePage = ({ user }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {records.length === 0 ? (
+                        {filteredDailyRecords.length === 0 ? (
                             <tr><td colSpan="11" className="empty-state">No records found for {date}</td></tr>
                         ) : (
-                            records.map(r => {
+                            filteredDailyRecords.map(r => {
                                 const start = r.check_in_time ? new Date(r.check_in_time) : null;
                                 const end = r.check_out_time ? new Date(r.check_out_time) : null;
                                 const arrival = r.arrival_time ? new Date(r.arrival_time) : null;
@@ -312,8 +373,8 @@ const AttendancePage = ({ user }) => {
                                                 }
                                             }
                                         }
-                                        if (t.late_time && t.late_time.includes('late')) {
-                                            const mins = parseInt(t.late_time);
+                                        if (t.late_time && t.late_time.includes('mins late')) {
+                                            const mins = parseInt(t.late_time.replace(/[^0-9]/g, ''));
                                             if (!isNaN(mins) && mins > maxL) {
                                                 maxL = mins;
                                                 lateTicketId = t.ticket_id;
@@ -323,8 +384,8 @@ const AttendancePage = ({ user }) => {
                                 }
 
                                 return (
-                                    <React.Fragment key={r.engineer_id || r.id}>
-                                        <tr>
+                                    <React.Fragment key={r.engineer_id}>
+                                        <tr className="clickable-row">
                                             <td>
                                                 <div className="user-info" style={{ display: 'flex', alignItems: 'center' }}>
                                                     {tickets.length > 0 ? (
@@ -340,7 +401,14 @@ const AttendancePage = ({ user }) => {
                                                     )}
                                                     <div className="avatar">{r.engineer_name?.charAt(0)}</div>
                                                     <div>
-                                                        <span className="name">{r.engineer_name}</span>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <span className="name">{r.engineer_name}</span>
+                                                            {isFullTimeEngineer(r) ? (
+                                                                <span className="emp-type-badge fulltime" title="Full-Time Engineer">Full-Time</span>
+                                                            ) : (
+                                                                <span className="emp-type-badge dispatch" title="Dispatch / Contract Engineer">Dispatch</span>
+                                                            )}
+                                                        </div>
                                                         <span className="email">{r.email}</span>
                                                         {tickets.length > 0 && (
                                                             <div className="engineer-tickets-list" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px', alignItems: 'center' }}>
@@ -628,9 +696,7 @@ const AttendancePage = ({ user }) => {
     const renderMonthlyView = () => {
         const daysInMonth = getDaysInMonth(year, month);
         const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-        const filtered = monthlyRecords.filter(r =>
-            r.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        const filtered = filteredMonthlyRecords;
 
         return (
             <div className="monthly-view-container fade-in">
@@ -848,12 +914,34 @@ const AttendancePage = ({ user }) => {
                         <select value={year} onChange={e => setYear(parseInt(e.target.value))}>
                             {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
-                        <div className="search-wrapper">
-                            <FiSearch />
-                            <input type="text" placeholder="Search engineer..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                        </div>
                     </div>
                 )}
+
+                <div className="right-controls-group">
+                    <div className="filter-dropdown-wrapper">
+                        <FiFilter style={{ color: 'var(--text-muted)', fontSize: '14px' }} />
+                        <select
+                            className="attendance-type-filter-select"
+                            value={filterType}
+                            onChange={e => setFilterType(e.target.value)}
+                        >
+                            <option value="default">Smart View (Full-Time + Active Clock-ins)</option>
+                            <option value="fulltime">Full-Time Engineers Only</option>
+                            <option value="dispatch">Dispatch / Contract Engineers Only</option>
+                            <option value="all">All Registered Engineers (Show Absent Dispatch)</option>
+                        </select>
+                    </div>
+
+                    <div className="search-wrapper">
+                        <FiSearch />
+                        <input
+                            type="text"
+                            placeholder="Search engineer..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* Error / Loading */}
