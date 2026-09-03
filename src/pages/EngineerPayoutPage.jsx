@@ -291,12 +291,13 @@ const EngineerPayoutPage = () => {
         doc.text('Date of issue:', rx, 28);  doc.text(today, rx + 28, 28);
 
         // ── Supplier / Engineer ──────────────────────────────────────────────
+        const engLocStr = engineer.city && engineer.country ? `${engineer.city}, ${engineer.country}` : (engineer.city || engineer.country || '');
         autoTable(doc, {
             startY: 42,
             head: [['Payer', 'Engineer']],
             body: [[
                 'AIMBOT BUSINESS SERVICES\nAleja Jana Pawla II\nNumber 43A, Lokal 37B, Warszawa 01-001\nKRS: 0000933886',
-                `${engineer.name}\n${engineer.email}\n${engineer.phone || ''}\n${engineer.city || ''}`
+                `${engineer.name}\n${engineer.email}\n${engineer.phone || ''}\n${engLocStr}`
             ]],
             theme: 'plain',
             headStyles: { fillColor: [210, 210, 210], textColor: [40, 40, 40], fontSize: 9, fontStyle: 'bold', cellPadding: 3 },
@@ -418,24 +419,28 @@ const EngineerPayoutPage = () => {
 
     const uniqueLocations = useMemo(() => {
         const locations = currencyFilteredEngineers
-            .map(e => e.city)
-            .filter((city, index, self) => city && self.indexOf(city) === index);
+            .map(e => {
+                if (e.city && e.country) return `${e.city}, ${e.country}`;
+                return e.city || e.country || '';
+            })
+            .filter((loc, index, self) => loc && self.indexOf(loc) === index);
         return ['All Locations', ...locations.sort()];
     }, [currencyFilteredEngineers]);
 
     // Apply search and advanced filters, then sort for the table display
     const filteredEngineers = useMemo(() => {
         let result = currencyFilteredEngineers.filter(eng => {
-            // Search filter (Name, Email, or City)
+            const engLoc = eng.city && eng.country ? `${eng.city}, ${eng.country}` : (eng.city || eng.country || '');
+            // Search filter (Name, Email, City, or Country)
             const matchesSearch = 
                 eng.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 eng.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (eng.city || '').toLowerCase().includes(searchTerm.toLowerCase());
+                engLoc.toLowerCase().includes(searchTerm.toLowerCase());
             if (!matchesSearch) return false;
 
             // Location filter
             if (selectedLocation !== 'All Locations') {
-                if (eng.city !== selectedLocation) return false;
+                if (engLoc !== selectedLocation && eng.city !== selectedLocation && eng.country !== selectedLocation) return false;
             }
 
             // Payout level filter
@@ -984,7 +989,14 @@ const EngineerPayoutPage = () => {
                                                     <small>{eng.phone}</small>
                                                 </div>
                                             </td>
-                                            <td>{eng.city || eng.country ? `${eng.city || ''}${eng.city && eng.country ? ', ' : ''}${eng.country || ''}` : 'N/A'}</td>
+                                            <td>
+                                                {(() => {
+                                                    if (eng.city && eng.country) return `${eng.city}, ${eng.country}`;
+                                                    if (eng.city) return eng.city;
+                                                    if (eng.country) return eng.country;
+                                                    return 'N/A';
+                                                })()}
+                                            </td>
                                             <td>
                                                 <span className="badge-ticket" style={activeTab === 'history' ? { background: '#eafaf1', color: '#2ec4b6' } : {}}>{eng.ticket_count} tickets</span>
                                             </td>
@@ -1163,7 +1175,17 @@ const EngineerPayoutPage = () => {
                                             <td><span className="ticket-id">#{ticket.id}</span></td>
                                             <td>{ticket.customer_name}</td>
                                             <td>{ticket.task_name}</td>
-                                            <td>{ticket.city || ticket.country ? `${ticket.city || ''}${ticket.city && ticket.country ? ', ' : ''}${ticket.country || ''}` : (selectedEngineerProfile?.city ? `${selectedEngineerProfile.city}${selectedEngineerProfile.country ? ', ' + selectedEngineerProfile.country : ''}` : 'N/A')}</td>
+                                            <td>
+                                                {(() => {
+                                                    if (ticket.city && ticket.country) return `${ticket.city}, ${ticket.country}`;
+                                                    if (ticket.city) return ticket.city;
+                                                    if (ticket.country) return ticket.country;
+                                                    if (selectedEngineerProfile?.city && selectedEngineerProfile?.country) return `${selectedEngineerProfile.city}, ${selectedEngineerProfile.country}`;
+                                                    if (selectedEngineerProfile?.city) return selectedEngineerProfile.city;
+                                                    if (selectedEngineerProfile?.country) return selectedEngineerProfile.country;
+                                                    return 'N/A';
+                                                })()}
+                                            </td>
                                             <td>{(() => {
                                                  const pd = calculateEngineerPayoutFrontend(ticket, calcTimezone);
                                                  return (isNaN(pd.totalHours) ? 0 : pd.totalHours).toFixed(2) + 'h';
@@ -1228,9 +1250,23 @@ const EngineerPayoutPage = () => {
                                         Ticket {detailTicket.id}
                                     </div>
                                     <h2 className="pm-title">{detailTicket.task_name}</h2>
-                                    <p className="pm-subtitle">
-                                        <FiBriefcase size={13} style={{ marginRight: 5, verticalAlign: 'middle' }} />
-                                        {detailTicket.customer_name}
+                                    <p className="pm-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                        <span>
+                                            <FiBriefcase size={13} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+                                            {detailTicket.customer_name}
+                                        </span>
+                                        <span style={{ color: '#64748b', fontSize: '13px' }}>
+                                            <FiGlobe size={13} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                                            {(() => {
+                                                if (detailTicket.city && detailTicket.country) return `${detailTicket.city}, ${detailTicket.country}`;
+                                                if (detailTicket.city) return detailTicket.city;
+                                                if (detailTicket.country) return detailTicket.country;
+                                                if (selectedEngineerProfile?.city && selectedEngineerProfile?.country) return `${selectedEngineerProfile.city}, ${selectedEngineerProfile.country}`;
+                                                if (selectedEngineerProfile?.city) return selectedEngineerProfile.city;
+                                                if (selectedEngineerProfile?.country) return selectedEngineerProfile.country;
+                                                return 'N/A';
+                                            })()}
+                                        </span>
                                     </p>
                                 </div>
                                 <button className="pm-close-btn" onClick={handleCloseDetails}>
