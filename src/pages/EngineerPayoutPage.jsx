@@ -86,9 +86,12 @@ const EngineerPayoutPage = () => {
         if (!eng) return 'N/A';
         const city = (eng.city || '').trim();
         const country = (eng.country || '').trim();
-        const address = (eng.address || eng.ticket_address || '').trim();
+        const address = (eng.address || eng.ticket_address || eng.location || eng.site_location || '').trim();
 
-        if (city && country) return `${city}, ${country}`;
+        if (city && country) {
+            if (city.toLowerCase().includes(country.toLowerCase())) return city;
+            return `${city}, ${country}`;
+        }
         if (city) return city;
         if (country) return country;
         if (address) return address;
@@ -99,9 +102,12 @@ const EngineerPayoutPage = () => {
         if (!ticket) return getEngineerLocation(engineer);
         const tCity = (ticket.city || '').trim();
         const tCountry = (ticket.country || '').trim();
-        const tAddress = (ticket.address_line1 || ticket.address_line2 || '').trim();
+        const tAddress = (ticket.address_line1 || ticket.address_line2 || ticket.site_location || ticket.location || '').trim();
 
-        if (tCity && tCountry) return `${tCity}, ${tCountry}`;
+        if (tCity && tCountry) {
+            if (tCity.toLowerCase().includes(tCountry.toLowerCase())) return tCity;
+            return `${tCity}, ${tCountry}`;
+        }
         if (tCity) return tCity;
         if (tCountry) return tCountry;
         if (tAddress) return tAddress;
