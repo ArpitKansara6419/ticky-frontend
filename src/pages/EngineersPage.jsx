@@ -285,7 +285,7 @@ function EngineersPage() {
 
                 // Populate Form
                 setChargesForm({
-                    jobType: eng.employmentType || 'Full Time',
+                    jobType: (eng.employmentType && eng.employmentType.toLowerCase().includes('full')) ? 'Full Time' : (eng.employmentType || 'Full Time'),
                     jobTitle: eng.jobTitle || '',
                     startDate: eng.startDate ? eng.startDate.split('T')[0] : '',
                     checkInTime: eng.checkInTime ? eng.checkInTime.slice(0, 5) : '',
@@ -789,7 +789,7 @@ function EngineersPage() {
                                 </div>
                             </div>
 
-                            {selectedEngineer.employmentType === 'Full Time' && (
+                            {(selectedEngineer.employmentType && selectedEngineer.employmentType.toLowerCase().includes('full')) && (
                                 <div className="profile-info-card" style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', marginTop: '25px' }}>
                                     <h4 className="section-head" style={{ fontSize: '15px', marginBottom: '15px', border: 'none', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <i className="fas fa-calendar-alt" style={{ color: '#6366f1' }}></i> Leave & Vacation Details

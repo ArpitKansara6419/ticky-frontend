@@ -62,8 +62,9 @@ const AttendancePage = ({ user }) => {
     const getEngineerConfig = (countryCode) => COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG['DEFAULT'];
 
     const isFullTimeEngineer = (r) => {
-        const empType = String(r.employment_type || r.employmentType || '').toLowerCase();
-        return empType === 'full-time' || empType === 'fulltime';
+        if (!r) return false;
+        const empType = String(r.employment_type || r.employmentType || r.jobType || '').trim().toLowerCase();
+        return empType.includes('full');
     };
 
     const hasEngineerClockedIn = (r) => {
