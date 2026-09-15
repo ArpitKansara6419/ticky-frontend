@@ -127,24 +127,30 @@ const AttendancePage = ({ user }) => {
         const s = String(val).trim();
         if (!s || s === 'null' || s === 'undefined' || s === '--:--') return '--:--';
 
-        // HH:MM or HH:MM:SS format without date (e.g. "09:30" or "09:30:00")
+        // Direct HH:MM or HH:MM:SS format without date
         if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
             const parts = s.split(':');
             return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
         }
 
-        // Clean timestamp (handle space-separated MySQL timestamp or ISO string)
-        // DO NOT append 'Z' to local MySQL string without 'T', as MySQL strings are already wall-clock local time!
-        const cleanStr = s.includes('T') ? s : s.replace(' ', 'T');
-        const d = new Date(cleanStr);
+        // Extract raw wall-clock time portion (HH:MM) from timestamp without browser timezone conversion
+        let timePart = s;
+        if (s.includes('T')) {
+            timePart = s.split('T')[1];
+        } else if (s.includes(' ')) {
+            timePart = s.split(' ')[1];
+        }
+
+        const match = String(timePart).match(/(\d{1,2}):(\d{2})/);
+        if (match) {
+            return `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`;
+        }
+
+        const d = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
         if (!isNaN(d.getTime())) {
-            try {
-                return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-            } catch (e) {
-                const hh = String(d.getHours()).padStart(2, '0');
-                const mm = String(d.getMinutes()).padStart(2, '0');
-                return `${hh}:${mm}`;
-            }
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
         }
 
         return '--:--';
