@@ -122,7 +122,7 @@ const AttendancePage = ({ user }) => {
         });
     }, [monthlyRecords, searchQuery, filterType]);
 
-    const formatActivityTime = (val) => {
+    const formatActivityTime = (val, timeZone) => {
         if (!val) return '--:--';
         const s = String(val).trim();
         if (!s || s === 'null' || s === 'undefined' || s === '--:--') return '--:--';
@@ -133,24 +133,18 @@ const AttendancePage = ({ user }) => {
             return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
         }
 
-        // Extract raw wall-clock time portion (HH:MM) from timestamp without browser timezone conversion
-        let timePart = s;
-        if (s.includes('T')) {
-            timePart = s.split('T')[1];
-        } else if (s.includes(' ')) {
-            timePart = s.split(' ')[1];
-        }
-
-        const match = String(timePart).match(/(\d{1,2}):(\d{2})/);
-        if (match) {
-            return `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`;
-        }
-
-        const d = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
+        const str = (s.includes('T') || s.endsWith('Z')) ? s : s.replace(' ', 'T') + 'Z';
+        const d = new Date(str);
         if (!isNaN(d.getTime())) {
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mm = String(d.getMinutes()).padStart(2, '0');
-            return `${hh}:${mm}`;
+            try {
+                const options = { hour: '2-digit', minute: '2-digit', hour12: false };
+                if (timeZone) options.timeZone = timeZone;
+                return d.toLocaleTimeString('en-GB', options);
+            } catch (e) {
+                const hh = String(d.getHours()).padStart(2, '0');
+                const mm = String(d.getMinutes()).padStart(2, '0');
+                return `${hh}:${mm}`;
+            }
         }
 
         return '--:--';
@@ -618,14 +612,14 @@ const AttendancePage = ({ user }) => {
                                                                             <div className="timeline-time-col">
                                                                                 <div className="time-block">
                                                                                     <span className="time-label">Arrival</span>
-                                                                                    <span className="time-val mono">{formatActivityTime(t.arrival_time)}</span>
+                                                                                    <span className="time-val mono">{formatActivityTime(t.arrival_time, t.timezone)}</span>
                                                                                 </div>
                                                                                 <div className="time-block">
                                                                                     <span className="time-label">Work Session</span>
                                                                                     <span className="time-val mono">
-                                                                                        {formatActivityTime(t.check_in_time)}
+                                                                                        {formatActivityTime(t.check_in_time, t.timezone)}
                                                                                         {' - '}
-                                                                                        {t.check_out_time ? formatActivityTime(t.check_out_time) : (t.check_in_time ? 'Active' : '--:--')}
+                                                                                        {t.check_out_time ? formatActivityTime(t.check_out_time, t.timezone) : (t.check_in_time ? 'Active' : '--:--')}
                                                                                     </span>
                                                                                 </div>
                                                                                 <div className="duration-badge-wrapper">
