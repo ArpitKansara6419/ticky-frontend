@@ -130,7 +130,7 @@ const ApprovalsPage = ({ onViewTicket }) => {
                                     </div>
                                 )}
 
-                                {(item.approvalType === 'Customer Amount' || item.approvalType === 'Expense') && (
+                                {(item.approvalType === 'Customer Amount' || item.approvalType === 'Expense' || item.approvalType === 'Expense Request') && (
                                     <div className="date-highlight-section" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', padding: '12px 16px', borderRadius: '10px', marginTop: '10px' }}>
                                         <div className="date-item">
                                             <label style={{ fontSize: '11px', color: '#166534', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Requested Customer Amount</label>

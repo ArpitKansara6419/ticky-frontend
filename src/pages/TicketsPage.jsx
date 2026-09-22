@@ -511,6 +511,12 @@ function TicketsPage() {
   const [newAdminNote, setNewAdminNote] = useState('')
   const [addingNote, setAddingNote] = useState(false)
 
+  // Extra Charge Modal
+  const [extraChargeModalOpen, setExtraChargeModalOpen] = useState(false)
+  const [extraChargeAmount, setExtraChargeAmount] = useState('')
+  const [extraChargeReason, setExtraChargeReason] = useState('')
+  const [addingExtraCharge, setAddingExtraCharge] = useState(false)
+
   // Form data
   const [customers, setCustomers] = useState([])
   const [leads, setLeads] = useState([])
@@ -2175,6 +2181,52 @@ function TicketsPage() {
       console.error('Error fetching ticket extras', e)
     }
   }
+
+  const handleAddExtraCharge = async (e) => {
+    e?.preventDefault();
+    const amt = parseFloat(extraChargeAmount);
+    if (!extraChargeAmount || isNaN(amt) || amt <= 0) {
+      alert('Please enter a valid positive amount.');
+      return;
+    }
+    if (!extraChargeReason.trim()) {
+      alert('Please enter a reason or description for the extra charge.');
+      return;
+    }
+    const ticketId = selectedTicket?.id;
+    if (!ticketId) return;
+
+    try {
+      setAddingExtraCharge(true);
+      const res = await fetch(`${API_BASE_URL}/tickets/${ticketId}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          description: extraChargeReason.trim(),
+          amount: amt,
+          requestedBy: 'Admin'
+        })
+      });
+
+      if (res.ok) {
+        setExtraChargeModalOpen(false);
+        setExtraChargeAmount('');
+        setExtraChargeReason('');
+        setSuccess('Extra charge submitted successfully! Approval request has been created and will be added to total billing after approval.');
+        await openTicketModal(ticketId);
+        await loadTickets();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Failed to submit extra charge request.');
+      }
+    } catch (err) {
+      console.error('Submit extra charge error:', err);
+      alert('Error submitting extra charge: ' + err.message);
+    } finally {
+      setAddingExtraCharge(false);
+    }
+  };
 
   const handleUpdateLog = async (logId, data) => {
     const ticketId = data.ticketId || selectedTicket?.id || editingTicketId;
@@ -4437,18 +4489,19 @@ function TicketsPage() {
                                 const isAutoGen = !log.status || log.status === 'Pending';
                                 const isSkippedDay = (isWeekend || isHoliday) && isAutoGen;
 
+                                const hasActualLogin = !!(log.start_time);
                                 const displayIn = log.start_time
-                                  ? ((formatForInput(String(log.start_time)) || '').slice(11, 16) || String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] || ticket.taskTime || '09:00')
-                                  : (ticket.taskTime || '09:00');
+                                  ? ((formatForInput(String(log.start_time)) || '').slice(11, 16) || String(log.start_time).match(/(\d{2}):(\d{2})/)?.[0] || '')
+                                  : '';
                                 const displayOut = log.end_time
-                                  ? ((formatForInput(String(log.end_time)) || '').slice(11, 16) || String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] || '17:00')
-                                  : '17:00';
-                                const rowHrs = isNoEngineerDay || isSkippedDay ? 0 : calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
+                                  ? ((formatForInput(String(log.end_time)) || '').slice(11, 16) || String(log.end_time).match(/(\d{2}):(\d{2})/)?.[0] || '')
+                                  : '';
+                                const rowHrs = isNoEngineerDay || isSkippedDay || !hasActualLogin ? 0 : calculateDuration(displayIn, displayOut, log.break_time_mins || 0);
                                 const rowExceeded = rowHrs > 8;
 
                                 const rowCost = (() => {
-                                   // No Engineer = 0 cost
-                                   if (isNoEngineerDay || isSkippedDay) return '0.00';
+                                   // No Engineer or not yet logged = 0 cost
+                                   if (isNoEngineerDay || isSkippedDay || !hasActualLogin) return '0.00';
                                    let rRates = { 
                                      hr: ticket.hourlyRate, 
                                      hd: ticket.halfDayRate, 
@@ -4527,32 +4580,38 @@ function TicketsPage() {
                                     </td>
                                     
                                     <td style={{ fontSize: '12px', color: '#64748b' }} colSpan={2}>
-                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                          <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>IN</span>
-                                          <input 
-                                            type="time" 
-                                            value={displayIn} 
-                                            style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
-                                            onChange={(e) => {
-                                              const val = e.target.value;
-                                              if (logId) handleUpdateLog(logId, { ticketId: ticket.id, startTime: `${log.logDateStr}T${val}:00` });
-                                            }}
-                                          />
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                          <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>OUT</span>
-                                          <input 
-                                            type="time" 
-                                            value={displayOut} 
-                                            style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
-                                            onChange={(e) => {
-                                              const val = e.target.value;
-                                              if (logId) handleUpdateLog(logId, { ticketId: ticket.id, endTime: `${log.logDateStr}T${val}:00` });
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
+                                      {!hasActualLogin ? (
+                                        <span style={{ fontSize: '10px', fontWeight: '700', background: '#fef9c3', color: '#92400e', padding: '3px 10px', borderRadius: '6px', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                          ⏳ Not Logged Yet
+                                        </span>
+                                      ) : (
+                                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                           <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>IN</span>
+                                           <input 
+                                             type="time" 
+                                             value={displayIn} 
+                                             style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
+                                             onChange={(e) => {
+                                               const val = e.target.value;
+                                               if (logId) handleUpdateLog(logId, { ticketId: ticket.id, startTime: `${log.logDateStr}T${val}:00` });
+                                             }}
+                                           />
+                                         </div>
+                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                           <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>OUT</span>
+                                           <input 
+                                             type="time" 
+                                             value={displayOut} 
+                                             style={{ border: 'none', fontSize: '12px', width: '75px', outline: 'none' }}
+                                             onChange={(e) => {
+                                               const val = e.target.value;
+                                               if (logId) handleUpdateLog(logId, { ticketId: ticket.id, endTime: `${log.logDateStr}T${val}:00` });
+                                             }}
+                                           />
+                                         </div>
+                                       </div>
+                                      )}
                                     </td>
 
                                     <td colSpan={2} style={{ fontSize: '12px', color: '#475569' }}>
@@ -4722,6 +4781,135 @@ function TicketsPage() {
                 🔄 Confirm Re-assign
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Extra Charge / Amount Request Modal ── */}
+      {extraChargeModalOpen && selectedTicket && (
+        <div 
+          className="ticket-modal-backdrop" 
+          style={{ zIndex: 1200 }} 
+          onClick={() => { if (!addingExtraCharge) setExtraChargeModalOpen(false); }} 
+          role="dialog" 
+          aria-modal="true"
+        >
+          <div 
+            className="ticket-modal" 
+            style={{ maxWidth: '480px', width: '95%' }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <header className="ticket-modal-header">
+              <div className="ticket-modal-header-info">
+                <h2>Add Extra Charge</h2>
+                <div className="ticket-badge-id">#AIM-T-{String(selectedTicket.id).padStart(3, '0')}</div>
+              </div>
+              <p className="ticket-modal-subtitle">Submit extra amount request for customer approval</p>
+              <button 
+                type="button" 
+                className="ticket-modal-close-btn" 
+                onClick={() => { if (!addingExtraCharge) setExtraChargeModalOpen(false); }}
+              >
+                <FiX />
+              </button>
+            </header>
+
+            <form onSubmit={handleAddExtraCharge}>
+              <div className="ticket-modal-content" style={{ padding: '24px' }}>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '12px 14px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                  <span style={{ fontSize: '18px', lineHeight: 1 }}>🛡️</span>
+                  <div style={{ fontSize: '12px', color: '#166534', lineHeight: 1.5 }}>
+                    <strong>Approval Required:</strong> This extra amount will be sent for customer/admin approval. It will only be added to the customer total bill <strong>after</strong> it is approved.
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '18px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                    Extra Amount ({selectedTicket.currency || 'USD'}) *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#64748b', fontSize: '15px' }}>
+                      {selectedTicket.currency || '$'}
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="0.00"
+                      value={extraChargeAmount}
+                      onChange={e => setExtraChargeAmount(e.target.value)}
+                      required
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        padding: '11px 14px 11px 40px',
+                        borderRadius: '10px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '15px',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '10px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                    Reason / Description *
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Additional equipment replacement, travel toll surcharge, emergency overtime"
+                    value={extraChargeReason}
+                    onChange={e => setExtraChargeReason(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      resize: 'vertical',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="ticket-modal-footer">
+                <button 
+                  type="button" 
+                  className="btn-wow-secondary" 
+                  onClick={() => { if (!addingExtraCharge) setExtraChargeModalOpen(false); }}
+                  disabled={addingExtraCharge}
+                >
+                  <FiX /> Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingExtraCharge}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    cursor: addingExtraCharge ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  {addingExtraCharge ? '⏳ Submitting...' : '✓ Submit for Approval'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -5017,17 +5205,34 @@ function TicketsPage() {
                     })}
                   </div>
 
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginTop: '24px', marginBottom: '12px', display: 'block' }}>Reported Expenses</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', marginBottom: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', margin: 0 }}>Reported Expenses</label>
+                    <button
+                      onClick={() => { setExtraChargeAmount(''); setExtraChargeReason(''); setExtraChargeModalOpen(true); }}
+                      style={{ fontSize: '11px', fontWeight: '700', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      ＋ Add Extra Charge
+                    </button>
+                  </div>
                   <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '12px', border: '1px solid #e2e8f0' }}>
-                    {ticketExpenses.length === 0 ? <span style={{ color: '#94a3b8', fontSize: '12px' }}>No expenses.</span> : ticketExpenses.map((ex, idx) => (
-                      <div key={ex.id || idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'white', borderRadius: '8px', marginBottom: '6px', border: '1px solid #e2e8f0' }}>
-                        <div>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>{ex.description}</div>
-                          <div style={{ fontSize: '10px', color: '#94a3b8' }}>{new Date(ex.created_at).toLocaleDateString()}</div>
+                    {ticketExpenses.length === 0 ? <span style={{ color: '#94a3b8', fontSize: '12px' }}>No extra charges added.</span> : ticketExpenses.map((ex, idx) => {
+                      const expStatus = ex.status || 'Pending';
+                      const statusColor = expStatus === 'Approved' ? { bg: '#dcfce7', color: '#166534', border: '#bbf7d0' } : expStatus === 'Rejected' ? { bg: '#fee2e2', color: '#991b1b', border: '#fecaca' } : { bg: '#fef9c3', color: '#92400e', border: '#fde68a' };
+                      return (
+                        <div key={ex.id || idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'white', borderRadius: '8px', marginBottom: '6px', border: '1px solid #e2e8f0' }}>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>{ex.description}</div>
+                            <div style={{ fontSize: '10px', color: '#94a3b8' }}>{new Date(ex.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', background: statusColor.bg, color: statusColor.color, border: `1px solid ${statusColor.border}`, textTransform: 'uppercase' }}>
+                              {expStatus}
+                            </span>
+                            <div style={{ fontWeight: '800', color: expStatus === 'Approved' ? '#10b981' : (expStatus === 'Rejected' ? '#ef4444' : '#f59e0b'), fontSize: '13px' }}>{selectedTicket.currency} {parseFloat(ex.amount).toFixed(2)}</div>
+                          </div>
                         </div>
-                        <div style={{ fontWeight: '800', color: '#10b981', fontSize: '13px' }}>{selectedTicket.currency} {parseFloat(ex.amount).toFixed(2)}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
